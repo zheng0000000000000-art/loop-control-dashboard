@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 public static class OllamaReviewer
 {
@@ -146,6 +147,7 @@ public static class OllamaReviewer
             ["prompt"] = prompt,
             ["stream"] = false,
             ["format"] = "json",
+            ["think"] = false,
         };
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{endpoint}/api/generate")
         {
@@ -198,6 +200,7 @@ public static class OllamaReviewer
     // 모델 응답에서 체크리스트 JSON을 추출한다.
     public static ChecklistAnswer? ParseChecklistResponse(string raw, string expectedCheckId)
     {
+        raw = StripThinkBlock(raw);
         var start = raw.IndexOf('{');
         var end = raw.LastIndexOf('}');
 
@@ -225,6 +228,12 @@ public static class OllamaReviewer
         {
             return null;
         }
+    }
+
+    // 모델 응답에서 think 블록을 제거한다(think:false가 적용되지 않는 버전 대비).
+    private static string StripThinkBlock(string raw)
+    {
+        return Regex.Replace(raw, "<think>.*?</think>", "", RegexOptions.Singleline | RegexOptions.IgnoreCase);
     }
 
     // 제안 생성자와 검토자 신원이 같은지 확인한다.

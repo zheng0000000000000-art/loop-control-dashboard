@@ -70,9 +70,17 @@
       "issues": []
     },
     "changeReview": {
-      "summary": "위반이 발견되면 변경 제안이 자동 생성되고 승인 대기 상태가 된다.",
-      "metrics": [],
-      "issues": []
+      "summary": "1층 체크리스트 결과를 사람이 확인해야 한다.",
+      "metrics": [
+        {
+          "label": "1층 검토 판정",
+          "value": "needs_changes"
+        }
+      ],
+      "issues": [
+        "note-nonempty: note는 'dashboard/data/lang/ko.json:3'로 비어 있지 않지만, 의미 있는 설명이 아니다.",
+        "after-matches-goal: ko.json:3의 after 값 0은 note에 명시된 변경 방향과 일치하지 않음"
+      ]
     },
     "apply": {
       "summary": "승인 후 사람이 저장소를 수정하고 다시 측정해 해소 여부를 확인한다.",
@@ -80,5 +88,5 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-09T11:07:02.6749169+09:00"
+  "lastUpdated": "2026-07-09T11:46:23.8959014+09:00"
 }

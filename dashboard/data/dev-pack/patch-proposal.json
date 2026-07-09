@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783562805916",
+  "id": "proposal-1783565097100",
   "title": "블루프린트 괴리 해소 제안",
   "lifecycle": "superseded",
   "createdBy": {
@@ -14,7 +14,7 @@
       "path": "koPoliteEndings",
       "before": 1,
       "after": 0,
-      "note": "dashboard/data/lang/ko.json:178"
+      "note": "dashboard/data/lang/ko.json:3"
     }
   ],
   "impact": [
