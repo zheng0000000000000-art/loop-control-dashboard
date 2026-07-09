@@ -26,7 +26,8 @@
     "edit": "편집",
     "save": "저장",
     "cancel": "취소",
-    "acknowledge": "확인"
+    "acknowledge": "확인",
+    "measure": "측정 실행"
   },
   "panels": {
     "pipelineEyebrow": "워크플로우 맵",
@@ -100,7 +101,8 @@
     "guardrail.acknowledged": "가드레일 확인: {id}",
     "system.restored": "시스템 복원: {text}",
     "executor.escalated": "실행자 승격: {from} -> {to} ({text})",
-    "scenario.step": "시나리오 단계: {text}"
+    "scenario.step": "시나리오 단계: {text}",
+    "measure.completed": "측정 완료: {providerId}, 위반 {violationCount}개"
   },
   "detail": {
     "updated": "업데이트 {time}",

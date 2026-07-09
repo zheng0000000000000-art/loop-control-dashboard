@@ -36,6 +36,15 @@ app.MapGet("/api/projects/{projectId}/proposal", (string projectId) => ReadFile(
 app.MapGet("/api/projects/{projectId}/reviews", (string projectId) => ReadFile(storage, projectId, Storage.ReviewFile, jsonOptions));
 app.MapGet("/api/projects/{projectId}/definition", (string projectId) => ReadFile(storage, projectId, Storage.DefinitionFile, jsonOptions));
 app.MapGet("/api/projects/{projectId}/blueprint", (string projectId) => ReadFile(storage, projectId, Storage.BlueprintFile, jsonOptions));
+app.MapGet("/api/projects/{projectId}/measurement", (string projectId) => ReadFile(storage, projectId, Storage.MeasurementFile, jsonOptions));
+
+app.MapPost("/api/projects/{projectId}/actions/measure", (string projectId) =>
+{
+    lock (storage.GetProjectLock(projectId))
+    {
+        return Measure(storage, projectId, jsonOptions);
+    }
+});
 
 app.MapPost("/api/projects/{projectId}/actions/approve", async (string projectId, HttpRequest request) =>
 {
@@ -101,6 +110,360 @@ static IResult ReadFile(Storage storage, string projectId, string fileName, Json
     }
 }
 
+// 측정 공급자를 실행하고 블루프린트 괴리를 판정한다.
+static IResult Measure(Storage storage, string projectId, JsonSerializerOptions jsonOptions)
+{
+    var bundle = storage.ReadBundle(projectId);
+    var provider = bundle.Definition["measurementProvider"] as JsonObject;
+    var providerId = provider?["id"]?.GetValue<string>();
+
+    if (string.IsNullOrWhiteSpace(providerId))
+    {
+        return ProblemResult(409, "checklist.provider_missing", "Measurement provider is not configured");
+    }
+
+    if (providerId != "dev-pack-checks")
+    {
+        return ProblemResult(409, "checklist.provider_unknown", $"Measurement provider is not supported: {providerId}");
+    }
+
+    storage.CreateRestorePoint(projectId);
+    var targetRoot = ResolveMeasurementTargetRoot(storage.ProjectPath(projectId), provider!);
+    bundle.Measurement = DevPackMeasures.Measure(targetRoot, providerId, bundle.Blueprint);
+    ApplyMeasurementResult(bundle, providerId);
+    return Persist(storage, projectId, bundle, jsonOptions);
+}
+
+// 측정 결과를 상태, 로그, 제안에 반영한다.
+static void ApplyMeasurementResult(ProjectBundle bundle, string providerId)
+{
+    var checks = EvaluateBlueprintChecks(bundle.Blueprint, bundle.Measurement);
+    var violations = checks.Where(check => check.Implemented && !check.Passed).ToList();
+    var stages = ResolveMeasurementStages(bundle.Definition);
+    var state = bundle.State;
+    var runLog = Engine.AppendLog(bundle.RunLog, new JsonObject
+    {
+        ["event"] = "measure.completed",
+        ["params"] = new JsonObject { ["providerId"] = providerId, ["violationCount"] = violations.Count },
+        ["level"] = violations.Count > 0 ? "warning" : "info",
+        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+        ["cost"] = RuntimeCost(),
+    }, Engine.GetLoopIteration(state));
+
+    state = ApplyMeasurementStagePatch(bundle.Definition, state, checks, violations, stages);
+    SetMeasurementDetails(state, stages.DeviationStageId, checks, violations);
+
+    if (violations.Count > 0)
+    {
+        runLog = Engine.AppendLog(runLog, new JsonObject
+        {
+            ["event"] = "stage.warning",
+            ["params"] = new JsonObject
+            {
+                ["stage"] = stages.DeviationStageId ?? "",
+                ["text"] = "블루프린트 대비 괴리가 감지됐다.",
+                ["reasonCode"] = "checklist.blueprint_deviation",
+            },
+            ["level"] = "warning",
+            ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+            ["cost"] = RuntimeCost(),
+        }, Engine.GetLoopIteration(state));
+
+        bundle.Proposal = CreateMeasurementProposal(bundle.Proposal, violations);
+        runLog = Engine.AppendLog(runLog, new JsonObject
+        {
+            ["event"] = "proposal.created",
+            ["params"] = new JsonObject { ["proposalId"] = bundle.Proposal["id"]?.GetValue<string>() ?? "" },
+            ["level"] = "info",
+            ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+            ["cost"] = RuntimeCost(),
+        }, Engine.GetLoopIteration(state));
+    }
+    else if (bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted")
+    {
+        bundle.Proposal["lifecycle"] = "superseded";
+    }
+
+    bundle.State = state;
+    bundle.RunLog = runLog;
+}
+
+// 측정 결과에 맞는 단계 상태 패치를 적용한다.
+static JsonObject ApplyMeasurementStagePatch(JsonObject definition, JsonObject state, List<MetricCheck> checks, List<MetricCheck> violations, MeasurementStages stages)
+{
+    var stageStatuses = new JsonObject();
+    var blockInfo = new JsonObject();
+
+    if (stages.MeasureStageId is not null)
+    {
+        stageStatuses[stages.MeasureStageId] = "passed";
+    }
+
+    if (stages.DeviationStageId is not null)
+    {
+        stageStatuses[stages.DeviationStageId] = violations.Count > 0 ? "warning" : "passed";
+    }
+
+    if (violations.Count > 0)
+    {
+        if (stages.ReviewStageId is not null)
+        {
+            stageStatuses[stages.ReviewStageId] = "pending_review";
+        }
+
+        if (stages.ApplyStageId is not null)
+        {
+            stageStatuses[stages.ApplyStageId] = "blocked";
+            blockInfo[stages.ApplyStageId] = new JsonObject { ["kind"] = "waiting" };
+        }
+
+        return Engine.ApplyStatePatch(definition, state, new JsonObject
+        {
+            ["currentStage"] = stages.ReviewStageId ?? stages.DeviationStageId ?? state["currentStage"]?.GetValue<string>(),
+            ["loopState"] = "running",
+            ["stageStatuses"] = stageStatuses,
+            ["blockInfo"] = blockInfo,
+        });
+    }
+
+    if (stages.ReviewStageId is not null && Engine.GetStageStatus(state, stages.ReviewStageId) == "pending_review")
+    {
+        stageStatuses[stages.ReviewStageId] = "not_started";
+    }
+
+    if (stages.ApplyStageId is not null && Engine.GetStageStatus(state, stages.ApplyStageId) == "in_progress")
+    {
+        stageStatuses[stages.ApplyStageId] = "completed";
+    }
+    else if (stages.ApplyStageId is not null && Engine.GetStageStatus(state, stages.ApplyStageId) == "blocked")
+    {
+        stageStatuses[stages.ApplyStageId] = "not_started";
+        blockInfo[stages.ApplyStageId] = null;
+    }
+
+    return Engine.ApplyStatePatch(definition, state, new JsonObject
+    {
+        ["currentStage"] = stages.DeviationStageId ?? state["currentStage"]?.GetValue<string>(),
+        ["loopState"] = "aligned",
+        ["stageStatuses"] = stageStatuses,
+        ["blockInfo"] = blockInfo,
+    });
+}
+
+// 측정 결과를 단계 상세 지표와 이슈로 기록한다.
+static void SetMeasurementDetails(JsonObject state, string? stageId, List<MetricCheck> checks, List<MetricCheck> violations)
+{
+    if (stageId is null)
+    {
+        return;
+    }
+
+    var metrics = new JsonArray();
+    foreach (var check in checks)
+    {
+        metrics.Add(new JsonObject
+        {
+            ["label"] = check.MetricId,
+            ["value"] = check.Implemented
+                ? $"{ValueText(check.Value!)} / {check.Expected}"
+                : "미구현",
+        });
+    }
+
+    var issues = new JsonArray();
+    foreach (var violation in violations)
+    {
+        issues.Add($"{violation.MetricId}: 측정값 {ValueText(violation.Value!)}이 기준 {violation.Expected}을 벗어났다. 근거: {EvidenceSummary(violation.Evidence, 3)}");
+    }
+
+    state["stageDetails"] ??= new JsonObject();
+    state["stageDetails"]!.AsObject()[stageId] = new JsonObject
+    {
+        ["summary"] = violations.Count == 0
+            ? "측정 결과가 블루프린트 기준을 만족한다."
+            : $"측정 결과에서 {violations.Count}개 괴리가 감지됐다.",
+        ["metrics"] = metrics,
+        ["issues"] = issues,
+    };
+}
+
+// 블루프린트 항목과 측정값을 비교한다.
+static List<MetricCheck> EvaluateBlueprintChecks(JsonObject blueprint, JsonObject measurement)
+{
+    var measurementById = (measurement["metrics"]?.AsArray() ?? new JsonArray())
+        .OfType<JsonObject>()
+        .Where(metric => !string.IsNullOrWhiteSpace(metric["metricId"]?.GetValue<string>()))
+        .ToDictionary(metric => metric["metricId"]!.GetValue<string>(), StringComparer.Ordinal);
+    var checks = new List<MetricCheck>();
+
+    foreach (var item in blueprint["items"]?.AsArray().OfType<JsonObject>() ?? [])
+    {
+        var metricId = item["metricId"]?.GetValue<string>() ?? "";
+        measurementById.TryGetValue(metricId, out var metric);
+        var value = metric?["value"];
+        var evidence = (metric?["evidence"]?.AsArray() ?? new JsonArray())
+            .Select(node => node?.GetValue<string>() ?? "")
+            .Where(text => !string.IsNullOrWhiteSpace(text))
+            .ToList();
+
+        if (value is null)
+        {
+            checks.Add(new MetricCheck(metricId, null, null, false, true, "미구현", evidence.Count > 0 ? evidence : ["미구현"]));
+            continue;
+        }
+
+        var goal = GetBlueprintGoal(item);
+        var expected = GoalText(item);
+        var passed = IsMetricWithinBlueprint(item, value);
+        checks.Add(new MetricCheck(metricId, Engine.CloneNode(value), goal, true, passed, expected, evidence));
+    }
+
+    return checks;
+}
+
+// 블루프린트 기준을 대표하는 값을 반환한다.
+static JsonNode? GetBlueprintGoal(JsonObject item)
+{
+    if (item["target"] is not null)
+    {
+        return Engine.CloneNode(item["target"]!);
+    }
+
+    if (item["band"] is not null)
+    {
+        return Engine.CloneNode(item["band"]!);
+    }
+
+    return null;
+}
+
+// 측정값이 블루프린트 기준을 만족하는지 확인한다.
+static bool IsMetricWithinBlueprint(JsonObject item, JsonNode value)
+{
+    if (item["target"] is not null)
+    {
+        if (TryDecimal(value, out var actual) && TryDecimal(item["target"], out var target))
+        {
+            return actual == target;
+        }
+
+        return value.ToJsonString() == item["target"]!.ToJsonString();
+    }
+
+    if (item["band"] is JsonArray band && band.Count >= 2 &&
+        TryDecimal(value, out var current) &&
+        TryDecimal(band[0], out var minimum) &&
+        TryDecimal(band[1], out var maximum))
+    {
+        return current >= minimum && current <= maximum;
+    }
+
+    return true;
+}
+
+// 측정 위반 목록을 변경 제안으로 변환한다.
+static JsonObject CreateMeasurementProposal(JsonObject currentProposal, List<MetricCheck> violations)
+{
+    var previousId = currentProposal["lifecycle"]?.GetValue<string>() == "submitted"
+        ? currentProposal["id"]?.GetValue<string>()
+        : null;
+    var proposalId = $"proposal-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+    var changes = new JsonArray();
+
+    foreach (var violation in violations)
+    {
+        changes.Add(new JsonObject
+        {
+            ["path"] = violation.MetricId,
+            ["before"] = violation.Value is null ? null : Engine.CloneNode(violation.Value),
+            ["after"] = violation.Goal is null ? violation.Expected : Engine.CloneNode(violation.Goal),
+            ["note"] = EvidenceSummary(violation.Evidence, 3),
+        });
+    }
+
+    return new JsonObject
+    {
+        ["schemaVersion"] = 2,
+        ["id"] = proposalId,
+        ["title"] = "블루프린트 괴리 해소 제안",
+        ["lifecycle"] = "submitted",
+        ["createdBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+        ["revisionOf"] = previousId,
+        ["summary"] = "측정 결과가 블루프린트 기준을 벗어난 항목을 수정 대상으로 제안한다.",
+        ["changes"] = changes,
+        ["impact"] = new JsonArray
+        {
+            new JsonObject { ["label"] = "위반 항목", ["value"] = violations.Count.ToString(CultureInfo.InvariantCulture) },
+            new JsonObject { ["label"] = "예상 비용", ["value"] = "$0.00" },
+        },
+    };
+}
+
+// 측정 단계 관련 stage id를 정의 배열에서 계산한다.
+static MeasurementStages ResolveMeasurementStages(JsonObject definition)
+{
+    var stages = definition["stages"]?.AsArray().OfType<JsonObject>().ToList() ?? [];
+    var reviewStage = Engine.GetHumanReviewStage(definition);
+    var reviewStageId = reviewStage?["id"]?.GetValue<string>();
+    var deviationStageId = reviewStage?["gate"]?.AsArray()
+        .OfType<JsonObject>()
+        .FirstOrDefault(condition => condition["check"]?.GetValue<string>() == "stageStatus")?["stage"]
+        ?.GetValue<string>();
+    var deviationIndex = stages.FindIndex(stage => stage["id"]?.GetValue<string>() == deviationStageId);
+    var measureStageId = deviationIndex > 0 ? stages[deviationIndex - 1]["id"]?.GetValue<string>() : null;
+    var applyStageId = reviewStageId is null ? null : Engine.GetNextStage(definition, reviewStageId)?["id"]?.GetValue<string>();
+    return new MeasurementStages(measureStageId, deviationStageId, reviewStageId, applyStageId);
+}
+
+// measurementProvider의 대상 경로를 실제 디렉터리로 해석한다.
+static string ResolveMeasurementTargetRoot(string projectPath, JsonObject provider)
+{
+    var targetPath = provider["targetPath"]?.GetValue<string>() ?? ".";
+    var candidate = Path.GetFullPath(Path.Combine(projectPath, targetPath));
+
+    if (Directory.Exists(Path.Combine(candidate, "server")) && Directory.Exists(Path.Combine(candidate, "dashboard")))
+    {
+        return candidate;
+    }
+
+    var parent = Directory.GetParent(candidate)?.FullName;
+    if (parent is not null && Directory.Exists(Path.Combine(parent, "server")) && Directory.Exists(Path.Combine(parent, "dashboard")))
+    {
+        return parent;
+    }
+
+    return candidate;
+}
+
+// definition에 측정 공급자 설정이 있는지 확인한다.
+static bool HasMeasurementProvider(JsonObject definition)
+{
+    var provider = definition["measurementProvider"] as JsonObject;
+    return !string.IsNullOrWhiteSpace(provider?["id"]?.GetValue<string>());
+}
+
+// 블루프린트 기준을 표시 문자열로 만든다.
+static string GoalText(JsonObject item)
+{
+    if (item["target"] is not null)
+    {
+        return ValueText(item["target"]!);
+    }
+
+    if (item["band"] is JsonArray band && band.Count >= 2)
+    {
+        return $"{ValueText(band[0]!)}~{ValueText(band[1]!)}";
+    }
+
+    return "기준 없음";
+}
+
+// 근거 목록을 짧은 표시 문자열로 만든다.
+static string EvidenceSummary(List<string> evidence, int take)
+{
+    return evidence.Count == 0 ? "근거 없음" : string.Join("; ", evidence.Take(take));
+}
+
 // 승인 액션을 처리하고 결과 파일을 기록한다.
 static IResult Approve(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions)
 {
@@ -119,6 +482,15 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
     var risk = AssessRisk(bundle.Definition, bundle.Proposal);
     var report = CreateReviewReport(bundle.Proposal, "approved", "사람 검토로 승인됐다.", risk, MergeFindings(GetEditFindings(bundle.Proposal), body["editedChanges"] as JsonArray));
     var state = Engine.ApplyStageStatus(bundle.Definition, bundle.State, stageId, "approved");
+    if (HasMeasurementProvider(bundle.Definition))
+    {
+        state = Engine.ApplyStatePatch(bundle.Definition, state, new JsonObject
+        {
+            ["loopIteration"] = Engine.GetLoopIteration(state) + 1,
+            ["loopState"] = "running",
+        });
+    }
+
     var runLog = Engine.AppendLog(bundle.RunLog, new JsonObject
     {
         ["event"] = "review.approved",
@@ -346,6 +718,7 @@ static IResult BundleResult(ProjectBundle bundle, JsonSerializerOptions jsonOpti
         ["runLog"] = Engine.CloneNode(bundle.RunLog),
         ["proposal"] = Engine.CloneNode(bundle.Proposal),
         ["reviewReport"] = Engine.CloneNode(bundle.Reviews),
+        ["measurement"] = Engine.CloneNode(bundle.Measurement),
     }, jsonOptions);
 }
 
@@ -549,8 +922,19 @@ static int Number(JsonNode? node, int fallback)
     return node is not null && int.TryParse(node.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? value : fallback;
 }
 
+// 노드에서 decimal 값을 읽는다.
+static bool TryDecimal(JsonNode? node, out decimal value)
+{
+    value = 0;
+    return node is not null && decimal.TryParse(node.ToString(), NumberStyles.Number, CultureInfo.InvariantCulture, out value);
+}
+
 // 표시용 값 문자열을 만든다.
 static string ValueText(JsonNode node)
 {
     return node is JsonValue ? node.ToString() : node.ToJsonString();
 }
+
+public sealed record MeasurementStages(string? MeasureStageId, string? DeviationStageId, string? ReviewStageId, string? ApplyStageId);
+
+public sealed record MetricCheck(string MetricId, JsonNode? Value, JsonNode? Goal, bool Implemented, bool Passed, string Expected, List<string> Evidence);

@@ -1,6 +1,7 @@
 {
   "projects": [
-    { "id": "ruined-lab", "name": "Ruined Lab — Game Balancing Showcase", "path": "./data/ruined-lab/" }
+    { "id": "ruined-lab", "name": "Ruined Lab — Game Balancing Showcase", "path": "./data/ruined-lab/" },
+    { "id": "dev-pack", "name": "Dev Pack — Self-Audit Loop", "path": "./data/dev-pack/" }
   ],
-  "lastOpened": "ruined-lab"
+  "lastOpened": "dev-pack"
 }

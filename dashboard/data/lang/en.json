@@ -26,7 +26,8 @@
     "edit": "Edit",
     "save": "Save",
     "cancel": "Cancel",
-    "acknowledge": "Acknowledge"
+    "acknowledge": "Acknowledge",
+    "measure": "Run Measurement"
   },
   "panels": {
     "pipelineEyebrow": "Workflow Map",
@@ -100,7 +101,8 @@
     "guardrail.acknowledged": "Guardrail acknowledged: {id}",
     "system.restored": "System restored: {text}",
     "executor.escalated": "Executor escalated: {from} -> {to} ({text})",
-    "scenario.step": "Scenario step: {text}"
+    "scenario.step": "Scenario step: {text}",
+    "measure.completed": "Measurement completed: {providerId}, {violationCount} violations"
   },
   "detail": {
     "updated": "Updated {time}",

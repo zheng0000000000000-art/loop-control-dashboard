@@ -34,6 +34,7 @@ const PROJECT_FILE_NAMES = {
   scenario: "scenario.json",
   reviewReport: "review-report.json",
   blueprint: "blueprint.json",
+  measurement: "measurement.json",
 };
 const DEFAULT_LANGUAGE = "ko";
 const RISK_ORDER = ["low", "medium", "high"];
@@ -81,12 +82,14 @@ let proposal = null;
 let scenario = null;
 let reviewReport = { schemaVersion: EXPECTED_SCHEMA_VERSION, reports: [] };
 let blueprint = { schemaVersion: EXPECTED_SCHEMA_VERSION, items: [] };
+let measurement = null;
 let projectBaseline = null;
 let schemaWarnings = [];
 let selectedStageId = null;
 let editingChangeIndex = null;
 let scenarioTimer = null;
 let scenarioRunning = false;
+let measureRunning = false;
 let serverBacked = false;
 let pollTimer = null;
 
@@ -199,14 +202,16 @@ async function loadProject(projectId) {
   const projectPath = normalizeProjectPath(activeProject.path);
   const loaded = await loadProjectData(activeProject.id, projectPath);
 
-  ({ definition, workflowState, runLog, proposal, scenario, reviewReport, blueprint } = loaded);
+  ({ definition, workflowState, runLog, proposal, scenario, reviewReport, blueprint, measurement } = loaded);
   proposal = normalizeProposal(proposal);
   reviewReport = normalizeReviewReport(reviewReport);
   blueprint = normalizeBlueprint(blueprint);
+  measurement = normalizeMeasurement(measurement);
   projectBaseline = {
     workflowState: cloneData(workflowState),
     runLog: cloneData(runLog),
     proposal: cloneData(proposal),
+    measurement: cloneData(measurement),
   };
   selectedStageId = workflowState.currentStage;
 
@@ -220,7 +225,7 @@ async function loadProject(projectId) {
 // 선택한 프로젝트 데이터를 서버 API 또는 정적 파일에서 불러온다.
 async function loadProjectData(projectId, projectPath) {
   try {
-    const [loadedDefinition, loadedState, loadedRunLog, loadedProposal, loadedReviewReport, loadedBlueprint, loadedScenario] =
+    const [loadedDefinition, loadedState, loadedRunLog, loadedProposal, loadedReviewReport, loadedBlueprint, loadedMeasurement, loadedScenario] =
       await Promise.all([
         loadVersionedJson(apiProjectFilePath(projectId, "definition"), PROJECT_FILE_NAMES.definition),
         loadVersionedJson(apiProjectFilePath(projectId, "state"), PROJECT_FILE_NAMES.state),
@@ -234,6 +239,7 @@ async function loadProjectData(projectId, projectPath) {
           schemaVersion: EXPECTED_SCHEMA_VERSION,
           items: [],
         }),
+        loadOptionalVersionedJson(apiProjectFilePath(projectId, "measurement"), PROJECT_FILE_NAMES.measurement, null),
         loadOptionalVersionedJson(projectFilePath(projectPath, PROJECT_FILE_NAMES.scenario), PROJECT_FILE_NAMES.scenario, {
           schemaVersion: SCENARIO_SCHEMA_VERSION,
           events: [],
@@ -248,10 +254,11 @@ async function loadProjectData(projectId, projectPath) {
       proposal: loadedProposal,
       reviewReport: loadedReviewReport,
       blueprint: loadedBlueprint,
+      measurement: loadedMeasurement,
       scenario: loadedScenario,
     };
   } catch (apiError) {
-    const [loadedDefinition, loadedState, loadedRunLog, loadedProposal, loadedScenario, loadedReviewReport, loadedBlueprint] =
+    const [loadedDefinition, loadedState, loadedRunLog, loadedProposal, loadedScenario, loadedReviewReport, loadedBlueprint, loadedMeasurement] =
       await Promise.all([
         loadVersionedJson(projectFilePath(projectPath, PROJECT_FILE_NAMES.definition), PROJECT_FILE_NAMES.definition),
         loadVersionedJson(projectFilePath(projectPath, PROJECT_FILE_NAMES.state), PROJECT_FILE_NAMES.state),
@@ -269,6 +276,7 @@ async function loadProjectData(projectId, projectPath) {
           schemaVersion: EXPECTED_SCHEMA_VERSION,
           items: [],
         }),
+        loadOptionalVersionedJson(projectFilePath(projectPath, PROJECT_FILE_NAMES.measurement), PROJECT_FILE_NAMES.measurement, null),
       ]);
 
     serverBacked = false;
@@ -280,6 +288,7 @@ async function loadProjectData(projectId, projectPath) {
       scenario: loadedScenario,
       reviewReport: loadedReviewReport,
       blueprint: loadedBlueprint,
+      measurement: loadedMeasurement,
     };
   }
 }
@@ -482,6 +491,18 @@ function renderStageDetail() {
       text: t("detail.updated", { time: formatDateTime(workflowState.lastUpdated) }),
     }),
   );
+
+  if (canRunMeasurement()) {
+    const measureButton = createElement("button", {
+      className: "button",
+      text: t("buttons.measure"),
+      attributes: { type: "button" },
+    });
+    measureButton.disabled = measureRunning;
+    measureButton.addEventListener("click", runMeasurement);
+    headerLine.append(measureButton);
+  }
+
   elements.stageDetail.append(headerLine);
 
   if (loopInfo?.detail) {
@@ -832,6 +853,19 @@ function renderRunLog() {
   );
 }
 
+// 측정 공급자를 실행하고 서버 응답으로 화면을 갱신한다.
+async function runMeasurement() {
+  if (!canRunMeasurement() || measureRunning) {
+    return;
+  }
+
+  measureRunning = true;
+  render();
+  await postProjectAction("measure", {});
+  measureRunning = false;
+  render();
+}
+
 // 변경 제안을 승인하고 검토 리포트를 추가한다.
 async function approveProposal() {
   const context = getReviewContext();
@@ -1149,6 +1183,7 @@ function downloadWorkspaceJson() {
     runLog,
     proposal,
     reviewReport,
+    measurement,
     downloadedAt: new Date().toISOString(),
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -1401,7 +1436,7 @@ async function refreshRuntimeData() {
     return;
   }
 
-  const [nextState, nextRunLog, nextProposal, nextReviewReport] = await Promise.all([
+  const [nextState, nextRunLog, nextProposal, nextReviewReport, nextMeasurement] = await Promise.all([
     loadVersionedJson(apiProjectFilePath(activeProject.id, "state"), PROJECT_FILE_NAMES.state),
     loadVersionedJson(apiProjectFilePath(activeProject.id, "runlog"), PROJECT_FILE_NAMES.runLog),
     loadOptionalVersionedJson(apiProjectFilePath(activeProject.id, "proposal"), PROJECT_FILE_NAMES.proposal, null),
@@ -1409,6 +1444,7 @@ async function refreshRuntimeData() {
       schemaVersion: EXPECTED_SCHEMA_VERSION,
       reports: [],
     }),
+    loadOptionalVersionedJson(apiProjectFilePath(activeProject.id, "measurement"), PROJECT_FILE_NAMES.measurement, null),
   ]);
 
   applyServerBundle({
@@ -1416,6 +1452,7 @@ async function refreshRuntimeData() {
     runLog: nextRunLog,
     proposal: nextProposal,
     reviewReport: nextReviewReport,
+    measurement: nextMeasurement,
   });
 }
 
@@ -1455,10 +1492,12 @@ function applyServerBundle(bundle) {
   runLog = bundle.runLog ?? runLog;
   proposal = normalizeProposal(bundle.proposal ?? proposal);
   reviewReport = normalizeReviewReport(bundle.reviewReport ?? reviewReport);
+  measurement = normalizeMeasurement(bundle.measurement ?? measurement);
   projectBaseline = {
     workflowState: cloneData(workflowState),
     runLog: cloneData(runLog),
     proposal: cloneData(proposal),
+    measurement: cloneData(measurement),
   };
   ensureSelectedStage();
   render();
@@ -1476,6 +1515,11 @@ function getScenarioEvents() {
   return Array.isArray(scenario?.events) ? scenario.events : [];
 }
 
+// 현재 프로젝트에서 서버 측정을 실행할 수 있는지 확인한다.
+function canRunMeasurement() {
+  return serverBacked && Boolean(definition?.measurementProvider?.id);
+}
+
 // 선택 단계가 유효하도록 보정한다.
 function ensureSelectedStage() {
   if (!definition || !workflowState) {
@@ -1491,7 +1535,7 @@ function ensureSelectedStage() {
 
 // 제안 데이터 존재 여부를 확인한다.
 function hasProposalData(value) {
-  return value !== null && typeof value === "object" && Object.keys(value).length > 0;
+  return value !== null && typeof value === "object" && Boolean(value.id || value.title || Array.isArray(value.changes));
 }
 
 // 제안 데이터를 화면 계약에 맞게 정규화한다.
@@ -1546,6 +1590,15 @@ function normalizeReviewReport(value) {
 function normalizeBlueprint(value) {
   if (!value || typeof value !== "object" || !Array.isArray(value.items)) {
     return { schemaVersion: EXPECTED_SCHEMA_VERSION, items: [] };
+  }
+
+  return cloneData(value);
+}
+
+// 측정 결과 컨테이너를 정규화한다.
+function normalizeMeasurement(value) {
+  if (!value || typeof value !== "object" || !Array.isArray(value.metrics)) {
+    return null;
   }
 
   return cloneData(value);

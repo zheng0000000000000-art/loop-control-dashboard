@@ -15,9 +15,10 @@ public sealed class Storage
     public const string ReviewFile = "review-report.json";
     public const string ScenarioFile = "scenario.json";
     public const string BlueprintFile = "blueprint.json";
+    public const string MeasurementFile = "measurement.json";
 
-    private static readonly string[] CoreFiles = [StateFile, RunLogFile, ProposalFile, ReviewFile];
-    private static readonly string[] StartupCheckedFiles = [DefinitionFile, StateFile, RunLogFile, ProposalFile, ReviewFile, ScenarioFile, BlueprintFile];
+    private static readonly string[] CoreFiles = [StateFile, RunLogFile, ProposalFile, ReviewFile, MeasurementFile];
+    private static readonly string[] StartupCheckedFiles = [DefinitionFile, StateFile, RunLogFile, ProposalFile, ReviewFile, ScenarioFile, BlueprintFile, MeasurementFile];
     private readonly ConcurrentDictionary<string, object> projectLocks = new();
 
     public string DataRoot { get; }
@@ -60,7 +61,8 @@ public sealed class Storage
             ReadProjectFile(projectId, RunLogFile).AsObject(),
             ReadOptionalProjectFile(projectId, ProposalFile, () => new JsonObject { ["schemaVersion"] = 2 }).AsObject(),
             ReadOptionalProjectFile(projectId, ReviewFile, () => new JsonObject { ["schemaVersion"] = 2, ["reports"] = new JsonArray() }).AsObject(),
-            ReadOptionalProjectFile(projectId, BlueprintFile, () => new JsonObject { ["schemaVersion"] = 2, ["items"] = new JsonArray() }).AsObject()
+            ReadOptionalProjectFile(projectId, BlueprintFile, () => new JsonObject { ["schemaVersion"] = 2, ["items"] = new JsonArray() }).AsObject(),
+            ReadOptionalProjectFile(projectId, MeasurementFile, () => new JsonObject { ["schemaVersion"] = 2, ["metrics"] = new JsonArray() }).AsObject()
         );
     }
 
@@ -71,6 +73,10 @@ public sealed class Storage
         WriteProjectFile(projectId, RunLogFile, bundle.RunLog);
         WriteProjectFile(projectId, ProposalFile, bundle.Proposal);
         WriteProjectFile(projectId, ReviewFile, bundle.Reviews);
+        if (ShouldWriteMeasurement(projectId, bundle.Measurement))
+        {
+            WriteProjectFile(projectId, MeasurementFile, bundle.Measurement);
+        }
     }
 
     // 상태 변경 전 복원 지점을 만든다.
@@ -101,6 +107,10 @@ public sealed class Storage
         WriteJson(Path.Combine(snapshotDirectory, RunLogFile), bundle.RunLog);
         WriteJson(Path.Combine(snapshotDirectory, ProposalFile), bundle.Proposal);
         WriteJson(Path.Combine(snapshotDirectory, ReviewFile), bundle.Reviews);
+        if (ShouldWriteMeasurement(projectId, bundle.Measurement))
+        {
+            WriteJson(Path.Combine(snapshotDirectory, MeasurementFile), bundle.Measurement);
+        }
     }
 
     // 서버 시작 시 JSON 파일을 검증하고 최신 복원 지점으로 복구한다.
@@ -188,6 +198,13 @@ public sealed class Storage
     {
         var path = ProjectFilePath(projectId, fileName);
         return File.Exists(path) ? ReadJson(path) : fallback();
+    }
+
+    // 측정 파일을 실제로 기록해야 하는지 확인한다.
+    private bool ShouldWriteMeasurement(string projectId, JsonObject measurement)
+    {
+        return File.Exists(ProjectFilePath(projectId, MeasurementFile)) ||
+            (measurement["metrics"]?.AsArray().Count ?? 0) > 0;
     }
 
     // JSON 파일을 읽고 파싱한다.
@@ -342,7 +359,7 @@ public sealed class Storage
 public sealed class ProjectBundle
 {
     // 작업 파일 묶음을 보관한다.
-    public ProjectBundle(JsonObject definition, JsonObject state, JsonObject runLog, JsonObject proposal, JsonObject reviews, JsonObject blueprint)
+    public ProjectBundle(JsonObject definition, JsonObject state, JsonObject runLog, JsonObject proposal, JsonObject reviews, JsonObject blueprint, JsonObject measurement)
     {
         Definition = definition;
         State = state;
@@ -350,6 +367,7 @@ public sealed class ProjectBundle
         Proposal = proposal;
         Reviews = reviews;
         Blueprint = blueprint;
+        Measurement = measurement;
     }
 
     public JsonObject Definition { get; set; }
@@ -358,4 +376,5 @@ public sealed class ProjectBundle
     public JsonObject Proposal { get; set; }
     public JsonObject Reviews { get; set; }
     public JsonObject Blueprint { get; set; }
+    public JsonObject Measurement { get; set; }
 }

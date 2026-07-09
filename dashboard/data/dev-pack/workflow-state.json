@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 2,
+  "projectName": "개발 팩 — 자기 검수 루프",
+  "currentStage": "measure",
+  "overallStatus": "in_progress",
+  "loopState": "running",
+  "mode": "normal",
+  "suspendedTracks": [],
+  "loopIteration": 0,
+  "stages": {
+    "goals": "passed",
+    "measure": "in_progress",
+    "deviationCheck": "not_started",
+    "changeReview": "not_started",
+    "apply": "not_started"
+  },
+  "blockInfo": {},
+  "stageDetails": {
+    "goals": {
+      "summary": "개발 팩은 저장소의 핵심 규칙을 측정하고 블루프린트 기준과 비교한다.",
+      "metrics": [
+        { "label": "블루프린트 지표", "value": "7" },
+        { "label": "측정 방식", "value": "규칙 기반" }
+      ],
+      "issues": []
+    },
+    "measure": {
+      "summary": "측정 실행 버튼으로 현재 저장소 상태를 measurement.json에 기록한다.",
+      "metrics": [],
+      "issues": []
+    },
+    "deviationCheck": {
+      "summary": "아직 측정 결과가 없다.",
+      "metrics": [],
+      "issues": []
+    },
+    "changeReview": {
+      "summary": "위반이 발견되면 변경 제안이 자동 생성되고 승인 대기 상태가 된다.",
+      "metrics": [],
+      "issues": []
+    },
+    "apply": {
+      "summary": "승인 후 사람이 저장소를 수정하고 다시 측정해 해소 여부를 확인한다.",
+      "metrics": [],
+      "issues": []
+    }
+  },
+  "lastUpdated": "2026-07-09T00:00:00+09:00"
+}
