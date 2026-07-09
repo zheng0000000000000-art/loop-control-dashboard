@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-10T00:00:23.5759898+09:00",
+  "measuredAt": "2026-07-10T00:15:46.9937060+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
@@ -76,23 +76,23 @@
     },
     {
       "metricId": "programCsLines",
-      "value": 2639,
+      "value": null,
       "evidence": [
-        "server/Program.cs:2639 lines"
+        "미구현"
       ]
     },
     {
       "metricId": "appJsLines",
-      "value": 2446,
+      "value": null,
       "evidence": [
-        "dashboard/app.js:2446 lines"
+        "미구현"
       ]
     },
     {
       "metricId": "maxFunctionLength",
-      "value": 246,
+      "value": null,
       "evidence": [
-        "server/Program.cs:740-985"
+        "미구현"
       ]
     }
   ]

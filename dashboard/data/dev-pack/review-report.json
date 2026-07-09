@@ -1648,6 +1648,80 @@
       "findings": [],
       "reason": "사람 검토로 승인됐다.",
       "createdAt": "2026-07-10T00:15:30.5068233+09:00"
+    },
+    {
+      "id": "review-1783610160918",
+      "proposalId": "proposal-1783610151120",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "skillDomainViolations",
+          "checkId": "note-nonempty",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "note 필드는 '기존 리뷰 피드백이 적용 지침임을 명확히하여, 잘못된 도메인 사용을 방지하고 측정값을 0으로 감소시키는 데 목적을 설명합니다.'와 같이 의미 있는 설명을 포함하고 있습니다.",
+          "comment": "note 필드는 '기존 리뷰 피드백이 적용 지침임을 명확히하여, 잘못된 도메인 사용을 방지하고 측정값을 0으로 감소시키는 데 목적을 설명합니다.'와 같이 의미 있는 설명을 포함하고 있습니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "skillDomainViolations",
+          "checkId": "after-matches-goal",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "after 값 0은 note에서 언급된 측정값 감소 목적과 일치합니다.",
+          "comment": "after 값 0은 note에서 언급된 측정값 감소 목적과 일치합니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "skillDomainViolations",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "변경 제안은 blueprint 위반 해소에 집중되어 있음",
+          "comment": "변경 제안은 blueprint 위반 해소에 집중되어 있음",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "createdAt": "2026-07-10T00:16:00.9182613+09:00"
+    },
+    {
+      "id": "review-1783610193866",
+      "proposalId": "proposal-1783610151120",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "human",
+        "provider": "human",
+        "model": null
+      },
+      "riskAssessed": "high",
+      "findings": [],
+      "reason": "사람 검토로 승인됐다.",
+      "createdAt": "2026-07-10T00:16:33.8664111+09:00"
     }
   ]
 }

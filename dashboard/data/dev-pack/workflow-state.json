@@ -13,7 +13,7 @@
       "suspectConfidence": "temporal"
     }
   ],
-  "loopIteration": 2,
+  "loopIteration": 3,
   "stages": {
     "goals": "passed",
     "measure": "passed",
@@ -43,7 +43,7 @@
       "issues": []
     },
     "deviationCheck": {
-      "summary": "측정 결과에서 2개 괴리가 감지됐다.",
+      "summary": "측정 결과에서 1개 괴리가 감지됐다.",
       "metrics": [
         {
           "label": "domainWordsInEngine",
@@ -99,33 +99,30 @@
         },
         {
           "label": "programCsLines",
-          "value": "2639 / 0~2661"
+          "value": "미구현"
         },
         {
           "label": "appJsLines",
-          "value": "2446 / 0~2692"
+          "value": "미구현"
         },
         {
           "label": "maxFunctionLength",
-          "value": "246 / 0~80"
+          "value": "미구현"
         }
       ],
       "issues": [
-        "skillDomainViolations: 측정값 2이 기준 0을 벗어났다. 근거: docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md",
-        "maxFunctionLength: 측정값 246이 기준 0~80을 벗어났다. 근거: server/Program.cs:740-985"
+        "skillDomainViolations: 측정값 2이 기준 0을 벗어났다. 근거: docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md"
       ]
     },
     "changeReview": {
-      "summary": "악화가 감지되어 1층 검토를 건너뛰고 사람 결재로 직행했다.",
+      "summary": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
       "metrics": [
         {
-          "label": "라우팅",
-          "value": "사람 직행"
+          "label": "1층 검토 판정",
+          "value": "approved"
         }
       ],
-      "issues": [
-        "skillDomainViolations: 0→2로 악화"
-      ]
+      "issues": []
     },
     "apply": {
       "summary": "승인 후 사람이 저장소를 수정하고 다시 측정해 해소 여부를 확인한다.",
@@ -133,7 +130,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-10T00:15:30.5071266+09:00",
+  "lastUpdated": "2026-07-10T00:16:33.8667353+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",

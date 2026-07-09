@@ -1,26 +1,26 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783609223596",
-  "title": "악화 롤백 제안: skillDomainViolations",
+  "id": "proposal-1783610151120",
+  "title": "도메인 오류 감소 목적 설명",
   "lifecycle": "decided",
-  "kind": "rollback",
   "createdBy": {
-    "provider": "rule-engine",
-    "model": null
+    "provider": "ollama",
+    "model": "qwen3:8b"
   },
   "revisionOf": null,
-  "summary": "직전에 충족되던 지표가 악화되어 자동 롤백을 제안한다. 체크리스트가 검토할 내용이 없어 1층을 건너뛰고 사람 결재로 직행한다.",
+  "summary": "기존 리뷰 피드백의 적용 목적을 명확히하여 잘못된 도메인 사용을 방지하고 측정값을 0으로 감소시킬 수 있도록 한다.",
+  "assumptions": [],
   "changes": [
     {
       "path": "skillDomainViolations",
       "before": 2,
       "after": 0,
-      "note": "직전 승인 원인 미상 이후 skillDomainViolations이 0→2로 악화됨. 되돌리거나 원인 조사 필요"
+      "note": "기존 리뷰 피드백이 적용 지침임을 명확히하여, 잘못된 도메인 사용을 방지하고 측정값을 0으로 감소시키는 데 목적을 설명합니다."
     }
   ],
   "impact": [
     {
-      "label": "악화 항목",
+      "label": "위반 항목",
       "value": "1"
     },
     {
