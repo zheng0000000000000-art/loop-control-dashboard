@@ -70,9 +70,13 @@ public sealed class OutboxManager
             var execution = await RunExecutorAsync(copyRoot, executor, instruction);
             var changes = CollectChanges(copyRoot, taskDirectory);
             var measure = await RunMeasureAsync(copyRoot);
+            var behavior = await RunVerifyBehaviorAsync(copyRoot);
             stopwatch.Stop();
 
-            var status = execution.TimedOut ? "failed" : "import_pending";
+            var strictGate = RequiresStrictGate(instruction);
+            var passedStrictGate = !strictGate || (measure.ExitCode == 0 && behavior.ExitCode == 0);
+            var hasChanges = changes.ChangedFiles.Count > 0 || changes.DeletedFiles.Count > 0;
+            var status = execution.TimedOut || execution.ExitCode != 0 || !hasChanges || !passedStrictGate ? "failed" : "import_pending";
             var meta = BaseMeta(taskId, projectId, executor, instruction, status, stopwatch.ElapsedMilliseconds, SubscriptionCalls(executor));
             meta["executorExitCode"] = execution.ExitCode;
             meta["timedOut"] = execution.TimedOut;
@@ -80,6 +84,9 @@ public sealed class OutboxManager
             meta["deletedFiles"] = new JsonArray(changes.DeletedFiles.Select(file => JsonValue.Create(file)).ToArray<JsonNode?>());
             meta["measureExitCode"] = measure.ExitCode;
             meta["measureSummary"] = measure.Stdout;
+            meta["behaviorExitCode"] = behavior.ExitCode;
+            meta["behaviorSummary"] = behavior.Stdout;
+            meta["strictGate"] = strictGate;
             meta["completedAt"] = DateTimeOffset.Now.ToString("O");
 
             WriteText(Path.Combine(taskDirectory, "executor-report.md"), BuildExecutorReport(execution));
@@ -89,6 +96,12 @@ public sealed class OutboxManager
                 ["exitCode"] = measure.ExitCode,
                 ["stdout"] = measure.Stdout,
                 ["stderr"] = measure.Stderr,
+            });
+            WriteJson(Path.Combine(taskDirectory, "behavior-result.json"), new JsonObject
+            {
+                ["exitCode"] = behavior.ExitCode,
+                ["stdout"] = behavior.Stdout,
+                ["stderr"] = behavior.Stderr,
             });
             WriteJson(Path.Combine(taskDirectory, "meta.json"), meta);
             TryDeleteDirectory(copyRoot);
@@ -315,6 +328,20 @@ public sealed class OutboxManager
     private static async Task<ProcessResult> RunMeasureAsync(string copyRoot)
     {
         return await RunProcessAsync(copyRoot, "dotnet", ["run", "--project", "server", "--", "measure", "dev-pack"], 60);
+    }
+
+    // 격리 사본에서 동작 동일성을 검증한다.
+    private static async Task<ProcessResult> RunVerifyBehaviorAsync(string copyRoot)
+    {
+        return await RunProcessAsync(copyRoot, "dotnet", ["run", "--project", "server", "--", "verify-behavior"], 60);
+    }
+
+    // 엄격한 반입 판정이 필요한 지시인지 확인한다.
+    private static bool RequiresStrictGate(string instruction)
+    {
+        return instruction.Contains("verify-behavior", StringComparison.OrdinalIgnoreCase) ||
+            instruction.Contains("Program.cs", StringComparison.OrdinalIgnoreCase) ||
+            instruction.Contains("구조 지표", StringComparison.OrdinalIgnoreCase);
     }
 
     // 외부 프로세스를 셸 없이 실행하고 결과를 수집한다.

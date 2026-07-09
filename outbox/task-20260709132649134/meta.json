@@ -1,0 +1,29 @@
+﻿{
+  "schemaVersion": 2,
+  "taskId": "task-20260709132649134",
+  "projectId": "dev-pack",
+  "executor": "claude-code",
+  "instruction": "Program.cs to Orchestrator.cs and ProposalFlow.cs. Completion check: verify-behavior passes, measure dev-pack has zero violations, structure metrics enter band.",
+  "status": "failed",
+  "createdAt": "2026-07-09T22:26:54.9602614+09:00",
+  "durationMs": 5825,
+  "cost": {
+    "estimatedUSD": 0,
+    "subscriptionCalls": 1,
+    "role": "runtime"
+  },
+  "executorExitCode": 0,
+  "timedOut": false,
+  "changedFiles": [
+    "server/Orchestrator.cs",
+    "server/Program.cs",
+    "server/ProposalFlow.cs"
+  ],
+  "deletedFiles": [],
+  "measureExitCode": 1,
+  "measureSummary": "C:\\Users\\1\\AppData\\Local\\Temp\\loop-dispatch-task-20260709132649134\\server\\Program.cs(913,62): error CS0206: 참조를 반환하지 않는 속성 또는 인덱서는 out 또는 ref 값으로 사용할 수 없음 [C:\\Users\\1\\AppData\\Local\\Temp\\loop-dispatch-task-20260709132649134\\server\\LocalFirstWorkflowDashboard.Server.csproj]\r\nC:\\Users\\1\\AppData\\Local\\Temp\\loop-dispatch-task-20260709132649134\\server\\Program.cs(943,62): error CS0206: 참조를 반환하지 않는 속성 또는 인덱서는 out 또는 ref 값으로 사용할 수 없음 [C:\\Users\\1\\AppData\\Local\\Temp\\loop-dispatch-task-20260709132649134\\server\\LocalFirstWorkflowDashboard.Server.csproj]\r\n",
+  "behaviorExitCode": 1,
+  "behaviorSummary": "C:\\Users\\1\\AppData\\Local\\Temp\\loop-dispatch-task-20260709132649134\\server\\Program.cs(913,62): error CS0206: 참조를 반환하지 않는 속성 또는 인덱서는 out 또는 ref 값으로 사용할 수 없음 [C:\\Users\\1\\AppData\\Local\\Temp\\loop-dispatch-task-20260709132649134\\server\\LocalFirstWorkflowDashboard.Server.csproj]\r\nC:\\Users\\1\\AppData\\Local\\Temp\\loop-dispatch-task-20260709132649134\\server\\Program.cs(943,62): error CS0206: 참조를 반환하지 않는 속성 또는 인덱서는 out 또는 ref 값으로 사용할 수 없음 [C:\\Users\\1\\AppData\\Local\\Temp\\loop-dispatch-task-20260709132649134\\server\\LocalFirstWorkflowDashboard.Server.csproj]\r\n",
+  "strictGate": true,
+  "completedAt": "2026-07-09T22:26:54.9604889+09:00"
+}

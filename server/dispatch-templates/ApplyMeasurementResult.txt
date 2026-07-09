@@ -1,0 +1,265 @@
+static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyOptions ntfy, JsonObject previousMeasurement, string projectPath, long durationMs)
+{
+    var context = BuildMeasurementContext(bundle, providerId, previousMeasurement, durationMs);
+    context.State = ApplyMeasurementStagePatch(bundle.Definition, context.State, context.Checks, context.Violations, context.Stages);
+    SetMeasurementDetails(context.State, context.Stages.DeviationStageId, context.Checks, context.Violations);
+    context.RunLog = ResumeSatisfiedTracks(context.State, context.RunLog, context.Checks);
+
+    if (context.Violations.Count > 0)
+    {
+        ApplyViolationFlow(bundle, providerId, ntfy, projectPath, context);
+    }
+    else if (bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted")
+    {
+        bundle.Proposal["lifecycle"] = "superseded";
+    }
+
+    bundle.State = context.State;
+    bundle.RunLog = context.RunLog;
+    return context.Violations.Count;
+}
+
+// 측정 결과 적용에 필요한 컨텍스트를 만든다.
+static MeasurementApplyContext BuildMeasurementContext(ProjectBundle bundle, string providerId, JsonObject previousMeasurement, long durationMs)
+{
+    var checks = EvaluateBlueprintChecks(bundle.Blueprint, bundle.Measurement);
+    var violations = checks.Where(check => check.Implemented && !check.Passed).ToList();
+    var previousChecks = EvaluateBlueprintChecks(bundle.Blueprint, previousMeasurement);
+    var state = bundle.State;
+    var runLog = Engine.AppendLog(bundle.RunLog, new JsonObject
+    {
+        ["event"] = "measure.completed",
+        ["params"] = new JsonObject { ["providerId"] = providerId, ["violationCount"] = violations.Count, ["durationMs"] = durationMs },
+        ["level"] = violations.Count > 0 ? "warning" : "info",
+        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+        ["cost"] = RuntimeCost(),
+    }, Engine.GetLoopIteration(state));
+
+    return new MeasurementApplyContext
+    {
+        Checks = checks,
+        Violations = violations,
+        PreviousChecks = previousChecks,
+        Regressions = DetectRegressions(previousChecks, checks),
+        Stages = ResolveMeasurementStages(bundle.Definition),
+        State = state,
+        RunLog = runLog,
+    };
+}
+
+// 위반 종류에 따라 후속 흐름을 실행한다.
+static void ApplyViolationFlow(ProjectBundle bundle, string providerId, NtfyOptions ntfy, string projectPath, MeasurementApplyContext context)
+{
+    context.RunLog = Engine.AppendLog(context.RunLog, new JsonObject
+    {
+        ["event"] = "stage.warning",
+        ["params"] = new JsonObject
+        {
+            ["stage"] = context.Stages.DeviationStageId ?? "",
+            ["text"] = "블루프린트 대비 괴리가 감지됐다.",
+            ["reasonCode"] = "checklist.blueprint_deviation",
+        },
+        ["level"] = "warning",
+        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+        ["cost"] = RuntimeCost(),
+    }, Engine.GetLoopIteration(context.State));
+
+    if (context.Regressions.Count > 0)
+    {
+        ApplyRegressionFlow(bundle, ntfy, context);
+    }
+    else if (providerId == "ruined-lab-sim")
+    {
+        ApplyTuningFlow(bundle, ntfy, projectPath, context);
+    }
+    else
+    {
+        ApplyChecklistFlow(bundle, ntfy, context);
+    }
+}
+
+// 회귀 감지 흐름을 적용한다.
+static void ApplyRegressionFlow(ProjectBundle bundle, NtfyOptions ntfy, MeasurementApplyContext context)
+{
+    var relatedProposalId = FindRecentApprovedProposalId(bundle.Reviews, BuildPreviousMeasurement(context));
+    foreach (var regression in context.Regressions)
+    {
+        context.RunLog = Engine.AppendLog(context.RunLog, new JsonObject
+        {
+            ["event"] = "measurement.regressed",
+            ["params"] = new JsonObject
+            {
+                ["metricId"] = regression.MetricId,
+                ["before"] = regression.PreviousValue is null ? null : Engine.CloneNode(regression.PreviousValue),
+                ["after"] = regression.CurrentValue is null ? null : Engine.CloneNode(regression.CurrentValue),
+                ["reasonCode"] = "checklist.metric_regressed",
+            },
+            ["level"] = "warning",
+            ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+            ["cost"] = RuntimeCost(),
+        }, Engine.GetLoopIteration(context.State));
+        AddSuspendedTrack(context.State, regression, relatedProposalId);
+    }
+
+    bundle.Proposal = CreateRollbackProposal(context.Regressions, relatedProposalId);
+    context.RunLog = Engine.AppendLog(context.RunLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(context.State));
+    context.RunLog = Engine.AppendLog(context.RunLog, new JsonObject
+    {
+        ["event"] = "review.routed",
+        ["params"] = new JsonObject { ["proposalId"] = bundle.Proposal["id"]?.GetValue<string>() ?? "", ["reasonCode"] = "regression_direct_to_human", ["text"] = "회귀 롤백은 사람 결재로 라우팅됐다." },
+        ["level"] = "warning",
+        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+        ["cost"] = RuntimeCost(),
+    }, Engine.GetLoopIteration(context.State));
+    SetRegressionReviewDetails(context.State, context.Stages.ReviewStageId, context.Regressions);
+    Notifier.NotifyMeasurementRegressed(ntfy, ProjectDisplayName(context.State), context.Regressions.Select(r => r.MetricId).ToList());
+}
+
+// 이전 측정 형태를 회귀 조회용으로 재구성한다.
+static JsonObject BuildPreviousMeasurement(MeasurementApplyContext context)
+{
+    return new JsonObject
+    {
+        ["metrics"] = new JsonArray(context.PreviousChecks.Select(check => (JsonNode)new JsonObject
+        {
+            ["metricId"] = check.MetricId,
+            ["value"] = check.Value is null ? null : Engine.CloneNode(check.Value),
+        }).ToArray()),
+    };
+}
+
+// 튜닝 위반 흐름을 적용한다.
+static void ApplyTuningFlow(ProjectBundle bundle, NtfyOptions ntfy, string projectPath, MeasurementApplyContext context)
+{
+    var gameDataPath = Path.Combine(projectPath, "game-data.json");
+    var gameData = JsonNode.Parse(File.ReadAllText(gameDataPath))!.AsObject();
+    var seed = Number(bundle.Definition["measurementProvider"]?.AsObject()["seed"], 42);
+    var tuning = BalanceTuner.Search(gameData, bundle.Blueprint, bundle.Definition, seed);
+
+    if (!tuning.ReachedBand && tuning.ChangedLevers.Count == 0)
+    {
+        ApplyTuningNoSolution(bundle, context, tuning);
+        return;
+    }
+
+    ApplyTuningProposalFlow(bundle, ntfy, context, tuning);
+}
+
+// 튜닝 해 없음 흐름을 적용한다.
+static void ApplyTuningNoSolution(ProjectBundle bundle, MeasurementApplyContext context, TuningResult tuning)
+{
+    if (bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted")
+    {
+        var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
+        bundle.Proposal["lifecycle"] = "superseded";
+        context.RunLog = Engine.AppendLog(context.RunLog, ProposalSupersededLog(supersededId, "tuning.no_solution"), Engine.GetLoopIteration(context.State));
+    }
+
+    context.RunLog = Engine.AppendLog(context.RunLog, TuningNoSolutionLog(tuning), Engine.GetLoopIteration(context.State));
+    context.State = ApplyNoSolutionState(bundle.Definition, context.State, context.Stages);
+    SetNoSolutionDetails(context.State, context.Stages.DeviationStageId, tuning);
+}
+
+// 튜닝 제안 생성과 1층 검토를 적용한다.
+static void ApplyTuningProposalFlow(ProjectBundle bundle, NtfyOptions ntfy, MeasurementApplyContext context, TuningResult tuning)
+{
+    var replacedProposalId = bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted" ? bundle.Proposal["id"]?.GetValue<string>() : null;
+    var generation = GenerateTuningProposalWithFallback(bundle.Definition, bundle.Proposal, tuning, previousReviewReport: null);
+    bundle.Proposal = generation.Proposal;
+    context.RunLog = Engine.AppendLog(context.RunLog, generation.LogEntry, Engine.GetLoopIteration(context.State));
+    AppendReplacementLog(replacedProposalId, "tuning.replaced", context);
+    context.RunLog = Engine.AppendLog(context.RunLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(context.State));
+    var tier1 = ReviewAndRecord(bundle, context);
+    var maxRegenerations = Number(bundle.Definition["executorPolicy"]?.AsObject()["maxRegenerations"], 0);
+
+    for (var regeneration = 0; regeneration < maxRegenerations && tier1.Verdict == "needs_changes"; regeneration += 1)
+    {
+        var nextRunLog = context.RunLog;
+        if (TryEscalateInsufficientRefeedback(ref tier1, ref nextRunLog, context.State))
+        {
+            context.RunLog = nextRunLog;
+            break;
+        }
+        context.RunLog = nextRunLog;
+
+        var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
+        context.RunLog = Engine.AppendLog(context.RunLog, ProposalSupersededLog(supersededId, "review.needs_changes_regenerate"), Engine.GetLoopIteration(context.State));
+        generation = GenerateTuningProposalWithFallback(bundle.Definition, bundle.Proposal, tuning, previousReviewReport: tier1.Report);
+        bundle.Proposal = generation.Proposal;
+        context.RunLog = Engine.AppendLog(context.RunLog, generation.LogEntry, Engine.GetLoopIteration(context.State));
+        context.RunLog = Engine.AppendLog(context.RunLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(context.State));
+        tier1 = ReviewAndRecord(bundle, context);
+    }
+
+    SetTier1Details(context.State, context.Stages.ReviewStageId, tier1);
+    Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(context.State), ProposalTitle(bundle.Proposal), tier1.Verdict);
+}
+
+// 체크리스트 위반 제안 생성과 1층 검토를 적용한다.
+static void ApplyChecklistFlow(ProjectBundle bundle, NtfyOptions ntfy, MeasurementApplyContext context)
+{
+    var generation = GenerateProposalWithFallback(bundle.Definition, bundle.Proposal, context.Violations, previousReviewReport: null);
+    bundle.Proposal = generation.Proposal;
+    context.RunLog = Engine.AppendLog(context.RunLog, generation.LogEntry, Engine.GetLoopIteration(context.State));
+    context.RunLog = Engine.AppendLog(context.RunLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(context.State));
+    var tier1 = ReviewAndRecord(bundle, context);
+    var maxRegenerations = Number(bundle.Definition["executorPolicy"]?.AsObject()["maxRegenerations"], 0);
+
+    for (var regeneration = 0; regeneration < maxRegenerations && tier1.Verdict == "needs_changes"; regeneration += 1)
+    {
+        var nextRunLog = context.RunLog;
+        if (TryEscalateInsufficientRefeedback(ref tier1, ref nextRunLog, context.State))
+        {
+            context.RunLog = nextRunLog;
+            break;
+        }
+        context.RunLog = nextRunLog;
+
+        var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
+        context.RunLog = Engine.AppendLog(context.RunLog, ProposalSupersededLog(supersededId, "review.needs_changes_regenerate"), Engine.GetLoopIteration(context.State));
+        generation = GenerateProposalWithFallback(bundle.Definition, bundle.Proposal, context.Violations, previousReviewReport: tier1.Report);
+        bundle.Proposal = generation.Proposal;
+        context.RunLog = Engine.AppendLog(context.RunLog, generation.LogEntry, Engine.GetLoopIteration(context.State));
+        context.RunLog = Engine.AppendLog(context.RunLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(context.State));
+        tier1 = ReviewAndRecord(bundle, context);
+    }
+
+    SetTier1Details(context.State, context.Stages.ReviewStageId, tier1);
+    Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(context.State), ProposalTitle(bundle.Proposal), tier1.Verdict);
+}
+
+// 1층 검토를 실행하고 로그와 리포트를 기록한다.
+static Tier1ReviewResult ReviewAndRecord(ProjectBundle bundle, MeasurementApplyContext context)
+{
+    var tier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
+    context.RunLog = Engine.AppendLog(context.RunLog, tier1.LogEntry, Engine.GetLoopIteration(context.State));
+
+    if (tier1.Report is not null)
+    {
+        AppendReport(bundle.Reviews, tier1.Report);
+    }
+
+    return tier1;
+}
+
+// 기존 제안 대체 로그를 필요할 때 추가한다.
+static void AppendReplacementLog(string? replacedProposalId, string reasonCode, MeasurementApplyContext context)
+{
+    if (!string.IsNullOrWhiteSpace(replacedProposalId))
+    {
+        context.RunLog = Engine.AppendLog(context.RunLog, ProposalSupersededLog(replacedProposalId, reasonCode), Engine.GetLoopIteration(context.State));
+    }
+}
+
+// 제안 대체 로그 엔트리를 만든다.
+static JsonObject ProposalSupersededLog(string proposalId, string reasonCode)
+{
+    return new JsonObject
+    {
+        ["event"] = "proposal.superseded",
+        ["params"] = new JsonObject { ["proposalId"] = proposalId, ["reasonCode"] = reasonCode },
+        ["level"] = "info",
+        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+        ["cost"] = RuntimeCost(),
+    };
+}

@@ -163,6 +163,30 @@ app.MapPost("/api/projects/{projectId}/actions/dispatch", async (string projectI
     return await DispatchResultAsync(() => outboxManager.DispatchAsync(projectId, body, remoteActionToken ?? "", request.Headers["X-Action-Token"].ToString()), jsonOptions);
 });
 
+app.MapPost("/api/projects/{projectId}/actions/self-refactor-dispatch", async (string projectId, HttpRequest request) =>
+{
+    var body = await ReadBodyObject(request);
+    return await DispatchResultAsync(async () =>
+    {
+        var token = request.Headers["X-Action-Token"].ToString();
+        var instruction = body["instruction"]?.GetValue<string>() ?? DefaultSelfRefactorInstruction();
+        var first = await outboxManager.DispatchAsync(projectId, new JsonObject { ["executor"] = "ollama", ["instruction"] = instruction }, remoteActionToken ?? "", token);
+
+        if (first["status"]?.GetValue<string>() == "import_pending")
+        {
+            return new JsonObject { ["schemaVersion"] = 2, ["attempts"] = new JsonArray(first) };
+        }
+
+        lock (storage.GetProjectLock(projectId))
+        {
+            RecordDispatchEscalation(storage, projectId, first["taskId"]?.GetValue<string>() ?? "", jsonOptions);
+        }
+
+        var second = await outboxManager.DispatchAsync(projectId, new JsonObject { ["executor"] = "claude-code", ["instruction"] = instruction }, remoteActionToken ?? "", token);
+        return new JsonObject { ["schemaVersion"] = 2, ["attempts"] = new JsonArray(first, second) };
+    }, jsonOptions);
+});
+
 app.MapPost("/api/projects/{projectId}/outbox/{taskId}/approve-import", (string projectId, string taskId, HttpRequest request) =>
 {
     return DispatchResult(() => outboxManager.ApproveImport(taskId, remoteActionToken ?? "", request.Headers["X-Action-Token"].ToString()), jsonOptions);
@@ -2352,6 +2376,35 @@ static IResult JsonResult(JsonNode node, JsonSerializerOptions jsonOptions, int 
 static IResult ProblemResult(int statusCode, string reasonCode, string reason)
 {
     return Results.Json(new JsonObject { ["reasonCode"] = reasonCode, ["reason"] = reason }, statusCode: statusCode);
+}
+
+// 자기 리팩터링 dispatch의 기본 지시문을 반환한다.
+static string DefaultSelfRefactorInstruction()
+{
+    return "Program.cs를 Orchestrator.cs/ProposalFlow.cs로 분리, 이동만·로직 무변경, app.js 동일 원칙으로 분리. Completion check: dotnet run --project server -- verify-behavior 통과, dotnet run --project server -- measure dev-pack 무위반, 구조 지표 밴드 진입.";
+}
+
+// dispatch 승격 이벤트를 프로젝트 run-log에 기록한다.
+static void RecordDispatchEscalation(Storage storage, string projectId, string fromTaskId, JsonSerializerOptions jsonOptions)
+{
+    var bundle = storage.ReadBundle(projectId);
+    storage.CreateRestorePoint(projectId);
+    bundle.RunLog = Engine.AppendLog(bundle.RunLog, new JsonObject
+    {
+        ["event"] = "executor.escalated",
+        ["params"] = new JsonObject
+        {
+            ["from"] = "ollama",
+            ["to"] = "claude-code",
+            ["taskId"] = fromTaskId,
+            ["reasonCode"] = "dispatch.strict_gate_failed",
+        },
+        ["level"] = "warning",
+        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+        ["cost"] = RuntimeCost(),
+    }, Engine.GetLoopIteration(bundle.State));
+    storage.WriteProjectFile(projectId, Storage.RunLogFile, bundle.RunLog);
+    storage.SaveLoopSnapshot(projectId, bundle);
 }
 
 // dispatch 작업 결과를 HTTP 응답으로 변환한다.

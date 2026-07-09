@@ -1,0 +1,25 @@
+﻿{
+  "schemaVersion": 2,
+  "taskId": "task-20260709133754416",
+  "projectId": "dev-pack",
+  "executor": "ollama",
+  "instruction": "Program.cs to Orchestrator.cs and ProposalFlow.cs. Completion check: verify-behavior passes, measure dev-pack has zero violations, structure metrics enter band.",
+  "status": "failed",
+  "createdAt": "2026-07-09T22:38:14.7115324+09:00",
+  "durationMs": 20291,
+  "cost": {
+    "estimatedUSD": 0,
+    "subscriptionCalls": 0,
+    "role": "runtime"
+  },
+  "executorExitCode": 1,
+  "timedOut": false,
+  "changedFiles": [],
+  "deletedFiles": [],
+  "measureExitCode": 1,
+  "measureSummary": "{\"projectId\":\"dev-pack\",\"violationCount\":1,\"proposalId\":\"proposal-1783604284323\",\"proposalLifecycle\":\"submitted\",\"createdBy\":{\"provider\":\"ollama\",\"model\":\"qwen3:8b\"},\"currentStage\":\"changeReview\",\"overallStatus\":\"warning\"}\r\n",
+  "behaviorExitCode": 0,
+  "behaviorSummary": "{\"behaviorEqual\":true,\"snapshot\":\"docs/behavior-snapshot.json\"}\r\n",
+  "strictGate": true,
+  "completedAt": "2026-07-09T22:38:14.7120523+09:00"
+}

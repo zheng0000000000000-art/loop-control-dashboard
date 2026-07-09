@@ -7,6 +7,13 @@ using System.Globalization;
 
 public static class BehaviorSnapshotCli
 {
+    private static readonly HashSet<string> StructuralMetricIds = new(StringComparer.Ordinal)
+    {
+        "programCsLines",
+        "appJsLines",
+        "maxFunctionLength",
+    };
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -51,8 +58,8 @@ public static class BehaviorSnapshotCli
                 return 2;
             }
 
-            var expected = JsonNode.Parse(File.ReadAllText(snapshotPath));
-            var current = BuildSnapshot(root);
+            var expected = NormalizeBehaviorSnapshot(JsonNode.Parse(File.ReadAllText(snapshotPath))!.AsObject());
+            var current = NormalizeBehaviorSnapshot(BuildSnapshot(root));
             var equal = JsonNode.DeepEquals(expected, current);
             Console.WriteLine(new JsonObject
             {
@@ -78,6 +85,24 @@ public static class BehaviorSnapshotCli
             ["measurements"] = BuildMeasurementSnapshots(root),
             ["scenarioReplay"] = BuildScenarioReplaySnapshot(root, "ruined-lab"),
         };
+    }
+
+    // 구조 진단 지표를 제외한 동작 스냅샷을 만든다.
+    private static JsonObject NormalizeBehaviorSnapshot(JsonObject snapshot)
+    {
+        var next = Engine.CloneObject(snapshot);
+        foreach (var project in next["measurements"]?.AsArray().OfType<JsonObject>() ?? [])
+        {
+            var metrics = project["metrics"]?.AsArray() ?? new JsonArray();
+            var filtered = metrics
+                .OfType<JsonObject>()
+                .Where(metric => !StructuralMetricIds.Contains(metric["metricId"]?.GetValue<string>() ?? ""))
+                .Select(metric => Engine.CloneNode(metric))
+                .ToArray();
+            project["metrics"] = new JsonArray(filtered);
+        }
+
+        return next;
     }
 
     // ruined-lab 튜닝 탐색 결과를 스냅샷으로 만든다.

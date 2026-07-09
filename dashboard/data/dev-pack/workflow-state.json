@@ -96,7 +96,7 @@
         },
         {
           "label": "programCsLines",
-          "value": "2478 / 0~2661"
+          "value": "2531 / 0~2661"
         },
         {
           "label": "appJsLines",
@@ -108,7 +108,7 @@
         }
       ],
       "issues": [
-        "maxFunctionLength: 측정값 235이 기준 0~80을 벗어났다. 근거: server/Program.cs:713-947"
+        "maxFunctionLength: 측정값 235이 기준 0~80을 벗어났다. 근거: server/Program.cs:737-971"
       ]
     },
     "changeReview": {
@@ -127,7 +127,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-09T22:18:11.1341028+09:00",
+  "lastUpdated": "2026-07-09T22:38:47.0814632+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
