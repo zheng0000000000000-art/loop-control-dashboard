@@ -3,10 +3,10 @@
   "projectName": "폐허 연구소 — 게임 밸런싱 쇼케이스",
   "currentStage": "patchApproval",
   "overallStatus": "warning",
-  "loopState": "paused",
+  "loopState": "running",
   "mode": "normal",
   "suspendedTracks": [],
-  "loopIteration": 5,
+  "loopIteration": 6,
   "stages": {
     "design": "approved",
     "gameData": "completed",
@@ -68,7 +68,7 @@
       "metrics": [
         {
           "label": "completionRate",
-          "value": "99.6 / 45~60"
+          "value": "71.2 / 45~60"
         },
         {
           "label": "room1DeathRate",
@@ -80,22 +80,25 @@
         },
         {
           "label": "avgRewardPerRun",
-          "value": "9.472 / 8~20"
+          "value": "9.024 / 8~20"
         }
       ],
       "issues": [
-        "completionRate: 측정값 99.6이 기준 45~60을 벗어났다. 근거: 시뮬레이션 전체 실행"
+        "completionRate: 측정값 71.2이 기준 45~60을 벗어났다. 근거: 시뮬레이션 전체 실행"
       ]
     },
     "patchApproval": {
-      "summary": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "summary": "1층 체크리스트 결과를 사람이 확인해야 한다.",
       "metrics": [
         {
           "label": "1층 검토 판정",
-          "value": "approved"
+          "value": "uncertain"
         }
       ],
-      "issues": []
+      "issues": [
+        "note-direction-match: note는 적의 체력을 증가시켰지만, 이는 플레이어가 방에서 성공적으로 통과할 가능성이 높아졌다고 주장하지만, 측정 요약에 따르면 room1DeathRate는 0으로, 플레이어가 첫 번째 방에서 죽는 경우가 전혀 없어, note의 변경 방향과 실제 수치 변경 방향이 일치하지 않습니다.",
+        "predicted-band-or-residual-declared: 미달 사유나 지표 밴드와의 관계에 대한 명시가 없음"
+      ]
     },
     "unityExport": {
       "summary": "변경 승인이 완료될 때까지 내보내기가 차단된다.",
@@ -110,11 +113,5 @@
       ]
     }
   },
-  "lastUpdated": "2026-07-10T00:08:32.7282437+09:00",
-  "pausedAt": "2026-07-10T00:08:32.7282281+09:00",
-  "pausedBy": {
-    "type": "checkpoint",
-    "checkpointId": "loop-milestone"
-  },
-  "checkpointId": "loop-milestone"
+  "lastUpdated": "2026-07-10T00:08:46.0967516+09:00"
 }

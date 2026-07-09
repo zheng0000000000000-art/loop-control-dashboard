@@ -40,7 +40,7 @@
       "enemies": {
         "hp": 34,
         "attack": 8,
-        "count": 2
+        "count": 3
       },
       "rewards": {
         "commonDropRate": 0.28,

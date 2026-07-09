@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783609702054",
-  "title": "밴드 도달 실패 및 잔여 위반 발생",
+  "id": "proposal-1783609731344",
+  "title": "레버 변경 성공",
   "lifecycle": "submitted",
   "kind": "tuning",
   "createdBy": {
@@ -9,21 +9,21 @@
     "model": "qwen3:8b"
   },
   "revisionOf": null,
-  "summary": "레버 변경 후 밴드 도달 실패로 잔여 위반 발생, completionRate 71.2로 밴드 45~60 밖에 있음 (최선 후보, 밴드 미달. 잔여 위반: completionRate=71.2 (밴드 45~60 밖). 레버 범위 확장은 definition 변경 사항으로 별도 사람 결재가 필요하다.)",
+  "summary": "레버 변경으로 인해 rooms[0].enemies.hp가 20에서 25로 증가했으며, 밴드 도달은 성공했고 잔여 위반은 없었습니다.",
   "assumptions": [],
   "changes": [
     {
-      "path": "rooms[2].enemies.count",
-      "before": 2,
-      "after": 3,
-      "note": "레버를 2에서 3으로 변경하여 해당 룸의 적 수를 증가시킴으로써 플레이어의 생존율을 낮추고, 완료율을 감소시킬 것으로 예상됩니다. 최선 후보, 밴드 미달."
+      "path": "rooms[0].enemies.hp",
+      "before": 20,
+      "after": 25,
+      "note": "레버를 20에서 25로 증가시킴으로써, 플레이어가 첫 번째 방에서 적과의 싸움을 성공적으로 통과할 가능성이 높아졌으며, 이는 완료율의 감소와 평균 보상 증가로 예측됩니다."
     }
   ],
   "predictedMetrics": [
     {
       "metricId": "completionRate",
-      "before": 99.6,
-      "after": 71.2,
+      "before": 71.2,
+      "after": 57.199999999999996,
       "band": "45~60"
     },
     {
@@ -40,12 +40,12 @@
     },
     {
       "metricId": "avgRewardPerRun",
-      "before": 9.472,
-      "after": 9.024,
+      "before": 9.024,
+      "after": 9.568,
       "band": "8~20"
     }
   ],
-  "predictedReachedBand": false,
+  "predictedReachedBand": true,
   "impact": [
     {
       "label": "레버 변경",

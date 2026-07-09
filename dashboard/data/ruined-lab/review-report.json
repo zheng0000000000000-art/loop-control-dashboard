@@ -1307,6 +1307,125 @@
       ],
       "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
       "createdAt": "2026-07-10T00:08:32.6630986+09:00"
+    },
+    {
+      "id": "review-1783609726044",
+      "proposalId": "proposal-1783609702054",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "human",
+        "provider": "human",
+        "model": null
+      },
+      "riskAssessed": "high",
+      "findings": [],
+      "reason": "사람 검토로 승인됐다.",
+      "createdAt": "2026-07-10T00:08:46.0445664+09:00"
+    },
+    {
+      "id": "review-1783609741999",
+      "proposalId": "proposal-1783609731344",
+      "verdict": "uncertain",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "medium",
+      "findings": [
+        {
+          "target": "rooms[0].enemies.hp",
+          "checkId": "note-direction-match",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "note는 적의 체력을 증가시켰지만, 이는 플레이어가 방에서 성공적으로 통과할 가능성이 높아졌다고 주장하지만, 측정 요약에 따르면 room1DeathRate는 0으로, 플레이어가 첫 번째 방에서 죽는 경우가 전혀 없어, note의 변경 방향과 실제 수치 변경 방향이 일치하지 않습니다.",
+          "comment": "note는 적의 체력을 증가시켰지만, 이는 플레이어가 방에서 성공적으로 통과할 가능성이 높아졌다고 주장하지만, 측정 요약에 따르면 room1DeathRate는 0으로, 플레이어가 첫 번째 방에서 죽는 경우가 전혀 없어, note의 변경 방향과 실제 수치 변경 방향이 일치하지 않습니다.",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "rooms[0].enemies.hp",
+          "checkId": "risk-note-present",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "변경 항목에 플레이어 완료율 감소와 평균 보상 증가에 대한 영향이 명시되어 있음",
+          "comment": "변경 항목에 플레이어 완료율 감소와 평균 보상 증가에 대한 영향이 명시되어 있음",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "rooms[0].enemies.hp",
+          "checkId": "no-unrelated-change",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "제안은 rooms[0].enemies.hp 값을 변경하는 것으로, 경고 해소와 직접적으로 관련된 변경이다.",
+          "comment": "제안은 rooms[0].enemies.hp 값을 변경하는 것으로, 경고 해소와 직접적으로 관련된 변경이다.",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "rooms[0].enemies.hp",
+          "checkId": "predicted-band-or-residual-declared",
+          "answer": false,
+          "expected": true,
+          "confidence": "low",
+          "note": "미달 사유나 지표 밴드와의 관계에 대한 명시가 없음",
+          "comment": "미달 사유나 지표 밴드와의 관계에 대한 명시가 없음",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": true,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "rooms[0].enemies.hp",
+          "checkId": "lever-range-within-definition",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "변경된 레버 값(25)은 definition의 tunableLevers min/max 범위 내에 포함됨",
+          "comment": "변경된 레버 값(25)은 definition의 tunableLevers min/max 범위 내에 포함됨",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "rooms[0].enemies.hp",
+          "checkId": "note-purpose-effect",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "note에서 변경 목적과 예상 효과가 명확히 서술되어 있음",
+          "comment": "note에서 변경 목적과 예상 효과가 명확히 서술되어 있음",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트에서 불확실하거나 상위 검토가 필요한 항목이 발견됐다.",
+      "createdAt": "2026-07-10T00:09:01.9996319+09:00"
     }
   ]
 }
