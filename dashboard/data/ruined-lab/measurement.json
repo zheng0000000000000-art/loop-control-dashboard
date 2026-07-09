@@ -2,12 +2,12 @@
   "schemaVersion": 2,
   "providerId": "ruined-lab-sim",
   "providerVersion": "2",
-  "measuredAt": "2026-07-10T00:08:46.0964202+09:00",
+  "measuredAt": "2026-07-10T00:09:06.8591385+09:00",
   "seed": 42,
   "metrics": [
     {
       "metricId": "completionRate",
-      "value": 71.2,
+      "value": 57.199999999999996,
       "evidence": [
         "시뮬레이션 전체 실행"
       ]
@@ -28,9 +28,9 @@
     },
     {
       "metricId": "avgRewardPerRun",
-      "value": 9.024,
+      "value": 9.568,
       "evidence": [
-        "stddev=7.72"
+        "stddev=7.83"
       ]
     }
   ]

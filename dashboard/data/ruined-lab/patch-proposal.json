@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "proposal-1783609731344",
   "title": "레버 변경 성공",
-  "lifecycle": "submitted",
+  "lifecycle": "decided",
   "kind": "tuning",
   "createdBy": {
     "provider": "ollama",

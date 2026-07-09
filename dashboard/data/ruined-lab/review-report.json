@@ -1426,6 +1426,20 @@
       ],
       "reason": "1층 체크리스트에서 불확실하거나 상위 검토가 필요한 항목이 발견됐다.",
       "createdAt": "2026-07-10T00:09:01.9996319+09:00"
+    },
+    {
+      "id": "review-1783609746804",
+      "proposalId": "proposal-1783609731344",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "human",
+        "provider": "human",
+        "model": null
+      },
+      "riskAssessed": "medium",
+      "findings": [],
+      "reason": "사람 검토로 승인됐다.",
+      "createdAt": "2026-07-10T00:09:06.8048054+09:00"
     }
   ]
 }

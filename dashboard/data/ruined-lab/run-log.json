@@ -1749,6 +1749,93 @@
         "subscriptionCalls": 0,
         "role": "runtime"
       }
+    },
+    {
+      "createdAt": "2026-07-10T00:09:06.8050101+09:00",
+      "event": "review.approved",
+      "params": {
+        "proposalId": "proposal-1783609731344",
+        "edited": false
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "human",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 7,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-10T00:09:06.8594040+09:00",
+      "event": "measure.completed",
+      "params": {
+        "providerId": "ruined-lab-sim",
+        "violationCount": 0,
+        "durationMs": 0
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 7,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-10T00:09:06.9113918+09:00",
+      "event": "tuning.applied",
+      "params": {
+        "comparisons": [
+          {
+            "metricId": "completionRate",
+            "predicted": 57.199999999999996,
+            "actual": 57.199999999999996
+          },
+          {
+            "metricId": "room1DeathRate",
+            "predicted": 0,
+            "actual": 0
+          },
+          {
+            "metricId": "room3DeathRate",
+            "predicted": 0,
+            "actual": 0
+          },
+          {
+            "metricId": "avgRewardPerRun",
+            "predicted": 9.568,
+            "actual": 9.568
+          }
+        ]
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 7,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
     }
   ]
 }

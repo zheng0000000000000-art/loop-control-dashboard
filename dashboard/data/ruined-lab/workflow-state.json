@@ -1,25 +1,21 @@
 {
   "schemaVersion": 2,
   "projectName": "폐허 연구소 — 게임 밸런싱 쇼케이스",
-  "currentStage": "patchApproval",
-  "overallStatus": "warning",
-  "loopState": "running",
+  "currentStage": "balanceValidation",
+  "overallStatus": "completed",
+  "loopState": "aligned",
   "mode": "normal",
   "suspendedTracks": [],
-  "loopIteration": 6,
+  "loopIteration": 7,
   "stages": {
     "design": "approved",
     "gameData": "completed",
     "schemaValidation": "passed",
-    "balanceValidation": "warning",
-    "patchApproval": "pending_review",
-    "unityExport": "blocked"
+    "balanceValidation": "passed",
+    "patchApproval": "approved",
+    "unityExport": "completed"
   },
-  "blockInfo": {
-    "unityExport": {
-      "kind": "waiting"
-    }
-  },
+  "blockInfo": {},
   "stageDetails": {
     "design": {
       "summary": "짧은 플레이 세션, 모듈형 방 구성, 로컬 검토 지점을 기준으로 설계 방향을 확정했다.",
@@ -64,11 +60,11 @@
       "issues": []
     },
     "balanceValidation": {
-      "summary": "측정 결과에서 1개 괴리가 감지됐다.",
+      "summary": "측정 결과가 블루프린트 기준을 만족한다.",
       "metrics": [
         {
           "label": "completionRate",
-          "value": "71.2 / 45~60"
+          "value": "57.199999999999996 / 45~60"
         },
         {
           "label": "room1DeathRate",
@@ -80,12 +76,10 @@
         },
         {
           "label": "avgRewardPerRun",
-          "value": "9.024 / 8~20"
+          "value": "9.568 / 8~20"
         }
       ],
-      "issues": [
-        "completionRate: 측정값 71.2이 기준 45~60을 벗어났다. 근거: 시뮬레이션 전체 실행"
-      ]
+      "issues": []
     },
     "patchApproval": {
       "summary": "1층 체크리스트 결과를 사람이 확인해야 한다.",
@@ -113,5 +107,5 @@
       ]
     }
   },
-  "lastUpdated": "2026-07-10T00:08:46.0967516+09:00"
+  "lastUpdated": "2026-07-10T00:09:06.8594620+09:00"
 }

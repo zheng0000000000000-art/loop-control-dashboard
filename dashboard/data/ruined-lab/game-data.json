@@ -8,7 +8,7 @@
     {
       "id": "room-1",
       "enemies": {
-        "hp": 20,
+        "hp": 25,
         "attack": 4,
         "count": 2
       },
