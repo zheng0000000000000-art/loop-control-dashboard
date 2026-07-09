@@ -44,6 +44,10 @@ var ntfyOptions = new NtfyOptions(
     builder.Configuration.GetValue<double?>("Ntfy:ReminderAfterHours") ?? 24);
 var workspaceRoot = Directory.GetParent(builder.Environment.ContentRootPath)?.FullName
     ?? throw new InvalidOperationException("Workspace root was not found.");
+var gitDataCommitOptions = new GitDataCommitOptions(
+    workspaceRoot,
+    builder.Configuration.GetValue<bool?>("Git:AutoCommitData") ?? true,
+    builder.Configuration.GetValue<bool>("Git:AutoPush"));
 var dashboardRoot = Path.Combine(workspaceRoot, "dashboard");
 var dataRoot = Path.Combine(dashboardRoot, "data");
 var storage = new Storage(dataRoot);
@@ -102,7 +106,7 @@ app.MapPost("/api/projects/{projectId}/actions/approve", async (string projectId
     var body = await ReadBodyObject(request);
     lock (storage.GetProjectLock(projectId))
     {
-        return Approve(storage, projectId, body, jsonOptions, ntfyOptions);
+        return Approve(storage, projectId, body, jsonOptions, ntfyOptions, gitDataCommitOptions);
     }
 });
 
@@ -111,7 +115,7 @@ app.MapPost("/api/projects/{projectId}/actions/reject", async (string projectId,
     var body = await ReadBodyObject(request);
     lock (storage.GetProjectLock(projectId))
     {
-        return Reject(storage, projectId, body, jsonOptions, ntfyOptions);
+        return Reject(storage, projectId, body, jsonOptions, ntfyOptions, gitDataCommitOptions);
     }
 });
 
@@ -120,7 +124,7 @@ app.MapPost("/api/projects/{projectId}/actions/edit-change", async (string proje
     var body = await ReadBodyObject(request);
     lock (storage.GetProjectLock(projectId))
     {
-        return EditChange(storage, projectId, body, jsonOptions, ntfyOptions);
+        return EditChange(storage, projectId, body, jsonOptions, ntfyOptions, gitDataCommitOptions);
     }
 });
 
@@ -129,7 +133,7 @@ app.MapPost("/api/projects/{projectId}/actions/acknowledge", async (string proje
     var body = await ReadBodyObject(request);
     lock (storage.GetProjectLock(projectId))
     {
-        return Acknowledge(storage, projectId, body, jsonOptions);
+        return Acknowledge(storage, projectId, body, jsonOptions, gitDataCommitOptions);
     }
 });
 
@@ -1606,7 +1610,7 @@ static string EvidenceSummary(List<string> evidence, int take)
 }
 
 // 승인 액션을 처리하고 결과 파일을 기록한다.
-static IResult Approve(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions, NtfyOptions ntfy)
+static IResult Approve(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions, NtfyOptions ntfy, GitDataCommitOptions gitDataCommitOptions)
 {
     var bundle = storage.ReadBundle(projectId);
     var reviewStage = Engine.GetHumanReviewStage(bundle.Definition, bundle.State);
@@ -1659,6 +1663,7 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
     bundle.Proposal["lifecycle"] = "decided";
     AppendReport(bundle.Reviews, report);
     var result = Persist(storage, projectId, bundle, jsonOptions, ntfy);
+    var committedBundle = bundle;
 
     if (isTuningApproval && tuningChanges is not null && tuningChanges.Count > 0)
     {
@@ -1670,9 +1675,11 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
             var finalBundle = remeasure.Bundle;
             finalBundle.RunLog = Engine.AppendLog(finalBundle.RunLog, BuildTuningAppliedLog(predictedMetrics, finalBundle.Measurement), Engine.GetLoopIteration(finalBundle.State));
             result = Persist(storage, projectId, finalBundle, jsonOptions, ntfy);
+            committedBundle = finalBundle;
         }
     }
 
+    GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(committedBundle.State), "approve", proposalId);
     return result;
 }
 
@@ -1738,7 +1745,7 @@ static JsonObject BuildTuningAppliedLog(JsonArray? predictedMetrics, JsonObject 
 }
 
 // 거절 액션을 처리하고 결과 파일을 기록한다.
-static IResult Reject(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions, NtfyOptions ntfy)
+static IResult Reject(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions, NtfyOptions ntfy, GitDataCommitOptions gitDataCommitOptions)
 {
     var bundle = storage.ReadBundle(projectId);
     var reviewStage = Engine.GetHumanReviewStage(bundle.Definition, bundle.State);
@@ -1771,7 +1778,9 @@ static IResult Reject(Storage storage, string projectId, JsonObject body, JsonSe
     bundle.RunLog = runLog;
     bundle.Proposal["lifecycle"] = "decided";
     AppendReport(bundle.Reviews, report);
-    return Persist(storage, projectId, bundle, jsonOptions, ntfy);
+    var result = Persist(storage, projectId, bundle, jsonOptions, ntfy);
+    GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(bundle.State), "reject", proposalId);
+    return result;
 }
 
 // 거절된 제안이 다루던 metric의 suspendedTracks 항목을 정리한다("유지하고 관찰" 선택).
@@ -1824,7 +1833,7 @@ static JsonObject ClearRejectedSuspendedTracks(JsonObject state, JsonObject prop
 }
 
 // 변경 항목 편집 액션을 처리하고 결과 파일을 기록한다.
-static IResult EditChange(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions, NtfyOptions ntfy)
+static IResult EditChange(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions, NtfyOptions ntfy, GitDataCommitOptions gitDataCommitOptions)
 {
     if (body.ContainsKey("path") || body.ContainsKey("before"))
     {
@@ -1874,11 +1883,14 @@ static IResult EditChange(Storage storage, string projectId, JsonObject body, Js
         ["producedBy"] = new JsonObject { ["provider"] = "human", ["model"] = null },
         ["cost"] = RuntimeCost(),
     }, Engine.GetLoopIteration(bundle.State));
-    return Persist(storage, projectId, bundle, jsonOptions, ntfy);
+    var result = Persist(storage, projectId, bundle, jsonOptions, ntfy);
+    var proposalId = bundle.Proposal["id"]?.GetValue<string>();
+    GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(bundle.State), "edit-change", proposalId);
+    return result;
 }
 
 // 확인 액션을 처리하고 결과 파일을 기록한다.
-static IResult Acknowledge(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions)
+static IResult Acknowledge(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions, GitDataCommitOptions gitDataCommitOptions)
 {
     var type = body["type"]?.GetValue<string>();
     var id = body["id"]?.GetValue<string>();
@@ -1901,7 +1913,10 @@ static IResult Acknowledge(Storage storage, string projectId, JsonObject body, J
             ["producedBy"] = new JsonObject { ["provider"] = "human", ["model"] = null },
             ["cost"] = RuntimeCost(),
         }, Engine.GetLoopIteration(bundle.State));
-        return PersistWithoutGuardrail(storage, projectId, bundle, jsonOptions);
+        var result = PersistWithoutGuardrail(storage, projectId, bundle, jsonOptions);
+        var proposalId = bundle.Proposal["id"]?.GetValue<string>();
+        GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(bundle.State), "acknowledge-checkpoint", proposalId);
+        return result;
     }
     else if (type == "guardrail")
     {
@@ -1916,7 +1931,10 @@ static IResult Acknowledge(Storage storage, string projectId, JsonObject body, J
             ["producedBy"] = new JsonObject { ["provider"] = "human", ["model"] = null },
             ["cost"] = RuntimeCost(),
         }, Engine.GetLoopIteration(bundle.State));
-        return PersistWithoutGuardrail(storage, projectId, bundle, jsonOptions);
+        var result = PersistWithoutGuardrail(storage, projectId, bundle, jsonOptions);
+        var proposalId = bundle.Proposal["id"]?.GetValue<string>();
+        GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(bundle.State), "acknowledge-guardrail", proposalId);
+        return result;
     }
     else
     {
