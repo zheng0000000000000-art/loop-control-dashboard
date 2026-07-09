@@ -810,11 +810,37 @@ function renderReviewHistory(proposalId) {
         header,
         createElement("p", { className: "review-reason", text: report.reason ?? t("approval.none") }),
       );
+
+      const findings = renderReportFindings(report.findings);
+      if (findings) {
+        item.append(findings);
+      }
+
       return item;
     }),
   );
   section.append(list);
   return section;
+}
+
+// 검토 리포트의 finding 목록을 렌더링한다.
+function renderReportFindings(findings) {
+  if (!Array.isArray(findings) || findings.length === 0) {
+    return null;
+  }
+
+  const list = createElement("ul", { className: "review-findings" });
+  list.append(
+    ...findings.map((finding) => {
+      const checkId = finding.checkId ?? finding.target ?? "";
+      const answer = typeof finding.answer === "boolean" ? String(finding.answer) : t("approval.unknown");
+      const note = finding.note ?? finding.comment ?? "";
+      return createElement("li", {
+        text: `${checkId}: ${answer} · ${note}`,
+      });
+    }),
+  );
+  return list;
 }
 
 // 실행 로그 타임라인을 렌더링한다.

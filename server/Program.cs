@@ -178,6 +178,16 @@ static void ApplyMeasurementResult(ProjectBundle bundle, string providerId)
             ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
             ["cost"] = RuntimeCost(),
         }, Engine.GetLoopIteration(state));
+
+        var tier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
+        runLog = Engine.AppendLog(runLog, tier1.LogEntry, Engine.GetLoopIteration(state));
+
+        if (tier1.Report is not null)
+        {
+            AppendReport(bundle.Reviews, tier1.Report);
+        }
+
+        SetTier1Details(state, stages.ReviewStageId, tier1);
     }
     else if (bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted")
     {
@@ -282,6 +292,44 @@ static void SetMeasurementDetails(JsonObject state, string? stageId, List<Metric
         ["summary"] = violations.Count == 0
             ? "측정 결과가 블루프린트 기준을 만족한다."
             : $"측정 결과에서 {violations.Count}개 괴리가 감지됐다.",
+        ["metrics"] = metrics,
+        ["issues"] = issues,
+    };
+}
+
+// 1층 검토 결과를 검토 단계 상세에 반영한다.
+static void SetTier1Details(JsonObject state, string? stageId, Tier1ReviewResult tier1)
+{
+    if (stageId is null)
+    {
+        return;
+    }
+
+    var issues = new JsonArray();
+    var metrics = new JsonArray
+    {
+        new JsonObject { ["label"] = "1층 검토 판정", ["value"] = tier1.Verdict },
+    };
+
+    if (tier1.ReasonCode is not null)
+    {
+        issues.Add($"1층 검토 강등: {tier1.ReasonCode}");
+    }
+
+    if (tier1.Report?["findings"] is JsonArray findings)
+    {
+        foreach (var finding in findings.OfType<JsonObject>().Where(finding => finding["passed"]?.GetValue<bool>() == false || finding["uncertain"]?.GetValue<bool>() == true))
+        {
+            issues.Add($"{finding["checkId"]?.GetValue<string>()}: {finding["note"]?.GetValue<string>() ?? finding["comment"]?.GetValue<string>() ?? ""}");
+        }
+    }
+
+    state["stageDetails"] ??= new JsonObject();
+    state["stageDetails"]!.AsObject()[stageId] = new JsonObject
+    {
+        ["summary"] = tier1.Verdict == "approved"
+            ? "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다."
+            : "1층 체크리스트 결과를 사람이 확인해야 한다.",
         ["metrics"] = metrics,
         ["issues"] = issues,
     };

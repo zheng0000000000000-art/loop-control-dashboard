@@ -10,6 +10,28 @@ dotnet run --project server
 
 기본 주소는 `http://localhost:5173`이다. 기존 정적 서버가 같은 포트를 쓰고 있으면 먼저 종료한다.
 
+## Ollama Setup
+
+1층 로컬 AI 검토를 쓰려면 Ollama를 준비한다.
+
+```powershell
+./scripts/setup-ollama.ps1
+```
+
+스크립트는 `ollama --version`을 확인하고, 없으면 `winget install Ollama.Ollama`로 설치한다. 이후 `http://localhost:11434/api/tags` 응답을 확인하고, definition의 `reviewerPolicy.tier1`에서 쓰는 모델을 받을 수 있게 기본 모델 `qwen2.5:14b-instruct`, `llama3.1:8b`를 준비한다.
+
+수동 대안:
+
+```powershell
+winget install --id Ollama.Ollama --exact
+ollama serve
+ollama pull qwen2.5:14b-instruct
+ollama pull llama3.1:8b
+ollama list
+```
+
+모델명, endpoint, timeout, retry 횟수는 코드가 아니라 각 프로젝트의 `workflow-definition.json`에 둔다.
+
 ## Structure
 
 ```text
@@ -56,6 +78,8 @@ dashboard
 - `GET reviews`
 - `GET definition`
 - `GET blueprint`
+- `GET measurement`
+- `POST actions/measure`
 - `POST actions/approve`
 - `POST actions/reject`
 - `POST actions/edit-change`

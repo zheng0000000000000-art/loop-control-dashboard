@@ -95,6 +95,7 @@
     "review.approved": "Review approved: {proposalId} {text}{editedSuffix}",
     "review.rejected": "Review rejected: {proposalId} {text}",
     "review.needs_changes": "Review needs changes: {proposalId} {text}",
+    "review.tier1_completed": "Tier 1 review completed: {proposalId}, {verdict}, model {model}, {durationMs}ms {reasonCode} {text}",
     "guardrail.halted": "Guardrail halted: {text}",
     "checkpoint.paused": "Checkpoint paused: {checkpointId}, loop {loopIteration}",
     "checkpoint.acknowledged": "Checkpoint acknowledged: {checkpointId}",

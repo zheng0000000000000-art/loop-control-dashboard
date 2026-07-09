@@ -50,6 +50,34 @@
       { "default": "high" }
     ]
   },
+  "reviewerPolicy": {
+    "tier1": {
+      "provider": "ollama",
+      "model": "qwen2.5:14b-instruct",
+      "fallbackModel": "llama3.1:8b",
+      "endpoint": "http://localhost:11434",
+      "timeoutSeconds": 60,
+      "maxRetries": 2
+    }
+  },
+  "reviewChecklist": [
+    {
+      "id": "note-direction-match",
+      "ask": "각 변경 항목의 note가 실제 수치 변경 방향과 일치하는가",
+      "onFail": "needs_changes"
+    },
+    {
+      "id": "risk-note-present",
+      "ask": "변경 항목에 검토자가 이해할 수 있는 위험 또는 영향 설명이 포함되어 있는가",
+      "onFail": "needs_changes"
+    },
+    {
+      "id": "no-unrelated-change",
+      "ask": "제안 안에 현재 경고 해소와 무관한 변경이 섞여 있는가",
+      "expect": false,
+      "onFail": "escalate"
+    }
+  ],
   "executorPolicy": {
     "ladder": ["rule-engine", "ollama", "claude-code"],
     "escalation": {

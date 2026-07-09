@@ -777,6 +777,17 @@ textarea {
   line-height: 1.45;
 }
 
+.review-findings {
+  display: grid;
+  gap: 6px;
+  padding: 8px 0 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+  list-style: none;
+}
+
 .verdict {
   display: inline-flex;
   align-items: center;
@@ -800,6 +811,11 @@ textarea {
 .verdict-needs_changes {
   color: var(--yellow);
   background: var(--yellow-bg);
+}
+
+.verdict-uncertain {
+  color: var(--blue);
+  background: var(--blue-bg);
 }
 
 .run-log {

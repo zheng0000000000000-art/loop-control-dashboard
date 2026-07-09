@@ -48,6 +48,34 @@
       { "default": "high" }
     ]
   },
+  "reviewerPolicy": {
+    "tier1": {
+      "provider": "ollama",
+      "model": "qwen2.5:14b-instruct",
+      "fallbackModel": "llama3.1:8b",
+      "endpoint": "http://localhost:11434",
+      "timeoutSeconds": 60,
+      "maxRetries": 2
+    }
+  },
+  "reviewChecklist": [
+    {
+      "id": "note-nonempty",
+      "ask": "각 변경 항목의 note가 비어 있지 않고 의미 있는 설명인가",
+      "onFail": "needs_changes"
+    },
+    {
+      "id": "after-matches-goal",
+      "ask": "각 변경의 after 값이 note가 말하는 방향과 일치하는가",
+      "onFail": "needs_changes"
+    },
+    {
+      "id": "no-scope-creep",
+      "ask": "changes에 blueprint 위반 해소와 무관한 항목이 섞여 있는가",
+      "expect": false,
+      "onFail": "escalate"
+    }
+  ],
   "executorPolicy": {
     "ladder": ["rule-engine"],
     "escalation": {
