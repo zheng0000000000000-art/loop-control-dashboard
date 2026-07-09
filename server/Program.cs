@@ -20,6 +20,11 @@ if (string.Equals(cliCommand, "verify-behavior", StringComparison.OrdinalIgnoreC
     return BehaviorSnapshotCli.Verify();
 }
 
+if (args.Length > 0 && string.Equals(args[0], "dispatch-executor", StringComparison.OrdinalIgnoreCase))
+{
+    return DispatchExecutorCli.Run(args);
+}
+
 if (args.Length > 0 && string.Equals(args[0], "measure", StringComparison.OrdinalIgnoreCase))
 {
     return RunMeasureCli(args);
@@ -63,6 +68,7 @@ var gitDataCommitOptions = new GitDataCommitOptions(
 var dashboardRoot = Path.Combine(workspaceRoot, "dashboard");
 var dataRoot = Path.Combine(dashboardRoot, "data");
 var storage = new Storage(dataRoot);
+var outboxManager = new OutboxManager(workspaceRoot);
 var jsonOptions = new JsonSerializerOptions
 {
     WriteIndented = true,
@@ -104,7 +110,8 @@ app.MapGet("/api/projects/{projectId}/definition", (string projectId) => ReadFil
 app.MapGet("/api/projects/{projectId}/blueprint", (string projectId) => ReadFile(storage, projectId, Storage.BlueprintFile, jsonOptions));
 app.MapGet("/api/projects/{projectId}/measurement", (string projectId) => ReadFile(storage, projectId, Storage.MeasurementFile, jsonOptions));
 app.MapGet("/api/projects/{projectId}/cycle-summary", (string projectId) => CycleSummary(storage, projectId, jsonOptions));
-app.MapGet("/api/inbox", () => Inbox(storage, jsonOptions, ntfyOptions));
+app.MapGet("/api/inbox", () => Inbox(storage, jsonOptions, ntfyOptions, outboxManager));
+app.MapGet("/api/outbox/{taskId}", (string taskId) => DispatchResult(() => outboxManager.ReadTask(taskId), jsonOptions));
 
 app.MapPost("/api/projects/{projectId}/actions/measure", (string projectId) =>
 {
@@ -150,6 +157,23 @@ app.MapPost("/api/projects/{projectId}/actions/acknowledge", async (string proje
     }
 });
 
+app.MapPost("/api/projects/{projectId}/actions/dispatch", async (string projectId, HttpRequest request) =>
+{
+    var body = await ReadBodyObject(request);
+    return await DispatchResultAsync(() => outboxManager.DispatchAsync(projectId, body, remoteActionToken ?? "", request.Headers["X-Action-Token"].ToString()), jsonOptions);
+});
+
+app.MapPost("/api/projects/{projectId}/outbox/{taskId}/approve-import", (string projectId, string taskId, HttpRequest request) =>
+{
+    return DispatchResult(() => outboxManager.ApproveImport(taskId, remoteActionToken ?? "", request.Headers["X-Action-Token"].ToString()), jsonOptions);
+});
+
+app.MapPost("/api/projects/{projectId}/outbox/{taskId}/reject-import", async (string projectId, string taskId, HttpRequest request) =>
+{
+    var body = await ReadBodyObject(request);
+    return DispatchResult(() => outboxManager.RejectImport(taskId, body, remoteActionToken ?? "", request.Headers["X-Action-Token"].ToString()), jsonOptions);
+});
+
 app.UseDefaultFiles(new DefaultFilesOptions
 {
     FileProvider = new PhysicalFileProvider(dashboardRoot),
@@ -180,12 +204,14 @@ static IResult ReadFile(Storage storage, string projectId, string fileName, Json
 }
 
 // 모든 프로젝트의 사람 행동 대기 항목을 반환한다.
-static IResult Inbox(Storage storage, JsonSerializerOptions jsonOptions, NtfyOptions ntfy)
+static IResult Inbox(Storage storage, JsonSerializerOptions jsonOptions, NtfyOptions ntfy, OutboxManager outboxManager)
 {
+    var items = BuildInboxItems(storage, ntfy);
+    outboxManager.AddInboxItems(items);
     return JsonResult(new JsonObject
     {
         ["schemaVersion"] = 2,
-        ["items"] = BuildInboxItems(storage, ntfy),
+        ["items"] = items,
     }, jsonOptions);
 }
 
@@ -2326,6 +2352,40 @@ static IResult JsonResult(JsonNode node, JsonSerializerOptions jsonOptions, int 
 static IResult ProblemResult(int statusCode, string reasonCode, string reason)
 {
     return Results.Json(new JsonObject { ["reasonCode"] = reasonCode, ["reason"] = reason }, statusCode: statusCode);
+}
+
+// dispatch 작업 결과를 HTTP 응답으로 변환한다.
+static IResult DispatchResult(Func<JsonObject> action, JsonSerializerOptions jsonOptions)
+{
+    try
+    {
+        return JsonResult(action(), jsonOptions);
+    }
+    catch (DispatchHttpException error)
+    {
+        return ProblemResult(error.StatusCode, error.ReasonCode, error.Message);
+    }
+    catch (Exception error)
+    {
+        return ProblemResult(500, "dispatch.failed", error.Message);
+    }
+}
+
+// 비동기 dispatch 작업 결과를 HTTP 응답으로 변환한다.
+static async Task<IResult> DispatchResultAsync(Func<Task<JsonObject>> action, JsonSerializerOptions jsonOptions)
+{
+    try
+    {
+        return JsonResult(await action(), jsonOptions);
+    }
+    catch (DispatchHttpException error)
+    {
+        return ProblemResult(error.StatusCode, error.ReasonCode, error.Message);
+    }
+    catch (Exception error)
+    {
+        return ProblemResult(500, "dispatch.failed", error.Message);
+    }
 }
 
 // state 객체에서 프로젝트 표시 이름을 읽는다.

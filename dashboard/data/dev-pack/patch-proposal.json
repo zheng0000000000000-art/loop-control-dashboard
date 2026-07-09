@@ -1,14 +1,14 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783602370924",
-  "title": "함수 길이 단축",
+  "id": "proposal-1783603096320",
+  "title": "함수 길이 제한 강화",
   "lifecycle": "submitted",
   "createdBy": {
     "provider": "ollama",
     "model": "qwen3:8b"
   },
-  "revisionOf": "proposal-1783602289342",
-  "summary": "함수 길이를 단축하여 가독성과 유지보수성을 개선합니다.",
+  "revisionOf": "proposal-1783602370924",
+  "summary": "함수 길이가 목표치를 초과하고 있어 코드 가독성과 유지보수성을 개선하기 위해 제한을 강화합니다.",
   "assumptions": [],
   "changes": [
     {
@@ -18,7 +18,7 @@
         0,
         80
       ],
-      "note": "함수 길이를 단축하여 가독성과 유지보수성을 개선하고, 목표 범위 내로 조정하는 것이 목적입니다."
+      "note": "현재 함수 길이가 목표치를 크게 초과하고 있어, 코드 가독성과 유지보수성을 개선하기 위해 제한을 강화하는 변경을 제안합니다."
     }
   ],
   "impact": [
