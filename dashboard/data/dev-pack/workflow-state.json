@@ -59,7 +59,7 @@
         },
         {
           "label": "directiveAcceptanceCriteria",
-          "value": "7 / 3~99"
+          "value": "6 / 3~99"
         },
         {
           "label": "koPoliteEndings",
@@ -129,7 +129,8 @@
         }
       ],
       "issues": [
-        "no-scope-creep: changes에 blueprint 위반 해소와 무관한 항목이 섞여 있는가"
+        "after-matches-goal: after 값은 [0,2661]이지만 note에 따르면 2661 줄로 줄였다고 명시되어 있으나, 측정 요약의 programCsLines는 2684로 기록되어 있음",
+        "no-scope-creep: changes에 blueprint 위반 해소와 무관한 항목인 'Program.cs 파일의 코드 줄 수 줄이기'가 포함되어 있음"
       ]
     },
     "apply": {
@@ -138,7 +139,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-10T04:42:28.8003486+09:00",
+  "lastUpdated": "2026-07-10T05:12:08.3779066+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",

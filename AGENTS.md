@@ -21,6 +21,8 @@
   직접 수정 + 커밋은 예외이며 다음 경우에만 쓴다: ①관례·가이드 문서 자체(CLAUDE.md, AGENTS.md,
   AGENT-GUIDE.md, skills/, docs/) ②지시서에 "직접 경로"가 명시된 경우. 예외를 썼으면 작업 보고에
   사유를 남긴다.
+- 지시서(#12부터)는 불변 제약을 인라인으로 싣지 않고 "이 지시서는 docs/directives/_header.md의
+  불변 제약을 따른다" 1줄로 참조한다 — 전문은 docs/directives/_header.md에 있다(#11까지는 인라인).
 
 ## 스킬 라우팅
 - /skills/common/ 은 모든 작업에서 읽는다.
