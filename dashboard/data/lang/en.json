@@ -45,7 +45,8 @@
     "save": "Save",
     "cancel": "Cancel",
     "acknowledge": "Acknowledge",
-    "measure": "Run Measurement"
+    "measure": "Run Measurement",
+    "processing": "Processing"
   },
   "panels": {
     "pipelineEyebrow": "Workflow Map",
@@ -175,7 +176,8 @@
     "tuningBadge": "Tuning",
     "predictedMetrics": "Predicted metrics",
     "predictedLabel": "Predicted",
-    "predictedBand": "band"
+    "predictedBand": "band",
+    "alreadyDecided": "This item has already been decided. Refreshing the screen."
   },
   "risk": {
     "assessedRisk": "Assessed risk",

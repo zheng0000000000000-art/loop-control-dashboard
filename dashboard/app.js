@@ -94,6 +94,7 @@ let editingChangeIndex = null;
 let scenarioTimer = null;
 let scenarioRunning = false;
 let measureRunning = false;
+let reviewActionRunning = false;
 let serverBacked = false;
 let pollTimer = null;
 let actionToken = null;
@@ -775,8 +776,12 @@ function renderApprovalPanel() {
     attributes: { type: "button" },
   });
 
-  approveButton.disabled = !context.canReview;
-  rejectButton.disabled = !context.canReview;
+  approveButton.disabled = !context.canReview || reviewActionRunning;
+  rejectButton.disabled = !context.canReview || reviewActionRunning;
+  if (reviewActionRunning) {
+    approveButton.textContent = t("buttons.processing");
+    rejectButton.textContent = t("buttons.processing");
+  }
   approveButton.addEventListener("click", approveProposal);
   rejectButton.addEventListener("click", rejectProposal);
 
@@ -1042,14 +1047,21 @@ async function runMeasurement() {
 async function approveProposal() {
   const context = getReviewContext();
 
-  if (!context.canReview) {
+  if (!context.canReview || reviewActionRunning) {
     return;
   }
 
   if (serverBacked) {
-    await postProjectAction("approve", {
-      editedChanges: getEditFindings(proposal),
-    });
+    reviewActionRunning = true;
+    render();
+    try {
+      await postProjectAction("approve", {
+        editedChanges: getEditFindings(proposal),
+      });
+    } finally {
+      reviewActionRunning = false;
+      render();
+    }
     return;
   }
 
@@ -1107,7 +1119,7 @@ async function approveProposal() {
 async function rejectProposal() {
   const context = getReviewContext();
 
-  if (!context.canReview) {
+  if (!context.canReview || reviewActionRunning) {
     return;
   }
 
@@ -1120,9 +1132,16 @@ async function rejectProposal() {
   const trimmedReason = reason.trim();
 
   if (serverBacked) {
-    await postProjectAction("reject", {
-      reason: trimmedReason,
-    });
+    reviewActionRunning = true;
+    render();
+    try {
+      await postProjectAction("reject", {
+        reason: trimmedReason,
+      });
+    } finally {
+      reviewActionRunning = false;
+      render();
+    }
     return;
   }
 
@@ -1673,6 +1692,12 @@ async function postProjectAction(action, body) {
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
+    if (payload?.reasonCode === "review.already_decided") {
+      window.alert(t("approval.alreadyDecided"));
+      await refreshRuntimeData();
+      return false;
+    }
+
     showActionError(payload ?? { reason: response.statusText, reasonCode: response.status });
     return false;
   }

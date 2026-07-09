@@ -45,7 +45,8 @@
     "save": "저장",
     "cancel": "취소",
     "acknowledge": "확인",
-    "measure": "측정 실행"
+    "measure": "측정 실행",
+    "processing": "?? ?"
   },
   "panels": {
     "pipelineEyebrow": "워크플로우 맵",
@@ -175,7 +176,8 @@
     "tuningBadge": "튜닝",
     "predictedMetrics": "예측 지표",
     "predictedLabel": "예측",
-    "predictedBand": "밴드"
+    "predictedBand": "밴드",
+    "alreadyDecided": "?? ??? ???. ??? ?? ????."
   },
   "risk": {
     "assessedRisk": "산정 위험도",

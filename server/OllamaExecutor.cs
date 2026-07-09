@@ -16,6 +16,21 @@ public static class OllamaExecutor
         WriteIndented = false,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
+    private static readonly string[] ProhibitedNoteTerms =
+    [
+        "\uC218\uC815 \uD544\uC694",
+        "\uC218\uC815\uC774 \uD544\uC694",
+        "\uAC70\uC808",
+        "\uC2B9\uC778",
+        "needs_changes",
+        "rejected",
+        "approved",
+        "\uCE21\uC815 \uACB0\uACFC",
+        "\uCE21\uC815\uACB0\uACFC",
+    ];
+    private const string NoteHygieneInstruction =
+        "Review findings are instructions to apply, not text to quote. Do not put verdict words such as needs_changes, rejected, approved, or their Korean equivalents in note. " +
+        "Describe only the purpose and expected effect of the change. Refer to predicted values as predictions, never as measured results.\n";
 
     // definition 정책과 위반 목록으로 note·title·summary를 생성한다.
     public static ExecutorGenerateResult Generate(JsonObject definition, List<MetricCheck> violations, JsonObject? previousReviewReport)
@@ -144,6 +159,7 @@ public static class OllamaExecutor
             $"레버 경로: {change.Path}\n" +
             $"변경: {change.Before.ToString("0.###", CultureInfo.InvariantCulture)} → {change.After.ToString("0.###", CultureInfo.InvariantCulture)}\n" +
             $"예측 지표 변화: {predictedText}\n" +
+            NoteHygieneInstruction +
             feedbackLine +
             $"답 형식: {{\"metricId\":\"{change.Path}\",\"note\":\"한두 문장 설명\"}}";
     }
@@ -271,6 +287,7 @@ public static class OllamaExecutor
             $"측정값: {ValueText(violation.Value)}\n" +
             $"목표: {violation.Expected}\n" +
             $"근거: {evidence}\n" +
+            NoteHygieneInstruction +
             feedbackLine +
             $"답 형식: {{\"metricId\":\"{violation.MetricId}\",\"note\":\"한두 문장 설명\"}}";
     }
@@ -281,7 +298,16 @@ public static class OllamaExecutor
         var json = ExtractJsonObject(StripThinkBlock(raw));
         var metricId = json?["metricId"]?.GetValue<string>();
         var note = json?["note"]?.GetValue<string>()?.Trim();
-        return metricId == expectedMetricId && !string.IsNullOrWhiteSpace(note) && !HasReplacementChar(note) ? note : null;
+        return metricId == expectedMetricId &&
+            !string.IsNullOrWhiteSpace(note) &&
+            !HasReplacementChar(note) &&
+            !HasProhibitedNoteTerm(note) ? note : null;
+    }
+
+    // note에 판정어와 예측/사실 혼동어가 섞였는지 확인한다.
+    public static bool HasProhibitedNoteTerm(string note)
+    {
+        return ProhibitedNoteTerms.Any(term => note.Contains(term, StringComparison.OrdinalIgnoreCase));
     }
 
     // 인코딩이 깨진 응답(유니코드 대체 문자 포함)인지 확인한다.

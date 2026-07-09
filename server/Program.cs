@@ -1932,17 +1932,22 @@ static IResult? ValidateReviewReady(ProjectBundle bundle, JsonObject? reviewStag
         return ProblemResult(409, "review.no_gate", "No human review stage is configured");
     }
 
+    if (bundle.Proposal.Count == 0 || bundle.Proposal["id"] is null)
+    {
+        return ProblemResult(409, "review.no_proposal", "No proposal is available");
+    }
+
+    if (bundle.Proposal["lifecycle"]?.GetValue<string>() == "decided")
+    {
+        return ProblemResult(409, "review.already_decided", "Proposal is already decided");
+    }
+
     var stageId = reviewStage["id"]!.GetValue<string>();
     var status = Engine.GetStageStatus(bundle.State, stageId);
 
     if (status != "pending_review")
     {
         return ProblemResult(409, "review.not_pending", "Review stage is not pending");
-    }
-
-    if (bundle.Proposal.Count == 0 || bundle.Proposal["id"] is null)
-    {
-        return ProblemResult(409, "review.no_proposal", "No proposal is available");
     }
 
     var gate = Engine.EvaluateGate(bundle.Definition, bundle.State, stageId);
