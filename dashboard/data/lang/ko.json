@@ -177,7 +177,8 @@
     "predictedMetrics": "예측 지표",
     "predictedLabel": "예측",
     "predictedBand": "밴드",
-    "alreadyDecided": "?? ??? ???. ??? ?? ????."
+    "alreadyDecided": "?? ??? ???. ??? ?? ????.",
+    "assumptions": "??? ??? ??"
   },
   "risk": {
     "assessedRisk": "산정 위험도",
@@ -215,5 +216,13 @@
   "load": {
     "failed": "로드 실패",
     "dataUnavailable": "데이터를 사용할 수 없다."
+  },
+  "cycleSummary": {
+    "title": "?? {iteration}",
+    "measurement": "??",
+    "generation": "??",
+    "review": "??",
+    "humanWaiting": "?? ??",
+    "total": "??"
   }
 }

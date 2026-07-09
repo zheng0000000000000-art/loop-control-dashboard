@@ -177,7 +177,8 @@
     "predictedMetrics": "Predicted metrics",
     "predictedLabel": "Predicted",
     "predictedBand": "band",
-    "alreadyDecided": "This item has already been decided. Refreshing the screen."
+    "alreadyDecided": "This item has already been decided. Refreshing the screen.",
+    "assumptions": "Assumptions and Uncertainties"
   },
   "risk": {
     "assessedRisk": "Assessed risk",
@@ -215,5 +216,13 @@
   "load": {
     "failed": "Load failed",
     "dataUnavailable": "Data unavailable"
+  },
+  "cycleSummary": {
+    "title": "Loop {iteration}",
+    "measurement": "Measure",
+    "generation": "Generate",
+    "review": "Review",
+    "humanWaiting": "Human wait",
+    "total": "Total"
   }
 }

@@ -27,8 +27,21 @@
       "description": "제안된 변경을 적용 전에 검토하고 결정한다.",
       "requiresHuman": true,
       "gate": [
-        { "check": "stageStatus", "stage": "schemaValidation", "mustBe": ["passed"] },
-        { "check": "stageStatus", "stage": "balanceValidation", "mustBe": ["passed", "warning"] }
+        {
+          "check": "stageStatus",
+          "stage": "schemaValidation",
+          "mustBe": [
+            "passed"
+          ]
+        },
+        {
+          "check": "stageStatus",
+          "stage": "balanceValidation",
+          "mustBe": [
+            "passed",
+            "warning"
+          ]
+        }
       ]
     },
     {
@@ -43,23 +56,59 @@
     "dryRunSamples": 500
   },
   "tunableLevers": [
-    { "path": "rooms[*].rewards.commonDropRate", "min": 0.1, "max": 0.6, "step": 0.05 },
-    { "path": "rooms[*].rewards.healAmount", "min": 4, "max": 20, "step": 2 },
-    { "path": "rooms[*].enemies.attack", "min": 2, "max": 15, "step": 1 },
-    { "path": "player.maxHp", "min": 80, "max": 150, "step": 10 }
+    {
+      "path": "rooms[*].rewards.commonDropRate",
+      "min": 0.1,
+      "max": 0.6,
+      "step": 0.05
+    },
+    {
+      "path": "rooms[*].rewards.healAmount",
+      "min": 4,
+      "max": 20,
+      "step": 2
+    },
+    {
+      "path": "rooms[*].enemies.attack",
+      "min": 2,
+      "max": 15,
+      "step": 1
+    },
+    {
+      "path": "player.maxHp",
+      "min": 80,
+      "max": 150,
+      "step": 10
+    }
   ],
-  "tuning": { "maxCandidates": 40, "dryRunSamples": 500, "maxLeversPerProposal": 3 },
+  "tuning": {
+    "maxCandidates": 40,
+    "dryRunSamples": 500,
+    "maxLeversPerProposal": 3
+  },
   "guardrails": {
     "maxLoopIterations": 10,
-    "maxEstimatedCost": 5.0,
+    "maxEstimatedCost": 5,
     "maxSubscriptionCalls": 5
   },
   "reviewPolicy": {
-    "autoApprove": { "enabled": false, "maxRisk": "low", "maxAutoApprovalsPerLoop": 3 },
+    "autoApprove": {
+      "enabled": false,
+      "maxRisk": "low",
+      "maxAutoApprovalsPerLoop": 3
+    },
     "riskRules": [
-      { "if": "changeCount <= 3 && maxValueDeltaPercent <= 10", "then": "low" },
-      { "if": "changeCount <= 6 && maxValueDeltaPercent <= 25", "then": "medium" },
-      { "default": "high" }
+      {
+        "if": "changeCount <= 3 && maxValueDeltaPercent <= 10",
+        "then": "low"
+      },
+      {
+        "if": "changeCount <= 6 && maxValueDeltaPercent <= 25",
+        "then": "medium"
+      },
+      {
+        "default": "high"
+      }
     ]
   },
   "reviewerPolicy": {
@@ -88,10 +137,29 @@
       "ask": "제안 안에 현재 경고 해소와 무관한 변경이 섞여 있는가",
       "expect": false,
       "onFail": "escalate"
+    },
+    {
+      "id": "predicted-band-or-residual-declared",
+      "ask": "predictedMetrics? ? ?? ?? ?? ???, ?? ??? ?????",
+      "onFail": "needs_changes"
+    },
+    {
+      "id": "lever-range-within-definition",
+      "ask": "?? ?? ?? definition? tunableLevers min/max ?? ???",
+      "onFail": "needs_changes"
+    },
+    {
+      "id": "note-purpose-effect",
+      "ask": "note? ?? ??? ?? ??? ?????",
+      "onFail": "needs_changes"
     }
   ],
   "executorPolicy": {
-    "ladder": ["rule-engine", "ollama", "claude-code"],
+    "ladder": [
+      "rule-engine",
+      "ollama",
+      "claude-code"
+    ],
     "escalation": {
       "maxLocalRetries": 2,
       "requiresApprovalAbove": "ollama"
@@ -106,6 +174,11 @@
     "maxRegenerations": 1
   },
   "checkpoints": [
-    { "id": "loop-milestone", "on": "loopIteration", "every": 5, "action": "pause_notify" }
+    {
+      "id": "loop-milestone",
+      "on": "loopIteration",
+      "every": 5,
+      "action": "pause_notify"
+    }
   ]
 }

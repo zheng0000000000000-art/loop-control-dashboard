@@ -69,7 +69,7 @@ public static class OllamaExecutor
         }
 
         timer.Stop();
-        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, timer.ElapsedMilliseconds, null);
+        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, summary.Value.Assumptions, timer.ElapsedMilliseconds, null);
     }
 
     // 이미 결정된 레버 변경들을 서술하는 note·title·summary를 생성한다. 수치는 BalanceTuner가 이미 정했다 — 모델은 서술만 한다.
@@ -109,7 +109,7 @@ public static class OllamaExecutor
         }
 
         timer.Stop();
-        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, timer.ElapsedMilliseconds, null);
+        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, summary.Value.Assumptions, timer.ElapsedMilliseconds, null);
     }
 
     // 레버 변경 하나에 대한 note를 생성한다. 실패 사유를 함께 반환한다.
@@ -165,7 +165,7 @@ public static class OllamaExecutor
     }
 
     // 튜닝 제안의 제목과 요약을 생성한다. 실패 사유를 함께 반환한다.
-    private static ((string Title, string Summary)? Result, string? Error) TryGenerateTuningSummary(JsonObject policy, string model, TuningResult tuning, int maxRetries)
+    private static ((string Title, string Summary, List<string> Assumptions)? Result, string? Error) TryGenerateTuningSummary(JsonObject policy, string model, TuningResult tuning, int maxRetries)
     {
         string? lastError = null;
 
@@ -209,7 +209,8 @@ public static class OllamaExecutor
             $"레버 변경: {changesText}\n" +
             $"밴드 도달: {(tuning.ReachedBand ? "성공" : "실패")}\n" +
             $"잔여 위반: {residualText}\n" +
-            "답 형식: {\"title\":\"짧은 제목\",\"summary\":\"한 문장 요약\"}";
+            "가정이나 불확실한 지점이 있으면 assumptions 배열에 짧게 쓰고, 없으면 빈 배열로 두라.\n" +
+            "답 형식: {\"title\":\"짧은 제목\",\"summary\":\"한 문장 요약\",\"assumptions\":[]}";
     }
 
     // 이전 검토에서 통과하지 못한 finding을 metricId 기준으로 모은다.
@@ -317,7 +318,7 @@ public static class OllamaExecutor
     }
 
     // 제안 제목과 요약을 생성한다. 실패 사유(HTTP 상태·예외 요약)를 함께 반환한다.
-    private static ((string Title, string Summary)? Result, string? Error) TryGenerateSummary(JsonObject policy, string model, List<MetricCheck> violations, Dictionary<string, string> notes, int maxRetries)
+    private static ((string Title, string Summary, List<string> Assumptions)? Result, string? Error) TryGenerateSummary(JsonObject policy, string model, List<MetricCheck> violations, Dictionary<string, string> notes, int maxRetries)
     {
         string? lastError = null;
 
@@ -359,18 +360,24 @@ public static class OllamaExecutor
 
         return "너는 변경 제안 작성자다. 아래 변경 항목들을 대표하는 짧은 한국어 제목과 한 문장 요약을 작성하라.\n" +
             $"변경 항목: {items.ToJsonString(JsonOptions)}\n" +
-            "답 형식: {\"title\":\"짧은 제목\",\"summary\":\"한 문장 요약\"}";
+            "가정이나 불확실한 지점이 있으면 assumptions 배열에 짧게 쓰고, 없으면 빈 배열로 두라.\n" +
+            "답 형식: {\"title\":\"짧은 제목\",\"summary\":\"한 문장 요약\",\"assumptions\":[]}";
     }
 
     // 제목/요약 응답 JSON을 파싱한다.
-    private static (string Title, string Summary)? ParseSummaryResponse(string raw)
+    private static (string Title, string Summary, List<string> Assumptions)? ParseSummaryResponse(string raw)
     {
         var json = ExtractJsonObject(StripThinkBlock(raw));
         var title = json?["title"]?.GetValue<string>()?.Trim();
         var summary = json?["summary"]?.GetValue<string>()?.Trim();
+        var assumptions = json?["assumptions"]?.AsArray()
+            .Select(item => item?.GetValue<string>()?.Trim() ?? "")
+            .Where(item => !string.IsNullOrWhiteSpace(item) && !HasReplacementChar(item))
+            .Take(5)
+            .ToList() ?? [];
         var valid = !string.IsNullOrWhiteSpace(title) && !string.IsNullOrWhiteSpace(summary) &&
             !HasReplacementChar(title) && !HasReplacementChar(summary);
-        return valid ? (title!, summary!) : null;
+        return valid ? (title!, summary!, assumptions) : null;
     }
 
     // 원시 응답 문자열에서 JSON 객체를 추출한다.
@@ -452,7 +459,7 @@ public static class OllamaExecutor
     private static ExecutorGenerateResult Unavailable(Stopwatch timer, string error, string provider = "rule-engine", string? model = null)
     {
         timer.Stop();
-        return new ExecutorGenerateResult(true, provider, model, new Dictionary<string, string>(), "", "", timer.ElapsedMilliseconds, error);
+        return new ExecutorGenerateResult(true, provider, model, new Dictionary<string, string>(), "", "", [], timer.ElapsedMilliseconds, error);
     }
 
     // 노드에서 정수 값을 읽는다.
@@ -462,4 +469,4 @@ public static class OllamaExecutor
     }
 }
 
-public sealed record ExecutorGenerateResult(bool Unavailable, string Provider, string? Model, Dictionary<string, string> Notes, string Title, string Summary, long DurationMs, string? Error);
+public sealed record ExecutorGenerateResult(bool Unavailable, string Provider, string? Model, Dictionary<string, string> Notes, string Title, string Summary, List<string> Assumptions, long DurationMs, string? Error);

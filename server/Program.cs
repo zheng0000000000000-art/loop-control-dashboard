@@ -91,6 +91,7 @@ app.MapGet("/api/projects/{projectId}/reviews", (string projectId) => ReadFile(s
 app.MapGet("/api/projects/{projectId}/definition", (string projectId) => ReadFile(storage, projectId, Storage.DefinitionFile, jsonOptions));
 app.MapGet("/api/projects/{projectId}/blueprint", (string projectId) => ReadFile(storage, projectId, Storage.BlueprintFile, jsonOptions));
 app.MapGet("/api/projects/{projectId}/measurement", (string projectId) => ReadFile(storage, projectId, Storage.MeasurementFile, jsonOptions));
+app.MapGet("/api/projects/{projectId}/cycle-summary", (string projectId) => CycleSummary(storage, projectId, jsonOptions));
 app.MapGet("/api/inbox", () => Inbox(storage, jsonOptions, ntfyOptions));
 
 app.MapPost("/api/projects/{projectId}/actions/measure", (string projectId) =>
@@ -174,6 +175,101 @@ static IResult Inbox(Storage storage, JsonSerializerOptions jsonOptions, NtfyOpt
         ["schemaVersion"] = 2,
         ["items"] = BuildInboxItems(storage, ntfy),
     }, jsonOptions);
+}
+
+// 현재 회차의 측정, 생성, 검토, 사람 대기 시간을 집계한다.
+static IResult CycleSummary(Storage storage, string projectId, JsonSerializerOptions jsonOptions)
+{
+    try
+    {
+        var bundle = storage.ReadBundle(projectId);
+        return JsonResult(BuildCycleSummary(bundle.State, bundle.RunLog, bundle.Proposal), jsonOptions);
+    }
+    catch (FileNotFoundException)
+    {
+        return ProblemResult(404, "path.not_found", "project not found");
+    }
+    catch (Exception error)
+    {
+        return ProblemResult(500, "system.read_failed", error.Message);
+    }
+}
+
+// run-log와 현재 proposal로 회차 시간 분해 JSON을 만든다.
+static JsonObject BuildCycleSummary(JsonObject state, JsonObject runLog, JsonObject proposal)
+{
+    var loopIteration = Engine.GetLoopIteration(state);
+    var entries = (runLog["entries"]?.AsArray() ?? new JsonArray())
+        .OfType<JsonObject>()
+        .Where(entry => Number(entry["loopIteration"], loopIteration) == loopIteration)
+        .OrderBy(entry => entry["createdAt"]?.GetValue<string>() ?? "", StringComparer.Ordinal)
+        .ToList();
+    var measurementMs = SumEventDuration(entries, "measure.completed");
+    var generationMs = SumEventDuration(entries, "proposal.generated");
+    var reviewMs = SumEventDuration(entries, "review.tier1_completed");
+    var humanWaitingMs = CalculateHumanWaitingMs(entries, proposal);
+
+    return new JsonObject
+    {
+        ["schemaVersion"] = 2,
+        ["loopIteration"] = loopIteration,
+        ["segments"] = new JsonObject
+        {
+            ["measurementMs"] = measurementMs,
+            ["generationMs"] = generationMs,
+            ["reviewMs"] = reviewMs,
+            ["humanWaitingMs"] = humanWaitingMs,
+            ["totalMs"] = measurementMs + generationMs + reviewMs + humanWaitingMs,
+        },
+    };
+}
+
+// 특정 이벤트의 durationMs 값을 합산한다.
+static long SumEventDuration(List<JsonObject> entries, string eventName)
+{
+    return entries
+        .Where(entry => entry["event"]?.GetValue<string>() == eventName)
+        .Select(entry => Number(entry["params"]?.AsObject()["durationMs"], 0))
+        .Sum(value => (long)Math.Max(0, value));
+}
+
+// 제출된 proposal이 사람 결재를 기다린 시간을 계산한다.
+static long CalculateHumanWaitingMs(List<JsonObject> entries, JsonObject proposal)
+{
+    var proposalId = proposal["id"]?.GetValue<string>() ?? "";
+    var lifecycle = proposal["lifecycle"]?.GetValue<string>() ?? "";
+
+    if (string.IsNullOrWhiteSpace(proposalId))
+    {
+        return 0;
+    }
+
+    var createdAt = entries
+        .Where(entry => entry["event"]?.GetValue<string>() == "proposal.created" &&
+            entry["params"]?.AsObject()["proposalId"]?.GetValue<string>() == proposalId)
+        .Select(entry => entry["createdAt"]?.GetValue<string>())
+        .FirstOrDefault();
+
+    if (!DateTimeOffset.TryParse(createdAt, CultureInfo.InvariantCulture, DateTimeStyles.None, out var start))
+    {
+        return 0;
+    }
+
+    var decidedAt = entries
+        .Where(entry => (entry["event"]?.GetValue<string>() == "review.approved" ||
+                entry["event"]?.GetValue<string>() == "review.rejected") &&
+            entry["params"]?.AsObject()["proposalId"]?.GetValue<string>() == proposalId)
+        .Select(entry => entry["createdAt"]?.GetValue<string>())
+        .FirstOrDefault();
+
+    if (DateTimeOffset.TryParse(decidedAt, CultureInfo.InvariantCulture, DateTimeStyles.None, out var end))
+    {
+        return Math.Max(0, (long)(end - start).TotalMilliseconds);
+    }
+
+    return lifecycle == "submitted"
+        ? Math.Max(0, (long)(DateTimeOffset.Now - start).TotalMilliseconds)
+        : 0;
 }
 
 // 등록된 프로젝트를 훑어 사람 행동 대기 목록을 만든다.
@@ -319,13 +415,15 @@ static MeasureOutcome RunMeasureCore(Storage storage, string projectId, JsonSeri
 
     storage.CreateRestorePoint(projectId);
     var previousMeasurement = bundle.Measurement;
+    var measureTimer = System.Diagnostics.Stopwatch.StartNew();
     bundle.Measurement = providerId switch
     {
         "dev-pack-checks" => DevPackMeasures.Measure(ResolveMeasurementTargetRoot(storage.ProjectPath(projectId), provider!), providerId, bundle.Blueprint),
         "ruined-lab-sim" => GameSimulator.Measure(storage.ProjectPath(projectId), providerId, bundle.Blueprint, provider!),
         _ => bundle.Measurement,
     };
-    var violationCount = ApplyMeasurementResult(bundle, providerId, ntfy, previousMeasurement, storage.ProjectPath(projectId));
+    measureTimer.Stop();
+    var violationCount = ApplyMeasurementResult(bundle, providerId, ntfy, previousMeasurement, storage.ProjectPath(projectId), measureTimer.ElapsedMilliseconds);
     Persist(storage, projectId, bundle, jsonOptions, ntfy);
     return new MeasureOutcome(bundle, null, violationCount);
 }
@@ -574,7 +672,7 @@ static int RunRefeedbackTestCli()
 }
 
 // 측정 결과를 상태, 로그, 제안에 반영하고 위반 수를 반환한다.
-static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyOptions ntfy, JsonObject previousMeasurement, string projectPath)
+static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyOptions ntfy, JsonObject previousMeasurement, string projectPath, long durationMs)
 {
     var checks = EvaluateBlueprintChecks(bundle.Blueprint, bundle.Measurement);
     var violations = checks.Where(check => check.Implemented && !check.Passed).ToList();
@@ -585,7 +683,7 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
     var runLog = Engine.AppendLog(bundle.RunLog, new JsonObject
     {
         ["event"] = "measure.completed",
-        ["params"] = new JsonObject { ["providerId"] = providerId, ["violationCount"] = violations.Count },
+        ["params"] = new JsonObject { ["providerId"] = providerId, ["violationCount"] = violations.Count, ["durationMs"] = durationMs },
         ["level"] = violations.Count > 0 ? "warning" : "info",
         ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
         ["cost"] = RuntimeCost(),
@@ -1161,16 +1259,16 @@ static ProposalGeneration GenerateTuningProposalWithFallback(JsonObject definiti
 
     if (!generated.Unavailable)
     {
-        var proposal = BuildTuningProposal(tuning, generated.Provider, generated.Model, generated.Title, generated.Summary, generated.Notes, revisionOf);
+        var proposal = BuildTuningProposal(tuning, generated.Provider, generated.Model, generated.Title, generated.Summary, generated.Notes, generated.Assumptions, revisionOf);
         return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null));
     }
 
-    var fallbackProposal = BuildTuningProposal(tuning, "rule-engine", null, FallbackTuningTitle(tuning), FallbackTuningSummary(tuning), new Dictionary<string, string>(), revisionOf);
+    var fallbackProposal = BuildTuningProposal(tuning, "rule-engine", null, FallbackTuningTitle(tuning), FallbackTuningSummary(tuning), new Dictionary<string, string>(), [], revisionOf);
     return new ProposalGeneration(fallbackProposal, GeneratedLogEntry("rule-engine", null, generated.DurationMs, true, generated.Error));
 }
 
 // 튜닝 결과로 proposal JSON을 만든다. 밴드 도달 실패 시 잔여 위반과 결재 안내를 서버가 직접 덧붙인다(모델 준수 여부에 기대지 않는다).
-static JsonObject BuildTuningProposal(TuningResult tuning, string provider, string? model, string title, string summary, Dictionary<string, string> notes, string? revisionOf)
+static JsonObject BuildTuningProposal(TuningResult tuning, string provider, string? model, string title, string summary, Dictionary<string, string> notes, List<string> assumptions, string? revisionOf)
 {
     var changes = new JsonArray();
     foreach (var change in tuning.ChangedLevers)
@@ -1210,6 +1308,7 @@ static JsonObject BuildTuningProposal(TuningResult tuning, string provider, stri
         ["createdBy"] = new JsonObject { ["provider"] = provider, ["model"] = model },
         ["revisionOf"] = revisionOf,
         ["summary"] = finalSummary,
+        ["assumptions"] = StringArray(assumptions),
         ["changes"] = changes,
         ["predictedMetrics"] = predictedMetrics,
         ["predictedReachedBand"] = tuning.ReachedBand,
@@ -1274,6 +1373,7 @@ static ProposalGeneration GenerateProposalWithFallback(JsonObject definition, Js
             ["createdBy"] = new JsonObject { ["provider"] = generated.Provider, ["model"] = generated.Model },
             ["revisionOf"] = revisionOf,
             ["summary"] = generated.Summary,
+            ["assumptions"] = StringArray(generated.Assumptions),
             ["changes"] = BuildExecutorChanges(violations, generated.Notes),
             ["impact"] = new JsonArray
             {
@@ -2037,6 +2137,7 @@ static IResult BundleResult(ProjectBundle bundle, JsonSerializerOptions jsonOpti
         ["proposal"] = Engine.CloneNode(bundle.Proposal),
         ["reviewReport"] = Engine.CloneNode(bundle.Reviews),
         ["measurement"] = Engine.CloneNode(bundle.Measurement),
+        ["cycleSummary"] = BuildCycleSummary(bundle.State, bundle.RunLog, bundle.Proposal),
     }, jsonOptions);
 }
 
@@ -2282,6 +2383,16 @@ static string ValueText(JsonNode node)
 static string ValueTextOrNone(JsonNode? node)
 {
     return node is null ? "없음" : ValueText(node);
+}
+
+// 문자열 목록을 JSON 배열로 만든다.
+static JsonArray StringArray(IEnumerable<string> values)
+{
+    return new JsonArray(values
+        .Where(value => !string.IsNullOrWhiteSpace(value))
+        .Take(5)
+        .Select(value => (JsonNode)value)
+        .ToArray());
 }
 
 public sealed record MeasurementStages(string? MeasureStageId, string? DeviationStageId, string? ReviewStageId, string? ApplyStageId);

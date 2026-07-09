@@ -46,6 +46,7 @@ const elements = {
   projectSelect: document.querySelector("#projectSelect"),
   pipelineMinimap: document.querySelector("#pipelineMinimap"),
   schemaWarning: document.querySelector("#schemaWarning"),
+  cycleSummary: document.querySelector("#cycleSummary"),
   overallStatus: document.querySelector("#overallStatus"),
   regressedBadge: document.querySelector("#regressedBadge"),
   inboxMenu: document.querySelector("#inboxMenu"),
@@ -87,6 +88,7 @@ let scenario = null;
 let reviewReport = { schemaVersion: EXPECTED_SCHEMA_VERSION, reports: [] };
 let blueprint = { schemaVersion: EXPECTED_SCHEMA_VERSION, items: [] };
 let measurement = null;
+let cycleSummary = null;
 let projectBaseline = null;
 let schemaWarnings = [];
 let selectedStageId = null;
@@ -222,7 +224,7 @@ async function loadProject(projectId) {
   const projectPath = normalizeProjectPath(activeProject.path);
   const loaded = await loadProjectData(activeProject.id, projectPath);
 
-  ({ definition, workflowState, runLog, proposal, scenario, reviewReport, blueprint, measurement } = loaded);
+  ({ definition, workflowState, runLog, proposal, scenario, reviewReport, blueprint, measurement, cycleSummary } = loaded);
   if (serverBacked) {
     globalInbox = await loadGlobalInbox();
   } else {
@@ -250,7 +252,7 @@ async function loadProject(projectId) {
 // 선택한 프로젝트 데이터를 서버 API 또는 정적 파일에서 불러온다.
 async function loadProjectData(projectId, projectPath) {
   try {
-    const [loadedDefinition, loadedState, loadedRunLog, loadedProposal, loadedReviewReport, loadedBlueprint, loadedMeasurement, loadedScenario] =
+    const [loadedDefinition, loadedState, loadedRunLog, loadedProposal, loadedReviewReport, loadedBlueprint, loadedMeasurement, loadedCycleSummary, loadedScenario] =
       await Promise.all([
         loadVersionedJson(apiProjectFilePath(projectId, "definition"), PROJECT_FILE_NAMES.definition),
         loadVersionedJson(apiProjectFilePath(projectId, "state"), PROJECT_FILE_NAMES.state),
@@ -265,6 +267,7 @@ async function loadProjectData(projectId, projectPath) {
           items: [],
         }),
         loadOptionalVersionedJson(apiProjectFilePath(projectId, "measurement"), PROJECT_FILE_NAMES.measurement, null),
+        fetchOptionalJson(`/api/projects/${encodeURIComponent(projectId)}/cycle-summary`, null),
         loadOptionalVersionedJson(projectFilePath(projectPath, PROJECT_FILE_NAMES.scenario), PROJECT_FILE_NAMES.scenario, {
           schemaVersion: SCENARIO_SCHEMA_VERSION,
           events: [],
@@ -280,6 +283,7 @@ async function loadProjectData(projectId, projectPath) {
       reviewReport: loadedReviewReport,
       blueprint: loadedBlueprint,
       measurement: loadedMeasurement,
+      cycleSummary: loadedCycleSummary,
       scenario: loadedScenario,
     };
   } catch (apiError) {
@@ -314,6 +318,7 @@ async function loadProjectData(projectId, projectPath) {
       reviewReport: loadedReviewReport,
       blueprint: loadedBlueprint,
       measurement: loadedMeasurement,
+      cycleSummary: null,
     };
   }
 }
@@ -371,6 +376,7 @@ function render() {
 
   updateDocumentTitle();
   renderSchemaWarning();
+  renderCycleSummary();
   elements.projectName.textContent = workflowState.projectName ?? activeProject?.name ?? "";
   setStatusBadge(elements.overallStatus, getOverallBadgeStatus(), getOverallBadgeLabel());
   renderRegressedBadge();
@@ -405,6 +411,59 @@ function renderSchemaWarning() {
 }
 
 // 헤더의 악화 배지를 렌더링한다.
+// 현재 회차 시간 분해 바를 표시한다.
+function renderCycleSummary() {
+  const segments = cycleSummary?.segments;
+
+  if (!segments) {
+    elements.cycleSummary.hidden = true;
+    elements.cycleSummary.replaceChildren();
+    return;
+  }
+
+  elements.cycleSummary.hidden = false;
+  elements.cycleSummary.replaceChildren(
+    createElement("span", {
+      className: "cycle-summary__label",
+      text: t("cycleSummary.title", { iteration: cycleSummary.loopIteration ?? workflowState.loopIteration ?? 0 }),
+    }),
+    renderCycleSegment("measurement", segments.measurementMs),
+    renderCycleSegment("generation", segments.generationMs),
+    renderCycleSegment("review", segments.reviewMs),
+    renderCycleSegment("humanWaiting", segments.humanWaitingMs),
+    renderCycleSegment("total", segments.totalMs),
+  );
+}
+
+// 시간 분해 항목 하나를 만든다.
+function renderCycleSegment(key, milliseconds) {
+  return createElement("span", {
+    className: `cycle-segment cycle-segment-${key}`,
+    text: `${t(`cycleSummary.${key}`)} ${formatDuration(milliseconds ?? 0)}`,
+  });
+}
+
+// 밀리초를 짧은 표시 문자열로 바꾼다.
+function formatDuration(milliseconds) {
+  const totalSeconds = Math.max(0, Math.round(Number(milliseconds || 0) / 1000));
+
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
+  }
+
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes < 60) {
+    return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes === 0 ? `${hours}h` : `${hours}h ${remainingMinutes}m`;
+}
+
+// 악화 보류 배지를 표시한다.
 function renderRegressedBadge() {
   const count = Array.isArray(workflowState.suspendedTracks) ? workflowState.suspendedTracks.length : 0;
 
@@ -737,6 +796,7 @@ function renderApprovalPanel() {
         }),
       })
     : null;
+  const assumptions = renderProposalAssumptions(proposal.assumptions);
 
   const changes = createElement("section");
   changes.append(createElement("p", { className: "section-label", text: t("approval.changes") }));
@@ -798,6 +858,7 @@ function renderApprovalPanel() {
       className: "proposal-summary",
       text: proposal.summary ?? t("detail.noStageSummary"),
     }),
+    ...(assumptions ? [assumptions] : []),
     meta,
     ...(riskMismatch ? [riskMismatch] : []),
     changes,
@@ -824,6 +885,27 @@ function renderClosedProposalHistory() {
 }
 
 // 튜닝 제안의 예측 지표(현재 → 예측)를 렌더링한다. "예측" 라벨을 항상 붙인다.
+// 제안의 가정과 불확실 지점을 표시한다.
+function renderProposalAssumptions(assumptions) {
+  const items = Array.isArray(assumptions)
+    ? assumptions.filter((item) => typeof item === "string" && item.trim().length > 0)
+    : [];
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  const section = createElement("section");
+  const list = createElement("ul", { className: "change-list assumption-list" });
+  list.append(...items.map((item) => createElement("li", { className: "change-item", text: item })));
+  section.append(
+    createElement("p", { className: "section-label", text: t("approval.assumptions") }),
+    list,
+  );
+  return section;
+}
+
+// 제안의 예측 지표를 표시한다.
 function renderPredictedMetrics(predictedMetrics) {
   const section = createElement("section");
   section.append(createElement("p", { className: "section-label", text: t("approval.predictedMetrics") }));
@@ -1629,7 +1711,7 @@ async function refreshRuntimeData() {
     return;
   }
 
-  const [nextState, nextRunLog, nextProposal, nextReviewReport, nextMeasurement] = await Promise.all([
+  const [nextState, nextRunLog, nextProposal, nextReviewReport, nextMeasurement, nextCycleSummary] = await Promise.all([
     loadVersionedJson(apiProjectFilePath(activeProject.id, "state"), PROJECT_FILE_NAMES.state),
     loadVersionedJson(apiProjectFilePath(activeProject.id, "runlog"), PROJECT_FILE_NAMES.runLog),
     loadOptionalVersionedJson(apiProjectFilePath(activeProject.id, "proposal"), PROJECT_FILE_NAMES.proposal, null),
@@ -1638,6 +1720,7 @@ async function refreshRuntimeData() {
       reports: [],
     }),
     loadOptionalVersionedJson(apiProjectFilePath(activeProject.id, "measurement"), PROJECT_FILE_NAMES.measurement, null),
+    fetchOptionalJson(`/api/projects/${encodeURIComponent(activeProject.id)}/cycle-summary`, null),
   ]);
   globalInbox = await loadGlobalInbox();
 
@@ -1647,6 +1730,7 @@ async function refreshRuntimeData() {
     proposal: nextProposal,
     reviewReport: nextReviewReport,
     measurement: nextMeasurement,
+    cycleSummary: nextCycleSummary,
   });
 }
 
@@ -1728,6 +1812,7 @@ function applyServerBundle(bundle) {
   proposal = normalizeProposal(bundle.proposal ?? proposal);
   reviewReport = normalizeReviewReport(bundle.reviewReport ?? reviewReport);
   measurement = normalizeMeasurement(bundle.measurement ?? measurement);
+  cycleSummary = bundle.cycleSummary ?? cycleSummary;
   projectBaseline = {
     workflowState: cloneData(workflowState),
     runLog: cloneData(runLog),

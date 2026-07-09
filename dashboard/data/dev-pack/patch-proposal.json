@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783596444960",
-  "title": "악화 롤백 제안: skillDomainViolations",
+  "id": "proposal-1783601795014",
+  "title": "악화 롤백 제안: functionsWithoutComment",
   "lifecycle": "superseded",
   "kind": "rollback",
   "createdBy": {
@@ -12,10 +12,10 @@
   "summary": "직전에 충족되던 지표가 악화되어 자동 롤백을 제안한다. 체크리스트가 검토할 내용이 없어 1층을 건너뛰고 사람 결재로 직행한다.",
   "changes": [
     {
-      "path": "skillDomainViolations",
-      "before": 1,
+      "path": "functionsWithoutComment",
+      "before": 2,
       "after": 0,
-      "note": "직전 승인 원인 미상 이후 skillDomainViolations이 0→1로 악화됨. 되돌리거나 원인 조사 필요"
+      "note": "직전 승인 원인 미상 이후 functionsWithoutComment이 0→2로 악화됨. 되돌리거나 원인 조사 필요"
     }
   ],
   "impact": [
