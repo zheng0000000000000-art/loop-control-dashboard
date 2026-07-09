@@ -112,6 +112,7 @@
     "review.routed": "Review routed: {proposalId} ({reasonCode}) {text}",
     "track.resumed": "Track resumed: {metricId}",
     "track.dismissed": "Track dismissed: {metricId} ({reasonCode})",
+    "tuning.applied": "Tuning applied, remeasured: {comparisons}",
     "executor.escalated": "Executor escalated: {from} -> {to} ({text})",
     "scenario.step": "Scenario step: {text}",
     "measure.completed": "Measurement completed: {providerId}, {violationCount} violations"
@@ -150,7 +151,11 @@
     "noChanges": "No proposed changes are available.",
     "noImpact": "No expected impact is available.",
     "rejectionPrompt": "Reason for rejecting this change proposal",
-    "rollbackBadge": "Rollback"
+    "rollbackBadge": "Rollback",
+    "tuningBadge": "Tuning",
+    "predictedMetrics": "Predicted metrics",
+    "predictedLabel": "Predicted",
+    "predictedBand": "band"
   },
   "risk": {
     "assessedRisk": "Assessed risk",

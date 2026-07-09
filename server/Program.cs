@@ -18,6 +18,11 @@ if (args.Length > 0 && string.Equals(args[0], "simtest", StringComparison.Ordina
     return RunSimTestCli(args);
 }
 
+if (args.Length > 0 && string.Equals(args[0], "simtune", StringComparison.OrdinalIgnoreCase))
+{
+    return RunSimTuneCli(args);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
@@ -182,7 +187,7 @@ static MeasureOutcome RunMeasureCore(Storage storage, string projectId, JsonSeri
         "ruined-lab-sim" => GameSimulator.Measure(storage.ProjectPath(projectId), providerId, bundle.Blueprint, provider!),
         _ => bundle.Measurement,
     };
-    var violationCount = ApplyMeasurementResult(bundle, providerId, ntfy, previousMeasurement);
+    var violationCount = ApplyMeasurementResult(bundle, providerId, ntfy, previousMeasurement, storage.ProjectPath(projectId));
     Persist(storage, projectId, bundle, jsonOptions, ntfy);
     return new MeasureOutcome(bundle, null, violationCount);
 }
@@ -321,8 +326,72 @@ static bool SimResultsEqual(SimResult first, SimResult second)
         first.RewardPerRunStdDev.Equals(second.RewardPerRunStdDev);
 }
 
+// 레버 범위 안에서 밸런스 탐색을 실행하는 CLI. 측정·제안 파일은 건드리지 않는 순수 실험용이다.
+static int RunSimTuneCli(string[] args)
+{
+    var cliJsonOptions = new JsonSerializerOptions
+    {
+        WriteIndented = false,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+    var projectId = args.Length > 1 && !string.IsNullOrWhiteSpace(args[1]) ? args[1] : "ruined-lab";
+
+    try
+    {
+        var workspaceRoot = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName
+            ?? throw new InvalidOperationException("Workspace root was not found.");
+        var dataRoot = Path.Combine(workspaceRoot, "dashboard", "data");
+        var storage = new Storage(dataRoot);
+        var projectPath = storage.ProjectPath(projectId);
+        var gameDataPath = Path.Combine(projectPath, "game-data.json");
+
+        if (!File.Exists(gameDataPath))
+        {
+            Console.Error.WriteLine(CliError($"game-data.json not found for {projectId}").ToJsonString(cliJsonOptions));
+            return 2;
+        }
+
+        var gameData = JsonNode.Parse(File.ReadAllText(gameDataPath))!.AsObject();
+        var definition = storage.ReadProjectFile(projectId, Storage.DefinitionFile).AsObject();
+        var blueprint = storage.ReadProjectFile(projectId, Storage.BlueprintFile).AsObject();
+        var seed = Number(definition["measurementProvider"]?.AsObject()["seed"], 42);
+
+        var tuning = BalanceTuner.Search(gameData, blueprint, definition, seed, message => Console.WriteLine(message));
+
+        var summary = new JsonObject
+        {
+            ["projectId"] = projectId,
+            ["seed"] = seed,
+            ["candidatesUsed"] = tuning.CandidatesUsed,
+            ["reachedBand"] = tuning.ReachedBand,
+            ["changedLevers"] = new JsonArray(tuning.ChangedLevers.Select(change => (JsonNode)new JsonObject
+            {
+                ["path"] = change.Path,
+                ["before"] = change.Before,
+                ["after"] = change.After,
+            }).ToArray()),
+            ["predictedMetrics"] = new JsonArray(tuning.PredictedMetrics.Select(metric => (JsonNode)new JsonObject
+            {
+                ["metricId"] = metric.MetricId,
+                ["before"] = metric.Before,
+                ["after"] = metric.After,
+                ["band"] = metric.Band,
+            }).ToArray()),
+            ["residualViolations"] = new JsonArray(tuning.ResidualViolations.Select(text => (JsonNode)text).ToArray()),
+        };
+
+        Console.WriteLine(summary.ToJsonString(cliJsonOptions));
+        return 0;
+    }
+    catch (Exception error)
+    {
+        Console.Error.WriteLine(CliError(error.Message).ToJsonString(cliJsonOptions));
+        return 2;
+    }
+}
+
 // 측정 결과를 상태, 로그, 제안에 반영하고 위반 수를 반환한다.
-static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyOptions ntfy, JsonObject previousMeasurement)
+static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyOptions ntfy, JsonObject previousMeasurement, string projectPath)
 {
     var checks = EvaluateBlueprintChecks(bundle.Blueprint, bundle.Measurement);
     var violations = checks.Where(check => check.Implemented && !check.Passed).ToList();
@@ -401,6 +470,57 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
 
             SetRegressionReviewDetails(state, stages.ReviewStageId, regressions);
             Notifier.NotifyMeasurementRegressed(ntfy, ProjectDisplayName(state), regressions.Select(r => r.MetricId).ToList());
+        }
+        else if (providerId == "ruined-lab-sim")
+        {
+            var gameDataPath = Path.Combine(projectPath, "game-data.json");
+            var gameData = JsonNode.Parse(File.ReadAllText(gameDataPath))!.AsObject();
+            var seed = Number(bundle.Definition["measurementProvider"]?.AsObject()["seed"], 42);
+            var tuning = BalanceTuner.Search(gameData, bundle.Blueprint, bundle.Definition, seed);
+
+            var tuningGeneration = GenerateTuningProposalWithFallback(bundle.Definition, bundle.Proposal, tuning, previousReviewReport: null);
+            bundle.Proposal = tuningGeneration.Proposal;
+            runLog = Engine.AppendLog(runLog, tuningGeneration.LogEntry, Engine.GetLoopIteration(state));
+            runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
+
+            var tuningTier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
+            runLog = Engine.AppendLog(runLog, tuningTier1.LogEntry, Engine.GetLoopIteration(state));
+
+            if (tuningTier1.Report is not null)
+            {
+                AppendReport(bundle.Reviews, tuningTier1.Report);
+            }
+
+            var tuningMaxRegenerations = Number(bundle.Definition["executorPolicy"]?.AsObject()["maxRegenerations"], 0);
+
+            for (var regeneration = 0; regeneration < tuningMaxRegenerations && tuningTier1.Verdict == "needs_changes"; regeneration += 1)
+            {
+                var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
+                runLog = Engine.AppendLog(runLog, new JsonObject
+                {
+                    ["event"] = "proposal.superseded",
+                    ["params"] = new JsonObject { ["proposalId"] = supersededId, ["reasonCode"] = "review.needs_changes_regenerate" },
+                    ["level"] = "info",
+                    ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+                    ["cost"] = RuntimeCost(),
+                }, Engine.GetLoopIteration(state));
+
+                tuningGeneration = GenerateTuningProposalWithFallback(bundle.Definition, bundle.Proposal, tuning, previousReviewReport: tuningTier1.Report);
+                bundle.Proposal = tuningGeneration.Proposal;
+                runLog = Engine.AppendLog(runLog, tuningGeneration.LogEntry, Engine.GetLoopIteration(state));
+                runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
+
+                tuningTier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
+                runLog = Engine.AppendLog(runLog, tuningTier1.LogEntry, Engine.GetLoopIteration(state));
+
+                if (tuningTier1.Report is not null)
+                {
+                    AppendReport(bundle.Reviews, tuningTier1.Report);
+                }
+            }
+
+            SetTier1Details(state, stages.ReviewStageId, tuningTier1);
+            Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), tuningTier1.Verdict);
         }
         else
         {
@@ -668,6 +788,99 @@ static bool IsMetricWithinBlueprint(JsonObject item, JsonNode value)
     }
 
     return true;
+}
+
+// 튜닝 결과로 제안을 생성하고 실패 시 rule-engine 서술로 강등한다. 수치는 언제나 BalanceTuner가 결정한다.
+static ProposalGeneration GenerateTuningProposalWithFallback(JsonObject definition, JsonObject currentProposal, TuningResult tuning, JsonObject? previousReviewReport)
+{
+    var revisionOf = currentProposal["lifecycle"]?.GetValue<string>() == "submitted" ? currentProposal["id"]?.GetValue<string>() : null;
+    var generated = OllamaExecutor.GenerateForTuning(definition, tuning, previousReviewReport);
+
+    if (!generated.Unavailable)
+    {
+        var proposal = BuildTuningProposal(tuning, generated.Provider, generated.Model, generated.Title, generated.Summary, generated.Notes, revisionOf);
+        return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null));
+    }
+
+    var fallbackProposal = BuildTuningProposal(tuning, "rule-engine", null, FallbackTuningTitle(tuning), FallbackTuningSummary(tuning), new Dictionary<string, string>(), revisionOf);
+    return new ProposalGeneration(fallbackProposal, GeneratedLogEntry("rule-engine", null, generated.DurationMs, true, generated.Error));
+}
+
+// 튜닝 결과로 proposal JSON을 만든다. 밴드 도달 실패 시 잔여 위반과 결재 안내를 서버가 직접 덧붙인다(모델 준수 여부에 기대지 않는다).
+static JsonObject BuildTuningProposal(TuningResult tuning, string provider, string? model, string title, string summary, Dictionary<string, string> notes, string? revisionOf)
+{
+    var changes = new JsonArray();
+    foreach (var change in tuning.ChangedLevers)
+    {
+        changes.Add(new JsonObject
+        {
+            ["path"] = change.Path,
+            ["before"] = change.Before,
+            ["after"] = change.After,
+            ["note"] = notes.GetValueOrDefault(change.Path, FallbackLeverNote(change)),
+        });
+    }
+
+    var predictedMetrics = new JsonArray();
+    foreach (var metric in tuning.PredictedMetrics)
+    {
+        predictedMetrics.Add(new JsonObject
+        {
+            ["metricId"] = metric.MetricId,
+            ["before"] = metric.Before,
+            ["after"] = metric.After,
+            ["band"] = metric.Band,
+        });
+    }
+
+    var finalSummary = tuning.ReachedBand
+        ? summary
+        : $"{summary} (레버 범위 내 해 없음. 잔여 위반: {string.Join(", ", tuning.ResidualViolations)}. 레버 범위 확장은 definition 변경 사항으로 별도 사람 결재가 필요하다.)";
+
+    return new JsonObject
+    {
+        ["schemaVersion"] = 2,
+        ["id"] = $"proposal-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+        ["title"] = title,
+        ["lifecycle"] = "submitted",
+        ["kind"] = "tuning",
+        ["createdBy"] = new JsonObject { ["provider"] = provider, ["model"] = model },
+        ["revisionOf"] = revisionOf,
+        ["summary"] = finalSummary,
+        ["changes"] = changes,
+        ["predictedMetrics"] = predictedMetrics,
+        ["predictedReachedBand"] = tuning.ReachedBand,
+        ["impact"] = new JsonArray
+        {
+            new JsonObject { ["label"] = "레버 변경", ["value"] = tuning.ChangedLevers.Count.ToString(CultureInfo.InvariantCulture) },
+            new JsonObject { ["label"] = "탐색 후보 수", ["value"] = tuning.CandidatesUsed.ToString(CultureInfo.InvariantCulture) },
+            new JsonObject { ["label"] = "예상 비용", ["value"] = "$0.00" },
+        },
+    };
+}
+
+// rule-engine 강등 시 쓰는 고정 제목.
+static string FallbackTuningTitle(TuningResult tuning)
+{
+    return tuning.ReachedBand ? "자동 밸런스 튜닝 제안" : "자동 밸런스 튜닝 — 레버 범위 내 해 없음";
+}
+
+// rule-engine 강등 시 쓰는 고정 요약(밴드 실패 시 잔여 위반을 포함).
+static string FallbackTuningSummary(TuningResult tuning)
+{
+    if (tuning.ReachedBand)
+    {
+        return $"레버 {tuning.ChangedLevers.Count}개를 조정해 모든 지표가 밴드 안에 들어오도록 예측됐다.";
+    }
+
+    var residual = tuning.ResidualViolations.Count == 0 ? "없음" : string.Join(", ", tuning.ResidualViolations);
+    return $"레버 범위 내에서 밴드에 도달하는 해를 찾지 못했다. 잔여 위반: {residual}.";
+}
+
+// rule-engine 강등 시 쓰는 고정 레버 note.
+static string FallbackLeverNote(LeverChange change)
+{
+    return $"탐색기가 {change.Path}을(를) {change.Before.ToString("0.###", CultureInfo.InvariantCulture)}에서 {change.After.ToString("0.###", CultureInfo.InvariantCulture)}로 조정(자동 서술 실패로 rule-engine이 대신 기록)";
 }
 
 // 실행자로 제안을 생성하고 실패 시 rule-engine으로 강등한다.
@@ -1070,9 +1283,88 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
 
     bundle.State = state;
     bundle.RunLog = runLog;
+    var isTuningApproval = bundle.Proposal["kind"]?.GetValue<string>() == "tuning";
+    var predictedMetrics = isTuningApproval ? bundle.Proposal["predictedMetrics"]?.AsArray() : null;
+    var tuningChanges = isTuningApproval ? bundle.Proposal["changes"]?.AsArray() : null;
     bundle.Proposal["lifecycle"] = "decided";
     AppendReport(bundle.Reviews, report);
-    return Persist(storage, projectId, bundle, jsonOptions, ntfy);
+    var result = Persist(storage, projectId, bundle, jsonOptions, ntfy);
+
+    if (isTuningApproval && tuningChanges is not null && tuningChanges.Count > 0)
+    {
+        ApplyTuningChanges(storage, projectId, tuningChanges);
+        var remeasure = RunMeasureCore(storage, projectId, jsonOptions, ntfy);
+
+        if (remeasure.Bundle is not null)
+        {
+            var finalBundle = remeasure.Bundle;
+            finalBundle.RunLog = Engine.AppendLog(finalBundle.RunLog, BuildTuningAppliedLog(predictedMetrics, finalBundle.Measurement), Engine.GetLoopIteration(finalBundle.State));
+            result = Persist(storage, projectId, finalBundle, jsonOptions, ntfy);
+        }
+    }
+
+    return result;
+}
+
+// 승인된 튜닝 제안의 레버 변경을 game-data.json에 실제로 기록한다(원자 쓰기는 Storage가 담당).
+static void ApplyTuningChanges(Storage storage, string projectId, JsonArray changes)
+{
+    var gameDataPath = storage.ProjectFilePath(projectId, Storage.GameDataFile);
+
+    if (!File.Exists(gameDataPath))
+    {
+        return;
+    }
+
+    var gameData = JsonNode.Parse(File.ReadAllText(gameDataPath))!.AsObject();
+
+    foreach (var change in changes.OfType<JsonObject>())
+    {
+        var path = change["path"]?.GetValue<string>();
+        var after = change["after"];
+
+        if (string.IsNullOrWhiteSpace(path) || after is null)
+        {
+            continue;
+        }
+
+        var afterValue = double.Parse(after.ToString(), CultureInfo.InvariantCulture);
+        var isInteger = after is JsonValue afterJsonValue && afterJsonValue.TryGetValue<int>(out _);
+        BalanceTuner.SetLeverValue(gameData, path, afterValue, isInteger);
+    }
+
+    storage.WriteProjectFile(projectId, Storage.GameDataFile, gameData);
+}
+
+// 튜닝 승인 후 재측정한 실측값과 예측값을 비교하는 로그 항목을 만든다.
+static JsonObject BuildTuningAppliedLog(JsonArray? predictedMetrics, JsonObject actualMeasurement)
+{
+    var actualByMetric = (actualMeasurement["metrics"]?.AsArray() ?? new JsonArray())
+        .OfType<JsonObject>()
+        .ToDictionary(metric => metric["metricId"]?.GetValue<string>() ?? "", metric => metric["value"]);
+
+    var comparisons = new JsonArray();
+    foreach (var predicted in predictedMetrics?.OfType<JsonObject>() ?? [])
+    {
+        var metricId = predicted["metricId"]?.GetValue<string>() ?? "";
+        var predictedAfter = predicted["after"];
+        actualByMetric.TryGetValue(metricId, out var actualValue);
+        comparisons.Add(new JsonObject
+        {
+            ["metricId"] = metricId,
+            ["predicted"] = predictedAfter is null ? null : Engine.CloneNode(predictedAfter),
+            ["actual"] = actualValue is null ? null : Engine.CloneNode(actualValue),
+        });
+    }
+
+    return new JsonObject
+    {
+        ["event"] = "tuning.applied",
+        ["params"] = new JsonObject { ["comparisons"] = comparisons },
+        ["level"] = "info",
+        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+        ["cost"] = RuntimeCost(),
+    };
 }
 
 // 거절 액션을 처리하고 결과 파일을 기록한다.

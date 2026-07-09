@@ -1,29 +1,51 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783592715979",
-  "title": "완료율 개선",
+  "id": "proposal-1783594012403",
+  "title": "밴드 도달 실패",
   "lifecycle": "submitted",
+  "kind": "tuning",
   "createdBy": {
     "provider": "ollama",
     "model": "qwen3:8b"
   },
-  "revisionOf": "proposal-1783592066380",
-  "summary": "시뮬레이션 전체 과정을 완료할 수 있는 비율을 측정하여 시스템의 완성도와 사용자 경험을 향상시킵니다.",
-  "changes": [
+  "revisionOf": "proposal-1783592715979",
+  "summary": "레버 변경 없이 밴드 도달에 실패했으며, completionRate=0로 밴드 45~60 밖에 위치해 잔여 위반 상태 (레버 범위 내 해 없음. 잔여 위반: completionRate=0 (밴드 45~60 밖). 레버 범위 확장은 definition 변경 사항으로 별도 사람 결재가 필요하다.)",
+  "changes": [],
+  "predictedMetrics": [
     {
-      "path": "completionRate",
+      "metricId": "completionRate",
       "before": 0,
-      "after": [
-        45,
-        60
-      ],
-      "note": "시뮬레이션 전체 실행을 통해 전체 과정을 완료할 수 있는 비율을 측정하여, 시스템의 완성도와 사용자 경험을 개선하는 데 기여합니다."
+      "after": 0,
+      "band": "45~60"
+    },
+    {
+      "metricId": "room1DeathRate",
+      "before": 0,
+      "after": 0,
+      "band": "0~20"
+    },
+    {
+      "metricId": "room3DeathRate",
+      "before": 0.8,
+      "after": 0.8,
+      "band": "0~35"
+    },
+    {
+      "metricId": "avgRewardPerRun",
+      "before": 8.076,
+      "after": 8.076,
+      "band": "8~20"
     }
   ],
+  "predictedReachedBand": false,
   "impact": [
     {
-      "label": "위반 항목",
-      "value": "1"
+      "label": "레버 변경",
+      "value": "0"
+    },
+    {
+      "label": "탐색 후보 수",
+      "value": "26"
     },
     {
       "label": "예상 비용",

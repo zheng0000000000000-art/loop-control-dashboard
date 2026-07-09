@@ -373,6 +373,11 @@ textarea {
   background: var(--orange-bg);
 }
 
+.status-tuning {
+  color: var(--blue);
+  background: var(--blue-bg);
+}
+
 [data-theme="dark"] .status-completed,
 [data-theme="dark"] .status-passed,
 [data-theme="dark"] .status-approved,
@@ -398,7 +403,8 @@ textarea {
 
 [data-theme="dark"] .status-pending_review,
 [data-theme="dark"] .status-in_progress,
-[data-theme="dark"] .status-loop_paused {
+[data-theme="dark"] .status-loop_paused,
+[data-theme="dark"] .status-tuning {
   color: #b6ccff;
   background: #1a3159;
 }
@@ -658,6 +664,12 @@ textarea {
 
 .change-diff {
   grid-template-columns: 1fr;
+}
+
+.change-item.predicted-metric-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .change-diff-header {

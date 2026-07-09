@@ -16,9 +16,10 @@ public sealed class Storage
     public const string ScenarioFile = "scenario.json";
     public const string BlueprintFile = "blueprint.json";
     public const string MeasurementFile = "measurement.json";
+    public const string GameDataFile = "game-data.json";
 
-    private static readonly string[] CoreFiles = [StateFile, RunLogFile, ProposalFile, ReviewFile, MeasurementFile];
-    private static readonly string[] StartupCheckedFiles = [DefinitionFile, StateFile, RunLogFile, ProposalFile, ReviewFile, ScenarioFile, BlueprintFile, MeasurementFile];
+    private static readonly string[] CoreFiles = [StateFile, RunLogFile, ProposalFile, ReviewFile, MeasurementFile, GameDataFile];
+    private static readonly string[] StartupCheckedFiles = [DefinitionFile, StateFile, RunLogFile, ProposalFile, ReviewFile, ScenarioFile, BlueprintFile, MeasurementFile, GameDataFile];
     private readonly ConcurrentDictionary<string, object> projectLocks = new();
 
     public string DataRoot { get; }

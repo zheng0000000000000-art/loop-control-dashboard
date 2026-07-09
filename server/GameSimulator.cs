@@ -143,13 +143,28 @@ public static class GameSimulator
     // 측정 지표 하나를 SimResult에서 뽑아 JSON으로 만든다.
     private static JsonObject MetricFromResult(string metricId, SimResult result)
     {
+        var value = MetricValue(metricId, result);
+        var evidence = metricId switch
+        {
+            "completionRate" => new[] { "시뮬레이션 전체 실행" },
+            "room1DeathRate" => new[] { "rooms[0]" },
+            "room3DeathRate" => new[] { "rooms[2]" },
+            "avgRewardPerRun" => new[] { $"stddev={result.RewardPerRunStdDev.ToString("0.##", CultureInfo.InvariantCulture)}" },
+            _ => new[] { "미구현" },
+        };
+        return Metric(metricId, value, evidence);
+    }
+
+    // metricId에 해당하는 원시 수치를 SimResult에서 뽑는다. BalanceTuner의 위반 거리 계산에도 쓰인다.
+    public static double? MetricValue(string metricId, SimResult result)
+    {
         return metricId switch
         {
-            "completionRate" => Metric(metricId, result.CompletionRate, ["시뮬레이션 전체 실행"]),
-            "room1DeathRate" => Metric(metricId, RoomValue(result.RoomDeathRates, 0), ["rooms[0]"]),
-            "room3DeathRate" => Metric(metricId, RoomValue(result.RoomDeathRates, 2), ["rooms[2]"]),
-            "avgRewardPerRun" => Metric(metricId, result.RewardPerRunMean, [$"stddev={result.RewardPerRunStdDev.ToString("0.##", CultureInfo.InvariantCulture)}"]),
-            _ => Metric(metricId, (JsonNode?)null, ["미구현"]),
+            "completionRate" => result.CompletionRate,
+            "room1DeathRate" => RoomValue(result.RoomDeathRates, 0),
+            "room3DeathRate" => RoomValue(result.RoomDeathRates, 2),
+            "avgRewardPerRun" => result.RewardPerRunMean,
+            _ => null,
         };
     }
 
@@ -186,9 +201,9 @@ public static class GameSimulator
     }
 
     // 측정 결과 JSON 객체를 만든다.
-    private static JsonObject Metric(string metricId, double value, IEnumerable<string> evidence)
+    private static JsonObject Metric(string metricId, double? value, IEnumerable<string> evidence)
     {
-        return Metric(metricId, JsonValue.Create(value), evidence);
+        return Metric(metricId, value is null ? null : JsonValue.Create(value.Value), evidence);
     }
 
     // 측정 결과 JSON 객체를 만든다.

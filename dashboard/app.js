@@ -632,6 +632,10 @@ function renderApprovalPanel() {
     titleRow.append(createStatusBadge("rollback", t("approval.rollbackBadge")));
   }
 
+  if (proposal.kind === "tuning") {
+    titleRow.append(createStatusBadge("tuning", t("approval.tuningBadge")));
+  }
+
   const meta = createElement("div", { className: "proposal-meta" });
   meta.append(
     createMetaItem(t("approval.proposal"), proposal.id ?? t("approval.none")),
@@ -677,6 +681,9 @@ function renderApprovalPanel() {
   );
   impact.append(impactList);
 
+  const predictedMetrics = Array.isArray(proposal.predictedMetrics) ? proposal.predictedMetrics : [];
+  const predicted = predictedMetrics.length > 0 ? renderPredictedMetrics(predictedMetrics) : null;
+
   const reviewHistory = renderReviewHistory(proposal.id);
 
   const approveButton = createElement("button", {
@@ -712,9 +719,32 @@ function renderApprovalPanel() {
     ...(riskMismatch ? [riskMismatch] : []),
     changes,
     impact,
+    ...(predicted ? [predicted] : []),
     reviewHistory,
     actions,
   );
+}
+
+// 튜닝 제안의 예측 지표(현재 → 예측)를 렌더링한다. "예측" 라벨을 항상 붙인다.
+function renderPredictedMetrics(predictedMetrics) {
+  const section = createElement("section");
+  section.append(createElement("p", { className: "section-label", text: t("approval.predictedMetrics") }));
+
+  const list = createElement("ul", { className: "change-list" });
+  list.append(
+    ...predictedMetrics.map((metric) => {
+      const item = createElement("li", { className: "change-item predicted-metric-item" });
+      item.append(
+        createElement("span", { className: "tag tag-predicted", text: t("approval.predictedLabel") }),
+        createElement("span", {
+          text: `${metric.metricId}: ${formatNumber(metric.before)} → ${formatNumber(metric.after)} (${t("approval.predictedBand")} ${metric.band})`,
+        }),
+      );
+      return item;
+    }),
+  );
+  section.append(list);
+  return section;
 }
 
 // 변경 항목 diff와 편집 UI를 렌더링한다.

@@ -1140,6 +1140,66 @@
       ],
       "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
       "createdAt": "2026-07-09T19:26:31.3028683+09:00"
+    },
+    {
+      "id": "review-1783594516096",
+      "proposalId": "proposal-1783594508322",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "smallTouchTargets",
+          "checkId": "note-nonempty",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "변경 항목의 note는 '작은 터치 타겟을 개선하기 위해 버튼의 크기를 조정해야 하며, 해당 스타일은 dashboard/style.css의 260행과 271행에서 정의되어 있습니다.'로 비어 있지 않고 의미 있는 설명을 포함하고 있습니다.",
+          "comment": "변경 항목의 note는 '작은 터치 타겟을 개선하기 위해 버튼의 크기를 조정해야 하며, 해당 스타일은 dashboard/style.css의 260행과 271행에서 정의되어 있습니다.'로 비어 있지 않고 의미 있는 설명을 포함하고 있습니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "smallTouchTargets",
+          "checkId": "after-matches-goal",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "제안의 after 값 0은 note에서 언급한 작은 터치 타겟 개선과 일치함",
+          "comment": "제안의 after 값 0은 note에서 언급한 작은 터치 타겟 개선과 일치함",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "smallTouchTargets",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "변경 항목은 smallTouchTargets 문제 해결에 집중되어 있음",
+          "comment": "변경 항목은 smallTouchTargets 문제 해결에 집중되어 있음",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "createdAt": "2026-07-09T19:55:16.0968542+09:00"
     }
   ]
 }

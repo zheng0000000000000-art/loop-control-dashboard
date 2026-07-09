@@ -57,6 +57,145 @@ public static class OllamaExecutor
         return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, timer.ElapsedMilliseconds, null);
     }
 
+    // 이미 결정된 레버 변경들을 서술하는 note·title·summary를 생성한다. 수치는 BalanceTuner가 이미 정했다 — 모델은 서술만 한다.
+    public static ExecutorGenerateResult GenerateForTuning(JsonObject definition, TuningResult tuning, JsonObject? previousReviewReport)
+    {
+        var timer = Stopwatch.StartNew();
+        var policy = definition["executorPolicy"]?.AsObject()["tier1"] as JsonObject;
+
+        if (policy is null)
+        {
+            return Unavailable(timer, "1층 생성 정책이 없다.");
+        }
+
+        var provider = policy["provider"]?.GetValue<string>() ?? "";
+        var model = policy["model"]?.GetValue<string>() ?? "";
+        var maxRetries = Math.Max(1, Number(policy["maxRetries"], 1));
+        var feedback = BuildFeedbackByMetric(previousReviewReport);
+        var notes = new Dictionary<string, string>();
+
+        foreach (var change in tuning.ChangedLevers)
+        {
+            var (note, noteError) = TryGenerateTuningNote(policy, model, change, tuning.PredictedMetrics, feedback.GetValueOrDefault(change.Path), maxRetries);
+
+            if (note is null)
+            {
+                return Unavailable(timer, $"{change.Path}: {noteError ?? "note 생성 실패"}", provider, model);
+            }
+
+            notes[change.Path] = note;
+        }
+
+        var (summary, summaryError) = TryGenerateTuningSummary(policy, model, tuning, maxRetries);
+
+        if (summary is null)
+        {
+            return Unavailable(timer, summaryError ?? "제목/요약 생성 실패", provider, model);
+        }
+
+        timer.Stop();
+        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, timer.ElapsedMilliseconds, null);
+    }
+
+    // 레버 변경 하나에 대한 note를 생성한다. 실패 사유를 함께 반환한다.
+    private static (string? Note, string? Error) TryGenerateTuningNote(JsonObject policy, string model, LeverChange change, List<PredictedMetricChange> predicted, string? feedback, int maxRetries)
+    {
+        string? lastError = null;
+
+        for (var attempt = 1; attempt <= maxRetries; attempt += 1)
+        {
+            try
+            {
+                var raw = CallModel(policy, model, BuildTuningNotePrompt(change, predicted, feedback));
+                var parsed = ParseNoteResponse(raw, change.Path);
+
+                if (parsed is not null)
+                {
+                    return (parsed, null);
+                }
+
+                lastError = "응답 JSON 스키마 불일치 또는 빈/손상된 note";
+            }
+            catch (ReviewerUnavailableException error)
+            {
+                return (null, error.Message);
+            }
+            catch (Exception error)
+            {
+                lastError = error.Message;
+            }
+        }
+
+        return (null, lastError);
+    }
+
+    // 레버 변경 note 생성 프롬프트를 만든다.
+    private static string BuildTuningNotePrompt(LeverChange change, List<PredictedMetricChange> predicted, string? feedback)
+    {
+        var predictedText = predicted.Count == 0
+            ? "없음"
+            : string.Join("; ", predicted.Select(metric => $"{metric.MetricId}: {metric.Before.ToString("0.###", CultureInfo.InvariantCulture)}→{metric.After.ToString("0.###", CultureInfo.InvariantCulture)} (밴드 {metric.Band})"));
+        var feedbackLine = string.IsNullOrWhiteSpace(feedback)
+            ? ""
+            : $"이전 시도가 거절된 이유: {feedback}. 이 지적을 해소하는 note를 작성하라.\n";
+
+        return "너는 자동 밸런스 튜닝 결과를 서술하는 작성자다. 수치(before/after)는 이미 탐색기가 정했으니 절대 바꾸지 말고, " +
+            "이 레버 변경이 예측 지표에 어떤 영향을 주는지 한국어 1~2문장 note만 작성하라.\n" +
+            $"레버 경로: {change.Path}\n" +
+            $"변경: {change.Before.ToString("0.###", CultureInfo.InvariantCulture)} → {change.After.ToString("0.###", CultureInfo.InvariantCulture)}\n" +
+            $"예측 지표 변화: {predictedText}\n" +
+            feedbackLine +
+            $"답 형식: {{\"metricId\":\"{change.Path}\",\"note\":\"한두 문장 설명\"}}";
+    }
+
+    // 튜닝 제안의 제목과 요약을 생성한다. 실패 사유를 함께 반환한다.
+    private static ((string Title, string Summary)? Result, string? Error) TryGenerateTuningSummary(JsonObject policy, string model, TuningResult tuning, int maxRetries)
+    {
+        string? lastError = null;
+
+        for (var attempt = 1; attempt <= maxRetries; attempt += 1)
+        {
+            try
+            {
+                var raw = CallModel(policy, model, BuildTuningSummaryPrompt(tuning));
+                var parsed = ParseSummaryResponse(raw);
+
+                if (parsed is not null)
+                {
+                    return (parsed, null);
+                }
+
+                lastError = "응답 JSON 스키마 불일치 또는 빈/손상된 title·summary";
+            }
+            catch (ReviewerUnavailableException error)
+            {
+                return (null, error.Message);
+            }
+            catch (Exception error)
+            {
+                lastError = error.Message;
+            }
+        }
+
+        return (null, lastError);
+    }
+
+    // 튜닝 제안 제목/요약 생성 프롬프트를 만든다.
+    private static string BuildTuningSummaryPrompt(TuningResult tuning)
+    {
+        var changesText = tuning.ChangedLevers.Count == 0
+            ? "없음(레버 범위 안에서 개선되는 후보를 찾지 못함)"
+            : string.Join("; ", tuning.ChangedLevers.Select(change => $"{change.Path}: {change.Before.ToString("0.###", CultureInfo.InvariantCulture)}→{change.After.ToString("0.###", CultureInfo.InvariantCulture)}"));
+        var residualText = tuning.ResidualViolations.Count == 0 ? "없음" : string.Join("; ", tuning.ResidualViolations);
+
+        return "너는 자동 밸런스 튜닝 결과를 서술하는 작성자다. 아래 탐색 결과를 요약하는 짧은 한국어 제목과 한 문장 요약을 작성하라. " +
+            "밴드 도달에 실패했다면 그 사실과 잔여 위반을 요약에 반드시 포함하라.\n" +
+            $"레버 변경: {changesText}\n" +
+            $"밴드 도달: {(tuning.ReachedBand ? "성공" : "실패")}\n" +
+            $"잔여 위반: {residualText}\n" +
+            "답 형식: {\"title\":\"짧은 제목\",\"summary\":\"한 문장 요약\"}";
+    }
+
     // 이전 검토에서 통과하지 못한 finding을 metricId 기준으로 모은다.
     private static Dictionary<string, string> BuildFeedbackByMetric(JsonObject? previousReviewReport)
     {
