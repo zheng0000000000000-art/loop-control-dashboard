@@ -5,7 +5,11 @@
       "id": "review-001",
       "proposalId": "patch-2026-07-08-01",
       "verdict": "needs_changes",
-      "reviewer": { "type": "ai", "provider": "claude-code", "model": null },
+      "reviewer": {
+        "type": "ai",
+        "provider": "claude-code",
+        "model": null
+      },
       "riskAssessed": "medium",
       "findings": [
         {
@@ -16,6 +20,111 @@
       ],
       "reason": "방향은 적절하지만 첫 번째 변경 항목의 검토 메모가 더 구체적이면 좋다.",
       "createdAt": "2026-07-08T14:22:00+09:00"
+    },
+    {
+      "id": "review-1783592076187",
+      "proposalId": "proposal-1783592066380",
+      "verdict": "uncertain",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "low",
+      "findings": [
+        {
+          "target": "completionRate",
+          "checkId": "note-direction-match",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "note는 completionRate가 45~60 범위로 감소하는 방향으로 변경되었음을 올바르게 설명함",
+          "comment": "note는 completionRate가 45~60 범위로 감소하는 방향으로 변경되었음을 올바르게 설명함",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "avgRewardPerRun",
+          "checkId": "note-direction-match",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "note는 '개선이 필요하다'라고 명시하지만, 수치는 0에서 8~20으로 증가하므로 방향은 일치하지 않는다.",
+          "comment": "note는 '개선이 필요하다'라고 명시하지만, 수치는 0에서 8~20으로 증가하므로 방향은 일치하지 않는다.",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "completionRate",
+          "checkId": "risk-note-present",
+          "answer": false,
+          "expected": true,
+          "confidence": "low",
+          "note": "변경 항목의 note에 위험 또는 영향에 대한 설명이 포함되어 있지 않음",
+          "comment": "변경 항목의 note에 위험 또는 영향에 대한 설명이 포함되어 있지 않음",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": true,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "avgRewardPerRun",
+          "checkId": "risk-note-present",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "제안의 note 필드에 데이터 변동성과 목표 범위 미달로 인한 개선 필요성을 명시하여 위험 또는 영향이 설명되어 있음",
+          "comment": "제안의 note 필드에 데이터 변동성과 목표 범위 미달로 인한 개선 필요성을 명시하여 위험 또는 영향이 설명되어 있음",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "completionRate",
+          "checkId": "no-unrelated-change",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "제안은 completionRate 지표 개선에 집중되어 있으며, 다른 지표와 관련된 변경은 없음",
+          "comment": "제안은 completionRate 지표 개선에 집중되어 있으며, 다른 지표와 관련된 변경은 없음",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "avgRewardPerRun",
+          "checkId": "no-unrelated-change",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "제안은 avgRewardPerRun의 개선을 위한 것으로, 측정 요약과 직접 관련되어 있다.",
+          "comment": "제안은 avgRewardPerRun의 개선을 위한 것으로, 측정 요약과 직접 관련되어 있다.",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트에서 불확실하거나 상위 검토가 필요한 항목이 발견됐다.",
+      "createdAt": "2026-07-09T19:14:36.1878977+09:00"
     }
   ]
 }

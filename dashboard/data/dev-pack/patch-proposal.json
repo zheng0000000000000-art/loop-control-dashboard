@@ -1,20 +1,20 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783591270365",
-  "title": "작은 터치 대상 요소 수정",
+  "id": "proposal-1783592132694",
+  "title": "smallTouchTargets 측정값 조정",
   "lifecycle": "submitted",
   "createdBy": {
     "provider": "ollama",
     "model": "qwen3:8b"
   },
-  "revisionOf": "proposal-1783591190338",
-  "summary": "dashboard/style.css의 260행과 271행에서 정의된 작은 터치 대상 요소를 수정해야 합니다.",
+  "revisionOf": "proposal-1783591270365",
+  "summary": "smallTouchTargets 측정값을 2에서 0으로 변경하여 터치 표적 크기 문제를 해결하고자 함.",
   "changes": [
     {
       "path": "smallTouchTargets",
       "before": 2,
       "after": 0,
-      "note": "작은 터치 대상 요소가 있음. dashboard/style.css 제260행과 제271행에서 해당 요소의 스타일이 정의되어 있음."
+      "note": "smallTouchTargets 측정값이 2에서 0으로 변경되어 터치 표적 크기 문제를 해결하고자 함. 근거는 dashboard/style.css:260; dashboard/style.css:271"
     }
   ],
   "impact": [

@@ -13,6 +13,11 @@ if (args.Length > 0 && string.Equals(args[0], "measure", StringComparison.Ordina
     return RunMeasureCli(args);
 }
 
+if (args.Length > 0 && string.Equals(args[0], "simtest", StringComparison.OrdinalIgnoreCase))
+{
+    return RunSimTestCli(args);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
@@ -164,15 +169,19 @@ static MeasureOutcome RunMeasureCore(Storage storage, string projectId, JsonSeri
         return new MeasureOutcome(null, ProblemResult(409, "checklist.provider_missing", "Measurement provider is not configured"), 0);
     }
 
-    if (providerId != "dev-pack-checks")
+    if (providerId != "dev-pack-checks" && providerId != "ruined-lab-sim")
     {
         return new MeasureOutcome(null, ProblemResult(409, "checklist.provider_unknown", $"Measurement provider is not supported: {providerId}"), 0);
     }
 
     storage.CreateRestorePoint(projectId);
     var previousMeasurement = bundle.Measurement;
-    var targetRoot = ResolveMeasurementTargetRoot(storage.ProjectPath(projectId), provider!);
-    bundle.Measurement = DevPackMeasures.Measure(targetRoot, providerId, bundle.Blueprint);
+    bundle.Measurement = providerId switch
+    {
+        "dev-pack-checks" => DevPackMeasures.Measure(ResolveMeasurementTargetRoot(storage.ProjectPath(projectId), provider!), providerId, bundle.Blueprint),
+        "ruined-lab-sim" => GameSimulator.Measure(storage.ProjectPath(projectId), providerId, bundle.Blueprint, provider!),
+        _ => bundle.Measurement,
+    };
     var violationCount = ApplyMeasurementResult(bundle, providerId, ntfy, previousMeasurement);
     Persist(storage, projectId, bundle, jsonOptions, ntfy);
     return new MeasureOutcome(bundle, null, violationCount);
@@ -246,6 +255,70 @@ static JsonObject BuildCliSummary(string projectId, MeasureOutcome outcome)
 static JsonObject CliError(string message)
 {
     return new JsonObject { ["error"] = message };
+}
+
+// 게임 시뮬레이터를 두 번 실행해 같은 시드가 같은 결과를 내는지 확인하는 CLI. 재현 실패·데이터 없음=2, 정상=0.
+static int RunSimTestCli(string[] args)
+{
+    var cliJsonOptions = new JsonSerializerOptions
+    {
+        WriteIndented = false,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+    var projectId = args.Length > 1 && !string.IsNullOrWhiteSpace(args[1]) ? args[1] : "ruined-lab";
+    const int seed = 42;
+    const int runs = 500;
+
+    try
+    {
+        var workspaceRoot = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName
+            ?? throw new InvalidOperationException("Workspace root was not found.");
+        var dataRoot = Path.Combine(workspaceRoot, "dashboard", "data");
+        var storage = new Storage(dataRoot);
+        var gameDataPath = Path.Combine(storage.ProjectPath(projectId), "game-data.json");
+
+        if (!File.Exists(gameDataPath))
+        {
+            Console.Error.WriteLine(CliError($"game-data.json not found for {projectId}").ToJsonString(cliJsonOptions));
+            return 2;
+        }
+
+        var gameData = JsonNode.Parse(File.ReadAllText(gameDataPath))!.AsObject();
+        var first = GameSimulator.RunSimulation(gameData, seed, runs);
+        var second = GameSimulator.RunSimulation(gameData, seed, runs);
+        var reproducible = SimResultsEqual(first, second);
+
+        var summary = new JsonObject
+        {
+            ["projectId"] = projectId,
+            ["seed"] = seed,
+            ["runs"] = runs,
+            ["reproducible"] = reproducible,
+            ["completionRate"] = first.CompletionRate,
+            ["roomDeathRates"] = new JsonArray(first.RoomDeathRates.Select(value => (JsonNode)value).ToArray()),
+            ["avgHpPerRoom"] = new JsonArray(first.AvgHpPerRoom.Select(value => (JsonNode)value).ToArray()),
+            ["rewardPerRunMean"] = first.RewardPerRunMean,
+            ["rewardPerRunStdDev"] = first.RewardPerRunStdDev,
+        };
+
+        Console.WriteLine(summary.ToJsonString(cliJsonOptions));
+        return reproducible ? 0 : 2;
+    }
+    catch (Exception error)
+    {
+        Console.Error.WriteLine(CliError(error.Message).ToJsonString(cliJsonOptions));
+        return 2;
+    }
+}
+
+// 두 SimResult가 완전히 동일한지 비교한다(재현성 게이트).
+static bool SimResultsEqual(SimResult first, SimResult second)
+{
+    return first.CompletionRate.Equals(second.CompletionRate) &&
+        first.RoomDeathRates.SequenceEqual(second.RoomDeathRates) &&
+        first.AvgHpPerRoom.SequenceEqual(second.AvgHpPerRoom) &&
+        first.RewardPerRunMean.Equals(second.RewardPerRunMean) &&
+        first.RewardPerRunStdDev.Equals(second.RewardPerRunStdDev);
 }
 
 // 측정 결과를 상태, 로그, 제안에 반영하고 위반 수를 반환한다.
@@ -892,7 +965,7 @@ static MeasurementStages ResolveMeasurementStages(JsonObject definition)
     var reviewStageId = reviewStage?["id"]?.GetValue<string>();
     var deviationStageId = reviewStage?["gate"]?.AsArray()
         .OfType<JsonObject>()
-        .FirstOrDefault(condition => condition["check"]?.GetValue<string>() == "stageStatus")?["stage"]
+        .LastOrDefault(condition => condition["check"]?.GetValue<string>() == "stageStatus")?["stage"]
         ?.GetValue<string>();
     var deviationIndex = stages.FindIndex(stage => stage["id"]?.GetValue<string>() == deviationStageId);
     var measureStageId = deviationIndex > 0 ? stages[deviationIndex - 1]["id"]?.GetValue<string>() : null;

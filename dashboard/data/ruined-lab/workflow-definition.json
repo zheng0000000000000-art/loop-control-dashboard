@@ -37,6 +37,11 @@
       "description": "승인된 결과를 다음 도구나 대상에 전달한다."
     }
   ],
+  "measurementProvider": {
+    "id": "ruined-lab-sim",
+    "seed": 42,
+    "dryRunSamples": 500
+  },
   "guardrails": {
     "maxLoopIterations": 10,
     "maxEstimatedCost": 5.0,

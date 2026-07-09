@@ -4,12 +4,26 @@
     {
       "metricId": "completionRate",
       "band": [45, 60],
-      "priority": "high"
+      "priority": "high",
+      "note": "500회 시뮬레이션 완주율 목표 범위"
     },
     {
-      "metricId": "earlyVariance",
-      "target": 18,
-      "priority": "normal"
+      "metricId": "room1DeathRate",
+      "band": [0, 20],
+      "priority": "normal",
+      "note": "첫 방 사망률 — 초반 진입 장벽"
+    },
+    {
+      "metricId": "room3DeathRate",
+      "band": [0, 35],
+      "priority": "normal",
+      "note": "4번째 방(보스 직전) 사망률"
+    },
+    {
+      "metricId": "avgRewardPerRun",
+      "band": [8, 20],
+      "priority": "normal",
+      "note": "런당 평균 보상 획득량 — 보상 페이싱"
     }
   ]
 }
