@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "proposal-1783604332412",
   "title": "함수 길이 제한 조정",
-  "lifecycle": "submitted",
+  "lifecycle": "decided",
   "createdBy": {
     "provider": "ollama",
     "model": "qwen3:8b"
