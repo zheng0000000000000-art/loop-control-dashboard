@@ -249,6 +249,21 @@ textarea {
   border-color: var(--blue);
 }
 
+.inbox-audit {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.inbox-audit-item {
+  cursor: default;
+}
+
+.inbox-audit-item:hover {
+  border-color: var(--line);
+}
+
 .schema-warning {
   padding: 12px 18px;
   border-right: 1px solid var(--line);
@@ -403,6 +418,7 @@ textarea {
 .status-completed,
 .status-passed,
 .status-approved,
+.status-ai_approval,
 .status-loop_aligned,
 .status-mode_normal {
   color: var(--green);
@@ -452,6 +468,7 @@ textarea {
 [data-theme="dark"] .status-completed,
 [data-theme="dark"] .status-passed,
 [data-theme="dark"] .status-approved,
+[data-theme="dark"] .status-ai_approval,
 [data-theme="dark"] .status-loop_aligned,
 [data-theme="dark"] .status-mode_normal {
   color: #9ff0bd;

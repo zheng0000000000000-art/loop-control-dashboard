@@ -14,7 +14,8 @@
     "subscriptionCalls": "Subscription Runs",
     "subscriptionCallsByRole": "runtime {runtime} · dev {dev}",
     "languageToggle": "KO",
-    "regressedBadge": "{count} regressed"
+    "regressedBadge": "{count} regressed",
+    "unattendedBadge": "{count} unattended loops"
   },
   "inbox": {
     "badge": "Review {count}",
@@ -22,6 +23,9 @@
     "projectOptionCount": "review {count}",
     "waitingHours": "waiting {count}h",
     "waitingDays": "waiting {count}d",
+    "autoApprovals": "Recent auto approvals {count}",
+    "noAutoApprovals": "No recent auto approvals.",
+    "actual": "actual {actual}",
     "kinds": {
       "approval": "Approval",
       "checkpoint": "Checkpoint",
@@ -120,6 +124,7 @@
     "review.rejected": "Review rejected: {proposalId} {text}",
     "review.needs_changes": "Review needs changes: {proposalId} {text}",
     "review.tier1_completed": "Tier 1 review completed: {proposalId}, {verdict}, model {model}, {durationMs}ms {reasonCode} {text}",
+    "review.approver_completed": "AI approval completed: {proposalId}, {decision}, {durationMs}ms {reasonCode} {text}",
     "review.refeedback_insufficient": "Insufficient refeedback: {checkIds} {text}",
     "guardrail.halted": "Guardrail halted: {text}",
     "checkpoint.paused": "Checkpoint paused: {checkpointId}, loop {loopIteration}",
@@ -207,7 +212,8 @@
     "approvedReason": "Approved by human review.",
     "rejectedReason": "Rejected by human review.",
     "editReason": "Proposal change edited during review.",
-    "editFinding": "Edited after value from {before} to {after}. Note: {note}"
+    "editFinding": "Edited after value from {before} to {after}. Note: {note}",
+    "aiApprovalBadge": "AI approval"
   },
   "runLog": {
     "entries": "{count} entries",

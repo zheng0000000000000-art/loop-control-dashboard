@@ -45,6 +45,11 @@ if (args.Length > 0 && string.Equals(args[0], "refeedbacktest", StringComparison
     return RunRefeedbackTestCli();
 }
 
+if (args.Length > 0 && string.Equals(args[0], "approvertest", StringComparison.OrdinalIgnoreCase))
+{
+    return ApproverTestCli.Run(args);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
@@ -249,6 +254,7 @@ static IResult Inbox(Storage storage, JsonSerializerOptions jsonOptions, NtfyOpt
     {
         ["schemaVersion"] = 2,
         ["items"] = items,
+        ["autoApprovals"] = AutoApprovalInbox.BuildSummaries(storage),
     }, jsonOptions);
 }
 
@@ -258,7 +264,7 @@ static IResult CycleSummary(Storage storage, string projectId, JsonSerializerOpt
     try
     {
         var bundle = storage.ReadBundle(projectId);
-        return JsonResult(BuildCycleSummary(bundle.State, bundle.RunLog, bundle.Proposal), jsonOptions);
+        return JsonResult(CycleSummaryBuilder.Build(bundle.State, bundle.RunLog, bundle.Proposal), jsonOptions);
     }
     catch (FileNotFoundException)
     {
@@ -284,7 +290,7 @@ static IResult ProjectContext(Storage storage, string projectId, JsonSerializerO
             ["schemaVersion"] = 2,
             ["projectId"] = projectId,
             ["blueprint"] = Engine.CloneNode(bundle.Blueprint),
-            ["recentCycle"] = BuildCycleSummary(bundle.State, bundle.RunLog, bundle.Proposal),
+            ["recentCycle"] = CycleSummaryBuilder.Build(bundle.State, bundle.RunLog, bundle.Proposal),
             ["pending"] = pending,
             ["relevantSkillPaths"] = SkillRouter.RelevantPaths(workspaceRoot, projectId),
         }, jsonOptions);
@@ -297,83 +303,6 @@ static IResult ProjectContext(Storage storage, string projectId, JsonSerializerO
     {
         return ProblemResult(500, "system.read_failed", error.Message);
     }
-}
-
-// run-log와 현재 proposal로 회차 시간 분해 JSON을 만든다.
-static JsonObject BuildCycleSummary(JsonObject state, JsonObject runLog, JsonObject proposal)
-{
-    var loopIteration = Engine.GetLoopIteration(state);
-    var entries = (runLog["entries"]?.AsArray() ?? new JsonArray())
-        .OfType<JsonObject>()
-        .Where(entry => Number(entry["loopIteration"], loopIteration) == loopIteration)
-        .OrderBy(entry => entry["createdAt"]?.GetValue<string>() ?? "", StringComparer.Ordinal)
-        .ToList();
-    var measurementMs = SumEventDuration(entries, "measure.completed");
-    var generationMs = SumEventDuration(entries, "proposal.generated");
-    var reviewMs = SumEventDuration(entries, "review.tier1_completed");
-    var humanWaitingMs = CalculateHumanWaitingMs(entries, proposal);
-
-    return new JsonObject
-    {
-        ["schemaVersion"] = 2,
-        ["loopIteration"] = loopIteration,
-        ["segments"] = new JsonObject
-        {
-            ["measurementMs"] = measurementMs,
-            ["generationMs"] = generationMs,
-            ["reviewMs"] = reviewMs,
-            ["humanWaitingMs"] = humanWaitingMs,
-            ["totalMs"] = measurementMs + generationMs + reviewMs + humanWaitingMs,
-        },
-    };
-}
-
-// 특정 이벤트의 durationMs 값을 합산한다.
-static long SumEventDuration(List<JsonObject> entries, string eventName)
-{
-    return entries
-        .Where(entry => entry["event"]?.GetValue<string>() == eventName)
-        .Select(entry => Number(entry["params"]?.AsObject()["durationMs"], 0))
-        .Sum(value => (long)Math.Max(0, value));
-}
-
-// 제출된 proposal이 사람 결재를 기다린 시간을 계산한다.
-static long CalculateHumanWaitingMs(List<JsonObject> entries, JsonObject proposal)
-{
-    var proposalId = proposal["id"]?.GetValue<string>() ?? "";
-    var lifecycle = proposal["lifecycle"]?.GetValue<string>() ?? "";
-
-    if (string.IsNullOrWhiteSpace(proposalId))
-    {
-        return 0;
-    }
-
-    var createdAt = entries
-        .Where(entry => entry["event"]?.GetValue<string>() == "proposal.created" &&
-            entry["params"]?.AsObject()["proposalId"]?.GetValue<string>() == proposalId)
-        .Select(entry => entry["createdAt"]?.GetValue<string>())
-        .FirstOrDefault();
-
-    if (!DateTimeOffset.TryParse(createdAt, CultureInfo.InvariantCulture, DateTimeStyles.None, out var start))
-    {
-        return 0;
-    }
-
-    var decidedAt = entries
-        .Where(entry => (entry["event"]?.GetValue<string>() == "review.approved" ||
-                entry["event"]?.GetValue<string>() == "review.rejected") &&
-            entry["params"]?.AsObject()["proposalId"]?.GetValue<string>() == proposalId)
-        .Select(entry => entry["createdAt"]?.GetValue<string>())
-        .FirstOrDefault();
-
-    if (DateTimeOffset.TryParse(decidedAt, CultureInfo.InvariantCulture, DateTimeStyles.None, out var end))
-    {
-        return Math.Max(0, (long)(end - start).TotalMilliseconds);
-    }
-
-    return lifecycle == "submitted"
-        ? Math.Max(0, (long)(DateTimeOffset.Now - start).TotalMilliseconds)
-        : 0;
 }
 
 // 등록된 프로젝트를 훑어 사람 행동 대기 목록을 만든다.
@@ -530,7 +459,7 @@ static MeasureOutcome RunMeasureCore(Storage storage, string projectId, JsonSeri
         _ => bundle.Measurement,
     };
     measureTimer.Stop();
-    var violationCount = ApplyMeasurementResult(bundle, providerId, ntfy, previousMeasurement, storage.ProjectPath(projectId), measureTimer.ElapsedMilliseconds);
+    var violationCount = ApplyMeasurementResult(bundle, projectId, storage, jsonOptions, providerId, ntfy, previousMeasurement, storage.ProjectPath(projectId), measureTimer.ElapsedMilliseconds);
     Persist(storage, projectId, bundle, jsonOptions, ntfy);
     return new MeasureOutcome(bundle, null, violationCount);
 }
@@ -782,7 +711,7 @@ static int RunRefeedbackTestCli()
 }
 
 // 측정 결과를 상태, 로그, 제안에 반영하고 위반 수를 반환한다.
-static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyOptions ntfy, JsonObject previousMeasurement, string projectPath, long durationMs)
+static int ApplyMeasurementResult(ProjectBundle bundle, string projectId, Storage storage, JsonSerializerOptions jsonOptions, string providerId, NtfyOptions ntfy, JsonObject previousMeasurement, string projectPath, long durationMs)
 {
     var checks = EvaluateBlueprintChecks(bundle.Blueprint, bundle.Measurement);
     var violations = checks.Where(check => check.Implemented && !check.Passed).ToList();
@@ -953,7 +882,7 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
                 }
 
                 SetTier1Details(state, stages.ReviewStageId, tuningTier1);
-                Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), tuningTier1.Verdict);
+                (state, runLog) = CompleteTier1Review(bundle, projectId, ntfy, storage, jsonOptions, tuningTier1, state, runLog);
             }
         }
         else
@@ -1005,7 +934,7 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
             }
 
             SetTier1Details(state, stages.ReviewStageId, tier1);
-            Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), tier1.Verdict);
+            (state, runLog) = CompleteTier1Review(bundle, projectId, ntfy, storage, jsonOptions, tier1, state, runLog);
         }
     }
     else
@@ -1343,6 +1272,20 @@ static bool TryEscalateInsufficientRefeedback(ref Tier1ReviewResult tier1, ref J
     runLog = Engine.AppendLog(runLog, RefeedbackInsufficientLog(missingCheckIds), Engine.GetLoopIteration(state));
     tier1 = new Tier1ReviewResult(tier1.Report, tier1.LogEntry, "uncertain", "review.refeedback_insufficient");
     return true;
+}
+
+// 1층 검토 이후 상위 AI 결재 또는 사람 결재 대기로 마무리한다.
+static (JsonObject State, JsonObject RunLog) CompleteTier1Review(ProjectBundle bundle, string projectId, NtfyOptions ntfy, Storage storage, JsonSerializerOptions jsonOptions, Tier1ReviewResult tier1, JsonObject state, JsonObject runLog)
+{
+    bundle.State = state;
+    bundle.RunLog = runLog;
+
+    if (!ApproverWorkflow.TryRun(bundle, projectId, ntfy, storage, jsonOptions, tier1, ApplyApprovalDecision))
+    {
+        Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(bundle.State), ProposalTitle(bundle.Proposal), tier1.Verdict);
+    }
+
+    return (bundle.State, bundle.RunLog);
 }
 
 // 실패 finding 중 재지시 정보가 부족한 checkId를 찾는다.
@@ -1938,9 +1881,25 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
     }
 
     storage.CreateRestorePoint(projectId);
-    var stageId = reviewStage!["id"]!.GetValue<string>();
     var risk = AssessRisk(bundle.Definition, bundle.Proposal);
-    var report = CreateReviewReport(bundle.Proposal, "approved", "사람 검토로 승인됐다.", risk, MergeFindings(GetEditFindings(bundle.Proposal), body["editedChanges"] as JsonArray));
+    var report = CreateReviewReportWithReviewer(
+        bundle.Proposal,
+        "approved",
+        "사람 검토로 승인됐다.",
+        risk,
+        MergeFindings(GetEditFindings(bundle.Proposal), body["editedChanges"] as JsonArray),
+        new JsonObject { ["type"] = "human", ["provider"] = "human", ["model"] = null });
+    var result = ApplyApprovalDecision(storage, projectId, bundle, reviewStage!, report, "human", RuntimeCost(), jsonOptions, ntfy, out var committedBundle);
+
+    GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(committedBundle.State), "approve", proposalId);
+    return result;
+}
+
+// 승인 판정 공통 경로를 적용하고 필요하면 튜닝 재측정을 수행한다.
+static IResult ApplyApprovalDecision(Storage storage, string projectId, ProjectBundle bundle, JsonObject reviewStage, JsonObject report, string provider, JsonObject cost, JsonSerializerOptions jsonOptions, NtfyOptions ntfy, out ProjectBundle committedBundle)
+{
+    var stageId = reviewStage["id"]!.GetValue<string>();
+    var proposalId = bundle.Proposal["id"]?.GetValue<string>() ?? "proposal";
     var state = Engine.ApplyStageStatus(bundle.Definition, bundle.State, stageId, "approved");
     if (HasMeasurementProvider(bundle.Definition))
     {
@@ -1956,8 +1915,8 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
         ["event"] = "review.approved",
         ["params"] = new JsonObject { ["proposalId"] = proposalId, ["edited"] = Bool(bundle.Proposal["edited"]) },
         ["level"] = "info",
-        ["producedBy"] = new JsonObject { ["provider"] = "human", ["model"] = null },
-        ["cost"] = RuntimeCost(),
+        ["producedBy"] = new JsonObject { ["provider"] = provider, ["model"] = null },
+        ["cost"] = Engine.CloneNode(cost),
     }, Engine.GetLoopIteration(state));
 
     var nextStage = Engine.GetNextStage(bundle.Definition, stageId);
@@ -1978,7 +1937,7 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
     bundle.Proposal["lifecycle"] = "decided";
     AppendReport(bundle.Reviews, report);
     var result = Persist(storage, projectId, bundle, jsonOptions, ntfy);
-    var committedBundle = bundle;
+    committedBundle = bundle;
 
     if (isTuningApproval && tuningChanges is not null && tuningChanges.Count > 0)
     {
@@ -1994,7 +1953,6 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
         }
     }
 
-    GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(committedBundle.State), "approve", proposalId);
     return result;
 }
 
@@ -2352,19 +2310,31 @@ static IResult BundleResult(ProjectBundle bundle, JsonSerializerOptions jsonOpti
         ["proposal"] = Engine.CloneNode(bundle.Proposal),
         ["reviewReport"] = Engine.CloneNode(bundle.Reviews),
         ["measurement"] = Engine.CloneNode(bundle.Measurement),
-        ["cycleSummary"] = BuildCycleSummary(bundle.State, bundle.RunLog, bundle.Proposal),
+        ["cycleSummary"] = CycleSummaryBuilder.Build(bundle.State, bundle.RunLog, bundle.Proposal),
     }, jsonOptions);
 }
 
 // 검토 리포트 객체를 만든다.
 static JsonObject CreateReviewReport(JsonObject proposal, string verdict, string reason, string risk, JsonArray findings)
 {
+    return CreateReviewReportWithReviewer(
+        proposal,
+        verdict,
+        reason,
+        risk,
+        findings,
+        new JsonObject { ["type"] = "human", ["provider"] = "human", ["model"] = null });
+}
+
+// 검토자 정보를 포함한 검토 리포트 객체를 만든다.
+static JsonObject CreateReviewReportWithReviewer(JsonObject proposal, string verdict, string reason, string risk, JsonArray findings, JsonObject reviewer)
+{
     return new JsonObject
     {
         ["id"] = $"review-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
         ["proposalId"] = proposal["id"]?.GetValue<string>() ?? "",
         ["verdict"] = verdict,
-        ["reviewer"] = new JsonObject { ["type"] = "human", ["provider"] = "human", ["model"] = null },
+        ["reviewer"] = Engine.CloneNode(reviewer),
         ["riskAssessed"] = risk,
         ["findings"] = Engine.CloneNode(findings),
         ["reason"] = reason,

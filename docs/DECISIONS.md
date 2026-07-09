@@ -12,3 +12,4 @@
   안전하게 뺄 수 있는 부분(스킬 트리거 매칭)만 SkillRouter.cs로 옮기고, 나머지는 강제로
   압축하지 않고 위반으로 보고한다 — 진짜 해소는 이미 반입 대기 중인 self-refactor-dispatch
   (Orchestrator.cs/ProposalFlow.cs 분리) 몫이다. 같은 지표를 두 번 손대는 대신 기존 트랙에 맡긴다.
+- 2026-07-10: 결재 사다리 — low는 상위 AI, medium+·메타는 사람. 정당성은 사후 감사와 재측정·롤백 백스톱.

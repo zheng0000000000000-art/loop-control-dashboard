@@ -14,7 +14,8 @@
     "subscriptionCalls": "구독 실행 횟수",
     "subscriptionCallsByRole": "런타임 {runtime} · 개발 {dev}",
     "languageToggle": "영문",
-    "regressedBadge": "악화 {count}건"
+    "regressedBadge": "악화 {count}건",
+    "unattendedBadge": "무인 진행 {count}회차"
   },
   "inbox": {
     "badge": "결재 {count}",
@@ -22,6 +23,9 @@
     "projectOptionCount": "결재 {count}",
     "waitingHours": "대기 {count}시간",
     "waitingDays": "대기 {count}일",
+    "autoApprovals": "최근 자동 결재 {count}건",
+    "noAutoApprovals": "최근 자동 결재가 없다.",
+    "actual": "실측 {actual}",
     "kinds": {
       "approval": "결재",
       "checkpoint": "체크포인트",
@@ -120,6 +124,7 @@
     "review.rejected": "검토 거절: {proposalId} {text}",
     "review.needs_changes": "검토 결과 수정 필요: {proposalId} {text}",
     "review.tier1_completed": "1층 검토 완료: {proposalId}, {verdict}, 모델 {model}, {durationMs}ms {reasonCode} {text}",
+    "review.approver_completed": "AI 결재 완료: {proposalId}, {decision}, {durationMs}ms {reasonCode} {text}",
     "review.refeedback_insufficient": "재지시 정보 부족: {checkIds} {text}",
     "guardrail.halted": "가드레일 정지: {text}",
     "checkpoint.paused": "체크포인트 일시 정지: {checkpointId}, 루프 {loopIteration}",
@@ -207,7 +212,8 @@
     "approvedReason": "사람 검토로 승인됐다.",
     "rejectedReason": "사람 검토로 거절됐다.",
     "editReason": "검토 중 제안 변경 항목이 편집됐다.",
-    "editFinding": "이후 값을 {before}에서 {after}로 편집했다. 메모: {note}"
+    "editFinding": "이후 값을 {before}에서 {after}로 편집했다. 메모: {note}",
+    "aiApprovalBadge": "AI 결재"
   },
   "runLog": {
     "entries": "{count}개 항목",
