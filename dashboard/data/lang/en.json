@@ -1,0 +1,177 @@
+{
+  "documentTitle": "Loop Control",
+  "schema": {
+    "warning": "Older data detected. Expected version {expected}; found {files}. Continuing without migration."
+  },
+  "header": {
+    "eyebrow": "LOOP CONTROL · LOCAL-FIRST DEMO",
+    "projectSelect": "Active Project",
+    "totalCost": "Execution Cost",
+    "subscriptionCalls": "Subscription Runs",
+    "subscriptionCallsByRole": "runtime {runtime} · dev {dev}",
+    "languageToggle": "KO"
+  },
+  "degraded": {
+    "banner": "Escalation blocked — {days} days until reset"
+  },
+  "theme": {
+    "dark": "Dark",
+    "light": "Light"
+  },
+  "buttons": {
+    "replayScenario": "Replay Demo Loop",
+    "downloadJson": "Export Workspace Snapshot",
+    "approve": "Approve",
+    "reject": "Reject",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "acknowledge": "Acknowledge"
+  },
+  "panels": {
+    "pipelineEyebrow": "Workflow Map",
+    "pipelineTitle": "Loop Stages",
+    "detailEyebrow": "Current Context",
+    "detailTitleLoading": "Loading",
+    "approvalEyebrow": "Decision Gate",
+    "approvalTitleFallback": "Review Queue",
+    "logEyebrow": "Operational History",
+    "logTitle": "Activity Timeline"
+  },
+  "statuses": {
+    "not_started": "Not started",
+    "in_progress": "In progress",
+    "completed": "Completed",
+    "passed": "Passed",
+    "warning": "Warning",
+    "blocked": "Blocked",
+    "pending_review": "Pending review",
+    "approved": "Approved",
+    "failed": "Failed",
+    "gate_blocked": "Gate blocked",
+    "failed_upstream": "Failed upstream"
+  },
+  "loopStates": {
+    "running": "Running",
+    "paused": "Paused",
+    "halted": "Halted",
+    "aligned": "Aligned"
+  },
+  "modes": {
+    "normal": "Normal",
+    "degraded": "Degraded"
+  },
+  "blockKinds": {
+    "waiting": "Waiting",
+    "gate_blocked": "Gate blocked",
+    "failed_upstream": "Failed upstream"
+  },
+  "lifecycles": {
+    "draft": "Draft",
+    "candidate": "Candidate",
+    "submitted": "Submitted",
+    "decided": "Decided",
+    "superseded": "Superseded"
+  },
+  "costRoles": {
+    "runtime": "runtime",
+    "dev": "dev"
+  },
+  "verdicts": {
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "needs_changes": "Needs changes",
+    "uncertain": "Uncertain"
+  },
+  "events": {
+    "stage.started": "{stage} started",
+    "stage.passed": "{stage} passed",
+    "stage.failed": "{stage} failed: {text}",
+    "stage.warning": "{stage} warning: {text}",
+    "stage.blocked": "{stage} blocked: {failedChecks}{text}",
+    "proposal.created": "Change Proposal created: {proposalId}",
+    "proposal.edited": "Change Proposal edited: {target} ({before} -> {after}) {text}",
+    "review.approved": "Review approved: {proposalId} {text}{editedSuffix}",
+    "review.rejected": "Review rejected: {proposalId} {text}",
+    "review.needs_changes": "Review needs changes: {proposalId} {text}",
+    "guardrail.halted": "Guardrail halted: {text}",
+    "checkpoint.paused": "Checkpoint paused: {checkpointId}, loop {loopIteration}",
+    "checkpoint.acknowledged": "Checkpoint acknowledged: {checkpointId}",
+    "guardrail.acknowledged": "Guardrail acknowledged: {id}",
+    "system.restored": "System restored: {text}",
+    "executor.escalated": "Executor escalated: {from} -> {to} ({text})",
+    "scenario.step": "Scenario step: {text}"
+  },
+  "detail": {
+    "updated": "Updated {time}",
+    "metrics": "Metrics",
+    "issues": "Issues",
+    "noStageSummary": "No stage summary is available.",
+    "noActiveIssues": "No active issues.",
+    "suspendedTracks": "Suspended {count}",
+    "haltFallback": "Execution is stopped because a configured limit was reached."
+  },
+  "halt": {
+    "guardrailBadge": "Limit exceeded",
+    "checkpointBadge": "Needs check",
+    "guardrailDetail": "The workflow stopped because a limit was exceeded. {text}",
+    "checkpointDetail": "Checkpoint {checkpointId} needs confirmation at loop {loopIteration}. Notification handoff point."
+  },
+  "approval": {
+    "noHumanGate": "No decision gate is configured for this workflow.",
+    "noProposalTitle": "No Change Proposal",
+    "noProposalBody": "No change proposal is attached to the current stage.",
+    "untitledProposal": "Untitled Change Proposal",
+    "proposal": "Change Proposal",
+    "revisionOf": "Revision Of",
+    "lifecycle": "Lifecycle",
+    "latestVerdict": "Latest verdict",
+    "provider": "Origin",
+    "model": "Model",
+    "none": "none",
+    "unknown": "unknown",
+    "notLoaded": "not loaded",
+    "changes": "Proposed Changes",
+    "impact": "Expected Impact",
+    "noChanges": "No proposed changes are available.",
+    "noImpact": "No expected impact is available.",
+    "rejectionPrompt": "Reason for rejecting this change proposal"
+  },
+  "risk": {
+    "assessedRisk": "Assessed risk",
+    "providedRisk": "Provided risk",
+    "changeCount": "Change count",
+    "maxDelta": "Max delta",
+    "autoApproveTarget": "Eligible for Policy-Based Automation",
+    "mismatch": "Assessed risk takes priority: provided {provided}, assessed {assessed}.",
+    "low": "low",
+    "medium": "medium",
+    "high": "high"
+  },
+  "diff": {
+    "before": "Before",
+    "after": "After",
+    "note": "Note",
+    "changed": "changed"
+  },
+  "review": {
+    "history": "Review Trail",
+    "noHistory": "No review trail exists for this change proposal.",
+    "approvedReason": "Approved by human review.",
+    "rejectedReason": "Rejected by human review.",
+    "editReason": "Proposal change edited during review.",
+    "editFinding": "Edited after value from {before} to {after}. Note: {note}"
+  },
+  "runLog": {
+    "entries": "{count} entries",
+    "subscriptionCallsShort": "calls {count}",
+    "retry": "retry {count}"
+  },
+  "logs": {
+    "editedSuffix": "(edited)"
+  },
+  "load": {
+    "failed": "Load failed",
+    "dataUnavailable": "Data unavailable"
+  }
+}

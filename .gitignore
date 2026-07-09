@@ -1,0 +1,7 @@
+.vs/
+bin/
+obj/
+server/bin/
+server/obj/
+server-test.out.log
+server-test.err.log

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 2,
+  "items": [
+    {
+      "metricId": "completionRate",
+      "band": [45, 60],
+      "priority": "high"
+    },
+    {
+      "metricId": "earlyVariance",
+      "target": 18,
+      "priority": "normal"
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title></title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="top-bar">
+        <div class="project-block">
+          <p id="productEyebrow" class="eyebrow"></p>
+          <h1 id="projectName"></h1>
+          <label class="project-picker">
+            <span id="projectSelectLabel"></span>
+            <select id="projectSelect"></select>
+          </label>
+          <div id="pipelineMinimap" class="pipeline-minimap" aria-hidden="true"></div>
+        </div>
+        <div class="top-bar__meta">
+          <span id="overallStatus" class="status-badge status-not_started">not_started</span>
+          <span class="cost-pill">
+            <span id="totalCostLabel"></span>
+            <strong id="totalCost">$0.00</strong>
+          </span>
+          <span class="cost-pill">
+            <span id="subscriptionCallsLabel"></span>
+            <strong id="subscriptionCalls">0</strong>
+          </span>
+          <button id="languageToggle" class="button button-secondary" type="button"></button>
+          <button id="themeToggle" class="button button-secondary" type="button"></button>
+          <button id="replayScenario" class="button button-secondary" type="button"></button>
+          <button id="downloadJson" class="button button-secondary" type="button"></button>
+        </div>
+      </header>
+      <div id="schemaWarning" class="schema-warning" hidden></div>
+
+      <main class="dashboard-grid" aria-live="polite">
+        <section class="panel panel-pipeline" aria-labelledby="pipelineTitle">
+          <div class="panel-heading">
+            <p id="pipelineEyebrow" class="eyebrow"></p>
+            <h2 id="pipelineTitle"></h2>
+          </div>
+          <ol id="stageList" class="stage-list"></ol>
+        </section>
+
+        <section class="panel panel-detail" aria-labelledby="detailTitle">
+          <div class="panel-heading">
+            <p id="detailEyebrow" class="eyebrow"></p>
+            <h2 id="detailTitle"></h2>
+          </div>
+          <div id="stageDetail" class="stage-detail"></div>
+        </section>
+
+        <section class="panel panel-approval" aria-labelledby="approvalTitle">
+          <div class="panel-heading">
+            <p id="approvalEyebrow" class="eyebrow"></p>
+            <h2 id="approvalTitle"></h2>
+          </div>
+          <div id="approvalPanel" class="approval-panel"></div>
+        </section>
+
+        <section class="panel panel-log" aria-labelledby="logTitle">
+          <div class="panel-heading panel-heading-inline">
+            <div>
+              <p id="logEyebrow" class="eyebrow"></p>
+              <h2 id="logTitle"></h2>
+            </div>
+            <span id="logCount" class="muted"></span>
+          </div>
+          <ol id="runLog" class="run-log"></ol>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

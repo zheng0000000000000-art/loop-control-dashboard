@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 2,
+  "projectName": "폐허 연구소 — 게임 밸런싱 쇼케이스",
+  "currentStage": "balanceValidation",
+  "overallStatus": "warning",
+  "loopState": "halted",
+  "mode": "normal",
+  "suspendedTracks": [],
+  "loopIteration": 4,
+  "stages": {
+    "design": "approved",
+    "gameData": "completed",
+    "schemaValidation": "passed",
+    "balanceValidation": "warning",
+    "patchApproval": "pending_review",
+    "unityExport": "blocked"
+  },
+  "blockInfo": {
+    "unityExport": {
+      "kind": "waiting"
+    }
+  },
+  "stageDetails": {
+    "design": {
+      "summary": "짧은 플레이 세션, 모듈형 방 구성, 로컬 검토 지점을 기준으로 설계 방향을 확정했다.",
+      "metrics": [
+        {
+          "label": "승인된 브리프 항목",
+          "value": "6/6"
+        },
+        {
+          "label": "남은 설계 질문",
+          "value": "0"
+        }
+      ],
+      "issues": []
+    },
+    "gameData": {
+      "summary": "아이템, 방, 보상, 전투 데이터를 JSON 테이블 형태로 정규화했다.",
+      "metrics": [
+        {
+          "label": "가져온 레코드",
+          "value": "148"
+        },
+        {
+          "label": "중복 ID",
+          "value": "0"
+        }
+      ],
+      "issues": []
+    },
+    "schemaValidation": {
+      "summary": "필수 필드와 참조 관계가 현재 스키마를 만족한다.",
+      "metrics": [
+        {
+          "label": "통과한 스키마 검사",
+          "value": "24/24"
+        },
+        {
+          "label": "누락 참조",
+          "value": "0"
+        }
+      ],
+      "issues": []
+    },
+    "balanceValidation": {
+      "summary": "현재 값은 진행 가능하지만 초반 구간의 변동성이 경고 기준을 넘었다.",
+      "metrics": [
+        {
+          "label": "시뮬레이션 횟수",
+          "value": "500"
+        },
+        {
+          "label": "경고 기준 초과",
+          "value": "3"
+        },
+        {
+          "label": "예상 완주율",
+          "value": "61%"
+        },
+        {
+          "label": "루프 반복",
+          "value": "3"
+        }
+      ],
+      "issues": [
+        "초반 방 피해량 변동 폭이 목표 범위를 18% 초과했다.",
+        "두 번째 전투 이후 일반 보상 드롭률이 낮다.",
+        "낮은 강화 경로에서 첫 보스 체력이 진행을 지연시킨다."
+      ]
+    },
+    "patchApproval": {
+      "summary": "내보내기 전에 검토해야 할 변경 제안이 승인 대기 중이다.",
+      "metrics": [
+        {
+          "label": "변경 항목 수",
+          "value": "4"
+        },
+        {
+          "label": "산정 위험도",
+          "value": "중간"
+        }
+      ],
+      "issues": [
+        "내보내기 단계로 이동하려면 제안 승인이 필요하다."
+      ]
+    },
+    "unityExport": {
+      "summary": "변경 승인이 완료될 때까지 내보내기가 차단된다.",
+      "metrics": [
+        {
+          "label": "내보내기 준비",
+          "value": "차단됨"
+        }
+      ],
+      "issues": [
+        "변경 검토 단계가 아직 완료되지 않았다."
+      ]
+    }
+  },
+  "lastUpdated": "2026-07-09T10:19:12.1948439+09:00",
+  "haltedAt": "2026-07-09T10:19:12.1948057+09:00",
+  "haltedBy": {
+    "type": "guardrail",
+    "breaches": [
+      {
+        "type": "loopIteration",
+        "actual": 4,
+        "limit": 4
+      }
+    ]
+  }
+}

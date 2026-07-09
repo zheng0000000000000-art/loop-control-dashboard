@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 2,
+  "stages": [
+    {
+      "id": "design",
+      "name": "목표 정하기",
+      "description": "이 흐름의 목표, 제약, 승인 기준을 정한다."
+    },
+    {
+      "id": "gameData",
+      "name": "데이터 준비",
+      "description": "검증과 적용에 쓸 구조화된 입력을 준비한다."
+    },
+    {
+      "id": "schemaValidation",
+      "name": "형식 검사",
+      "description": "필수 항목, 참조, 형식이 정의에 맞는지 확인한다."
+    },
+    {
+      "id": "balanceValidation",
+      "name": "내용 검사",
+      "description": "측정 결과가 목표 범위와 경고 조건 안에 있는지 평가한다."
+    },
+    {
+      "id": "patchApproval",
+      "name": "변경 검토",
+      "description": "제안된 변경을 적용 전에 검토하고 결정한다.",
+      "requiresHuman": true,
+      "gate": [
+        { "check": "stageStatus", "stage": "schemaValidation", "mustBe": ["passed"] },
+        { "check": "stageStatus", "stage": "balanceValidation", "mustBe": ["passed", "warning"] }
+      ]
+    },
+    {
+      "id": "unityExport",
+      "name": "내보내기",
+      "description": "승인된 결과를 다음 도구나 대상에 전달한다."
+    }
+  ],
+  "guardrails": {
+    "maxLoopIterations": 10,
+    "maxEstimatedCost": 5.0,
+    "maxSubscriptionCalls": 5
+  },
+  "reviewPolicy": {
+    "autoApprove": { "enabled": false, "maxRisk": "low", "maxAutoApprovalsPerLoop": 3 },
+    "riskRules": [
+      { "if": "changeCount <= 3 && maxValueDeltaPercent <= 10", "then": "low" },
+      { "if": "changeCount <= 6 && maxValueDeltaPercent <= 25", "then": "medium" },
+      { "default": "high" }
+    ]
+  },
+  "executorPolicy": {
+    "ladder": ["rule-engine", "ollama", "claude-code"],
+    "escalation": {
+      "maxLocalRetries": 2,
+      "requiresApprovalAbove": "ollama"
+    }
+  },
+  "checkpoints": [
+    { "id": "loop-milestone", "on": "loopIteration", "every": 5, "action": "pause_notify" }
+  ]
+}

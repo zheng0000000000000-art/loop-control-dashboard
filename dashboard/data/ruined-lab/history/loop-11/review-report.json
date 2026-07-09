@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 2,
+  "reports": [
+    {
+      "id": "review-001",
+      "proposalId": "patch-2026-07-08-01",
+      "verdict": "needs_changes",
+      "reviewer": {
+        "type": "ai",
+        "provider": "claude-code",
+        "model": null
+      },
+      "riskAssessed": "medium",
+      "findings": [
+        {
+          "target": "rooms[2].rewards.commonDropRate",
+          "comment": "보상 드롭률 조정의 기대 효과를 조금 더 명확히 남기는 편이 좋다.",
+          "severity": "concern"
+        }
+      ],
+      "reason": "방향은 적절하지만 첫 번째 변경 항목의 검토 메모가 더 구체적이면 좋다.",
+      "createdAt": "2026-07-08T14:22:00+09:00"
+    },
+    {
+      "id": "review-1783559927400",
+      "proposalId": "patch-2026-07-08-01",
+      "verdict": "needs_changes",
+      "reviewer": {
+        "type": "human",
+        "provider": "human",
+        "model": null
+      },
+      "riskAssessed": "medium",
+      "findings": [
+        {
+          "target": "rooms[2].rewards.commonDropRate",
+          "comment": "이후 값을 0.34에서 0.35로 편집했다. 메모: ???? ??? 1",
+          "severity": "info"
+        }
+      ],
+      "reason": "검토 중 제안 변경 항목이 편집됐다.",
+      "createdAt": "2026-07-09T10:18:47.4009818+09:00"
+    },
+    {
+      "id": "review-1783559927531",
+      "proposalId": "patch-2026-07-08-01",
+      "verdict": "needs_changes",
+      "reviewer": {
+        "type": "human",
+        "provider": "human",
+        "model": null
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "rooms[2].rewards.commonDropRate",
+          "comment": "이후 값을 0.35에서 0.36로 편집했다. 메모: ???? ??? 2",
+          "severity": "info"
+        }
+      ],
+      "reason": "검토 중 제안 변경 항목이 편집됐다.",
+      "createdAt": "2026-07-09T10:18:47.5317910+09:00"
+    },
+    {
+      "id": "review-1783559927618",
+      "proposalId": "patch-2026-07-08-01",
+      "verdict": "needs_changes",
+      "reviewer": {
+        "type": "human",
+        "provider": "human",
+        "model": null
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "rooms[2].rewards.commonDropRate",
+          "comment": "이후 값을 0.36에서 0.37로 편집했다. 메모: ???? ??? 3",
+          "severity": "info"
+        }
+      ],
+      "reason": "검토 중 제안 변경 항목이 편집됐다.",
+      "createdAt": "2026-07-09T10:18:47.6181551+09:00"
+    }
+  ]
+}

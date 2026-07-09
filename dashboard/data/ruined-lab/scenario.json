@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 3,
+  "name": "게이트 차단과 복구 시연",
+  "intervalMs": 1000,
+  "events": [
+    {
+      "statePatch": {
+        "loopState": "running",
+        "mode": "normal",
+        "suspendedTracks": [],
+        "loopIteration": 1,
+        "currentStage": "schemaValidation",
+        "stageStatuses": {
+          "gameData": "completed",
+          "schemaValidation": "in_progress",
+          "balanceValidation": "blocked",
+          "patchApproval": "blocked",
+          "unityExport": "blocked"
+        },
+        "blockInfo": {
+          "balanceValidation": { "kind": "waiting" },
+          "patchApproval": { "kind": "waiting" },
+          "unityExport": { "kind": "waiting" }
+        },
+        "overallStatus": "in_progress"
+      },
+      "proposalPatch": {
+        "lifecycle": "draft",
+        "edited": false
+      },
+      "log": {
+        "createdAt": "2026-07-08T11:00:00+09:00",
+        "event": "stage.passed",
+        "params": { "stage": "gameData", "text": "데이터 임포트 완료" },
+        "level": "info",
+        "producedBy": { "provider": "local-transform", "model": null },
+        "attempt": 1,
+        "loopIteration": 1,
+        "cost": { "inputTokens": 0, "outputTokens": 0, "estimatedUSD": 0, "subscriptionCalls": 0, "role": "runtime" }
+      }
+    },
+    {
+      "statePatch": {
+        "currentStage": "schemaValidation",
+        "stageStatuses": {
+          "schemaValidation": "failed",
+          "balanceValidation": "blocked",
+          "patchApproval": "blocked",
+          "unityExport": "blocked"
+        },
+        "blockInfo": {
+          "balanceValidation": { "kind": "waiting" },
+          "patchApproval": { "kind": "waiting" },
+          "unityExport": { "kind": "waiting" }
+        },
+        "overallStatus": "failed"
+      },
+      "log": {
+        "createdAt": "2026-07-08T11:01:00+09:00",
+        "event": "stage.failed",
+        "params": { "stage": "schemaValidation", "text": "필수 보상 참조가 누락됨" },
+        "level": "error",
+        "producedBy": { "provider": "schema-checker", "model": null },
+        "attempt": 1,
+        "loopIteration": 1,
+        "cost": { "inputTokens": 0, "outputTokens": 0, "estimatedUSD": 0, "subscriptionCalls": 0, "role": "runtime" }
+      }
+    },
+    {
+      "statePatch": {
+        "currentStage": "patchApproval",
+        "stageStatuses": {
+          "balanceValidation": "warning",
+          "patchApproval": "pending_review",
+          "unityExport": "blocked"
+        },
+        "blockInfo": {
+          "unityExport": { "kind": "waiting" }
+        },
+        "overallStatus": "pending_review"
+      },
+      "log": {
+        "createdAt": "2026-07-08T11:02:00+09:00",
+        "event": "scenario.step",
+        "params": { "text": "검증 실패 상태에서 결정 게이트 진입 시도" },
+        "level": "warning",
+        "producedBy": { "provider": "workflow-engine", "model": null },
+        "attempt": 1,
+        "loopIteration": 1,
+        "cost": { "inputTokens": 0, "outputTokens": 0, "estimatedUSD": 0, "subscriptionCalls": 0, "role": "runtime" }
+      }
+    },
+    {
+      "statePatch": {
+        "currentStage": "schemaValidation",
+        "stageStatuses": {
+          "schemaValidation": "in_progress",
+          "balanceValidation": "warning",
+          "patchApproval": "blocked"
+        },
+        "blockInfo": {
+          "patchApproval": { "kind": "waiting" }
+        },
+        "overallStatus": "in_progress"
+      },
+      "log": {
+        "createdAt": "2026-07-08T11:03:00+09:00",
+        "event": "executor.escalated",
+        "params": { "from": "ollama", "to": "claude-code", "text": "수정 적용 후 재검증 위임" },
+        "level": "warning",
+        "producedBy": { "provider": "workflow-engine", "model": null },
+        "attempt": 1,
+        "loopIteration": 1,
+        "cost": { "inputTokens": 0, "outputTokens": 0, "estimatedUSD": 0, "subscriptionCalls": 0, "role": "runtime" }
+      }
+    },
+    {
+      "statePatch": {
+        "currentStage": "balanceValidation",
+        "stageStatuses": {
+          "schemaValidation": "passed",
+          "balanceValidation": "warning",
+          "patchApproval": "blocked"
+        },
+        "blockInfo": {
+          "patchApproval": { "kind": "waiting" }
+        },
+        "overallStatus": "warning"
+      },
+      "log": {
+        "createdAt": "2026-07-08T11:04:00+09:00",
+        "event": "stage.passed",
+        "params": { "stage": "schemaValidation" },
+        "level": "info",
+        "producedBy": { "provider": "claude-code", "model": null },
+        "attempt": 2,
+        "loopIteration": 1,
+        "cost": { "inputTokens": 2200, "outputTokens": 410, "estimatedUSD": 0, "subscriptionCalls": 1, "role": "runtime" }
+      }
+    },
+    {
+      "statePatch": {
+        "loopState": "paused",
+        "currentStage": "patchApproval",
+        "stageStatuses": {
+          "patchApproval": "pending_review",
+          "unityExport": "blocked"
+        },
+        "blockInfo": {
+          "unityExport": { "kind": "waiting" }
+        },
+        "overallStatus": "pending_review"
+      },
+      "proposalPatch": {
+        "lifecycle": "submitted"
+      },
+      "log": {
+        "createdAt": "2026-07-08T11:05:00+09:00",
+        "event": "proposal.created",
+        "params": { "proposalId": "patch-2026-07-08-01" },
+        "level": "info",
+        "producedBy": { "provider": "workflow-engine", "model": null },
+        "attempt": 1,
+        "loopIteration": 1,
+        "cost": { "inputTokens": 0, "outputTokens": 0, "estimatedUSD": 0, "subscriptionCalls": 0, "role": "runtime" }
+      }
+    },
+    {
+      "statePatch": {},
+      "log": {
+        "createdAt": "2026-07-08T11:06:00+09:00",
+        "event": "domain.note",
+        "params": { "text": "미정의 이벤트 표시 확인" },
+        "level": "info",
+        "producedBy": { "provider": "workflow-engine", "model": null },
+        "attempt": 1,
+        "loopIteration": 1,
+        "cost": { "inputTokens": 0, "outputTokens": 0, "estimatedUSD": 0, "subscriptionCalls": 0, "role": "runtime" }
+      }
+    }
+  ]
+}
