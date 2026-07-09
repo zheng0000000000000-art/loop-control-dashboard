@@ -1,21 +1,30 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783629441529",
-  "title": "코드 품질 개선 및 문서 정확성 강화",
+  "id": "proposal-1783627935057",
+  "title": "코드 품질 개선",
   "lifecycle": "submitted",
   "createdBy": {
     "provider": "ollama",
     "model": "qwen3:8b"
   },
-  "revisionOf": "proposal-1783629398689",
-  "summary": "함수 길이 제한을 설정해 가독성과 유지보수성을 향상시키고, 문서의 일관성과 정확성을 높이기 위한 변경을 진행합니다.",
+  "revisionOf": "proposal-1783626921358",
+  "summary": "기술 도메인 위반 수정, 코드 줄 수 감소, 함수 길이 단축을 통해 가독성과 유지보수성을 향상시키는 변경 제안",
   "assumptions": [],
   "changes": [
     {
       "path": "skillDomainViolations",
       "before": 2,
       "after": 0,
-      "note": "기존의 검토 항목이 적용 지침임을 명시하여, 잘못된 문맥에서 인용되는 문제를 수정하고, 도메인별 파일 네비게이션 및 게임 균형 조정 관련 문서의 일관성과 정확성을 높이기 위한 변경"
+      "note": "사용자에게 직접적인 지시를 제공하는 대신, 기술 도메인 위반 사항을 수정하여 향후 발생할 수 있는 오류를 예방하고자 함"
+    },
+    {
+      "path": "programCsLines",
+      "before": 2684,
+      "after": [
+        0,
+        2661
+      ],
+      "note": "Program.cs 파일의 코드 줄 수를 2684 줄에서 2661 줄로 줄여서 코드의 가독성과 유지보수성을 향상시키고자 함"
     },
     {
       "path": "maxFunctionLength",
@@ -24,13 +33,13 @@
         0,
         80
       ],
-      "note": "함수 길이를 짧게하여 가독성과 유지보수성을 향상시키고, 코드의 복잡도를 낮추는 것을 목표로 합니다."
+      "note": "함수 길이를 단축하여 가독성과 유지보수성을 향상시키고, 코드 복잡도를 낮추는 데 목적이 있다."
     }
   ],
   "impact": [
     {
       "label": "위반 항목",
-      "value": "2"
+      "value": "3"
     },
     {
       "label": "예상 비용",

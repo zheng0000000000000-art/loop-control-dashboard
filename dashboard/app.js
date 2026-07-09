@@ -49,7 +49,6 @@ const elements = {
   cycleSummary: document.querySelector("#cycleSummary"),
   overallStatus: document.querySelector("#overallStatus"),
   regressedBadge: document.querySelector("#regressedBadge"),
-  unattendedBadge: document.querySelector("#unattendedBadge"),
   inboxMenu: document.querySelector("#inboxMenu"),
   inboxBadge: document.querySelector("#inboxBadge"),
   inboxDropdown: document.querySelector("#inboxDropdown"),
@@ -101,7 +100,7 @@ let reviewActionRunning = false;
 let serverBacked = false;
 let pollTimer = null;
 let actionToken = null;
-let globalInbox = { schemaVersion: EXPECTED_SCHEMA_VERSION, items: [], autoApprovals: [] };
+let globalInbox = { schemaVersion: EXPECTED_SCHEMA_VERSION, items: [] };
 
 initialize();
 
@@ -229,7 +228,7 @@ async function loadProject(projectId) {
   if (serverBacked) {
     globalInbox = await loadGlobalInbox();
   } else {
-    globalInbox = { schemaVersion: EXPECTED_SCHEMA_VERSION, items: [], autoApprovals: [] };
+    globalInbox = { schemaVersion: EXPECTED_SCHEMA_VERSION, items: [] };
   }
   proposal = normalizeProposal(proposal);
   reviewReport = normalizeReviewReport(reviewReport);
@@ -381,7 +380,6 @@ function render() {
   elements.projectName.textContent = workflowState.projectName ?? activeProject?.name ?? "";
   setStatusBadge(elements.overallStatus, getOverallBadgeStatus(), getOverallBadgeLabel());
   renderRegressedBadge();
-  renderUnattendedBadge();
   elements.totalCost.textContent = formatCurrency(sumEstimatedCost(runLog));
   elements.subscriptionCalls.textContent = formatSubscriptionCallsByRole(runLog);
   elements.replayScenario.disabled = scenarioRunning || getScenarioEvents().length === 0;
@@ -478,28 +476,14 @@ function renderRegressedBadge() {
   elements.regressedBadge.textContent = t("header.regressedBadge", { count });
 }
 
-// 헤더에 무인 진행 회차 수를 표시한다.
-function renderUnattendedBadge() {
-  const count = countAutoApprovals(reviewReport);
-
-  if (count === 0) {
-    elements.unattendedBadge.hidden = true;
-    return;
-  }
-
-  elements.unattendedBadge.hidden = false;
-  elements.unattendedBadge.textContent = t("header.unattendedBadge", { count });
-}
-
 // 헤더 전역 인박스 배지와 드롭다운을 렌더링한다.
 function renderInbox() {
   const items = getInboxItems();
-  const autoApprovals = getAutoApprovalItems();
 
   populateProjectSelect();
   elements.projectSelect.value = activeProject?.id ?? "";
 
-  if (items.length === 0 && autoApprovals.length === 0) {
+  if (items.length === 0) {
     elements.inboxMenu.hidden = true;
     elements.inboxDropdown.hidden = true;
     elements.inboxDropdown.replaceChildren();
@@ -511,36 +495,7 @@ function renderInbox() {
   elements.inboxDropdown.replaceChildren(
     createElement("p", { className: "section-label", text: t("inbox.title") }),
     ...items.map((item) => renderInboxItem(item)),
-    renderAutoApprovalInboxSection(autoApprovals),
   );
-}
-
-// 최근 자동 결재 감사 섹션을 렌더링한다.
-function renderAutoApprovalInboxSection(items) {
-  const section = createElement("section", { className: "inbox-audit" });
-  section.append(createElement("p", { className: "section-label", text: t("inbox.autoApprovals", { count: items.length }) }));
-
-  if (items.length === 0) {
-    section.append(createElement("p", { className: "empty-state", text: t("inbox.noAutoApprovals") }));
-    return section;
-  }
-
-  section.append(...items.map(renderAutoApprovalInboxItem));
-  return section;
-}
-
-// 자동 결재 감사 항목을 렌더링한다.
-function renderAutoApprovalInboxItem(item) {
-  const actual = Array.isArray(item.actual)
-    ? item.actual.map((metric) => `${metric.metricId}:${formatValue(metric.value)}`).join(", ")
-    : t("approval.none");
-  const node = createElement("div", { className: "inbox-item inbox-audit-item" });
-  node.append(
-    createElement("strong", { text: item.projectName ?? item.projectId }),
-    createElement("span", { text: `${item.proposalId ?? ""} · ${formatRisk(item.riskAssessed ?? "low")}` }),
-    createElement("span", { className: "muted", text: `${item.reason ?? ""} · ${t("inbox.actual", { actual })}` }),
-  );
-  return node;
 }
 
 // 인박스 항목 버튼을 렌더링한다.
@@ -1139,9 +1094,6 @@ function renderRunLog() {
         });
         const eventText = createElement("p", { className: "log-event-text" });
         eventText.append(level, document.createTextNode(formatEvent(entry)));
-        if (entry.event === "review.approver_completed") {
-          eventText.append(" ", createStatusBadge("ai_approval", t("review.aiApprovalBadge")));
-        }
 
         item.append(
           createElement("span", { className: "log-time", text: formatDateTime(entry.createdAt) }),
@@ -1977,7 +1929,6 @@ function normalizeInbox(value) {
   return {
     schemaVersion: value?.schemaVersion ?? EXPECTED_SCHEMA_VERSION,
     items: Array.isArray(value?.items) ? value.items : [],
-    autoApprovals: Array.isArray(value?.autoApprovals) ? value.autoApprovals : [],
   };
 }
 
@@ -2377,11 +2328,6 @@ function getInboxItems() {
   return Array.isArray(globalInbox?.items) ? globalInbox.items : [];
 }
 
-// 전역 인박스의 자동 결재 감사 항목 목록을 반환한다.
-function getAutoApprovalItems() {
-  return Array.isArray(globalInbox?.autoApprovals) ? globalInbox.autoApprovals : [];
-}
-
 // 프로젝트별 인박스 항목 수를 계산한다.
 function getInboxCountsByProject() {
   const counts = new Map();
@@ -2391,13 +2337,6 @@ function getInboxCountsByProject() {
   });
 
   return counts;
-}
-
-// 검토 리포트에서 상위 AI 승인 횟수를 센다.
-function countAutoApprovals(currentReviewReport) {
-  return (currentReviewReport?.reports ?? []).filter((report) => {
-    return report.verdict === "approved" && report.reviewer?.type === "ai" && report.reviewer?.role === "approver";
-  }).length;
 }
 
 // 상태 또는 차단 종류를 표시 문자열로 변환한다.

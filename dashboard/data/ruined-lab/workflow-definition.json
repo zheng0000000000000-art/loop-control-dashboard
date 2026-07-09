@@ -149,17 +149,6 @@
       "maxRisk": "low",
       "maxAutoApprovalsPerLoop": 3
     },
-    "approverTier": {
-      "provider": "claude-code",
-      "enabled": true,
-      "maxRisk": "low",
-      "maxAutoApprovalsPerLoop": 3,
-      "requires": [
-        "tier1_passed",
-        "no_suspended_tracks",
-        "not_meta_change"
-      ]
-    },
     "riskRules": [
       {
         "if": "changeCount <= 3 && maxValueDeltaPercent <= 10",
