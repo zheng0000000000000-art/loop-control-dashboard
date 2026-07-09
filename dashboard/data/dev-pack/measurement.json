@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-09T23:49:04.0176272+09:00",
+  "measuredAt": "2026-07-10T00:00:23.5759898+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
@@ -68,8 +68,11 @@
     },
     {
       "metricId": "skillDomainViolations",
-      "value": 0,
-      "evidence": []
+      "value": 2,
+      "evidence": [
+        "docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md",
+        "docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md"
+      ]
     },
     {
       "metricId": "programCsLines",

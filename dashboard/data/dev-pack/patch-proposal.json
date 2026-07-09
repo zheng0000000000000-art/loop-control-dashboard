@@ -1,29 +1,26 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783608549264",
-  "title": "함수 길이 단축",
+  "id": "proposal-1783609223596",
+  "title": "악화 롤백 제안: skillDomainViolations",
   "lifecycle": "submitted",
+  "kind": "rollback",
   "createdBy": {
-    "provider": "ollama",
-    "model": "qwen3:8b"
+    "provider": "rule-engine",
+    "model": null
   },
   "revisionOf": null,
-  "summary": "함수 길이를 단축하여 가독성과 유지보수성을 향상시키고 코드 복잡도를 낮춥니다.",
-  "assumptions": [],
+  "summary": "직전에 충족되던 지표가 악화되어 자동 롤백을 제안한다. 체크리스트가 검토할 내용이 없어 1층을 건너뛰고 사람 결재로 직행한다.",
   "changes": [
     {
-      "path": "maxFunctionLength",
-      "before": 246,
-      "after": [
-        0,
-        80
-      ],
-      "note": "함수 길이를 단축하여 가독성과 유지보수성을 향상시키고, 코드의 복잡도를 낮추는 것을 목표로 합니다."
+      "path": "skillDomainViolations",
+      "before": 2,
+      "after": 0,
+      "note": "직전 승인 원인 미상 이후 skillDomainViolations이 0→2로 악화됨. 되돌리거나 원인 조사 필요"
     }
   ],
   "impact": [
     {
-      "label": "위반 항목",
+      "label": "악화 항목",
       "value": "1"
     },
     {

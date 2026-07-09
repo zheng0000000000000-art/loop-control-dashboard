@@ -1187,6 +1187,152 @@
         "subscriptionCalls": 0,
         "role": "runtime"
       }
+    },
+    {
+      "createdAt": "2026-07-09T23:57:43.4116119+09:00",
+      "event": "measure.completed",
+      "params": {
+        "providerId": "ruined-lab-sim",
+        "violationCount": 1,
+        "durationMs": 19
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 4,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-09T23:57:43.4175567+09:00",
+      "event": "stage.warning",
+      "params": {
+        "stage": "balanceValidation",
+        "text": "블루프린트 대비 괴리가 감지됐다.",
+        "reasonCode": "checklist.blueprint_deviation"
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 4,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-09T23:57:50.0645416+09:00",
+      "event": "proposal.generated",
+      "params": {
+        "provider": "rule-engine",
+        "model": null,
+        "durationMs": 6610,
+        "fallback": true,
+        "selfReviewed": true,
+        "selfReviewPassed": false,
+        "reasonCode": "system.executor_degraded",
+        "text": "자가 비평 실패: 예측을 측정 결과라고 부르는 표현이 있으면 passed=false",
+        "failReason": "자가 비평 실패: 예측을 측정 결과라고 부르는 표현이 있으면 passed=false"
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 4,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-09T23:57:50.0649452+09:00",
+      "event": "proposal.superseded",
+      "params": {
+        "proposalId": "proposal-1783608467238",
+        "reasonCode": "tuning.replaced"
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 4,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-09T23:57:50.0656223+09:00",
+      "event": "proposal.created",
+      "params": {
+        "proposalId": "proposal-1783609070062"
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 4,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-09T23:58:11.3372525+09:00",
+      "event": "review.tier1_completed",
+      "params": {
+        "proposalId": "proposal-1783609070062",
+        "verdict": "uncertain",
+        "model": "qwen3:14b",
+        "durationMs": 21267,
+        "checkCount": 18,
+        "uncertainCount": 8,
+        "attempts": 18,
+        "text": ""
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "attempt": 1,
+      "loopIteration": 4,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
     }
   ]
 }
