@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
-  "currentStage": "apply",
-  "overallStatus": "in_progress",
+  "currentStage": "changeReview",
+  "overallStatus": "warning",
   "loopState": "running",
   "mode": "normal",
   "suspendedTracks": [
@@ -18,10 +18,14 @@
     "goals": "passed",
     "measure": "passed",
     "deviationCheck": "warning",
-    "changeReview": "approved",
-    "apply": "in_progress"
+    "changeReview": "pending_review",
+    "apply": "blocked"
   },
-  "blockInfo": {},
+  "blockInfo": {
+    "apply": {
+      "kind": "waiting"
+    }
+  },
   "stageDetails": {
     "goals": {
       "summary": "개발 팩은 저장소의 핵심 규칙을 측정하고 블루프린트 기준과 비교한다.",
@@ -43,7 +47,7 @@
       "issues": []
     },
     "deviationCheck": {
-      "summary": "측정 결과에서 1개 괴리가 감지됐다.",
+      "summary": "측정 결과에서 3개 괴리가 감지됐다.",
       "metrics": [
         {
           "label": "domainWordsInEngine",
@@ -99,30 +103,34 @@
         },
         {
           "label": "programCsLines",
-          "value": "미구현"
+          "value": "2684 / 0~2661"
         },
         {
           "label": "appJsLines",
-          "value": "미구현"
+          "value": "2446 / 0~2692"
         },
         {
           "label": "maxFunctionLength",
-          "value": "미구현"
+          "value": "246 / 0~80"
         }
       ],
       "issues": [
-        "skillDomainViolations: 측정값 2이 기준 0을 벗어났다. 근거: docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md"
+        "skillDomainViolations: 측정값 2이 기준 0을 벗어났다. 근거: docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md",
+        "programCsLines: 측정값 2684이 기준 0~2661을 벗어났다. 근거: server/Program.cs:2684 lines",
+        "maxFunctionLength: 측정값 246이 기준 0~80을 벗어났다. 근거: server/Program.cs:785-1030"
       ]
     },
     "changeReview": {
-      "summary": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "summary": "1층 체크리스트 결과를 사람이 확인해야 한다.",
       "metrics": [
         {
           "label": "1층 검토 판정",
-          "value": "approved"
+          "value": "uncertain"
         }
       ],
-      "issues": []
+      "issues": [
+        "no-scope-creep: changes에 blueprint 위반 해소와 무관한 항목이 섞여 있는가"
+      ]
     },
     "apply": {
       "summary": "승인 후 사람이 저장소를 수정하고 다시 측정해 해소 여부를 확인한다.",
@@ -130,7 +138,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-10T00:16:33.8667353+09:00",
+  "lastUpdated": "2026-07-10T04:42:28.8003486+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",

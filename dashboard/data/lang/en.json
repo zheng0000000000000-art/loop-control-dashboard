@@ -26,7 +26,10 @@
       "approval": "Approval",
       "checkpoint": "Checkpoint",
       "guardrail": "Guardrail",
-      "regression": "Regression"
+      "regression": "Regression",
+      "import_pending": "Import pending",
+      "dispatch_questions": "Needs clarification",
+      "contribution": "Contribution suggestion"
     }
   },
   "degraded": {
@@ -131,7 +134,8 @@
     "tuning.no_solution": "No tuning solution: {candidatesUsed} candidates, {text}",
     "executor.escalated": "Executor escalated: {from} -> {to} ({text})",
     "scenario.step": "Scenario step: {text}",
-    "measure.completed": "Measurement completed: {providerId}, {violationCount} violations"
+    "measure.completed": "Measurement completed: {providerId}, {violationCount} violations",
+    "contribution.submitted": "Contribution received: {kind}, status {status} — {content}"
   },
   "detail": {
     "updated": "Updated {time}",

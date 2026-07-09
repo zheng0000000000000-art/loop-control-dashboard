@@ -1,4 +1,4 @@
-// 프로젝트 JSON 파일을 원자적으로 읽고 쓴다.
+// 프로젝트·전역 JSON 파일을 원자적으로 읽고 쓴다.
 // 복원 지점과 루프 스냅샷을 관리한다.
 using System.Collections.Concurrent;
 using System.Text;
@@ -199,6 +199,25 @@ public sealed class Storage
     public void WriteProjectFile(string projectId, string fileName, JsonNode node)
     {
         WriteJson(ProjectFilePath(projectId, fileName), node);
+    }
+
+    // 프로젝트에 속하지 않는 전역 파일 경로를 계산한다.
+    public string GlobalFilePath(string fileName)
+    {
+        return Path.Combine(DataRoot, fileName);
+    }
+
+    // 전역 JSON 파일을 읽는다. 없으면 대체값을 만든다.
+    public JsonNode ReadGlobalFile(string fileName, Func<JsonNode> fallback)
+    {
+        var path = GlobalFilePath(fileName);
+        return File.Exists(path) ? ReadJson(path) : fallback();
+    }
+
+    // 전역 JSON 파일을 원자적으로 쓴다.
+    public void WriteGlobalFile(string fileName, JsonNode node)
+    {
+        WriteJson(GlobalFilePath(fileName), node);
     }
 
     // 선택 프로젝트 파일을 읽고 없으면 대체값을 만든다.

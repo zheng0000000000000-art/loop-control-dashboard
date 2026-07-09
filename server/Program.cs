@@ -69,6 +69,7 @@ var dashboardRoot = Path.Combine(workspaceRoot, "dashboard");
 var dataRoot = Path.Combine(dashboardRoot, "data");
 var storage = new Storage(dataRoot);
 var outboxManager = new OutboxManager(workspaceRoot);
+var contributionsLock = new object();
 var jsonOptions = new JsonSerializerOptions
 {
     WriteIndented = true,
@@ -198,6 +199,17 @@ app.MapPost("/api/projects/{projectId}/outbox/{taskId}/reject-import", async (st
     return DispatchResult(() => outboxManager.RejectImport(taskId, body, remoteActionToken ?? "", request.Headers["X-Action-Token"].ToString()), jsonOptions);
 });
 
+app.MapPost("/api/contributions", async (HttpRequest request) =>
+{
+    var body = await ReadBodyObject(request);
+    lock (contributionsLock)
+    {
+        return DispatchResult(() => ContributionStore.Submit(storage, workspaceRoot, body), jsonOptions);
+    }
+});
+
+app.MapGet("/api/projects/{projectId}/context", (string projectId) => ProjectContext(storage, projectId, jsonOptions, ntfyOptions, workspaceRoot));
+
 app.UseDefaultFiles(new DefaultFilesOptions
 {
     FileProvider = new PhysicalFileProvider(dashboardRoot),
@@ -232,6 +244,7 @@ static IResult Inbox(Storage storage, JsonSerializerOptions jsonOptions, NtfyOpt
 {
     var items = BuildInboxItems(storage, ntfy);
     outboxManager.AddInboxItems(items);
+    ContributionStore.AddPendingInboxItems(storage, items);
     return JsonResult(new JsonObject
     {
         ["schemaVersion"] = 2,
@@ -246,6 +259,35 @@ static IResult CycleSummary(Storage storage, string projectId, JsonSerializerOpt
     {
         var bundle = storage.ReadBundle(projectId);
         return JsonResult(BuildCycleSummary(bundle.State, bundle.RunLog, bundle.Proposal), jsonOptions);
+    }
+    catch (FileNotFoundException)
+    {
+        return ProblemResult(404, "path.not_found", "project not found");
+    }
+    catch (Exception error)
+    {
+        return ProblemResult(500, "system.read_failed", error.Message);
+    }
+}
+
+// 새 에이전트 온보딩용 한 방 조회: blueprint·최근 회차·미결·관련 스킬 경로.
+static IResult ProjectContext(Storage storage, string projectId, JsonSerializerOptions jsonOptions, NtfyOptions ntfy, string workspaceRoot)
+{
+    try
+    {
+        var bundle = storage.ReadBundle(projectId);
+        var projectName = ProjectDisplayName(bundle.State);
+        var pending = new JsonArray();
+        AddProjectInboxItems(storage, projectId, projectName, pending, ntfy);
+        return JsonResult(new JsonObject
+        {
+            ["schemaVersion"] = 2,
+            ["projectId"] = projectId,
+            ["blueprint"] = Engine.CloneNode(bundle.Blueprint),
+            ["recentCycle"] = BuildCycleSummary(bundle.State, bundle.RunLog, bundle.Proposal),
+            ["pending"] = pending,
+            ["relevantSkillPaths"] = SkillRouter.RelevantPaths(workspaceRoot, projectId),
+        }, jsonOptions);
     }
     catch (FileNotFoundException)
     {
@@ -385,6 +427,7 @@ static void AddProjectInboxItems(Storage storage, string projectId, string proje
             ["title"] = proposal["title"]?.GetValue<string>() ?? "제안",
             ["waitingSince"] = waitingSince,
             ["summary"] = SummarizeProposal(proposal),
+            ["assignableTo"] = "human",
         };
         items.Add(item);
         if (DateTimeOffset.TryParse(waitingSince, CultureInfo.InvariantCulture, DateTimeStyles.None, out var since))
@@ -405,6 +448,7 @@ static void AddProjectInboxItems(Storage storage, string projectId, string proje
             ["title"] = loopState == "paused" ? "체크포인트 확인 필요" : "가드레일 확인 필요",
             ["waitingSince"] = state["lastUpdated"]?.GetValue<string>() ?? DateTimeOffset.Now.ToString("O"),
             ["summary"] = reason?["checkpointId"]?.GetValue<string>() ?? reason?["type"]?.GetValue<string>() ?? loopState,
+            ["assignableTo"] = "human",
         });
     }
 
@@ -418,6 +462,7 @@ static void AddProjectInboxItems(Storage storage, string projectId, string proje
             ["title"] = "악화 확인 필요",
             ["waitingSince"] = track["createdAt"]?.GetValue<string>() ?? state["lastUpdated"]?.GetValue<string>() ?? DateTimeOffset.Now.ToString("O"),
             ["summary"] = track["metricId"]?.GetValue<string>() ?? "regression",
+            ["assignableTo"] = "human",
         });
     }
 }

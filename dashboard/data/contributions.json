@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 2,
+  "records": [
+    {
+      "event": "contribution.submitted",
+      "params": {
+        "id": "contribution-20260709193423742",
+        "kind": "incident",
+        "content": "dashboard/data/dev-pack/blueprint.json의 programCsLines·appJsLines·maxFunctionLength 세 항목 note 필드가 한글 대신 물음표(?)로 깨져 있다. 예: programCsLines note = \"Program.cs ? ?. ?? ?? ?? 2419?, ??? +10%\", maxFunctionLength note = \"??? ??? ??? ?? ?? ??. ???? ?? ???\". AGENT-GUIDE.md 자기사용 검증(GET /api/projects/dev-pack/context) 중 발견했다.",
+        "evidence": "node -e를 통해 blueprint.json을 utf8로 읽어 programCsLines/appJsLines/maxFunctionLength의 note 필드를 출력하면 UTF-8 대체 문자가 아닌 리터럴 물음표 문자가 다수 포함되어 있다(다른 12개 항목의 note는 정상 한글). blueprint.json은 이번 작업에서 수정하지 않았다 — 기준 파일 직접 수정 금지 원칙에 따라 사실만 기록한다.",
+        "status": "recorded",
+        "incidentPath": "docs/incidents/2026-07-10-agent-contribution-423742.md"
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "agent",
+        "model": null
+      },
+      "createdAt": "2026-07-10T04:34:23.7447625+09:00"
+    },
+    {
+      "event": "contribution.submitted",
+      "params": {
+        "id": "contribution-20260709193544899",
+        "kind": "skill_draft",
+        "content": "skills/domains/dev/file-navigation.md의 트리거 목록에 AGENT-GUIDE.md를 추가하자. 현재 트리거는 'server/**, dashboard/data/**, docs/verification/**, docs/DECISIONS.md, AGENTS.md, CLAUDE.md, skills/**'로 CLAUDE.md·AGENTS.md는 포함하지만 같은 루트 관례 문서인 AGENT-GUIDE.md는 빠져 있다. GET /api/projects/{id}/context의 relevantSkillPaths 매칭 로직도 이 파일의 '트리거:' 줄을 그대로 파싱하므로, 트리거에 추가하면 그 API 응답에도 자동 반영된다.",
+        "evidence": "skills/domains/dev/file-navigation.md 3번째 줄: '버전: 1 | 도메인: dev | 트리거: server/**, dashboard/data/**, docs/verification/**, docs/DECISIONS.md, AGENTS.md, CLAUDE.md, skills/** | 대상: ...' — AGENT-GUIDE.md 미포함 확인. 스킬 파일 수정은 사람 승인 필요 원칙에 따라 직접 고치지 않고 제안으로 남긴다.",
+        "status": "pending",
+        "incidentPath": null
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "agent",
+        "model": null
+      },
+      "createdAt": "2026-07-10T04:35:44.9022868+09:00"
+    }
+  ]
+}

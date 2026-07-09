@@ -1,27 +1,45 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783610151120",
-  "title": "도메인 오류 감소 목적 설명",
-  "lifecycle": "decided",
+  "id": "proposal-1783626155397",
+  "title": "코드 품질 개선 및 유지보수성 향상",
+  "lifecycle": "submitted",
   "createdBy": {
     "provider": "ollama",
     "model": "qwen3:8b"
   },
-  "revisionOf": null,
-  "summary": "기존 리뷰 피드백의 적용 목적을 명확히하여 잘못된 도메인 사용을 방지하고 측정값을 0으로 감소시킬 수 있도록 한다.",
+  "revisionOf": "proposal-1783625980899",
+  "summary": "스킬 도메인 위반 사례 제거, Program.cs 줄 수 감소, 함수 길이 단축을 통해 코드 품질과 유지보수성을 개선합니다.",
   "assumptions": [],
   "changes": [
     {
       "path": "skillDomainViolations",
       "before": 2,
       "after": 0,
-      "note": "기존 리뷰 피드백이 적용 지침임을 명확히하여, 잘못된 도메인 사용을 방지하고 측정값을 0으로 감소시키는 데 목적을 설명합니다."
+      "note": "스킬 도메인 위반 사례를 제거하여 측정값을 2에서 0으로 감소시키는 변경을 제안합니다."
+    },
+    {
+      "path": "programCsLines",
+      "before": 2684,
+      "after": [
+        0,
+        2661
+      ],
+      "note": "Program.cs 파일의 코드 줄 수를 2684 줄에서 2661 줄로 줄여서 읽기 쉽고 유지보수 가능한 코드 구조를 목표로 한다."
+    },
+    {
+      "path": "maxFunctionLength",
+      "before": 246,
+      "after": [
+        0,
+        80
+      ],
+      "note": "함수 길이를 단축하여 가독성과 유지보수성을 향상시키고, 코드 품질 개선을 목표로 합니다."
     }
   ],
   "impact": [
     {
       "label": "위반 항목",
-      "value": "1"
+      "value": "3"
     },
     {
       "label": "예상 비용",

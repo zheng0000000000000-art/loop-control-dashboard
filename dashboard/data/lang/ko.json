@@ -26,7 +26,10 @@
       "approval": "결재",
       "checkpoint": "체크포인트",
       "guardrail": "가드레일",
-      "regression": "악화"
+      "regression": "악화",
+      "import_pending": "반입 대기",
+      "dispatch_questions": "지시 보완 필요",
+      "contribution": "기여 제안"
     }
   },
   "degraded": {
@@ -131,7 +134,8 @@
     "tuning.no_solution": "튜닝 해 없음: 후보 {candidatesUsed}개, {text}",
     "executor.escalated": "실행자 승격: {from} -> {to} ({text})",
     "scenario.step": "시나리오 단계: {text}",
-    "measure.completed": "측정 완료: {providerId}, 위반 {violationCount}개"
+    "measure.completed": "측정 완료: {providerId}, 위반 {violationCount}개",
+    "contribution.submitted": "기여 접수: {kind}, 상태 {status} — {content}"
   },
   "detail": {
     "updated": "업데이트 {time}",

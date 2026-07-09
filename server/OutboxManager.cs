@@ -135,6 +135,7 @@ public sealed class OutboxManager
                 ["title"] = status == "import_pending" ? "반입 대기" : "지시 보완 필요",
                 ["waitingSince"] = meta["createdAt"]?.GetValue<string>() ?? DateTimeOffset.Now.ToString("O"),
                 ["summary"] = meta["instruction"]?.GetValue<string>() ?? "",
+                ["assignableTo"] = status == "import_pending" ? "human" : "agent_or_human",
             });
         }
     }

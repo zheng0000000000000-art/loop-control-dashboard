@@ -1,5 +1,7 @@
 # 이 저장소에서 작업하는 에이전트의 규칙
 
+먼저 [AGENT-GUIDE.md](AGENT-GUIDE.md)를 읽는다 — API·작업 수명주기·금지선·기여 방법이 거기 있다.
+
 ## 품질 게이트 (필수)
 - 코드·데이터 수정 후 커밋 전에 반드시 측정을 실행한다:
   `dotnet run --project server -- measure dev-pack` (아래 CLI, 서버 기동 불필요)
@@ -15,6 +17,10 @@
 ## 관례
 - 주석은 한국어 기능 설명만 (파일 머리 1~2줄 + 함수 위 1줄). 함수 수정 시 주석 갱신.
 - 커밋 전 git status로 bin/, obj/, history/ 미포함 확인.
+- 코드 변경의 기본 경로는 dispatch/outbox다 — 사본에서 작업하고 diff를 제출하며, 반입은 사람이 한다.
+  직접 수정 + 커밋은 예외이며 다음 경우에만 쓴다: ①관례·가이드 문서 자체(CLAUDE.md, AGENTS.md,
+  AGENT-GUIDE.md, skills/, docs/) ②지시서에 "직접 경로"가 명시된 경우. 예외를 썼으면 작업 보고에
+  사유를 남긴다.
 
 ## 스킬 라우팅
 - /skills/common/ 은 모든 작업에서 읽는다.
