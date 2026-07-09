@@ -68,8 +68,14 @@ public static class OllamaExecutor
             return Unavailable(timer, summaryError ?? "제목/요약 생성 실패", provider, model);
         }
 
+        var selfReview = RunSelfReviewIfEnabled(definition, policy, model, "blueprint", notes, summary.Value.Title, summary.Value.Summary);
+        if (!selfReview.Passed)
+        {
+            return Unavailable(timer, selfReview.Error ?? "자가 비평 실패", provider, model, selfReview.Enabled, false);
+        }
+
         timer.Stop();
-        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, summary.Value.Assumptions, timer.ElapsedMilliseconds, null);
+        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, summary.Value.Assumptions, timer.ElapsedMilliseconds, null, selfReview.Enabled, selfReview.Enabled);
     }
 
     // 이미 결정된 레버 변경들을 서술하는 note·title·summary를 생성한다. 수치는 BalanceTuner가 이미 정했다 — 모델은 서술만 한다.
@@ -108,8 +114,65 @@ public static class OllamaExecutor
             return Unavailable(timer, summaryError ?? "제목/요약 생성 실패", provider, model);
         }
 
+        var selfReview = RunSelfReviewIfEnabled(definition, policy, model, "tuning", notes, summary.Value.Title, summary.Value.Summary);
+        if (!selfReview.Passed)
+        {
+            return Unavailable(timer, selfReview.Error ?? "자가 비평 실패", provider, model, selfReview.Enabled, false);
+        }
+
         timer.Stop();
-        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, summary.Value.Assumptions, timer.ElapsedMilliseconds, null);
+        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, summary.Value.Assumptions, timer.ElapsedMilliseconds, null, selfReview.Enabled, selfReview.Enabled);
+    }
+
+    // definition의 selfReview가 켜져 있으면 생성 결과를 모델로 한 번 자체 점검한다.
+    private static SelfReviewResult RunSelfReviewIfEnabled(JsonObject definition, JsonObject policy, string model, string kind, Dictionary<string, string> notes, string title, string summary)
+    {
+        if (definition["selfReview"]?.GetValue<bool>() != true)
+        {
+            return new SelfReviewResult(false, true, null);
+        }
+
+        try
+        {
+            var raw = CallModel(policy, model, BuildSelfReviewPrompt(kind, notes, title, summary));
+            var parsed = ExtractJsonObject(StripThinkBlock(raw));
+            var passed = parsed?["passed"]?.GetValue<bool>();
+            var note = parsed?["note"]?.GetValue<string>() ?? "";
+
+            if (passed is null)
+            {
+                return new SelfReviewResult(true, false, "자가 비평 응답 스키마 불일치");
+            }
+
+            return passed.Value
+                ? new SelfReviewResult(true, true, null)
+                : new SelfReviewResult(true, false, $"자가 비평 실패: {note}");
+        }
+        catch (ReviewerUnavailableException error)
+        {
+            return new SelfReviewResult(true, false, error.Message);
+        }
+        catch (Exception error)
+        {
+            return new SelfReviewResult(true, false, error.Message);
+        }
+    }
+
+    // 제출 전 자가 비평 프롬프트를 만든다.
+    private static string BuildSelfReviewPrompt(string kind, Dictionary<string, string> notes, string title, string summary)
+    {
+        var notesJson = new JsonObject();
+        foreach (var item in notes)
+        {
+            notesJson[item.Key] = item.Value;
+        }
+
+        return "너는 제출 전 제안 문안을 자체 점검한다. JSON으로만 답하라. note에 판정어, 거절/승인 언어, 예측을 측정 결과라고 부르는 표현이 있으면 passed=false다.\n" +
+            $"종류: {kind}\n" +
+            $"제목: {title}\n" +
+            $"요약: {summary}\n" +
+            $"notes: {notesJson.ToJsonString(JsonOptions)}\n" +
+            "답 형식: {\"passed\":true|false,\"note\":\"한 줄 근거\"}";
     }
 
     // 레버 변경 하나에 대한 note를 생성한다. 실패 사유를 함께 반환한다.
@@ -456,10 +519,10 @@ public static class OllamaExecutor
     }
 
     // 생성 불가 결과를 만든다.
-    private static ExecutorGenerateResult Unavailable(Stopwatch timer, string error, string provider = "rule-engine", string? model = null)
+    private static ExecutorGenerateResult Unavailable(Stopwatch timer, string error, string provider = "rule-engine", string? model = null, bool selfReviewed = false, bool selfReviewPassed = false)
     {
         timer.Stop();
-        return new ExecutorGenerateResult(true, provider, model, new Dictionary<string, string>(), "", "", [], timer.ElapsedMilliseconds, error);
+        return new ExecutorGenerateResult(true, provider, model, new Dictionary<string, string>(), "", "", [], timer.ElapsedMilliseconds, error, selfReviewed, selfReviewPassed);
     }
 
     // 노드에서 정수 값을 읽는다.
@@ -469,4 +532,6 @@ public static class OllamaExecutor
     }
 }
 
-public sealed record ExecutorGenerateResult(bool Unavailable, string Provider, string? Model, Dictionary<string, string> Notes, string Title, string Summary, List<string> Assumptions, long DurationMs, string? Error);
+public sealed record SelfReviewResult(bool Enabled, bool Passed, string? Error);
+
+public sealed record ExecutorGenerateResult(bool Unavailable, string Provider, string? Model, Dictionary<string, string> Notes, string Title, string Summary, List<string> Assumptions, long DurationMs, string? Error, bool SelfReviewed, bool SelfReviewPassed);

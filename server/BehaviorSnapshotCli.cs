@@ -126,6 +126,7 @@ public static class BehaviorSnapshotCli
             ["finalDistance"] = tuning.FinalDistance,
             ["baselineProgressedRooms"] = tuning.BaselineProgressedRooms,
             ["finalProgressedRooms"] = tuning.FinalProgressedRooms,
+            ["restartAttempts"] = tuning.RestartAttempts,
             ["changedLevers"] = new JsonArray(tuning.ChangedLevers.Select(change => (JsonNode)new JsonObject
             {
                 ["path"] = change.Path,

@@ -79,13 +79,65 @@
       "min": 80,
       "max": 150,
       "step": 10
+    },
+    {
+      "path": "rooms[*].enemies.hp",
+      "min": 10,
+      "max": 30,
+      "step": 5
+    },
+    {
+      "path": "rooms[*].enemies.count",
+      "min": 1,
+      "max": 4,
+      "step": 1
     }
   ],
   "tuning": {
     "maxCandidates": 40,
     "dryRunSamples": 500,
-    "maxLeversPerProposal": 3
+    "maxLeversPerProposal": 3,
+    "randomRestarts": 3
   },
+  "suggestedBlueprintMetrics": [
+    {
+      "metricId": "room1ReachRate",
+      "band": [
+        95,
+        100
+      ],
+      "priority": "normal",
+      "note": "첫 방에 도달한 런 비율"
+    },
+    {
+      "metricId": "room2ReachRate",
+      "band": [
+        80,
+        100
+      ],
+      "priority": "normal",
+      "note": "두 번째 방에 도달한 런 비율"
+    },
+    {
+      "metricId": "room3ReachRate",
+      "band": [
+        60,
+        100
+      ],
+      "priority": "normal",
+      "note": "세 번째 방에 도달한 런 비율"
+    },
+    {
+      "metricId": "room4ReachRate",
+      "band": [
+        45,
+        100
+      ],
+      "priority": "normal",
+      "note": "네 번째 방에 도달한 런 비율"
+    }
+  ],
+  "selfReview": true,
   "guardrails": {
     "maxLoopIterations": 10,
     "maxEstimatedCost": 5,
@@ -140,17 +192,17 @@
     },
     {
       "id": "predicted-band-or-residual-declared",
-      "ask": "predictedMetrics? ? ?? ?? ?? ???, ?? ??? ?????",
+      "ask": "predictedMetrics가 전 지표 밴드 안이거나 미달 사유를 명시했는가",
       "onFail": "needs_changes"
     },
     {
       "id": "lever-range-within-definition",
-      "ask": "?? ?? ?? definition? tunableLevers min/max ?? ???",
+      "ask": "레버 변경 폭이 definition의 tunableLevers min/max 안에 있는가",
       "onFail": "needs_changes"
     },
     {
       "id": "note-purpose-effect",
-      "ask": "note? ?? ??? ?? ??? ?????",
+      "ask": "note가 변경 목적과 예상 효과를 서술하는가",
       "onFail": "needs_changes"
     }
   ],

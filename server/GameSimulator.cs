@@ -1,4 +1,4 @@
-// 렌더링 없는 수치 전투 시뮬레이터. game-data.json을 읽어 완주율·방별 사망률·보상 분포를 낸다.
+// 렌더링 없는 수치 전투 시뮬레이터. game-data.json을 읽어 완주율·방별 도달률·사망률·보상 분포를 낸다.
 // SimCombat이 방 하나의 턴제 전투 규칙을 계산한다.
 using System.Globalization;
 using System.Text.Json.Nodes;
@@ -19,11 +19,22 @@ public static class GameSimulator
         {
             var gameData = JsonNode.Parse(File.ReadAllText(gameDataPath))!.AsObject();
             var result = RunSimulation(gameData, seed, runs);
+            var emittedMetricIds = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (var item in blueprint["items"]?.AsArray().OfType<JsonObject>() ?? [])
             {
                 var metricId = item["metricId"]?.GetValue<string>() ?? "";
                 metrics.Add(MetricFromResult(metricId, result));
+                emittedMetricIds.Add(metricId);
+            }
+
+            for (var index = 0; index < result.RoomReachRates.Length; index += 1)
+            {
+                var metricId = $"room{index + 1}ReachRate";
+                if (!emittedMetricIds.Contains(metricId))
+                {
+                    metrics.Add(MetricFromResult(metricId, result));
+                }
             }
         }
 
@@ -88,11 +99,13 @@ public static class GameSimulator
 
         var completionRate = runs == 0 ? 0 : (double)completions / runs * 100;
         var averageProgressedRooms = runs == 0 ? 0 : (double)progressedRoomTotal / runs;
+        var roomReachRates = new double[rooms.Count];
         var roomDeathRates = new double[rooms.Count];
         var avgHpPerRoom = new double[rooms.Count];
 
         for (var index = 0; index < rooms.Count; index += 1)
         {
+            roomReachRates[index] = runs == 0 ? 0 : (double)roomAttempts[index] / runs * 100;
             roomDeathRates[index] = roomAttempts[index] == 0 ? 0 : (double)roomDeaths[index] / roomAttempts[index] * 100;
             avgHpPerRoom[index] = roomAttempts[index] == 0 ? 0 : hpSums[index] / roomAttempts[index];
         }
@@ -102,7 +115,7 @@ public static class GameSimulator
             ? 0
             : Math.Sqrt(rewards.Sum(reward => Math.Pow(reward - rewardMean, 2)) / rewards.Count);
 
-        return new SimResult(completionRate, roomDeathRates, avgHpPerRoom, rewardMean, rewardStdDev, averageProgressedRooms);
+        return new SimResult(completionRate, roomReachRates, roomDeathRates, avgHpPerRoom, rewardMean, rewardStdDev, averageProgressedRooms);
     }
 
     // 방 하나의 턴제 전투를 계산한다. 적을 한 명씩 상대하며, 전멸시키면 보상 판정 후 생존 결과를 반환한다.
@@ -155,6 +168,7 @@ public static class GameSimulator
             "room1DeathRate" => new[] { "rooms[0]" },
             "room3DeathRate" => new[] { "rooms[2]" },
             "avgRewardPerRun" => new[] { $"stddev={result.RewardPerRunStdDev.ToString("0.##", CultureInfo.InvariantCulture)}" },
+            _ when TryParseRoomMetric(metricId, "ReachRate", out var reachIndex) => new[] { $"rooms[{reachIndex}]" },
             _ => new[] { "미구현" },
         };
         return Metric(metricId, value, evidence);
@@ -169,8 +183,29 @@ public static class GameSimulator
             "room1DeathRate" => RoomValue(result.RoomDeathRates, 0),
             "room3DeathRate" => RoomValue(result.RoomDeathRates, 2),
             "avgRewardPerRun" => result.RewardPerRunMean,
+            _ when TryParseRoomMetric(metricId, "ReachRate", out var reachIndex) => RoomValue(result.RoomReachRates, reachIndex),
             _ => null,
         };
+    }
+
+    // roomN 계열 metricId에서 0 기반 방 인덱스를 읽는다.
+    private static bool TryParseRoomMetric(string metricId, string suffix, out int index)
+    {
+        index = -1;
+
+        if (!metricId.StartsWith("room", StringComparison.Ordinal) || !metricId.EndsWith(suffix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var numberPart = metricId["room".Length..^suffix.Length];
+        if (!int.TryParse(numberPart, NumberStyles.Integer, CultureInfo.InvariantCulture, out var roomNumber) || roomNumber <= 0)
+        {
+            return false;
+        }
+
+        index = roomNumber - 1;
+        return true;
     }
 
     // 방 배열에서 안전하게 인덱스 값을 읽는다.
@@ -241,7 +276,7 @@ public static class GameSimulator
     }
 }
 
-public sealed record SimResult(double CompletionRate, double[] RoomDeathRates, double[] AvgHpPerRoom, double RewardPerRunMean, double RewardPerRunStdDev, double AverageProgressedRooms);
+public sealed record SimResult(double CompletionRate, double[] RoomReachRates, double[] RoomDeathRates, double[] AvgHpPerRoom, double RewardPerRunMean, double RewardPerRunStdDev, double AverageProgressedRooms);
 
 public sealed record PlayerState(int Hp, int MaxHp, int Attack);
 

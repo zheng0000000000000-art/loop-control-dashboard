@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
-  "currentStage": "apply",
-  "overallStatus": "in_progress",
+  "currentStage": "changeReview",
+  "overallStatus": "warning",
   "loopState": "running",
   "mode": "normal",
   "suspendedTracks": [],
@@ -11,10 +11,14 @@
     "goals": "passed",
     "measure": "passed",
     "deviationCheck": "warning",
-    "changeReview": "approved",
-    "apply": "in_progress"
+    "changeReview": "pending_review",
+    "apply": "blocked"
   },
-  "blockInfo": {},
+  "blockInfo": {
+    "apply": {
+      "kind": "waiting"
+    }
+  },
   "stageDetails": {
     "goals": {
       "summary": "개발 팩은 저장소의 핵심 규칙을 측정하고 블루프린트 기준과 비교한다.",
@@ -92,7 +96,7 @@
         },
         {
           "label": "programCsLines",
-          "value": "2531 / 0~2661"
+          "value": "2639 / 0~2661"
         },
         {
           "label": "appJsLines",
@@ -100,11 +104,11 @@
         },
         {
           "label": "maxFunctionLength",
-          "value": "235 / 0~80"
+          "value": "246 / 0~80"
         }
       ],
       "issues": [
-        "maxFunctionLength: 측정값 235이 기준 0~80을 벗어났다. 근거: server/Program.cs:737-971"
+        "maxFunctionLength: 측정값 246이 기준 0~80을 벗어났다. 근거: server/Program.cs:740-985"
       ]
     },
     "changeReview": {
@@ -123,7 +127,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-09T22:42:27.1493735+09:00",
+  "lastUpdated": "2026-07-09T23:49:04.0268884+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",

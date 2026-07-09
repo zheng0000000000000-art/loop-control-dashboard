@@ -1,24 +1,24 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783604332412",
-  "title": "함수 길이 제한 조정",
-  "lifecycle": "decided",
+  "id": "proposal-1783608549264",
+  "title": "함수 길이 단축",
+  "lifecycle": "submitted",
   "createdBy": {
     "provider": "ollama",
     "model": "qwen3:8b"
   },
-  "revisionOf": "proposal-1783603307620",
-  "summary": "함수 길이 제한을 235에서 80으로 줄여 읽기 쉽게 하고 유지보수성을 높이기 위한 변경 제안입니다.",
+  "revisionOf": null,
+  "summary": "함수 길이를 단축하여 가독성과 유지보수성을 향상시키고 코드 복잡도를 낮춥니다.",
   "assumptions": [],
   "changes": [
     {
       "path": "maxFunctionLength",
-      "before": 235,
+      "before": 246,
       "after": [
         0,
         80
       ],
-      "note": "함수 길이를 단축하여 읽기 쉽게 하고 유지보수성을 높이기 위해, 현재 측정값 235를 목표 80으로 조정하는 예측치입니다."
+      "note": "함수 길이를 단축하여 가독성과 유지보수성을 향상시키고, 코드의 복잡도를 낮추는 것을 목표로 합니다."
     }
   ],
   "impact": [

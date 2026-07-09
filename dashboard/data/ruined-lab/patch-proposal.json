@@ -1,28 +1,41 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783595466291",
-  "title": "레버 변경 후 밴드 도달 실패",
-  "lifecycle": "decided",
+  "id": "proposal-1783608467238",
+  "title": "자동 밸런스 튜닝 — 최선 후보, 밴드 미달",
+  "lifecycle": "submitted",
   "kind": "tuning",
   "createdBy": {
-    "provider": "ollama",
-    "model": "qwen3:8b"
+    "provider": "rule-engine",
+    "model": null
   },
-  "revisionOf": "proposal-1783595453366",
-  "summary": "레버 변경 후 밴드 도달에 실패했으며, completionRate=0로 밴드 45~60 밖에 위치한 상태 (최선 후보, 밴드 미달. 잔여 위반: completionRate=0 (밴드 45~60 밖). 레버 범위 확장은 definition 변경 사항으로 별도 사람 결재가 필요하다.)",
+  "revisionOf": "proposal-1783608342014",
+  "summary": "레버 3개를 조정한 최선 후보지만 아직 밴드에 도달하지 못했다. 잔여 위반: completionRate=99.6 (밴드 45~60 밖). (최선 후보, 밴드 미달. 잔여 위반: completionRate=99.6 (밴드 45~60 밖). 레버 범위 확장은 definition 변경 사항으로 별도 사람 결재가 필요하다.)",
+  "assumptions": [],
   "changes": [
     {
-      "path": "rooms[1].rewards.healAmount",
-      "before": 8,
-      "after": 10,
-      "note": "healAmount를 8에서 10으로 증가시키면서 예측 지표에 따른 room3DeathRate 감소가 예상되었으나, 측정 결과는 0.8에서 0으로 감소하여 변경 방향과 일치하여 수정이 필요합니다. 최선 후보, 밴드 미달."
+      "path": "rooms[3].enemies.hp",
+      "before": 45,
+      "after": 15,
+      "note": "탐색기가 rooms[3].enemies.hp을(를) 45에서 15로 조정(자동 서술 실패로 rule-engine이 대신 기록) 최선 후보, 밴드 미달."
+    },
+    {
+      "path": "rooms[1].enemies.count",
+      "before": 2,
+      "after": 1,
+      "note": "탐색기가 rooms[1].enemies.count을(를) 2에서 1로 조정(자동 서술 실패로 rule-engine이 대신 기록) 최선 후보, 밴드 미달."
+    },
+    {
+      "path": "rooms[2].enemies.count",
+      "before": 3,
+      "after": 2,
+      "note": "탐색기가 rooms[2].enemies.count을(를) 3에서 2로 조정(자동 서술 실패로 rule-engine이 대신 기록) 최선 후보, 밴드 미달."
     }
   ],
   "predictedMetrics": [
     {
       "metricId": "completionRate",
       "before": 0,
-      "after": 0,
+      "after": 99.6,
       "band": "45~60"
     },
     {
@@ -33,14 +46,14 @@
     },
     {
       "metricId": "room3DeathRate",
-      "before": 0.8,
+      "before": 0,
       "after": 0,
       "band": "0~35"
     },
     {
       "metricId": "avgRewardPerRun",
-      "before": 8.076,
-      "after": 8.82,
+      "before": 8.82,
+      "after": 9.472,
       "band": "8~20"
     }
   ],
@@ -48,16 +61,19 @@
   "impact": [
     {
       "label": "레버 변경",
-      "value": "1"
+      "value": "3"
     },
     {
       "label": "탐색 후보 수",
       "value": "40"
     },
     {
+      "label": "재시작 시도",
+      "value": "3"
+    },
+    {
       "label": "예상 비용",
       "value": "$0.00"
     }
-  ],
-  "assumptions": []
+  ]
 }

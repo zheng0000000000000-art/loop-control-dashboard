@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "projectName": "폐허 연구소 — 게임 밸런싱 쇼케이스",
-  "currentStage": "balanceValidation",
+  "currentStage": "patchApproval",
   "overallStatus": "warning",
   "loopState": "running",
   "mode": "normal",
@@ -12,7 +12,7 @@
     "gameData": "completed",
     "schemaValidation": "passed",
     "balanceValidation": "warning",
-    "patchApproval": "not_started",
+    "patchApproval": "pending_review",
     "unityExport": "blocked"
   },
   "blockInfo": {
@@ -64,7 +64,7 @@
       "issues": []
     },
     "balanceValidation": {
-      "summary": "측정 결과가 기준을 벗어났고, 현재 레버 범위 안에서는 변경 제안을 만들 해를 찾지 못했다.",
+      "summary": "측정 결과에서 1개 괴리가 감지됐다.",
       "metrics": [
         {
           "label": "completionRate",
@@ -81,23 +81,10 @@
         {
           "label": "avgRewardPerRun",
           "value": "8.82 / 8~20"
-        },
-        {
-          "label": "탐색 후보 수",
-          "value": "40"
-        },
-        {
-          "label": "주항 거리",
-          "value": "45 -> 45"
-        },
-        {
-          "label": "평균 진행 방 수",
-          "value": "3 -> 3"
         }
       ],
       "issues": [
-        "completionRate: 측정값 0이 기준 45~60을 벗어났다. 근거: 시뮬레이션 전체 실행",
-        "레버 범위 내 해 없음 — 범위 확장은 기준 변경으로 사람 결재 사항"
+        "completionRate: 측정값 0이 기준 45~60을 벗어났다. 근거: 시뮬레이션 전체 실행"
       ]
     },
     "patchApproval": {
@@ -105,11 +92,19 @@
       "metrics": [
         {
           "label": "1층 검토 판정",
-          "value": "needs_changes"
+          "value": "uncertain"
         }
       ],
       "issues": [
-        "note-direction-match: note에서 room3DeathRate 감소가 예상되었으나, 측정 결과는 0.8에서 0으로 감소하여 변경 방향과 일치하지만, note의 '수정이 필요합니다'는 잘못된 판단으로 보여 일치하지 않습니다."
+        "risk-note-present: 변경 항목의 note 필드에 위험 또는 영향에 대한 설명이 명확히 포함되어 있지 않음.",
+        "risk-note-present: 변경 제안의 note 필드에는 위험 또는 영향에 대한 명확한 설명이 포함되어 있지 않음.",
+        "risk-note-present: 변경 항목의 note 필드에 위험 또는 영향에 대한 명확한 설명이 포함되어 있지 않음.",
+        "no-unrelated-change: 변경은 rooms[3].enemies.hp와 관련된 것으로, 측정 요약에서 room3ReachRate가 100%로 나타나 관련성이 있음",
+        "no-unrelated-change: 제안은 rooms[2].enemies.count의 변경에 대한 명확한 설명을 포함하고 있으며, 측정 요약에도 관련된 metrics이 존재함.",
+        "lever-range-within-definition: 변경 제안의 after 값 15가 definition의 tunableLevers min/max 범위에 포함되어 있는지 확인할 수 없습니다.",
+        "note-purpose-effect: note에서 변경 목적과 예상 효과에 대한 명확한 서술이 누락됨",
+        "note-purpose-effect: 변경 목적과 예상 효과에 대한 구체적인 설명이 부족함.",
+        "note-purpose-effect: note는 변경 목적과 예상 효과를 명확히 서술하지 않음"
       ]
     },
     "unityExport": {
@@ -125,5 +120,5 @@
       ]
     }
   },
-  "lastUpdated": "2026-07-09T22:42:53.2888317+09:00"
+  "lastUpdated": "2026-07-09T23:47:39.9912591+09:00"
 }

@@ -47,6 +47,7 @@ public static class BalanceTuner
         var maxCandidates = Number(tuningConfig?["maxCandidates"], 40);
         var dryRunSamples = Number(tuningConfig?["dryRunSamples"], 500);
         var maxLeversPerProposal = Number(tuningConfig?["maxLeversPerProposal"], 3);
+        var randomRestarts = Number(tuningConfig?["randomRestarts"], 3);
 
         var baseline = CloneGameData(gameData);
         var baselineResult = GameSimulator.RunSimulation(baseline, seed, dryRunSamples);
@@ -56,12 +57,13 @@ public static class BalanceTuner
         var currentScore = baselineScore;
         var candidatesUsed = 1;
         var touchedLevers = new HashSet<string>(StringComparer.Ordinal);
+        var restartAttempts = 0;
 
         onProgress?.Invoke(ScoreLine("[tuning] baseline", currentScore, candidatesUsed));
 
         while (currentScore.PrimaryDistance > ScoreEpsilon && candidatesUsed < maxCandidates)
         {
-            var best = TryBestSingleStep(current, blueprint, levers, touchedLevers, maxLeversPerProposal, seed, dryRunSamples, 1, currentScore, ref candidatesUsed, maxCandidates, onProgress);
+            var best = TryBestSingleStep(current, blueprint, levers, touchedLevers, maxLeversPerProposal, seed, dryRunSamples, 1, currentScore, ref candidatesUsed, PhaseLimit(candidatesUsed, maxCandidates, 4), onProgress);
 
             if ((best is null || !PrimaryImproved(best.Score, currentScore)) && candidatesUsed < maxCandidates)
             {
@@ -75,7 +77,12 @@ public static class BalanceTuner
 
             if ((best is null || !PrimaryImproved(best.Score, currentScore)) && candidatesUsed < maxCandidates)
             {
-                best = BetterCandidate(best, TryBestTwoLeverStep(current, blueprint, levers, touchedLevers, maxLeversPerProposal, seed, dryRunSamples, currentScore, ref candidatesUsed, maxCandidates, onProgress), currentScore);
+                best = BetterCandidate(best, TryBestTwoLeverStep(current, blueprint, levers, touchedLevers, maxLeversPerProposal, seed, dryRunSamples, currentScore, ref candidatesUsed, PhaseLimit(candidatesUsed, maxCandidates, 2), onProgress), currentScore);
+            }
+
+            if (best is null)
+            {
+                best = TryBestRandomRestart(baseline, blueprint, levers, maxLeversPerProposal, seed, dryRunSamples, randomRestarts, currentScore, ref candidatesUsed, maxCandidates, ref restartAttempts, onProgress);
             }
 
             if (best is null)
@@ -93,11 +100,7 @@ public static class BalanceTuner
             current = best.GameData;
             currentResult = best.Result;
             currentScore = best.Score;
-
-            foreach (var leverPath in best.LeverPaths)
-            {
-                touchedLevers.Add(leverPath);
-            }
+            touchedLevers = ChangedLeverPaths(baseline, current, levers);
 
             onProgress?.Invoke($"[tuning] 채택: candidates={candidatesUsed} distance={currentScore.PrimaryDistance:0.###} progress={currentScore.AverageProgressedRooms:0.###} score={currentScore.Total:0.######} levers={string.Join(", ", best.LeverPaths)}");
         }
@@ -149,7 +152,8 @@ public static class BalanceTuner
             baselineScore.PrimaryDistance,
             currentScore.PrimaryDistance,
             baselineScore.AverageProgressedRooms,
-            currentScore.AverageProgressedRooms);
+            currentScore.AverageProgressedRooms,
+            restartAttempts);
     }
 
     // 단일 레버를 지정 배수만큼 움직인 후보 중 가장 나은 것을 찾는다.
@@ -237,6 +241,79 @@ public static class BalanceTuner
         return best;
     }
 
+    // 이웃 개선이 없을 때 레버 공간의 재시작 후보를 정해진 후보 예산 안에서 평가한다.
+    private static SearchCandidate? TryBestRandomRestart(JsonObject baseline, JsonObject blueprint, List<TunableLever> levers, int maxLeversPerProposal, int seed, int samples, int restartLimit, TuningScore currentScore, ref int candidatesUsed, int maxCandidates, ref int restartAttempts, Action<string>? onProgress)
+    {
+        SearchCandidate? best = null;
+        var beforeCount = candidatesUsed;
+        var random = new Random(seed + candidatesUsed * 7919 + restartAttempts * 104729);
+
+        for (var attempt = 0; attempt < restartLimit && candidatesUsed < maxCandidates; attempt += 1)
+        {
+            var candidate = BuildRandomRestartCandidate(baseline, blueprint, levers, maxLeversPerProposal, random, seed, samples);
+            restartAttempts += 1;
+
+            if (candidate is null)
+            {
+                continue;
+            }
+
+            candidatesUsed += 1;
+            if (IsBetter(candidate.Score, best?.Score ?? currentScore))
+            {
+                best = candidate;
+            }
+        }
+
+        LogPhase(onProgress, "random-restart", candidatesUsed - beforeCount, currentScore, best?.Score ?? currentScore);
+        return best is not null && IsBetter(best.Score, currentScore) ? best : null;
+    }
+
+    // 기준 데이터에서 무작위 레버 조합을 만든 뒤 시뮬레이션 점수를 계산한다.
+    private static SearchCandidate? BuildRandomRestartCandidate(JsonObject baseline, JsonObject blueprint, List<TunableLever> levers, int maxLeversPerProposal, Random random, int seed, int samples)
+    {
+        if (levers.Count == 0 || maxLeversPerProposal <= 0)
+        {
+            return null;
+        }
+
+        var candidate = CloneGameData(baseline);
+        var selected = levers
+            .OrderBy(_ => random.Next())
+            .Take(Math.Min(maxLeversPerProposal, levers.Count))
+            .ToList();
+        var changed = new List<string>();
+
+        foreach (var lever in selected)
+        {
+            var value = RandomLeverValue(lever, random);
+            var before = GetLeverValue(baseline, lever.Path);
+
+            if (Math.Abs(value - before) <= ScoreEpsilon)
+            {
+                continue;
+            }
+
+            SetLeverValue(candidate, lever.Path, value, IsIntegerStep(lever.Step));
+            changed.Add(lever.Path);
+        }
+
+        if (changed.Count == 0)
+        {
+            return null;
+        }
+
+        var result = GameSimulator.RunSimulation(candidate, seed, samples);
+        return new SearchCandidate(candidate, result, ScoreCandidate(blueprint, result), changed);
+    }
+
+    // 레버 범위와 스텝에 맞는 무작위 값을 만든다.
+    private static double RandomLeverValue(TunableLever lever, Random random)
+    {
+        var steps = Math.Max(0, (int)Math.Floor((lever.Max - lever.Min) / lever.Step));
+        return Math.Clamp(lever.Min + random.Next(steps + 1) * lever.Step, lever.Min, lever.Max);
+    }
+
     // 단일 레버 후보를 만들고 시뮬레이션 점수를 계산한다.
     private static SearchCandidate? BuildSingleCandidate(JsonObject current, JsonObject blueprint, TunableLever lever, int direction, int multiplier, int seed, int samples)
     {
@@ -319,6 +396,15 @@ public static class BalanceTuner
     private static bool CanTouch(HashSet<string> touchedLevers, IEnumerable<string> candidatePaths, int maxLeversPerProposal)
     {
         return touchedLevers.Concat(candidatePaths).Distinct(StringComparer.Ordinal).Count() <= maxLeversPerProposal;
+    }
+
+    // 기준 데이터와 비교해 실제로 바뀐 레버 경로를 계산한다.
+    private static HashSet<string> ChangedLeverPaths(JsonObject baseline, JsonObject current, List<TunableLever> levers)
+    {
+        return levers
+            .Where(lever => Math.Abs(GetLeverValue(baseline, lever.Path) - GetLeverValue(current, lever.Path)) > ScoreEpsilon)
+            .Select(lever => lever.Path)
+            .ToHashSet(StringComparer.Ordinal);
     }
 
     // 탐색 단계의 후보 수와 점수 변화를 기록한다.
@@ -476,4 +562,4 @@ public sealed record TuningScore(double PrimaryDistance, double AverageProgresse
 
 public sealed record SearchCandidate(JsonObject GameData, SimResult Result, TuningScore Score, List<string> LeverPaths);
 
-public sealed record TuningResult(bool ReachedBand, JsonObject FinalGameData, int CandidatesUsed, List<LeverChange> ChangedLevers, List<PredictedMetricChange> PredictedMetrics, List<string> ResidualViolations, double BaselineDistance, double FinalDistance, double BaselineProgressedRooms, double FinalProgressedRooms);
+public sealed record TuningResult(bool ReachedBand, JsonObject FinalGameData, int CandidatesUsed, List<LeverChange> ChangedLevers, List<PredictedMetricChange> PredictedMetrics, List<string> ResidualViolations, double BaselineDistance, double FinalDistance, double BaselineProgressedRooms, double FinalProgressedRooms, int RestartAttempts);

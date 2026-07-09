@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "ruined-lab-sim",
   "providerVersion": "2",
-  "measuredAt": "2026-07-09T22:42:53.2621937+09:00",
+  "measuredAt": "2026-07-09T23:47:39.9815195+09:00",
   "seed": 42,
   "metrics": [
     {
@@ -31,6 +31,34 @@
       "value": 8.82,
       "evidence": [
         "stddev=7.29"
+      ]
+    },
+    {
+      "metricId": "room1ReachRate",
+      "value": 100,
+      "evidence": [
+        "rooms[0]"
+      ]
+    },
+    {
+      "metricId": "room2ReachRate",
+      "value": 100,
+      "evidence": [
+        "rooms[1]"
+      ]
+    },
+    {
+      "metricId": "room3ReachRate",
+      "value": 100,
+      "evidence": [
+        "rooms[2]"
+      ]
+    },
+    {
+      "metricId": "room4ReachRate",
+      "value": 100,
+      "evidence": [
+        "rooms[3]"
       ]
     }
   ]

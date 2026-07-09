@@ -598,6 +598,7 @@ static int RunSimTestCli(string[] args)
             ["runs"] = runs,
             ["reproducible"] = reproducible,
             ["completionRate"] = first.CompletionRate,
+            ["roomReachRates"] = new JsonArray(first.RoomReachRates.Select(value => (JsonNode)value).ToArray()),
             ["roomDeathRates"] = new JsonArray(first.RoomDeathRates.Select(value => (JsonNode)value).ToArray()),
             ["avgHpPerRoom"] = new JsonArray(first.AvgHpPerRoom.Select(value => (JsonNode)value).ToArray()),
             ["rewardPerRunMean"] = first.RewardPerRunMean,
@@ -618,6 +619,7 @@ static int RunSimTestCli(string[] args)
 static bool SimResultsEqual(SimResult first, SimResult second)
 {
     return first.CompletionRate.Equals(second.CompletionRate) &&
+        first.RoomReachRates.SequenceEqual(second.RoomReachRates) &&
         first.RoomDeathRates.SequenceEqual(second.RoomDeathRates) &&
         first.AvgHpPerRoom.SequenceEqual(second.AvgHpPerRoom) &&
         first.RewardPerRunMean.Equals(second.RewardPerRunMean) &&
@@ -667,6 +669,7 @@ static int RunSimTuneCli(string[] args)
             ["finalDistance"] = tuning.FinalDistance,
             ["baselineProgressedRooms"] = tuning.BaselineProgressedRooms,
             ["finalProgressedRooms"] = tuning.FinalProgressedRooms,
+            ["restartAttempts"] = tuning.RestartAttempts,
             ["changedLevers"] = new JsonArray(tuning.ChangedLevers.Select(change => (JsonNode)new JsonObject
             {
                 ["path"] = change.Path,
@@ -960,14 +963,115 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
             Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), tier1.Verdict);
         }
     }
-    else if (bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted")
+    else
     {
-        bundle.Proposal["lifecycle"] = "superseded";
+        var suggestedBlueprintProposal = CreateSuggestedBlueprintProposal(bundle.Definition, bundle.Blueprint, bundle.Measurement, bundle.Proposal);
+        if (suggestedBlueprintProposal is not null)
+        {
+            bundle.Proposal = suggestedBlueprintProposal;
+            runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
+            state = ApplySuggestedBlueprintProposalState(bundle.Definition, state, stages);
+            Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), "human_review");
+        }
+        else if (bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted")
+        {
+            bundle.Proposal["lifecycle"] = "superseded";
+        }
     }
 
     bundle.State = state;
     bundle.RunLog = runLog;
     return violations.Count;
+}
+
+// definition의 suggestedBlueprintMetrics 중 아직 blueprint에 없는 항목을 기준 추가 proposal로 만든다.
+static JsonObject? CreateSuggestedBlueprintProposal(JsonObject definition, JsonObject blueprint, JsonObject measurement, JsonObject currentProposal)
+{
+    if (currentProposal["lifecycle"]?.GetValue<string>() == "submitted")
+    {
+        return null;
+    }
+
+    var existingMetricIds = (blueprint["items"]?.AsArray() ?? new JsonArray())
+        .OfType<JsonObject>()
+        .Select(item => item["metricId"]?.GetValue<string>() ?? "")
+        .Where(id => !string.IsNullOrWhiteSpace(id))
+        .ToHashSet(StringComparer.Ordinal);
+    var measuredMetricIds = (measurement["metrics"]?.AsArray() ?? new JsonArray())
+        .OfType<JsonObject>()
+        .Select(metric => metric["metricId"]?.GetValue<string>() ?? "")
+        .Where(id => !string.IsNullOrWhiteSpace(id))
+        .ToHashSet(StringComparer.Ordinal);
+    var changes = new JsonArray();
+    var startIndex = existingMetricIds.Count;
+
+    foreach (var suggestion in definition["suggestedBlueprintMetrics"]?.AsArray().OfType<JsonObject>() ?? [])
+    {
+        var metricId = suggestion["metricId"]?.GetValue<string>() ?? "";
+        if (string.IsNullOrWhiteSpace(metricId) || existingMetricIds.Contains(metricId) || !measuredMetricIds.Contains(metricId))
+        {
+            continue;
+        }
+
+        changes.Add(new JsonObject
+        {
+            ["path"] = $"blueprint.items[{startIndex + changes.Count}]",
+            ["before"] = null,
+            ["after"] = Engine.CloneNode(suggestion),
+            ["note"] = $"측정은 존재하지만 기준에는 없는 {metricId} 지표를 blueprint 추가 후보로 올린다.",
+        });
+    }
+
+    if (changes.Count == 0)
+    {
+        return null;
+    }
+
+    var revisionOf = currentProposal["lifecycle"]?.GetValue<string>() == "submitted" ? currentProposal["id"]?.GetValue<string>() : null;
+    return new JsonObject
+    {
+        ["schemaVersion"] = 2,
+        ["id"] = $"proposal-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+        ["title"] = "방별 도달률 기준 추가 제안",
+        ["lifecycle"] = "submitted",
+        ["kind"] = "blueprint_metric",
+        ["createdBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+        ["revisionOf"] = revisionOf,
+        ["summary"] = "측정에 포함된 방별 도달률을 blueprint 기준 후보로 올린다. 기준 반영은 사람 결재 후에만 가능하다.",
+        ["assumptions"] = new JsonArray("방별 도달률은 문턱형 완주율을 보조하는 연속형 관찰 지표다."),
+        ["changes"] = changes,
+        ["impact"] = new JsonArray
+        {
+            new JsonObject { ["label"] = "기준 후보", ["value"] = changes.Count.ToString(CultureInfo.InvariantCulture) },
+            new JsonObject { ["label"] = "예상 비용", ["value"] = "$0.00" },
+        },
+    };
+}
+
+// 기준 추가 proposal을 사람 검토 단계로 보낸다.
+static JsonObject ApplySuggestedBlueprintProposalState(JsonObject definition, JsonObject state, MeasurementStages stages)
+{
+    var stageStatuses = new JsonObject();
+    var blockInfo = new JsonObject();
+
+    if (stages.ReviewStageId is not null)
+    {
+        stageStatuses[stages.ReviewStageId] = "pending_review";
+    }
+
+    if (stages.ApplyStageId is not null)
+    {
+        stageStatuses[stages.ApplyStageId] = "blocked";
+        blockInfo[stages.ApplyStageId] = new JsonObject { ["kind"] = "waiting" };
+    }
+
+    return Engine.ApplyStatePatch(definition, state, new JsonObject
+    {
+        ["currentStage"] = stages.ReviewStageId ?? stages.DeviationStageId ?? state["currentStage"]?.GetValue<string>(),
+        ["loopState"] = "running",
+        ["stageStatuses"] = stageStatuses,
+        ["blockInfo"] = blockInfo,
+    });
 }
 
 // 측정 결과에 맞는 단계 상태 패치를 적용한다.
@@ -1081,6 +1185,7 @@ static void SetNoSolutionDetails(JsonObject state, string? stageId, TuningResult
     var details = state["stageDetails"]!.AsObject()[stageId] as JsonObject ?? new JsonObject();
     var metrics = details["metrics"] as JsonArray ?? new JsonArray();
     metrics.Add(new JsonObject { ["label"] = "탐색 후보 수", ["value"] = tuning.CandidatesUsed.ToString(CultureInfo.InvariantCulture) });
+    metrics.Add(new JsonObject { ["label"] = "재시작 시도", ["value"] = tuning.RestartAttempts.ToString(CultureInfo.InvariantCulture) });
     metrics.Add(new JsonObject { ["label"] = "주항 거리", ["value"] = $"{tuning.BaselineDistance.ToString("0.###", CultureInfo.InvariantCulture)} -> {tuning.FinalDistance.ToString("0.###", CultureInfo.InvariantCulture)}" });
     metrics.Add(new JsonObject { ["label"] = "평균 진행 방 수", ["value"] = $"{tuning.BaselineProgressedRooms.ToString("0.###", CultureInfo.InvariantCulture)} -> {tuning.FinalProgressedRooms.ToString("0.###", CultureInfo.InvariantCulture)}" });
 
@@ -1322,11 +1427,11 @@ static ProposalGeneration GenerateTuningProposalWithFallback(JsonObject definiti
     if (!generated.Unavailable)
     {
         var proposal = BuildTuningProposal(tuning, generated.Provider, generated.Model, generated.Title, generated.Summary, generated.Notes, generated.Assumptions, revisionOf);
-        return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null));
+        return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null, generated.SelfReviewed, generated.SelfReviewPassed));
     }
 
     var fallbackProposal = BuildTuningProposal(tuning, "rule-engine", null, FallbackTuningTitle(tuning), FallbackTuningSummary(tuning), new Dictionary<string, string>(), [], revisionOf);
-    return new ProposalGeneration(fallbackProposal, GeneratedLogEntry("rule-engine", null, generated.DurationMs, true, generated.Error));
+    return new ProposalGeneration(fallbackProposal, GeneratedLogEntry("rule-engine", null, generated.DurationMs, true, generated.Error, generated.SelfReviewed, generated.SelfReviewPassed));
 }
 
 // 튜닝 결과로 proposal JSON을 만든다. 밴드 도달 실패 시 잔여 위반과 결재 안내를 서버가 직접 덧붙인다(모델 준수 여부에 기대지 않는다).
@@ -1378,6 +1483,7 @@ static JsonObject BuildTuningProposal(TuningResult tuning, string provider, stri
         {
             new JsonObject { ["label"] = "레버 변경", ["value"] = tuning.ChangedLevers.Count.ToString(CultureInfo.InvariantCulture) },
             new JsonObject { ["label"] = "탐색 후보 수", ["value"] = tuning.CandidatesUsed.ToString(CultureInfo.InvariantCulture) },
+            new JsonObject { ["label"] = "재시작 시도", ["value"] = tuning.RestartAttempts.ToString(CultureInfo.InvariantCulture) },
             new JsonObject { ["label"] = "예상 비용", ["value"] = "$0.00" },
         },
     };
@@ -1444,11 +1550,11 @@ static ProposalGeneration GenerateProposalWithFallback(JsonObject definition, Js
             },
         };
 
-        return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null));
+        return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null, generated.SelfReviewed, generated.SelfReviewPassed));
     }
 
     var fallbackProposal = CreateMeasurementProposal(currentProposal, violations);
-    return new ProposalGeneration(fallbackProposal, GeneratedLogEntry("rule-engine", null, generated.DurationMs, true, generated.Error));
+    return new ProposalGeneration(fallbackProposal, GeneratedLogEntry("rule-engine", null, generated.DurationMs, true, generated.Error, generated.SelfReviewed, generated.SelfReviewPassed));
 }
 
 // 실행자 생성 결과로 changes 배열을 만든다. 수치는 서버가 채운다.
@@ -1471,7 +1577,7 @@ static JsonArray BuildExecutorChanges(List<MetricCheck> violations, Dictionary<s
 }
 
 // 제안 생성 로그 항목을 만든다.
-static JsonObject GeneratedLogEntry(string provider, string? model, long durationMs, bool fallback, string? error)
+static JsonObject GeneratedLogEntry(string provider, string? model, long durationMs, bool fallback, string? error, bool selfReviewed, bool selfReviewPassed)
 {
     return new JsonObject
     {
@@ -1482,6 +1588,8 @@ static JsonObject GeneratedLogEntry(string provider, string? model, long duratio
             ["model"] = model,
             ["durationMs"] = durationMs,
             ["fallback"] = fallback,
+            ["selfReviewed"] = selfReviewed,
+            ["selfReviewPassed"] = selfReviewPassed,
             ["reasonCode"] = fallback ? "system.executor_degraded" : "",
             ["text"] = fallback ? (error ?? "") : "",
             ["failReason"] = fallback ? (error ?? "") : "",
