@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "ruined-lab-sim",
   "providerVersion": "2",
-  "measuredAt": "2026-07-09T20:10:48.8058059+09:00",
+  "measuredAt": "2026-07-09T22:42:53.2621937+09:00",
   "seed": 42,
   "metrics": [
     {
@@ -21,16 +21,16 @@
     },
     {
       "metricId": "room3DeathRate",
-      "value": 0.8,
+      "value": 0,
       "evidence": [
         "rooms[2]"
       ]
     },
     {
       "metricId": "avgRewardPerRun",
-      "value": 8.076,
+      "value": 8.82,
       "evidence": [
-        "stddev=6.46"
+        "stddev=7.29"
       ]
     }
   ]

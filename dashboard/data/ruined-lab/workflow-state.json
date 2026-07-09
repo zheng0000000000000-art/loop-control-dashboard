@@ -1,18 +1,18 @@
 {
   "schemaVersion": 2,
   "projectName": "폐허 연구소 — 게임 밸런싱 쇼케이스",
-  "currentStage": "patchApproval",
+  "currentStage": "balanceValidation",
   "overallStatus": "warning",
   "loopState": "running",
   "mode": "normal",
   "suspendedTracks": [],
-  "loopIteration": 3,
+  "loopIteration": 4,
   "stages": {
     "design": "approved",
     "gameData": "completed",
     "schemaValidation": "passed",
     "balanceValidation": "warning",
-    "patchApproval": "pending_review",
+    "patchApproval": "not_started",
     "unityExport": "blocked"
   },
   "blockInfo": {
@@ -64,7 +64,7 @@
       "issues": []
     },
     "balanceValidation": {
-      "summary": "측정 결과에서 1개 괴리가 감지됐다.",
+      "summary": "측정 결과가 기준을 벗어났고, 현재 레버 범위 안에서는 변경 제안을 만들 해를 찾지 못했다.",
       "metrics": [
         {
           "label": "completionRate",
@@ -76,15 +76,28 @@
         },
         {
           "label": "room3DeathRate",
-          "value": "0.8 / 0~35"
+          "value": "0 / 0~35"
         },
         {
           "label": "avgRewardPerRun",
-          "value": "8.076 / 8~20"
+          "value": "8.82 / 8~20"
+        },
+        {
+          "label": "탐색 후보 수",
+          "value": "40"
+        },
+        {
+          "label": "주항 거리",
+          "value": "45 -> 45"
+        },
+        {
+          "label": "평균 진행 방 수",
+          "value": "3 -> 3"
         }
       ],
       "issues": [
-        "completionRate: 측정값 0이 기준 45~60을 벗어났다. 근거: 시뮬레이션 전체 실행"
+        "completionRate: 측정값 0이 기준 45~60을 벗어났다. 근거: 시뮬레이션 전체 실행",
+        "레버 범위 내 해 없음 — 범위 확장은 기준 변경으로 사람 결재 사항"
       ]
     },
     "patchApproval": {
@@ -112,5 +125,5 @@
       ]
     }
   },
-  "lastUpdated": "2026-07-09T20:10:48.8163203+09:00"
+  "lastUpdated": "2026-07-09T22:42:53.2888317+09:00"
 }

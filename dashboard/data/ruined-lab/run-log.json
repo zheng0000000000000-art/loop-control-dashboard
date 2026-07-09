@@ -711,6 +711,141 @@
         "subscriptionCalls": 0,
         "role": "runtime"
       }
+    },
+    {
+      "createdAt": "2026-07-09T22:42:53.1769399+09:00",
+      "event": "review.approved",
+      "params": {
+        "proposalId": "proposal-1783595466291",
+        "edited": false
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "human",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 4,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-09T22:42:53.2668068+09:00",
+      "event": "measure.completed",
+      "params": {
+        "providerId": "ruined-lab-sim",
+        "violationCount": 1,
+        "durationMs": 11
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 4,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-09T22:42:53.2688142+09:00",
+      "event": "stage.warning",
+      "params": {
+        "stage": "balanceValidation",
+        "text": "블루프린트 대비 괴리가 감지됐다.",
+        "reasonCode": "checklist.blueprint_deviation"
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 4,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-09T22:42:53.2886130+09:00",
+      "event": "tuning.no_solution",
+      "params": {
+        "candidatesUsed": 40,
+        "residualViolations": [
+          "completionRate=0 (밴드 45~60 밖)"
+        ],
+        "text": "레버 범위 내 해 없음 — 범위 확장은 기준 변경으로 사람 결재 사항"
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 4,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-09T22:42:53.3413626+09:00",
+      "event": "tuning.applied",
+      "params": {
+        "comparisons": [
+          {
+            "metricId": "completionRate",
+            "predicted": 0,
+            "actual": 0
+          },
+          {
+            "metricId": "room1DeathRate",
+            "predicted": 0,
+            "actual": 0
+          },
+          {
+            "metricId": "room3DeathRate",
+            "predicted": 0,
+            "actual": 0
+          },
+          {
+            "metricId": "avgRewardPerRun",
+            "predicted": 8.82,
+            "actual": 8.82
+          }
+        ]
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 4,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
     }
   ]
 }

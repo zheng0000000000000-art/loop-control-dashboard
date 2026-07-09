@@ -319,6 +319,20 @@
       ],
       "reason": "1층 체크리스트에서 수정 필요 항목이 발견됐다.",
       "createdAt": "2026-07-09T20:11:14.0495213+09:00"
+    },
+    {
+      "id": "review-1783604573176",
+      "proposalId": "proposal-1783595466291",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "human",
+        "provider": "human",
+        "model": null
+      },
+      "riskAssessed": "medium",
+      "findings": [],
+      "reason": "사람 검토로 승인됐다.",
+      "createdAt": "2026-07-09T22:42:53.1767514+09:00"
     }
   ]
 }

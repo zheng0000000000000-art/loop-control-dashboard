@@ -7,27 +7,63 @@
   "rooms": [
     {
       "id": "room-1",
-      "enemies": { "hp": 20, "attack": 4, "count": 2 },
-      "rewards": { "commonDropRate": 0.4, "healAmount": 10 },
-      "hazards": { "damageMultiplier": 1.0 }
+      "enemies": {
+        "hp": 20,
+        "attack": 4,
+        "count": 2
+      },
+      "rewards": {
+        "commonDropRate": 0.4,
+        "healAmount": 10
+      },
+      "hazards": {
+        "damageMultiplier": 1.0
+      }
     },
     {
       "id": "room-2",
-      "enemies": { "hp": 28, "attack": 6, "count": 2 },
-      "rewards": { "commonDropRate": 0.32, "healAmount": 8 },
-      "hazards": { "damageMultiplier": 1.0 }
+      "enemies": {
+        "hp": 28,
+        "attack": 6,
+        "count": 2
+      },
+      "rewards": {
+        "commonDropRate": 0.32,
+        "healAmount": 10
+      },
+      "hazards": {
+        "damageMultiplier": 1.0
+      }
     },
     {
       "id": "room-3",
-      "enemies": { "hp": 34, "attack": 8, "count": 3 },
-      "rewards": { "commonDropRate": 0.28, "healAmount": 6 },
-      "hazards": { "damageMultiplier": 1.0 }
+      "enemies": {
+        "hp": 34,
+        "attack": 8,
+        "count": 3
+      },
+      "rewards": {
+        "commonDropRate": 0.28,
+        "healAmount": 6
+      },
+      "hazards": {
+        "damageMultiplier": 1.0
+      }
     },
     {
       "id": "room-4",
-      "enemies": { "hp": 45, "attack": 10, "count": 3 },
-      "rewards": { "commonDropRate": 0.22, "healAmount": 4 },
-      "hazards": { "damageMultiplier": 1.0 }
+      "enemies": {
+        "hp": 45,
+        "attack": 10,
+        "count": 3
+      },
+      "rewards": {
+        "commonDropRate": 0.22,
+        "healAmount": 4
+      },
+      "hazards": {
+        "damageMultiplier": 1.0
+      }
     }
   ],
   "bosses": [
@@ -35,7 +71,10 @@
       "id": "boss-1",
       "hp": 120,
       "attack": 14,
-      "healthMultiplier": { "lowUpgradePath": 1.35, "highUpgradePath": 1.1 }
+      "healthMultiplier": {
+        "lowUpgradePath": 1.35,
+        "highUpgradePath": 1.1
+      }
     }
   ]
 }

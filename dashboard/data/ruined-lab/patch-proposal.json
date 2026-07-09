@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "proposal-1783595466291",
   "title": "레버 변경 후 밴드 도달 실패",
-  "lifecycle": "submitted",
+  "lifecycle": "decided",
   "kind": "tuning",
   "createdBy": {
     "provider": "ollama",
