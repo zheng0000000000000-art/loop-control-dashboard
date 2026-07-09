@@ -2,12 +2,12 @@
   "schemaVersion": 2,
   "providerId": "ruined-lab-sim",
   "providerVersion": "2",
-  "measuredAt": "2026-07-09T23:57:43.4023291+09:00",
+  "measuredAt": "2026-07-10T00:08:17.4750722+09:00",
   "seed": 42,
   "metrics": [
     {
       "metricId": "completionRate",
-      "value": 0,
+      "value": 99.6,
       "evidence": [
         "시뮬레이션 전체 실행"
       ]
@@ -28,37 +28,9 @@
     },
     {
       "metricId": "avgRewardPerRun",
-      "value": 8.82,
+      "value": 9.472,
       "evidence": [
-        "stddev=7.29"
-      ]
-    },
-    {
-      "metricId": "room1ReachRate",
-      "value": 100,
-      "evidence": [
-        "rooms[0]"
-      ]
-    },
-    {
-      "metricId": "room2ReachRate",
-      "value": 100,
-      "evidence": [
-        "rooms[1]"
-      ]
-    },
-    {
-      "metricId": "room3ReachRate",
-      "value": 100,
-      "evidence": [
-        "rooms[2]"
-      ]
-    },
-    {
-      "metricId": "room4ReachRate",
-      "value": 100,
-      "evidence": [
-        "rooms[3]"
+        "stddev=7.75"
       ]
     }
   ]

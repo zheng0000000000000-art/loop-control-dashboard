@@ -3,10 +3,10 @@
   "projectName": "폐허 연구소 — 게임 밸런싱 쇼케이스",
   "currentStage": "patchApproval",
   "overallStatus": "warning",
-  "loopState": "running",
+  "loopState": "paused",
   "mode": "normal",
   "suspendedTracks": [],
-  "loopIteration": 4,
+  "loopIteration": 5,
   "stages": {
     "design": "approved",
     "gameData": "completed",
@@ -68,7 +68,7 @@
       "metrics": [
         {
           "label": "completionRate",
-          "value": "0 / 45~60"
+          "value": "99.6 / 45~60"
         },
         {
           "label": "room1DeathRate",
@@ -80,32 +80,22 @@
         },
         {
           "label": "avgRewardPerRun",
-          "value": "8.82 / 8~20"
+          "value": "9.472 / 8~20"
         }
       ],
       "issues": [
-        "completionRate: 측정값 0이 기준 45~60을 벗어났다. 근거: 시뮬레이션 전체 실행"
+        "completionRate: 측정값 99.6이 기준 45~60을 벗어났다. 근거: 시뮬레이션 전체 실행"
       ]
     },
     "patchApproval": {
-      "summary": "1층 체크리스트 결과를 사람이 확인해야 한다.",
+      "summary": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
       "metrics": [
         {
           "label": "1층 검토 판정",
-          "value": "uncertain"
+          "value": "approved"
         }
       ],
-      "issues": [
-        "risk-note-present: 변경 제안의 note 필드는 기술적 조정 사유를 설명하지만, 위험 또는 영향에 대한 명확한 설명이 포함되어 있지 않음.",
-        "risk-note-present: 변경 제안의 note 필드에 위험 또는 영향에 대한 설명이 명확히 포함되어 있지 않음.",
-        "risk-note-present: 변경 항목의 note 필드는 '자동 서술 실패로 rule-engine이 대신 기록'과 같은 기술적 배경 설명이 포함되어 있지만, 위험 또는 영향에 대한 명확한 설명이 누락되어 있다.",
-        "no-unrelated-change: 제안의 변경 내용은 rooms[3].enemies.hp와 관련되어 있으며, 측정 요약에서도 room3에 대한 데이터가 포함되어 있어 관련성이 있다.",
-        "lever-range-within-definition: 변경된 레버 값(15)이 definition의 tunableLevers min/max 범위를 확인할 수 없음.",
-        "lever-range-within-definition: 변경 폭에 대한 definition의 tunableLevers min/max 정보가 제공되지 않아 확인 불가능",
-        "note-purpose-effect: note는 변경 목적과 예상 효과를 명확히 서술하지 않음",
-        "note-purpose-effect: note에서 변경 목적과 예상 효과에 대한 명확한 서술이 누락됨.",
-        "note-purpose-effect: note는 변경 목적과 예상 효과를 명확히 서술하지 않음."
-      ]
+      "issues": []
     },
     "unityExport": {
       "summary": "변경 승인이 완료될 때까지 내보내기가 차단된다.",
@@ -120,5 +110,11 @@
       ]
     }
   },
-  "lastUpdated": "2026-07-09T23:57:43.4152952+09:00"
+  "lastUpdated": "2026-07-10T00:08:32.7282437+09:00",
+  "pausedAt": "2026-07-10T00:08:32.7282281+09:00",
+  "pausedBy": {
+    "type": "checkpoint",
+    "checkpointId": "loop-milestone"
+  },
+  "checkpointId": "loop-milestone"
 }

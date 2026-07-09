@@ -1188,6 +1188,125 @@
       ],
       "reason": "1층 체크리스트에서 불확실하거나 상위 검토가 필요한 항목이 발견됐다.",
       "createdAt": "2026-07-09T23:58:11.3365084+09:00"
+    },
+    {
+      "id": "review-1783609697406",
+      "proposalId": "proposal-1783609070062",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "human",
+        "provider": "human",
+        "model": null
+      },
+      "riskAssessed": "high",
+      "findings": [],
+      "reason": "사람 검토로 승인됐다.",
+      "createdAt": "2026-07-10T00:08:17.4060251+09:00"
+    },
+    {
+      "id": "review-1783609712662",
+      "proposalId": "proposal-1783609702054",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "rooms[2].enemies.count",
+          "checkId": "note-direction-match",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "note에서 적 수 증가로 인해 생존율이 낮아지고 완료율이 감소한다고 명시되었으며, 측정 요약에서 room3DeathRate는 0으로 유지되어 변경이 실제 수치에 영향을 미치지 않은 것으로 보임.",
+          "comment": "note에서 적 수 증가로 인해 생존율이 낮아지고 완료율이 감소한다고 명시되었으며, 측정 요약에서 room3DeathRate는 0으로 유지되어 변경이 실제 수치에 영향을 미치지 않은 것으로 보임.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "rooms[2].enemies.count",
+          "checkId": "risk-note-present",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "변경 제안의 note 필드에 위험 및 영향에 대한 설명이 포함되어 있습니다.",
+          "comment": "변경 제안의 note 필드에 위험 및 영향에 대한 설명이 포함되어 있습니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "rooms[2].enemies.count",
+          "checkId": "no-unrelated-change",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "제안은 rooms[2].enemies.count를 변경하는 것으로, 측정 요약의 room3DeathRate와 관련이 있으며, 경고 해소와 직접적으로 관련된 변경으로 보인다.",
+          "comment": "제안은 rooms[2].enemies.count를 변경하는 것으로, 측정 요약의 room3DeathRate와 관련이 있으며, 경고 해소와 직접적으로 관련된 변경으로 보인다.",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "rooms[2].enemies.count",
+          "checkId": "predicted-band-or-residual-declared",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "제안에서 '밴드 미달'을 명시하여 미달 사유를 명시했습니다.",
+          "comment": "제안에서 '밴드 미달'을 명시하여 미달 사유를 명시했습니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "rooms[2].enemies.count",
+          "checkId": "lever-range-within-definition",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "변경된 레버 값(3)은 definition의 tunableLevers min/max 범위 내에 포함됩니다.",
+          "comment": "변경된 레버 값(3)은 definition의 tunableLevers min/max 범위 내에 포함됩니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "rooms[2].enemies.count",
+          "checkId": "note-purpose-effect",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "note에서 변경 목적과 예상 효과가 명확하게 서술됨",
+          "comment": "note에서 변경 목적과 예상 효과가 명확하게 서술됨",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "createdAt": "2026-07-10T00:08:32.6630986+09:00"
     }
   ]
 }
