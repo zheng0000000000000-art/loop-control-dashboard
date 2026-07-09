@@ -1,16 +1,16 @@
 {
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
-  "currentStage": "measure",
-  "overallStatus": "in_progress",
-  "loopState": "running",
+  "currentStage": "deviationCheck",
+  "overallStatus": "completed",
+  "loopState": "aligned",
   "mode": "normal",
   "suspendedTracks": [],
   "loopIteration": 0,
   "stages": {
     "goals": "passed",
-    "measure": "in_progress",
-    "deviationCheck": "not_started",
+    "measure": "passed",
+    "deviationCheck": "passed",
     "changeReview": "not_started",
     "apply": "not_started"
   },
@@ -19,8 +19,14 @@
     "goals": {
       "summary": "개발 팩은 저장소의 핵심 규칙을 측정하고 블루프린트 기준과 비교한다.",
       "metrics": [
-        { "label": "블루프린트 지표", "value": "7" },
-        { "label": "측정 방식", "value": "규칙 기반" }
+        {
+          "label": "블루프린트 지표",
+          "value": "7"
+        },
+        {
+          "label": "측정 방식",
+          "value": "규칙 기반"
+        }
       ],
       "issues": []
     },
@@ -30,8 +36,37 @@
       "issues": []
     },
     "deviationCheck": {
-      "summary": "아직 측정 결과가 없다.",
-      "metrics": [],
+      "summary": "측정 결과가 블루프린트 기준을 만족한다.",
+      "metrics": [
+        {
+          "label": "domainWordsInEngine",
+          "value": "0 / 0"
+        },
+        {
+          "label": "functionsWithoutComment",
+          "value": "0 / 0"
+        },
+        {
+          "label": "directiveAcceptanceCriteria",
+          "value": "7 / 3~99"
+        },
+        {
+          "label": "koPoliteEndings",
+          "value": "0 / 0"
+        },
+        {
+          "label": "verdictInProposalFile",
+          "value": "0 / 0"
+        },
+        {
+          "label": "devRoleInRuntimeLogs",
+          "value": "0 / 0"
+        },
+        {
+          "label": "schemaVersionMissing",
+          "value": "0 / 0"
+        }
+      ],
       "issues": []
     },
     "changeReview": {
@@ -45,5 +80,5 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-09T00:00:00+09:00"
+  "lastUpdated": "2026-07-09T11:07:02.6749169+09:00"
 }

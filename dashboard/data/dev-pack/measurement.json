@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 2,
+  "providerId": "dev-pack-checks",
+  "providerVersion": "1",
+  "measuredAt": "2026-07-09T11:07:02.6747424+09:00",
+  "metrics": [
+    {
+      "metricId": "domainWordsInEngine",
+      "value": 0,
+      "evidence": []
+    },
+    {
+      "metricId": "functionsWithoutComment",
+      "value": 0,
+      "evidence": []
+    },
+    {
+      "metricId": "directiveAcceptanceCriteria",
+      "value": 7,
+      "evidence": [
+        "docs/directives/06-rule-loop.md"
+      ]
+    },
+    {
+      "metricId": "koPoliteEndings",
+      "value": 0,
+      "evidence": []
+    },
+    {
+      "metricId": "verdictInProposalFile",
+      "value": 0,
+      "evidence": []
+    },
+    {
+      "metricId": "devRoleInRuntimeLogs",
+      "value": 0,
+      "evidence": []
+    },
+    {
+      "metricId": "schemaVersionMissing",
+      "value": 0,
+      "evidence": []
+    }
+  ]
+}

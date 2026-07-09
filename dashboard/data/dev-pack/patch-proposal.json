@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 2,
+  "id": "proposal-1783562805916",
+  "title": "블루프린트 괴리 해소 제안",
+  "lifecycle": "superseded",
+  "createdBy": {
+    "provider": "rule-engine",
+    "model": null
+  },
+  "revisionOf": null,
+  "summary": "측정 결과가 블루프린트 기준을 벗어난 항목을 수정 대상으로 제안한다.",
+  "changes": [
+    {
+      "path": "koPoliteEndings",
+      "before": 1,
+      "after": 0,
+      "note": "dashboard/data/lang/ko.json:178"
+    }
+  ],
+  "impact": [
+    {
+      "label": "위반 항목",
+      "value": "1"
+    },
+    {
+      "label": "예상 비용",
+      "value": "$0.00"
+    }
+  ]
+}
