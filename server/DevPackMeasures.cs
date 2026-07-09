@@ -1,5 +1,6 @@
 // 개발 팩 측정 공급자의 규칙 기반 검사를 수행한다.
 // 측정 결과를 measurement.json 계약에 맞는 JSON으로 만든다.
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -7,6 +8,11 @@ using System.Text.RegularExpressions;
 public static class DevPackMeasures
 {
     private const string ProviderVersion = "1";
+
+    private static readonly HashSet<string> AllowedFontFamilies = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Inter", "ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif",
+    };
 
     private static readonly string[] ForbiddenWords =
     [
@@ -62,6 +68,11 @@ public static class DevPackMeasures
             "verdictInProposalFile" => CountVerdictInProposalFiles(root),
             "devRoleInRuntimeLogs" => CountDevRoleInRuntimeLogs(root),
             "schemaVersionMissing" => CountSchemaVersionMissing(root),
+            "hardcodedColors" => CountHardcodedColors(root),
+            "inlineStyles" => CountInlineStyles(root),
+            "smallTouchTargets" => CountSmallTouchTargets(root),
+            "newFontFamilies" => CountNewFontFamilies(root),
+            "skillsWithoutVersion" => CountSkillsWithoutVersion(root),
             _ => Metric(metricId, (JsonNode?)null, ["미구현"]),
         };
     }
@@ -268,6 +279,193 @@ public static class DevPackMeasures
         }
 
         return Metric("schemaVersionMissing", count, evidence);
+    }
+
+    // style.css 밖에서 하드코딩된 색상 리터럴(hex·rgb) 개수를 센다.
+    private static JsonObject CountHardcodedColors(string root)
+    {
+        var count = 0;
+        var evidence = new List<string>();
+        var pattern = new Regex(@"#[0-9a-fA-F]{3,8}\b|rgba?\(\s*\d", RegexOptions.Compiled);
+
+        foreach (var file in EnumerateStyleScanFiles(root))
+        {
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index += 1)
+            {
+                var matches = pattern.Matches(lines[index]).Count;
+                if (matches <= 0)
+                {
+                    continue;
+                }
+
+                count += matches;
+                AddEvidence(evidence, $"{RelativePath(root, file)}:{index + 1}");
+            }
+        }
+
+        return Metric("hardcodedColors", count, evidence);
+    }
+
+    // HTML·JS의 인라인 style 속성 또는 style 문자열 조립 개수를 센다.
+    private static JsonObject CountInlineStyles(string root)
+    {
+        var count = 0;
+        var evidence = new List<string>();
+        var pattern = new Regex(@"\bstyle\s*=\s*[""']|\.style\.\w+\s*=|[""']style[""']\s*:", RegexOptions.Compiled);
+
+        foreach (var file in EnumerateStyleScanFiles(root))
+        {
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index += 1)
+            {
+                if (!pattern.IsMatch(lines[index]))
+                {
+                    continue;
+                }
+
+                count += 1;
+                AddEvidence(evidence, $"{RelativePath(root, file)}:{index + 1}");
+            }
+        }
+
+        return Metric("inlineStyles", count, evidence);
+    }
+
+    // style.css에서 버튼류 셀렉터의 44px 미만 min-height 선언 개수를 센다(정적 검사 한계 내 근사).
+    private static JsonObject CountSmallTouchTargets(string root)
+    {
+        var file = Path.Combine(root, "dashboard", "style.css");
+
+        if (!File.Exists(file))
+        {
+            return Metric("smallTouchTargets", 0, ["dashboard/style.css 없음"]);
+        }
+
+        var count = 0;
+        var evidence = new List<string>();
+        var lines = File.ReadAllLines(file);
+        var selectorBuffer = new List<string>();
+        var isButtonRule = false;
+
+        for (var index = 0; index < lines.Length; index += 1)
+        {
+            var line = lines[index];
+
+            if (line.Contains('{'))
+            {
+                selectorBuffer.Add(line[..line.IndexOf('{')]);
+                isButtonRule = Regex.IsMatch(string.Join(" ", selectorBuffer), "button", RegexOptions.IgnoreCase);
+                selectorBuffer.Clear();
+            }
+            else if (!line.Contains('}'))
+            {
+                selectorBuffer.Add(line);
+            }
+
+            if (line.Contains('}'))
+            {
+                isButtonRule = false;
+                selectorBuffer.Clear();
+                continue;
+            }
+
+            if (!isButtonRule)
+            {
+                continue;
+            }
+
+            var match = Regex.Match(line, @"min-height:\s*(\d+(?:\.\d+)?)px");
+            if (match.Success && decimal.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) < 44)
+            {
+                count += 1;
+                AddEvidence(evidence, $"{RelativePath(root, file)}:{index + 1}");
+            }
+        }
+
+        return Metric("smallTouchTargets", count, evidence);
+    }
+
+    // style.css의 font-family 선언 중 기준 목록 외 폰트 개수를 센다.
+    private static JsonObject CountNewFontFamilies(string root)
+    {
+        var file = Path.Combine(root, "dashboard", "style.css");
+
+        if (!File.Exists(file))
+        {
+            return Metric("newFontFamilies", 0, ["dashboard/style.css 없음"]);
+        }
+
+        var text = File.ReadAllText(file);
+        var count = 0;
+        var evidence = new List<string>();
+
+        foreach (Match match in Regex.Matches(text, @"font-family:\s*([^;]+);", RegexOptions.Singleline))
+        {
+            var lineNumber = text[..match.Index].Count(ch => ch == '\n') + 1;
+            var fonts = match.Groups[1].Value
+                .Split(',')
+                .Select(font => font.Replace("\n", " ").Trim().Trim('"', '\''))
+                .Where(font => font.Length > 0);
+
+            foreach (var font in fonts)
+            {
+                if (AllowedFontFamilies.Contains(font))
+                {
+                    continue;
+                }
+
+                count += 1;
+                AddEvidence(evidence, $"{RelativePath(root, file)}:{lineNumber} ({font})");
+            }
+        }
+
+        return Metric("newFontFamilies", count, evidence);
+    }
+
+    // skills 문서 중 '버전:' 줄이 없는 파일 수를 센다.
+    private static JsonObject CountSkillsWithoutVersion(string root)
+    {
+        var skillsDirectory = Path.Combine(root, "skills");
+
+        if (!Directory.Exists(skillsDirectory))
+        {
+            return Metric("skillsWithoutVersion", 0, ["skills 폴더 없음"]);
+        }
+
+        var count = 0;
+        var evidence = new List<string>();
+
+        foreach (var file in Directory.EnumerateFiles(skillsDirectory, "*.md", SearchOption.TopDirectoryOnly))
+        {
+            var hasVersionLine = File.ReadAllLines(file).Any(line => line.Contains("버전:", StringComparison.Ordinal));
+
+            if (hasVersionLine)
+            {
+                continue;
+            }
+
+            count += 1;
+            AddEvidence(evidence, RelativePath(root, file));
+        }
+
+        return Metric("skillsWithoutVersion", count, evidence);
+    }
+
+    // 디자인 정적 검사 대상 파일(HTML·JS, style.css 제외)을 반환한다.
+    private static IEnumerable<string> EnumerateStyleScanFiles(string root)
+    {
+        var dashboardRoot = Path.Combine(root, "dashboard");
+
+        if (!Directory.Exists(dashboardRoot))
+        {
+            return [];
+        }
+
+        return Directory.EnumerateFiles(dashboardRoot, "*.*", SearchOption.AllDirectories)
+            .Where(file => (file.EndsWith(".html", StringComparison.OrdinalIgnoreCase) ||
+                            file.EndsWith(".js", StringComparison.OrdinalIgnoreCase)) &&
+                           !IsGeneratedOrRuntimePath(file));
     }
 
     // 검수 기준 섹션 안의 목록 항목 수를 계산한다.

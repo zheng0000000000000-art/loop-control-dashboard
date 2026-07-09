@@ -42,6 +42,36 @@
       "target": 0,
       "priority": "normal",
       "note": "schemaVersion 필드가 없는 데이터 파일 수"
+    },
+    {
+      "metricId": "hardcodedColors",
+      "target": 0,
+      "priority": "normal",
+      "note": "style.css 외 파일의 hex/rgb 색상 리터럴 개수 (모든 색은 CSS 변수로)"
+    },
+    {
+      "metricId": "inlineStyles",
+      "target": 0,
+      "priority": "normal",
+      "note": "HTML·JS의 인라인 style 속성/style= 문자열 조립 개수"
+    },
+    {
+      "metricId": "smallTouchTargets",
+      "target": 0,
+      "priority": "normal",
+      "note": "style.css에서 버튼·클릭 요소 셀렉터 중 min-height 44px 미만 명시 개수 (정적 검사 한계 내 근사)"
+    },
+    {
+      "metricId": "newFontFamilies",
+      "target": 0,
+      "priority": "normal",
+      "note": "style.css의 font-family 선언 중 기준 목록 외 폰트 개수"
+    },
+    {
+      "metricId": "skillsWithoutVersion",
+      "target": 0,
+      "priority": "normal",
+      "note": "skills/ 문서 중 '버전:' 줄이 없는 파일 수"
     }
   ]
 }
