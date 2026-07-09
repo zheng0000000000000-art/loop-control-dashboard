@@ -88,14 +88,16 @@
       ]
     },
     "patchApproval": {
-      "summary": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "summary": "1층 체크리스트 결과를 사람이 확인해야 한다.",
       "metrics": [
         {
           "label": "1층 검토 판정",
-          "value": "approved"
+          "value": "needs_changes"
         }
       ],
-      "issues": []
+      "issues": [
+        "note-direction-match: note에서 room3DeathRate 감소가 예상되었으나, 측정 결과는 0.8에서 0으로 감소하여 변경 방향과 일치하지만, note의 '수정이 필요합니다'는 잘못된 판단으로 보여 일치하지 않습니다."
+      ]
     },
     "unityExport": {
       "summary": "변경 승인이 완료될 때까지 내보내기가 차단된다.",
@@ -110,5 +112,5 @@
       ]
     }
   },
-  "lastUpdated": "2026-07-09T19:46:48.6968409+09:00"
+  "lastUpdated": "2026-07-09T20:10:48.8163203+09:00"
 }

@@ -113,6 +113,7 @@
     "track.resumed": "Track resumed: {metricId}",
     "track.dismissed": "Track dismissed: {metricId} ({reasonCode})",
     "tuning.applied": "Tuning applied, remeasured: {comparisons}",
+    "tuning.no_solution": "No tuning solution: {candidatesUsed} candidates, {text}",
     "executor.escalated": "Executor escalated: {from} -> {to} ({text})",
     "scenario.step": "Scenario step: {text}",
     "measure.completed": "Measurement completed: {providerId}, {violationCount} violations"

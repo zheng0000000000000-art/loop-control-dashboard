@@ -114,3 +114,128 @@ grep -ci "predict" dashboard/data/ruined-lab/measurement.json
 - 승인 시 실제 적용·자동 재측정·예측-실측 괴리 로그는 구현했지만 이번 세션에서는 실행(=승인)하지 않았다 — 결재는 사람 몫이라는 원칙을 검증 과정에도 그대로 적용했다.
 - `measurement.json`은 예측치로 오염되지 않았다.
 - 수치 결정 주체는 시종일관 `BalanceTuner`(결정론적 탐색)였고, 8b는 단 한 번도 수치를 만들지 않았다 — `changes.Count == 0`인 이번 실측에서 8b는 note를 하나도 쓰지 않고 summary만 작성했다.
+
+## 2차: 탐색 고원 탈출과 설계 판단 기록
+
+검증일: 2026-07-09
+
+목표: completionRate가 0에서 움직이지 않는 문턱형 고원에서, 평균 진행 방 수를 shaping 보조항으로 써서 탐색 기울기를 만든다. 보조항은 탐색 휴리스틱이며 목표가 아니다. `predictedMetrics`는 계속 blueprint 지표만 담는다.
+
+### A. simtune 재실행
+
+명령:
+
+```powershell
+dotnet run --project server --no-build -- simtune ruined-lab
+```
+
+출력 요약:
+
+```text
+[tuning] baseline: distance=45 progress=2.992 score=45.000001 candidates=1
+[tuning] step=±1 후보 25개 시도, distance 45→45, progress 2.992→3, score 45.000001→45.000001
+[tuning] step=±2 후보 4개 시도, distance 45→45, progress 2.992→2.996, score 45.000001→45.000001
+[tuning] step=±3 후보 5개 시도, distance 45→45, progress 2.992→2.998, score 45.000001→45.000001
+[tuning] two-lever 후보 5개 시도, distance 45→45, progress 2.992→2.994, score 45.000001→45.000001
+[tuning] 채택: candidates=40 distance=45 progress=3 score=45.000001 levers=rooms[1].rewards.healAmount
+```
+
+최종 JSON 요약:
+
+```json
+{
+  "candidatesUsed": 40,
+  "reachedBand": false,
+  "baselineDistance": 45,
+  "finalDistance": 45,
+  "baselineProgressedRooms": 2.992,
+  "finalProgressedRooms": 3,
+  "changedLevers": [
+    { "path": "rooms[1].rewards.healAmount", "before": 8, "after": 10 }
+  ],
+  "residualViolations": ["completionRate=0 (밴드 45~60 밖)"]
+}
+```
+
+판정: 기존 1차는 후보 26개 뒤 변경 0건으로 종료했다. 2차는 주항 distance를 줄이지 못했지만, 진행도 보조항으로 평균 진행 방 수가 2.992에서 3으로 올라간 후보를 찾았다. 보조항이 주항을 역전하지 않도록 primary distance가 악화되는 후보는 채택하지 않는다. `maxCandidates=40` 상한 안에서 step ±1, ±2, ±3, 2레버 조합 궤적이 모두 로그에 남았다.
+
+### B. measure ruined-lab
+
+명령:
+
+```powershell
+dotnet run --project server --no-build -- measure ruined-lab
+```
+
+응답 요약:
+
+```json
+{
+  "projectId": "ruined-lab",
+  "violationCount": 1,
+  "proposalId": "proposal-1783595466291",
+  "proposalLifecycle": "submitted",
+  "createdBy": { "provider": "ollama", "model": "qwen3:8b" },
+  "currentStage": "patchApproval",
+  "overallStatus": "warning"
+}
+```
+
+생성된 proposal 요약:
+
+- `changes`: 1건, `rooms[1].rewards.healAmount` 8 → 10
+- `predictedReachedBand`: false
+- `predictedMetrics`: `completionRate`, `room1DeathRate`, `room3DeathRate`, `avgRewardPerRun` 4개만 포함
+- note에 "최선 후보, 밴드 미달" 문구가 서버 보강으로 포함됐다.
+- 기존 결재 대기 빈 proposal `proposal-1783594012403`은 `proposal.superseded` 이벤트(`reasonCode=tuning.replaced`)로 대체 기록됐다.
+
+14b 1층 검토:
+
+- `proposal-1783595453366`: `needs_changes`
+- 재생성 후 `proposal-1783595466291`: `needs_changes`
+- 사람 결재는 호출하지 않았다. 현재 proposal은 사람 검토 대기 상태다.
+
+### C. no_solution 경로
+
+이번 2차 실측에서는 shaping 보조항으로 변경 1건이 생겨 `tuning.no_solution` 경로는 발동하지 않았다. 코드는 `reachedBand=false && changes.Count==0`일 때 proposal을 생성하지 않고, 기존 submitted proposal을 `superseded`로 닫은 뒤 `tuning.no_solution` 이벤트와 검증 단계 warning 이슈를 남기도록 구현했다. 이번 실행에서 확인된 것은 "기존 빈 proposal이 새 변경 후보로 superseded 처리된다"는 경로다.
+
+### D. 예측/사실 분리
+
+`patch-proposal.json`의 `predictedMetrics`는 blueprint 지표 4개만 포함한다. 진행도 보조항(`averageProgressedRooms`)은 simtune 출력과 내부 점수에만 쓰였고 proposal의 예측 지표나 `measurement.json`에는 기록하지 않았다.
+
+### E. 설계 판단 산출물
+
+- `docs/DECISIONS.md`에 목표/휴리스틱 분리, 변경 0건 proposal 금지, 문턱형 지표 고원 함정 3개 결정을 추가했다.
+- `skills/balance-tuning.md`를 추가했다. 도메인 폴더가 아직 없어 지시대로 루트 `skills/` 아래에 두고 헤더에 `도메인: game`을 명시했다.
+
+### F. 관례 게이트
+
+1차 실행:
+
+```powershell
+dotnet run --project server --no-build -- measure dev-pack
+```
+
+결과: `violationCount=1`, 위반은 `smallTouchTargets=2`였다. 근거는 `dashboard/style.css:260`, `dashboard/style.css:271`이다.
+
+수정: 버튼류 정적 검사 기준에 맞춰 `.button`, `.button-compact`의 `min-height`를 44px로 조정했다.
+
+2차 실행:
+
+```powershell
+dotnet run --project server --no-build -- measure dev-pack
+```
+
+결과:
+
+```json
+{
+  "violationCount": 0,
+  "overallStatus": "completed",
+  "loopState": "aligned",
+  "smallTouchTargets": 0,
+  "proposalLifecycle": "superseded"
+}
+```
+
+판정: O. dev-pack 게이트가 통과했고, 게이트 중 생성됐던 임시 위반 proposal은 재측정으로 `superseded` 처리됐다. approval/reject 액션은 호출하지 않았다.

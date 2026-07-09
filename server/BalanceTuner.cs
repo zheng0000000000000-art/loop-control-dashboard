@@ -6,6 +6,8 @@ using System.Text.RegularExpressions;
 
 public static class BalanceTuner
 {
+    private const double ScoreEpsilon = 1e-9;
+    private const double ShapingWeight = 0.000001;
     private static readonly Regex PathSegmentPattern = new(@"^(\w+)(?:\[(\d+)\])?$", RegexOptions.Compiled);
 
     // definition의 tunableLevers를 실제 game-data 구조에 맞춰 구체적인 경로 목록으로 펼친다(rooms[*] 와일드카드 확장).
@@ -50,67 +52,54 @@ public static class BalanceTuner
         var baselineResult = GameSimulator.RunSimulation(baseline, seed, dryRunSamples);
         var current = baseline;
         var currentResult = baselineResult;
-        var currentDistance = ViolationDistance(blueprint, currentResult);
+        var baselineScore = ScoreCandidate(blueprint, baselineResult);
+        var currentScore = baselineScore;
         var candidatesUsed = 1;
         var touchedLevers = new HashSet<string>(StringComparer.Ordinal);
 
-        onProgress?.Invoke($"[tuning] baseline: distance={currentDistance:0.###} candidates={candidatesUsed}");
+        onProgress?.Invoke(ScoreLine("[tuning] baseline", currentScore, candidatesUsed));
 
-        while (currentDistance > 1e-9 && candidatesUsed < maxCandidates)
+        while (currentScore.PrimaryDistance > ScoreEpsilon && candidatesUsed < maxCandidates)
         {
-            JsonObject? bestCandidate = null;
-            SimResult? bestResult = null;
-            var bestDistance = currentDistance;
-            string? bestLeverPath = null;
+            var best = TryBestSingleStep(current, blueprint, levers, touchedLevers, maxLeversPerProposal, seed, dryRunSamples, 1, currentScore, ref candidatesUsed, maxCandidates, onProgress);
 
-            var allowedLevers = touchedLevers.Count < maxLeversPerProposal
-                ? levers
-                : levers.Where(lever => touchedLevers.Contains(lever.Path)).ToList();
-
-            foreach (var lever in allowedLevers)
+            if ((best is null || !PrimaryImproved(best.Score, currentScore)) && candidatesUsed < maxCandidates)
             {
-                foreach (var direction in new[] { -1, 1 })
-                {
-                    if (candidatesUsed >= maxCandidates)
-                    {
-                        break;
-                    }
-
-                    var currentValue = GetLeverValue(current, lever.Path);
-                    var candidateValue = Math.Clamp(currentValue + direction * lever.Step, lever.Min, lever.Max);
-
-                    if (Math.Abs(candidateValue - currentValue) < 1e-9)
-                    {
-                        continue;
-                    }
-
-                    var candidate = CloneGameData(current);
-                    SetLeverValue(candidate, lever.Path, candidateValue, IsIntegerStep(lever.Step));
-                    var result = GameSimulator.RunSimulation(candidate, seed, dryRunSamples);
-                    candidatesUsed += 1;
-                    var distance = ViolationDistance(blueprint, result);
-
-                    if (distance < bestDistance)
-                    {
-                        bestDistance = distance;
-                        bestCandidate = candidate;
-                        bestResult = result;
-                        bestLeverPath = lever.Path;
-                    }
-                }
+                best = BetterCandidate(best, TryBestSingleStep(current, blueprint, levers, touchedLevers, maxLeversPerProposal, seed, dryRunSamples, 2, currentScore, ref candidatesUsed, PhaseLimit(candidatesUsed, maxCandidates, 3), onProgress), currentScore);
             }
 
-            if (bestCandidate is null || bestLeverPath is null)
+            if ((best is null || !PrimaryImproved(best.Score, currentScore)) && candidatesUsed < maxCandidates)
             {
-                onProgress?.Invoke($"[tuning] 개선되는 이웃 없음 — candidates={candidatesUsed} distance={currentDistance:0.###}에서 종료");
+                best = BetterCandidate(best, TryBestSingleStep(current, blueprint, levers, touchedLevers, maxLeversPerProposal, seed, dryRunSamples, 3, currentScore, ref candidatesUsed, PhaseLimit(candidatesUsed, maxCandidates, 2), onProgress), currentScore);
+            }
+
+            if ((best is null || !PrimaryImproved(best.Score, currentScore)) && candidatesUsed < maxCandidates)
+            {
+                best = BetterCandidate(best, TryBestTwoLeverStep(current, blueprint, levers, touchedLevers, maxLeversPerProposal, seed, dryRunSamples, currentScore, ref candidatesUsed, maxCandidates, onProgress), currentScore);
+            }
+
+            if (best is null)
+            {
+                if (candidatesUsed >= maxCandidates)
+                {
+                    onProgress?.Invoke($"[tuning] 후보 상한 도달 — candidates={candidatesUsed} distance={currentScore.PrimaryDistance:0.###}에서 종료");
+                    break;
+                }
+
+                onProgress?.Invoke($"[tuning] 개선되는 이웃 없음 — candidates={candidatesUsed} distance={currentScore.PrimaryDistance:0.###} progress={currentScore.AverageProgressedRooms:0.###}에서 종료");
                 break;
             }
 
-            current = bestCandidate;
-            currentResult = bestResult!;
-            currentDistance = bestDistance;
-            touchedLevers.Add(bestLeverPath);
-            onProgress?.Invoke($"[tuning] candidate {candidatesUsed}: distance={currentDistance:0.###} lever={bestLeverPath} -> {GetLeverValue(current, bestLeverPath):0.###}");
+            current = best.GameData;
+            currentResult = best.Result;
+            currentScore = best.Score;
+
+            foreach (var leverPath in best.LeverPaths)
+            {
+                touchedLevers.Add(leverPath);
+            }
+
+            onProgress?.Invoke($"[tuning] 채택: candidates={candidatesUsed} distance={currentScore.PrimaryDistance:0.###} progress={currentScore.AverageProgressedRooms:0.###} score={currentScore.Total:0.######} levers={string.Join(", ", best.LeverPaths)}");
         }
 
         var changedLevers = new List<LeverChange>();
@@ -150,7 +139,207 @@ public static class BalanceTuner
             }
         }
 
-        return new TuningResult(residualViolations.Count == 0, current, candidatesUsed, changedLevers, predictedMetrics, residualViolations);
+        return new TuningResult(
+            residualViolations.Count == 0,
+            current,
+            candidatesUsed,
+            changedLevers,
+            predictedMetrics,
+            residualViolations,
+            baselineScore.PrimaryDistance,
+            currentScore.PrimaryDistance,
+            baselineScore.AverageProgressedRooms,
+            currentScore.AverageProgressedRooms);
+    }
+
+    // 단일 레버를 지정 배수만큼 움직인 후보 중 가장 나은 것을 찾는다.
+    private static SearchCandidate? TryBestSingleStep(JsonObject current, JsonObject blueprint, List<TunableLever> levers, HashSet<string> touchedLevers, int maxLeversPerProposal, int seed, int samples, int multiplier, TuningScore currentScore, ref int candidatesUsed, int maxCandidates, Action<string>? onProgress)
+    {
+        SearchCandidate? best = null;
+        var beforeCount = candidatesUsed;
+
+        foreach (var lever in levers)
+        {
+            if (!CanTouch(touchedLevers, [lever.Path], maxLeversPerProposal))
+            {
+                continue;
+            }
+
+            foreach (var direction in new[] { -1, 1 })
+            {
+                if (candidatesUsed >= maxCandidates)
+                {
+                    break;
+                }
+
+                var candidate = BuildSingleCandidate(current, blueprint, lever, direction, multiplier, seed, samples);
+                if (candidate is null)
+                {
+                    continue;
+                }
+
+                candidatesUsed += 1;
+                if (IsBetter(candidate.Score, best?.Score ?? currentScore))
+                {
+                    best = candidate;
+                }
+            }
+        }
+
+        LogPhase(onProgress, $"step=±{multiplier}", candidatesUsed - beforeCount, currentScore, best?.Score ?? currentScore);
+        return best;
+    }
+
+    // 두 레버를 한 스텝씩 함께 움직인 후보 중 가장 나은 것을 찾는다.
+    private static SearchCandidate? TryBestTwoLeverStep(JsonObject current, JsonObject blueprint, List<TunableLever> levers, HashSet<string> touchedLevers, int maxLeversPerProposal, int seed, int samples, TuningScore currentScore, ref int candidatesUsed, int maxCandidates, Action<string>? onProgress)
+    {
+        SearchCandidate? best = null;
+        var beforeCount = candidatesUsed;
+
+        for (var firstIndex = 0; firstIndex < levers.Count; firstIndex += 1)
+        {
+            for (var secondIndex = firstIndex + 1; secondIndex < levers.Count; secondIndex += 1)
+            {
+                var first = levers[firstIndex];
+                var second = levers[secondIndex];
+
+                if (!CanTouch(touchedLevers, [first.Path, second.Path], maxLeversPerProposal))
+                {
+                    continue;
+                }
+
+                foreach (var firstDirection in new[] { -1, 1 })
+                {
+                    foreach (var secondDirection in new[] { -1, 1 })
+                    {
+                        if (candidatesUsed >= maxCandidates)
+                        {
+                            break;
+                        }
+
+                        var candidate = BuildPairCandidate(current, blueprint, first, firstDirection, second, secondDirection, seed, samples);
+                        if (candidate is null)
+                        {
+                            continue;
+                        }
+
+                        candidatesUsed += 1;
+                        if (IsBetter(candidate.Score, best?.Score ?? currentScore))
+                        {
+                            best = candidate;
+                        }
+                    }
+                }
+            }
+        }
+
+        LogPhase(onProgress, "two-lever", candidatesUsed - beforeCount, currentScore, best?.Score ?? currentScore);
+        return best;
+    }
+
+    // 단일 레버 후보를 만들고 시뮬레이션 점수를 계산한다.
+    private static SearchCandidate? BuildSingleCandidate(JsonObject current, JsonObject blueprint, TunableLever lever, int direction, int multiplier, int seed, int samples)
+    {
+        var currentValue = GetLeverValue(current, lever.Path);
+        var candidateValue = Math.Clamp(currentValue + direction * lever.Step * multiplier, lever.Min, lever.Max);
+
+        if (Math.Abs(candidateValue - currentValue) < ScoreEpsilon)
+        {
+            return null;
+        }
+
+        var candidate = CloneGameData(current);
+        SetLeverValue(candidate, lever.Path, candidateValue, IsIntegerStep(lever.Step));
+        var result = GameSimulator.RunSimulation(candidate, seed, samples);
+        return new SearchCandidate(candidate, result, ScoreCandidate(blueprint, result), [lever.Path]);
+    }
+
+    // 두 레버 후보를 만들고 시뮬레이션 점수를 계산한다.
+    private static SearchCandidate? BuildPairCandidate(JsonObject current, JsonObject blueprint, TunableLever first, int firstDirection, TunableLever second, int secondDirection, int seed, int samples)
+    {
+        var firstValue = GetLeverValue(current, first.Path);
+        var secondValue = GetLeverValue(current, second.Path);
+        var nextFirst = Math.Clamp(firstValue + firstDirection * first.Step, first.Min, first.Max);
+        var nextSecond = Math.Clamp(secondValue + secondDirection * second.Step, second.Min, second.Max);
+
+        if (Math.Abs(nextFirst - firstValue) < ScoreEpsilon && Math.Abs(nextSecond - secondValue) < ScoreEpsilon)
+        {
+            return null;
+        }
+
+        var candidate = CloneGameData(current);
+        SetLeverValue(candidate, first.Path, nextFirst, IsIntegerStep(first.Step));
+        SetLeverValue(candidate, second.Path, nextSecond, IsIntegerStep(second.Step));
+        var result = GameSimulator.RunSimulation(candidate, seed, samples);
+        return new SearchCandidate(candidate, result, ScoreCandidate(blueprint, result), [first.Path, second.Path]);
+    }
+
+    // 후보 점수를 비교한다. 주항이 같을 때만 진행도 보조항이 순서를 바꾼다.
+    private static bool IsBetter(TuningScore candidate, TuningScore best)
+    {
+        if (candidate.PrimaryDistance < best.PrimaryDistance - ScoreEpsilon)
+        {
+            return true;
+        }
+
+        return Math.Abs(candidate.PrimaryDistance - best.PrimaryDistance) <= ScoreEpsilon &&
+            candidate.Total < best.Total - ScoreEpsilon;
+    }
+
+    // 주항 거리가 줄었는지 확인한다.
+    private static bool PrimaryImproved(TuningScore candidate, TuningScore current)
+    {
+        return candidate.PrimaryDistance < current.PrimaryDistance - ScoreEpsilon;
+    }
+
+    // 남은 후보 예산을 아직 남은 확장 단계 수에 맞춰 나눈다.
+    private static int PhaseLimit(int candidatesUsed, int maxCandidates, int remainingPhases)
+    {
+        var remaining = Math.Max(0, maxCandidates - candidatesUsed);
+        return candidatesUsed + Math.Max(1, remaining / Math.Max(1, remainingPhases));
+    }
+
+    // 두 후보 중 현재 점수 기준으로 더 나은 후보를 고른다.
+    private static SearchCandidate? BetterCandidate(SearchCandidate? first, SearchCandidate? second, TuningScore currentScore)
+    {
+        if (first is null)
+        {
+            return second;
+        }
+
+        if (second is null)
+        {
+            return first;
+        }
+
+        return IsBetter(second.Score, first.Score) && IsBetter(second.Score, currentScore) ? second : first;
+    }
+
+    // 새 레버를 추가해도 제안 레버 수 상한을 넘지 않는지 확인한다.
+    private static bool CanTouch(HashSet<string> touchedLevers, IEnumerable<string> candidatePaths, int maxLeversPerProposal)
+    {
+        return touchedLevers.Concat(candidatePaths).Distinct(StringComparer.Ordinal).Count() <= maxLeversPerProposal;
+    }
+
+    // 탐색 단계의 후보 수와 점수 변화를 기록한다.
+    private static void LogPhase(Action<string>? onProgress, string label, int tried, TuningScore before, TuningScore after)
+    {
+        onProgress?.Invoke($"[tuning] {label} 후보 {tried}개 시도, distance {before.PrimaryDistance:0.###}→{after.PrimaryDistance:0.###}, progress {before.AverageProgressedRooms:0.###}→{after.AverageProgressedRooms:0.###}, score {before.Total:0.######}→{after.Total:0.######}");
+    }
+
+    // 점수 표시 문자열을 만든다.
+    private static string ScoreLine(string prefix, TuningScore score, int candidatesUsed)
+    {
+        return $"{prefix}: distance={score.PrimaryDistance:0.###} progress={score.AverageProgressedRooms:0.###} score={score.Total:0.######} candidates={candidatesUsed}";
+    }
+
+    // blueprint 거리와 진행도 보조항을 결합한 후보 점수를 만든다.
+    private static TuningScore ScoreCandidate(JsonObject blueprint, SimResult result)
+    {
+        var primary = ViolationDistance(blueprint, result);
+        var maxRooms = result.RoomDeathRates.Length;
+        var shapingDistance = Math.Max(0, maxRooms - result.AverageProgressedRooms);
+        return new TuningScore(primary, result.AverageProgressedRooms, primary + shapingDistance * ShapingWeight);
     }
 
     // 레버 경로가 가리키는 현재 수치를 읽는다.
@@ -283,4 +472,8 @@ public sealed record LeverChange(string Path, double Before, double After);
 
 public sealed record PredictedMetricChange(string MetricId, double Before, double After, string Band);
 
-public sealed record TuningResult(bool ReachedBand, JsonObject FinalGameData, int CandidatesUsed, List<LeverChange> ChangedLevers, List<PredictedMetricChange> PredictedMetrics, List<string> ResidualViolations);
+public sealed record TuningScore(double PrimaryDistance, double AverageProgressedRooms, double Total);
+
+public sealed record SearchCandidate(JsonObject GameData, SimResult Result, TuningScore Score, List<string> LeverPaths);
+
+public sealed record TuningResult(bool ReachedBand, JsonObject FinalGameData, int CandidatesUsed, List<LeverChange> ChangedLevers, List<PredictedMetricChange> PredictedMetrics, List<string> ResidualViolations, double BaselineDistance, double FinalDistance, double BaselineProgressedRooms, double FinalProgressedRooms);

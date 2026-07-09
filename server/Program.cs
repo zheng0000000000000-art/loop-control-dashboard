@@ -323,7 +323,8 @@ static bool SimResultsEqual(SimResult first, SimResult second)
         first.RoomDeathRates.SequenceEqual(second.RoomDeathRates) &&
         first.AvgHpPerRoom.SequenceEqual(second.AvgHpPerRoom) &&
         first.RewardPerRunMean.Equals(second.RewardPerRunMean) &&
-        first.RewardPerRunStdDev.Equals(second.RewardPerRunStdDev);
+        first.RewardPerRunStdDev.Equals(second.RewardPerRunStdDev) &&
+        first.AverageProgressedRooms.Equals(second.AverageProgressedRooms);
 }
 
 // 레버 범위 안에서 밸런스 탐색을 실행하는 CLI. 측정·제안 파일은 건드리지 않는 순수 실험용이다.
@@ -364,6 +365,10 @@ static int RunSimTuneCli(string[] args)
             ["seed"] = seed,
             ["candidatesUsed"] = tuning.CandidatesUsed,
             ["reachedBand"] = tuning.ReachedBand,
+            ["baselineDistance"] = tuning.BaselineDistance,
+            ["finalDistance"] = tuning.FinalDistance,
+            ["baselineProgressedRooms"] = tuning.BaselineProgressedRooms,
+            ["finalProgressedRooms"] = tuning.FinalProgressedRooms,
             ["changedLevers"] = new JsonArray(tuning.ChangedLevers.Select(change => (JsonNode)new JsonObject
             {
                 ["path"] = change.Path,
@@ -478,49 +483,87 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
             var seed = Number(bundle.Definition["measurementProvider"]?.AsObject()["seed"], 42);
             var tuning = BalanceTuner.Search(gameData, bundle.Blueprint, bundle.Definition, seed);
 
-            var tuningGeneration = GenerateTuningProposalWithFallback(bundle.Definition, bundle.Proposal, tuning, previousReviewReport: null);
-            bundle.Proposal = tuningGeneration.Proposal;
-            runLog = Engine.AppendLog(runLog, tuningGeneration.LogEntry, Engine.GetLoopIteration(state));
-            runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
-
-            var tuningTier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
-            runLog = Engine.AppendLog(runLog, tuningTier1.LogEntry, Engine.GetLoopIteration(state));
-
-            if (tuningTier1.Report is not null)
+            if (!tuning.ReachedBand && tuning.ChangedLevers.Count == 0)
             {
-                AppendReport(bundle.Reviews, tuningTier1.Report);
-            }
-
-            var tuningMaxRegenerations = Number(bundle.Definition["executorPolicy"]?.AsObject()["maxRegenerations"], 0);
-
-            for (var regeneration = 0; regeneration < tuningMaxRegenerations && tuningTier1.Verdict == "needs_changes"; regeneration += 1)
-            {
-                var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
-                runLog = Engine.AppendLog(runLog, new JsonObject
+                if (bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted")
                 {
-                    ["event"] = "proposal.superseded",
-                    ["params"] = new JsonObject { ["proposalId"] = supersededId, ["reasonCode"] = "review.needs_changes_regenerate" },
-                    ["level"] = "info",
-                    ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
-                    ["cost"] = RuntimeCost(),
-                }, Engine.GetLoopIteration(state));
+                    var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
+                    bundle.Proposal["lifecycle"] = "superseded";
+                    runLog = Engine.AppendLog(runLog, new JsonObject
+                    {
+                        ["event"] = "proposal.superseded",
+                        ["params"] = new JsonObject { ["proposalId"] = supersededId, ["reasonCode"] = "tuning.no_solution" },
+                        ["level"] = "info",
+                        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+                        ["cost"] = RuntimeCost(),
+                    }, Engine.GetLoopIteration(state));
+                }
 
-                tuningGeneration = GenerateTuningProposalWithFallback(bundle.Definition, bundle.Proposal, tuning, previousReviewReport: tuningTier1.Report);
+                runLog = Engine.AppendLog(runLog, TuningNoSolutionLog(tuning), Engine.GetLoopIteration(state));
+                state = ApplyNoSolutionState(bundle.Definition, state, stages);
+                SetNoSolutionDetails(state, stages.DeviationStageId, tuning);
+            }
+            else
+            {
+                var replacedProposalId = bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted"
+                    ? bundle.Proposal["id"]?.GetValue<string>()
+                    : null;
+                var tuningGeneration = GenerateTuningProposalWithFallback(bundle.Definition, bundle.Proposal, tuning, previousReviewReport: null);
                 bundle.Proposal = tuningGeneration.Proposal;
                 runLog = Engine.AppendLog(runLog, tuningGeneration.LogEntry, Engine.GetLoopIteration(state));
+                if (!string.IsNullOrWhiteSpace(replacedProposalId))
+                {
+                    runLog = Engine.AppendLog(runLog, new JsonObject
+                    {
+                        ["event"] = "proposal.superseded",
+                        ["params"] = new JsonObject { ["proposalId"] = replacedProposalId, ["reasonCode"] = "tuning.replaced" },
+                        ["level"] = "info",
+                        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+                        ["cost"] = RuntimeCost(),
+                    }, Engine.GetLoopIteration(state));
+                }
+
                 runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
 
-                tuningTier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
+                var tuningTier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
                 runLog = Engine.AppendLog(runLog, tuningTier1.LogEntry, Engine.GetLoopIteration(state));
 
                 if (tuningTier1.Report is not null)
                 {
                     AppendReport(bundle.Reviews, tuningTier1.Report);
                 }
-            }
 
-            SetTier1Details(state, stages.ReviewStageId, tuningTier1);
-            Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), tuningTier1.Verdict);
+                var tuningMaxRegenerations = Number(bundle.Definition["executorPolicy"]?.AsObject()["maxRegenerations"], 0);
+
+                for (var regeneration = 0; regeneration < tuningMaxRegenerations && tuningTier1.Verdict == "needs_changes"; regeneration += 1)
+                {
+                    var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
+                    runLog = Engine.AppendLog(runLog, new JsonObject
+                    {
+                        ["event"] = "proposal.superseded",
+                        ["params"] = new JsonObject { ["proposalId"] = supersededId, ["reasonCode"] = "review.needs_changes_regenerate" },
+                        ["level"] = "info",
+                        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+                        ["cost"] = RuntimeCost(),
+                    }, Engine.GetLoopIteration(state));
+
+                    tuningGeneration = GenerateTuningProposalWithFallback(bundle.Definition, bundle.Proposal, tuning, previousReviewReport: tuningTier1.Report);
+                    bundle.Proposal = tuningGeneration.Proposal;
+                    runLog = Engine.AppendLog(runLog, tuningGeneration.LogEntry, Engine.GetLoopIteration(state));
+                    runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
+
+                    tuningTier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
+                    runLog = Engine.AppendLog(runLog, tuningTier1.LogEntry, Engine.GetLoopIteration(state));
+
+                    if (tuningTier1.Report is not null)
+                    {
+                        AppendReport(bundle.Reviews, tuningTier1.Report);
+                    }
+                }
+
+                SetTier1Details(state, stages.ReviewStageId, tuningTier1);
+                Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), tuningTier1.Verdict);
+            }
         }
         else
         {
@@ -678,6 +721,73 @@ static void SetMeasurementDetails(JsonObject state, string? stageId, List<Metric
     };
 }
 
+// 해 없음 튜닝 결과를 측정 단계 상세에 추가한다.
+static void SetNoSolutionDetails(JsonObject state, string? stageId, TuningResult tuning)
+{
+    if (stageId is null)
+    {
+        return;
+    }
+
+    state["stageDetails"] ??= new JsonObject();
+    var details = state["stageDetails"]!.AsObject()[stageId] as JsonObject ?? new JsonObject();
+    var metrics = details["metrics"] as JsonArray ?? new JsonArray();
+    metrics.Add(new JsonObject { ["label"] = "탐색 후보 수", ["value"] = tuning.CandidatesUsed.ToString(CultureInfo.InvariantCulture) });
+    metrics.Add(new JsonObject { ["label"] = "주항 거리", ["value"] = $"{tuning.BaselineDistance.ToString("0.###", CultureInfo.InvariantCulture)} -> {tuning.FinalDistance.ToString("0.###", CultureInfo.InvariantCulture)}" });
+    metrics.Add(new JsonObject { ["label"] = "평균 진행 방 수", ["value"] = $"{tuning.BaselineProgressedRooms.ToString("0.###", CultureInfo.InvariantCulture)} -> {tuning.FinalProgressedRooms.ToString("0.###", CultureInfo.InvariantCulture)}" });
+
+    var issues = details["issues"] as JsonArray ?? new JsonArray();
+    issues.Add("레버 범위 내 해 없음 — 범위 확장은 기준 변경으로 사람 결재 사항");
+
+    details["summary"] = "측정 결과가 기준을 벗어났고, 현재 레버 범위 안에서는 변경 제안을 만들 해를 찾지 못했다.";
+    details["metrics"] = metrics;
+    details["issues"] = issues;
+    state["stageDetails"]!.AsObject()[stageId] = details;
+}
+
+// 해 없음 튜닝 결과에 맞춰 결재 단계 대기를 해제한다.
+static JsonObject ApplyNoSolutionState(JsonObject definition, JsonObject state, MeasurementStages stages)
+{
+    var stageStatuses = new JsonObject();
+    var blockInfo = new JsonObject();
+
+    if (stages.ReviewStageId is not null)
+    {
+        stageStatuses[stages.ReviewStageId] = "not_started";
+    }
+
+    if (stages.ApplyStageId is not null)
+    {
+        stageStatuses[stages.ApplyStageId] = "blocked";
+        blockInfo[stages.ApplyStageId] = new JsonObject { ["kind"] = "waiting" };
+    }
+
+    return Engine.ApplyStatePatch(definition, state, new JsonObject
+    {
+        ["currentStage"] = stages.DeviationStageId ?? state["currentStage"]?.GetValue<string>(),
+        ["stageStatuses"] = stageStatuses,
+        ["blockInfo"] = blockInfo,
+    });
+}
+
+// 해 없음 튜닝 결과 로그 항목을 만든다.
+static JsonObject TuningNoSolutionLog(TuningResult tuning)
+{
+    return new JsonObject
+    {
+        ["event"] = "tuning.no_solution",
+        ["params"] = new JsonObject
+        {
+            ["candidatesUsed"] = tuning.CandidatesUsed,
+            ["residualViolations"] = new JsonArray(tuning.ResidualViolations.Select(text => (JsonNode)text).ToArray()),
+            ["text"] = "레버 범위 내 해 없음 — 범위 확장은 기준 변경으로 사람 결재 사항",
+        },
+        ["level"] = "warning",
+        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+        ["cost"] = RuntimeCost(),
+    };
+}
+
 // 1층 검토 결과를 검토 단계 상세에 반영한다.
 static void SetTier1Details(JsonObject state, string? stageId, Tier1ReviewResult tier1)
 {
@@ -817,7 +927,7 @@ static JsonObject BuildTuningProposal(TuningResult tuning, string provider, stri
             ["path"] = change.Path,
             ["before"] = change.Before,
             ["after"] = change.After,
-            ["note"] = notes.GetValueOrDefault(change.Path, FallbackLeverNote(change)),
+            ["note"] = TuningNote(tuning, notes.GetValueOrDefault(change.Path, FallbackLeverNote(change))),
         });
     }
 
@@ -835,7 +945,7 @@ static JsonObject BuildTuningProposal(TuningResult tuning, string provider, stri
 
     var finalSummary = tuning.ReachedBand
         ? summary
-        : $"{summary} (레버 범위 내 해 없음. 잔여 위반: {string.Join(", ", tuning.ResidualViolations)}. 레버 범위 확장은 definition 변경 사항으로 별도 사람 결재가 필요하다.)";
+        : $"{summary} (최선 후보, 밴드 미달. 잔여 위반: {string.Join(", ", tuning.ResidualViolations)}. 레버 범위 확장은 definition 변경 사항으로 별도 사람 결재가 필요하다.)";
 
     return new JsonObject
     {
@@ -862,7 +972,7 @@ static JsonObject BuildTuningProposal(TuningResult tuning, string provider, stri
 // rule-engine 강등 시 쓰는 고정 제목.
 static string FallbackTuningTitle(TuningResult tuning)
 {
-    return tuning.ReachedBand ? "자동 밸런스 튜닝 제안" : "자동 밸런스 튜닝 — 레버 범위 내 해 없음";
+    return tuning.ReachedBand ? "자동 밸런스 튜닝 제안" : "자동 밸런스 튜닝 — 최선 후보, 밴드 미달";
 }
 
 // rule-engine 강등 시 쓰는 고정 요약(밴드 실패 시 잔여 위반을 포함).
@@ -874,7 +984,18 @@ static string FallbackTuningSummary(TuningResult tuning)
     }
 
     var residual = tuning.ResidualViolations.Count == 0 ? "없음" : string.Join(", ", tuning.ResidualViolations);
-    return $"레버 범위 내에서 밴드에 도달하는 해를 찾지 못했다. 잔여 위반: {residual}.";
+    return $"레버 {tuning.ChangedLevers.Count}개를 조정한 최선 후보지만 아직 밴드에 도달하지 못했다. 잔여 위반: {residual}.";
+}
+
+// 밴드 미달 후보의 note에 최선 후보 표시를 보강한다.
+static string TuningNote(TuningResult tuning, string note)
+{
+    if (tuning.ReachedBand || note.Contains("최선 후보", StringComparison.Ordinal))
+    {
+        return note;
+    }
+
+    return $"{note} 최선 후보, 밴드 미달.";
 }
 
 // rule-engine 강등 시 쓰는 고정 레버 note.

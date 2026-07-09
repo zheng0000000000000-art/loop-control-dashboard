@@ -1,24 +1,20 @@
 {
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
-  "currentStage": "changeReview",
-  "overallStatus": "warning",
-  "loopState": "running",
+  "currentStage": "deviationCheck",
+  "overallStatus": "completed",
+  "loopState": "aligned",
   "mode": "normal",
   "suspendedTracks": [],
   "loopIteration": 0,
   "stages": {
     "goals": "passed",
     "measure": "passed",
-    "deviationCheck": "warning",
-    "changeReview": "pending_review",
-    "apply": "blocked"
+    "deviationCheck": "passed",
+    "changeReview": "not_started",
+    "apply": "not_started"
   },
-  "blockInfo": {
-    "apply": {
-      "kind": "waiting"
-    }
-  },
+  "blockInfo": {},
   "stageDetails": {
     "goals": {
       "summary": "개발 팩은 저장소의 핵심 규칙을 측정하고 블루프린트 기준과 비교한다.",
@@ -40,7 +36,7 @@
       "issues": []
     },
     "deviationCheck": {
-      "summary": "측정 결과에서 1개 괴리가 감지됐다.",
+      "summary": "측정 결과가 블루프린트 기준을 만족한다.",
       "metrics": [
         {
           "label": "domainWordsInEngine",
@@ -80,7 +76,7 @@
         },
         {
           "label": "smallTouchTargets",
-          "value": "2 / 0"
+          "value": "0 / 0"
         },
         {
           "label": "newFontFamilies",
@@ -91,9 +87,7 @@
           "value": "0 / 0"
         }
       ],
-      "issues": [
-        "smallTouchTargets: 측정값 2이 기준 0을 벗어났다. 근거: dashboard/style.css:260; dashboard/style.css:271"
-      ]
+      "issues": []
     },
     "changeReview": {
       "summary": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
@@ -111,7 +105,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-09T19:55:05.1285526+09:00",
+  "lastUpdated": "2026-07-09T20:13:45.0346255+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",

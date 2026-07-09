@@ -113,6 +113,7 @@
     "track.resumed": "보류 해제: {metricId}",
     "track.dismissed": "보류 정리: {metricId} ({reasonCode})",
     "tuning.applied": "튜닝 적용 후 재측정: {comparisons}",
+    "tuning.no_solution": "튜닝 해 없음: 후보 {candidatesUsed}개, {text}",
     "executor.escalated": "실행자 승격: {from} -> {to} ({text})",
     "scenario.step": "시나리오 단계: {text}",
     "measure.completed": "측정 완료: {providerId}, 위반 {violationCount}개"

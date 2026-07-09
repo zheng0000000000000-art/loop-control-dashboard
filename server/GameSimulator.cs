@@ -50,12 +50,14 @@ public static class GameSimulator
         var hpSums = new double[rooms.Count];
         var rewards = new List<double>(runs);
         var completions = 0;
+        var progressedRoomTotal = 0;
 
         for (var run = 0; run < runs; run += 1)
         {
             var hp = player.MaxHp;
             var rewardTotal = 0.0;
             var completedAllRooms = true;
+            var progressedRooms = 0;
 
             for (var roomIndex = 0; roomIndex < rooms.Count; roomIndex += 1)
             {
@@ -72,6 +74,7 @@ public static class GameSimulator
                 }
 
                 hp = outcome.RemainingHp;
+                progressedRooms += 1;
             }
 
             if (completedAllRooms)
@@ -79,10 +82,12 @@ public static class GameSimulator
                 completions += 1;
             }
 
+            progressedRoomTotal += progressedRooms;
             rewards.Add(rewardTotal);
         }
 
         var completionRate = runs == 0 ? 0 : (double)completions / runs * 100;
+        var averageProgressedRooms = runs == 0 ? 0 : (double)progressedRoomTotal / runs;
         var roomDeathRates = new double[rooms.Count];
         var avgHpPerRoom = new double[rooms.Count];
 
@@ -97,7 +102,7 @@ public static class GameSimulator
             ? 0
             : Math.Sqrt(rewards.Sum(reward => Math.Pow(reward - rewardMean, 2)) / rewards.Count);
 
-        return new SimResult(completionRate, roomDeathRates, avgHpPerRoom, rewardMean, rewardStdDev);
+        return new SimResult(completionRate, roomDeathRates, avgHpPerRoom, rewardMean, rewardStdDev, averageProgressedRooms);
     }
 
     // 방 하나의 턴제 전투를 계산한다. 적을 한 명씩 상대하며, 전멸시키면 보상 판정 후 생존 결과를 반환한다.
@@ -236,7 +241,7 @@ public static class GameSimulator
     }
 }
 
-public sealed record SimResult(double CompletionRate, double[] RoomDeathRates, double[] AvgHpPerRoom, double RewardPerRunMean, double RewardPerRunStdDev);
+public sealed record SimResult(double CompletionRate, double[] RoomDeathRates, double[] AvgHpPerRoom, double RewardPerRunMean, double RewardPerRunStdDev, double AverageProgressedRooms);
 
 public sealed record PlayerState(int Hp, int MaxHp, int Attack);
 

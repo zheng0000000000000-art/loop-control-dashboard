@@ -257,7 +257,7 @@ textarea {
 }
 
 .button {
-  min-height: 38px;
+  min-height: 44px;
   border: 1px solid transparent;
   border-radius: 6px;
   padding: 0 14px;
@@ -268,7 +268,7 @@ textarea {
 }
 
 .button-compact {
-  min-height: 32px;
+  min-height: 44px;
   padding: 0 10px;
   font-size: 0.82rem;
 }
