@@ -1,13 +1,13 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783567409287",
+  "id": "proposal-1783568549708",
   "title": "블루프린트 괴리 해소 제안",
   "lifecycle": "superseded",
   "createdBy": {
     "provider": "rule-engine",
     "model": null
   },
-  "revisionOf": "proposal-1783567398049",
+  "revisionOf": "proposal-1783568544620",
   "summary": "측정 결과가 블루프린트 기준을 벗어난 항목을 수정 대상으로 제안한다.",
   "changes": [
     {

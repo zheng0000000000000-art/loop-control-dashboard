@@ -91,7 +91,7 @@
     "stage.warning": "{stage} 경고: {text}",
     "stage.blocked": "{stage} 차단: {failedChecks}{text}",
     "proposal.created": "변경 제안 생성: {proposalId}",
-    "proposal.generated": "제안 내용 생성: {provider} {model}, {durationMs}ms, 폴백 {fallback} {reasonCode} {text}",
+    "proposal.generated": "제안 내용 생성: {provider} {model}, {durationMs}ms, 폴백 {fallback} {reasonCode} {failReason}",
     "proposal.superseded": "제안 대체됨: {proposalId} ({reasonCode})",
     "proposal.edited": "변경 제안 편집: {target} ({before} -> {after}) {text}",
     "review.approved": "검토 승인: {proposalId} {text}{editedSuffix}",

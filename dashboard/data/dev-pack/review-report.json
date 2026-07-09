@@ -300,6 +300,246 @@
       ],
       "reason": "1층 체크리스트에서 수정 필요 항목이 발견됐다.",
       "createdAt": "2026-07-09T12:23:31.7269942+09:00"
+    },
+    {
+      "id": "review-1783568441842",
+      "proposalId": "proposal-1783568433787",
+      "verdict": "needs_changes",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "koPoliteEndings",
+          "checkId": "note-nonempty",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "note는 '문장 끝에 존칭 표현이 부족하여 측정값이 1로 유지되고 있으며, 이는 dashboard/data/lang/ko.json:3에 기재된 근거에 따라 목표인 0에 도달하지 못한 것으로 판단됩니다.'로 비어 있지 않고 의미 있는 설명을 포함하고 있습니다.",
+          "comment": "note는 '문장 끝에 존칭 표현이 부족하여 측정값이 1로 유지되고 있으며, 이는 dashboard/data/lang/ko.json:3에 기재된 근거에 따라 목표인 0에 도달하지 못한 것으로 판단됩니다.'로 비어 있지 않고 의미 있는 설명을 포함하고 있습니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "after-matches-goal",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "note에 따르면 목표는 0이지만 after 값은 1로 일치하지 않습니다.",
+          "comment": "note에 따르면 목표는 0이지만 after 값은 1로 일치하지 않습니다.",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "제안은 koPoliteEndings 메트릭과 관련된 변경 사항만 포함하고 있어 blueprint 위반 해소와 무관한 항목이 섞여 있지 않음",
+          "comment": "제안은 koPoliteEndings 메트릭과 관련된 변경 사항만 포함하고 있어 blueprint 위반 해소와 무관한 항목이 섞여 있지 않음",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트에서 수정 필요 항목이 발견됐다.",
+      "createdAt": "2026-07-09T12:40:41.8425108+09:00"
+    },
+    {
+      "id": "review-1783568454219",
+      "proposalId": "proposal-1783568446399",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "koPoliteEndings",
+          "checkId": "note-nonempty",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "note 필드는 '목표는 0이지만 이전 시도에서 after 값이 1로 설정되어 일치하지 않아 거절되었습니다. 이에 따라 after 값은 0으로 유지해야 합니다.'로 비어 있지 않고 의미 있는 설명을 제공합니다.",
+          "comment": "note 필드는 '목표는 0이지만 이전 시도에서 after 값이 1로 설정되어 일치하지 않아 거절되었습니다. 이에 따라 after 값은 0으로 유지해야 합니다.'로 비어 있지 않고 의미 있는 설명을 제공합니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "after-matches-goal",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "note에 따르면 after 값은 0으로 유지해야 하며, 제안의 after 값도 0으로 설정되어 일치합니다.",
+          "comment": "note에 따르면 after 값은 0으로 유지해야 하며, 제안의 after 값도 0으로 설정되어 일치합니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "변경 제안은 koPoliteEndings 메트릭과 관련된 것으로, blueprint 위반 해소와 무관한 항목은 섞여 있지 않습니다.",
+          "comment": "변경 제안은 koPoliteEndings 메트릭과 관련된 것으로, blueprint 위반 해소와 무관한 항목은 섞여 있지 않습니다.",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "createdAt": "2026-07-09T12:40:54.2191140+09:00"
+    },
+    {
+      "id": "review-1783568547662",
+      "proposalId": "proposal-1783568544620",
+      "verdict": "needs_changes",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "koPoliteEndings",
+          "checkId": "note-nonempty",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "note 필드는 'dashboard/data/lang/ko.json:3'만 포함되어 있고, 의미 있는 설명이 아니다.",
+          "comment": "note 필드는 'dashboard/data/lang/ko.json:3'만 포함되어 있고, 의미 있는 설명이 아니다.",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "after-matches-goal",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "note에 명시된 dashboard/data/lang/ko.json:3은 koPoliteEndings 메트릭의 증거로, before 값이 1이고 after 값이 0으로 변경되었으나, note는 변경 방향에 대한 명확한 설명을 제공하지 않는다.",
+          "comment": "note에 명시된 dashboard/data/lang/ko.json:3은 koPoliteEndings 메트릭의 증거로, before 값이 1이고 after 값이 0으로 변경되었으나, note는 변경 방향에 대한 명확한 설명을 제공하지 않는다.",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "변경 항목은 koPoliteEndings 관련 것으로 blueprint 위반 해소와 직접적으로 관련됨",
+          "comment": "변경 항목은 koPoliteEndings 관련 것으로 blueprint 위반 해소와 직접적으로 관련됨",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트에서 수정 필요 항목이 발견됐다.",
+      "createdAt": "2026-07-09T12:42:27.6627445+09:00"
+    },
+    {
+      "id": "review-1783568551827",
+      "proposalId": "proposal-1783568549708",
+      "verdict": "needs_changes",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "koPoliteEndings",
+          "checkId": "note-nonempty",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "note 필드는 'dashboard/data/lang/ko.json:3'로 비어 있지 않지만, 의미 있는 설명이 아닙니다.",
+          "comment": "note 필드는 'dashboard/data/lang/ko.json:3'로 비어 있지 않지만, 의미 있는 설명이 아닙니다.",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "after-matches-goal",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "note에 따르면 ko.json:3의 값이 변경되어야 하지만 after 값은 0으로 설정됨",
+          "comment": "note에 따르면 ko.json:3의 값이 변경되어야 하지만 after 값은 0으로 설정됨",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "제안은 koPoliteEndings 메트릭과 관련된 변경만 포함하고 있다.",
+          "comment": "제안은 koPoliteEndings 메트릭과 관련된 변경만 포함하고 있다.",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트에서 수정 필요 항목이 발견됐다.",
+      "createdAt": "2026-07-09T12:42:31.8273364+09:00"
     }
   ]
 }

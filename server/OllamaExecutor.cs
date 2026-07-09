@@ -36,21 +36,21 @@ public static class OllamaExecutor
 
         foreach (var violation in violations)
         {
-            var note = TryGenerateNote(policy, model, violation, feedback.GetValueOrDefault(violation.MetricId), maxRetries);
+            var (note, noteError) = TryGenerateNote(policy, model, violation, feedback.GetValueOrDefault(violation.MetricId), maxRetries);
 
             if (note is null)
             {
-                return Unavailable(timer, $"{violation.MetricId} note 생성 실패", provider, model);
+                return Unavailable(timer, $"{violation.MetricId}: {noteError ?? "note 생성 실패"}", provider, model);
             }
 
             notes[violation.MetricId] = note;
         }
 
-        var summary = TryGenerateSummary(policy, model, violations, notes, maxRetries);
+        var (summary, summaryError) = TryGenerateSummary(policy, model, violations, notes, maxRetries);
 
         if (summary is null)
         {
-            return Unavailable(timer, "제목/요약 생성 실패", provider, model);
+            return Unavailable(timer, summaryError ?? "제목/요약 생성 실패", provider, model);
         }
 
         timer.Stop();
@@ -84,9 +84,11 @@ public static class OllamaExecutor
         return result;
     }
 
-    // 위반 항목 하나에 대한 note를 생성한다.
-    private static string? TryGenerateNote(JsonObject policy, string model, MetricCheck violation, string? feedback, int maxRetries)
+    // 위반 항목 하나에 대한 note를 생성한다. 실패 사유(HTTP 상태·예외 요약)를 함께 반환한다.
+    private static (string? Note, string? Error) TryGenerateNote(JsonObject policy, string model, MetricCheck violation, string? feedback, int maxRetries)
     {
+        string? lastError = null;
+
         for (var attempt = 1; attempt <= maxRetries; attempt += 1)
         {
             try
@@ -96,19 +98,22 @@ public static class OllamaExecutor
 
                 if (parsed is not null)
                 {
-                    return parsed;
+                    return (parsed, null);
                 }
+
+                lastError = "응답 JSON 스키마 불일치 또는 빈/손상된 note";
             }
-            catch (ReviewerUnavailableException)
+            catch (ReviewerUnavailableException error)
             {
-                return null;
+                return (null, error.Message);
             }
-            catch (Exception)
+            catch (Exception error)
             {
+                lastError = error.Message;
             }
         }
 
-        return null;
+        return (null, lastError);
     }
 
     // note 생성 프롬프트를 만든다.
@@ -144,9 +149,11 @@ public static class OllamaExecutor
         return text.Contains('�');
     }
 
-    // 제안 제목과 요약을 생성한다.
-    private static (string Title, string Summary)? TryGenerateSummary(JsonObject policy, string model, List<MetricCheck> violations, Dictionary<string, string> notes, int maxRetries)
+    // 제안 제목과 요약을 생성한다. 실패 사유(HTTP 상태·예외 요약)를 함께 반환한다.
+    private static ((string Title, string Summary)? Result, string? Error) TryGenerateSummary(JsonObject policy, string model, List<MetricCheck> violations, Dictionary<string, string> notes, int maxRetries)
     {
+        string? lastError = null;
+
         for (var attempt = 1; attempt <= maxRetries; attempt += 1)
         {
             try
@@ -156,19 +163,22 @@ public static class OllamaExecutor
 
                 if (parsed is not null)
                 {
-                    return parsed;
+                    return (parsed, null);
                 }
+
+                lastError = "응답 JSON 스키마 불일치 또는 빈/손상된 title·summary";
             }
-            catch (ReviewerUnavailableException)
+            catch (ReviewerUnavailableException error)
             {
-                return null;
+                return (null, error.Message);
             }
-            catch (Exception)
+            catch (Exception error)
             {
+                lastError = error.Message;
             }
         }
 
-        return null;
+        return (null, lastError);
     }
 
     // 제목/요약 생성 프롬프트를 만든다.

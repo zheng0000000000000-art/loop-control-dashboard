@@ -78,8 +78,8 @@
         }
       ],
       "issues": [
-        "note-nonempty: note 필드는 'dashboard/data/lang/ko.json:3'로 비어 있지 않지만, 이는 의미 있는 설명이 아니다.",
-        "after-matches-goal: koPoliteEndings의 after 값(0)은 note에 언급된 dashboard/data/lang/ko.json:3의 변경 방향과 일치하지 않음"
+        "note-nonempty: note 필드는 'dashboard/data/lang/ko.json:3'로 비어 있지 않지만, 의미 있는 설명이 아닙니다.",
+        "after-matches-goal: note에 따르면 ko.json:3의 값이 변경되어야 하지만 after 값은 0으로 설정됨"
       ]
     },
     "apply": {
@@ -88,5 +88,5 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-09T12:24:07.0600733+09:00"
+  "lastUpdated": "2026-07-09T12:42:45.6421862+09:00"
 }

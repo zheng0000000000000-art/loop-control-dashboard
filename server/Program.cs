@@ -8,6 +8,11 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.FileProviders;
 
+if (args.Length > 0 && string.Equals(args[0], "measure", StringComparison.OrdinalIgnoreCase))
+{
+    return RunMeasureCli(args);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
@@ -92,6 +97,7 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 app.Run();
+return 0;
 
 // 프로젝트 파일을 JSON 응답으로 반환한다.
 static IResult ReadFile(Storage storage, string projectId, string fileName, JsonSerializerOptions jsonOptions)
@@ -113,29 +119,106 @@ static IResult ReadFile(Storage storage, string projectId, string fileName, Json
 // 측정 공급자를 실행하고 블루프린트 괴리를 판정한다.
 static IResult Measure(Storage storage, string projectId, JsonSerializerOptions jsonOptions)
 {
+    var outcome = RunMeasureCore(storage, projectId, jsonOptions);
+    return outcome.Problem ?? BundleResult(outcome.Bundle!, jsonOptions);
+}
+
+// 측정 실행 본체. HTTP 라우트와 CLI가 함께 사용한다.
+static MeasureOutcome RunMeasureCore(Storage storage, string projectId, JsonSerializerOptions jsonOptions)
+{
     var bundle = storage.ReadBundle(projectId);
     var provider = bundle.Definition["measurementProvider"] as JsonObject;
     var providerId = provider?["id"]?.GetValue<string>();
 
     if (string.IsNullOrWhiteSpace(providerId))
     {
-        return ProblemResult(409, "checklist.provider_missing", "Measurement provider is not configured");
+        return new MeasureOutcome(null, ProblemResult(409, "checklist.provider_missing", "Measurement provider is not configured"), 0);
     }
 
     if (providerId != "dev-pack-checks")
     {
-        return ProblemResult(409, "checklist.provider_unknown", $"Measurement provider is not supported: {providerId}");
+        return new MeasureOutcome(null, ProblemResult(409, "checklist.provider_unknown", $"Measurement provider is not supported: {providerId}"), 0);
     }
 
     storage.CreateRestorePoint(projectId);
     var targetRoot = ResolveMeasurementTargetRoot(storage.ProjectPath(projectId), provider!);
     bundle.Measurement = DevPackMeasures.Measure(targetRoot, providerId, bundle.Blueprint);
-    ApplyMeasurementResult(bundle, providerId);
-    return Persist(storage, projectId, bundle, jsonOptions);
+    var violationCount = ApplyMeasurementResult(bundle, providerId);
+    Persist(storage, projectId, bundle, jsonOptions);
+    return new MeasureOutcome(bundle, null, violationCount);
 }
 
-// 측정 결과를 상태, 로그, 제안에 반영한다.
-static void ApplyMeasurementResult(ProjectBundle bundle, string providerId)
+// 서버를 띄우지 않고 측정을 실행하는 CLI 진입점. 위반 0=0, 위반 존재=1, 실행 오류=2를 반환한다.
+static int RunMeasureCli(string[] args)
+{
+    var cliJsonOptions = new JsonSerializerOptions
+    {
+        WriteIndented = false,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
+    if (args.Length < 2 || string.IsNullOrWhiteSpace(args[1]))
+    {
+        Console.Error.WriteLine(CliError("사용법: measure <projectId>").ToJsonString(cliJsonOptions));
+        return 2;
+    }
+
+    var projectId = args[1];
+
+    try
+    {
+        var workspaceRoot = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName
+            ?? throw new InvalidOperationException("Workspace root was not found.");
+        var dataRoot = Path.Combine(workspaceRoot, "dashboard", "data");
+        var storage = new Storage(dataRoot);
+        storage.ValidateAndRestoreAllProjects();
+
+        MeasureOutcome outcome;
+        lock (storage.GetProjectLock(projectId))
+        {
+            outcome = RunMeasureCore(storage, projectId, cliJsonOptions);
+        }
+
+        if (outcome.Problem is not null || outcome.Bundle is null)
+        {
+            Console.Error.WriteLine(CliError($"measurement failed for {projectId}").ToJsonString(cliJsonOptions));
+            return 2;
+        }
+
+        Console.WriteLine(BuildCliSummary(projectId, outcome).ToJsonString(cliJsonOptions));
+        return outcome.ViolationCount > 0 ? 1 : 0;
+    }
+    catch (Exception error)
+    {
+        Console.Error.WriteLine(CliError(error.Message).ToJsonString(cliJsonOptions));
+        return 2;
+    }
+}
+
+// CLI 측정 결과 요약을 한 줄 JSON으로 만든다.
+static JsonObject BuildCliSummary(string projectId, MeasureOutcome outcome)
+{
+    var bundle = outcome.Bundle!;
+    return new JsonObject
+    {
+        ["projectId"] = projectId,
+        ["violationCount"] = outcome.ViolationCount,
+        ["proposalId"] = bundle.Proposal["id"]?.GetValue<string>(),
+        ["proposalLifecycle"] = bundle.Proposal["lifecycle"]?.GetValue<string>(),
+        ["createdBy"] = bundle.Proposal["createdBy"]?.DeepClone(),
+        ["currentStage"] = bundle.State["currentStage"]?.GetValue<string>(),
+        ["overallStatus"] = bundle.State["overallStatus"]?.GetValue<string>(),
+    };
+}
+
+// CLI 오류를 한 줄 JSON으로 만든다.
+static JsonObject CliError(string message)
+{
+    return new JsonObject { ["error"] = message };
+}
+
+// 측정 결과를 상태, 로그, 제안에 반영하고 위반 수를 반환한다.
+static int ApplyMeasurementResult(ProjectBundle bundle, string providerId)
 {
     var checks = EvaluateBlueprintChecks(bundle.Blueprint, bundle.Measurement);
     var violations = checks.Where(check => check.Implemented && !check.Passed).ToList();
@@ -219,6 +302,7 @@ static void ApplyMeasurementResult(ProjectBundle bundle, string providerId)
 
     bundle.State = state;
     bundle.RunLog = runLog;
+    return violations.Count;
 }
 
 // 측정 결과에 맞는 단계 상태 패치를 적용한다.
@@ -497,6 +581,7 @@ static JsonObject GeneratedLogEntry(string provider, string? model, long duratio
             ["fallback"] = fallback,
             ["reasonCode"] = fallback ? "system.executor_degraded" : "",
             ["text"] = fallback ? (error ?? "") : "",
+            ["failReason"] = fallback ? (error ?? "") : "",
         },
         ["level"] = fallback ? "warning" : "info",
         ["producedBy"] = new JsonObject { ["provider"] = provider, ["model"] = model },
@@ -1101,3 +1186,5 @@ public sealed record MeasurementStages(string? MeasureStageId, string? Deviation
 public sealed record MetricCheck(string MetricId, JsonNode? Value, JsonNode? Goal, bool Implemented, bool Passed, string Expected, List<string> Evidence);
 
 public sealed record ProposalGeneration(JsonObject Proposal, JsonObject LogEntry);
+
+public sealed record MeasureOutcome(ProjectBundle? Bundle, IResult? Problem, int ViolationCount);
