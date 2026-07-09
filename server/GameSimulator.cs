@@ -1,11 +1,11 @@
 // 렌더링 없는 수치 전투 시뮬레이터. game-data.json을 읽어 완주율·방별 사망률·보상 분포를 낸다.
-// SimCombat은 스텁이다 — 실제 턴제 전투 규칙은 사람이 채운다.
+// SimCombat이 방 하나의 턴제 전투 규칙을 계산한다.
 using System.Globalization;
 using System.Text.Json.Nodes;
 
 public static class GameSimulator
 {
-    private const string ProviderVersion = "1";
+    private const string ProviderVersion = "2";
 
     // game-data.json을 읽어 시뮬레이션 측정 결과를 만든다.
     public static JsonObject Measure(string projectPath, string providerId, JsonObject blueprint, JsonObject providerConfig)
@@ -100,11 +100,44 @@ public static class GameSimulator
         return new SimResult(completionRate, roomDeathRates, avgHpPerRoom, rewardMean, rewardStdDev);
     }
 
-    // 방 하나의 전투 결과를 계산하는 자리다. 실제 턴제 규칙은 사람이 채울 스텁 — 지금은 항상 고정값을 반환한다.
+    // 방 하나의 턴제 전투를 계산한다. 적을 한 명씩 상대하며, 전멸시키면 보상 판정 후 생존 결과를 반환한다.
     private static RoomOutcome SimCombat(PlayerState player, RoomState room, Random random)
     {
-        // TODO(사람 작성 예정): room.Enemies·room.Reward와 random을 사용해 실제 전투 결과를 계산한다.
-        return new RoomOutcome(Survived: true, RemainingHp: player.Hp, RewardGained: 0);
+        var hp = player.Hp;
+
+        // 적 무리를 한 명씩 처리한다.
+        for (var enemyIndex = 0; enemyIndex < room.Enemies.Count; enemyIndex += 1)
+        {
+            var enemyHp = room.Enemies.Hp;
+
+            // 플레이어와 적이 번갈아 때린다. 어느 한쪽이 쓰러질 때까지.
+            while (enemyHp > 0)
+            {
+                // 플레이어 공격: 공격력의 80~120% 피해.
+                enemyHp -= (int)Math.Round(player.Attack * random.Next(80, 121) / 100.0);
+                if (enemyHp <= 0)
+                {
+                    break;
+                }
+
+                // 적 반격: 같은 편차 규칙.
+                hp -= (int)Math.Round(room.Enemies.Attack * random.Next(80, 121) / 100.0);
+                if (hp <= 0)
+                {
+                    return new RoomOutcome(Survived: false, RemainingHp: 0, RewardGained: 0);
+                }
+            }
+        }
+
+        // 방 클리어: 드롭 판정에 성공하면 회복량만큼 회복하고, 회복량을 보상 수치로 기록한다.
+        var rewardGained = 0.0;
+        if (random.NextDouble() < room.Reward.CommonDropRate)
+        {
+            hp = Math.Min(player.MaxHp, hp + room.Reward.HealAmount);
+            rewardGained = room.Reward.HealAmount;
+        }
+
+        return new RoomOutcome(Survived: true, RemainingHp: hp, RewardGained: rewardGained);
     }
 
     // 측정 지표 하나를 SimResult에서 뽑아 JSON으로 만든다.

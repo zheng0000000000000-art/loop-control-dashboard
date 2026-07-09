@@ -64,11 +64,11 @@
       "issues": []
     },
     "balanceValidation": {
-      "summary": "측정 결과에서 2개 괴리가 감지됐다.",
+      "summary": "측정 결과에서 1개 괴리가 감지됐다.",
       "metrics": [
         {
           "label": "completionRate",
-          "value": "100 / 45~60"
+          "value": "0 / 45~60"
         },
         {
           "label": "room1DeathRate",
@@ -76,16 +76,15 @@
         },
         {
           "label": "room3DeathRate",
-          "value": "0 / 0~35"
+          "value": "0.8 / 0~35"
         },
         {
           "label": "avgRewardPerRun",
-          "value": "0 / 8~20"
+          "value": "8.076 / 8~20"
         }
       ],
       "issues": [
-        "completionRate: 측정값 100이 기준 45~60을 벗어났다. 근거: 시뮬레이션 전체 실행",
-        "avgRewardPerRun: 측정값 0이 기준 8~20을 벗어났다. 근거: stddev=0"
+        "completionRate: 측정값 0이 기준 45~60을 벗어났다. 근거: 시뮬레이션 전체 실행"
       ]
     },
     "patchApproval": {
@@ -97,8 +96,7 @@
         }
       ],
       "issues": [
-        "note-direction-match: note는 '개선이 필요하다'라고 명시하지만, 수치는 0에서 8~20으로 증가하므로 방향은 일치하지 않는다.",
-        "risk-note-present: 변경 항목의 note에 위험 또는 영향에 대한 설명이 포함되어 있지 않음"
+        "risk-note-present: 변경 항목에 위험 또는 영향에 대한 명확한 설명이 포함되어 있지 않음"
       ]
     },
     "unityExport": {
@@ -114,5 +112,5 @@
       ]
     }
   },
-  "lastUpdated": "2026-07-09T19:14:21.7308075+09:00"
+  "lastUpdated": "2026-07-09T19:25:11.9341613+09:00"
 }

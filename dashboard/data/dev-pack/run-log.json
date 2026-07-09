@@ -2759,6 +2759,127 @@
         "subscriptionCalls": 0,
         "role": "runtime"
       }
+    },
+    {
+      "createdAt": "2026-07-09T19:26:18.0991100+09:00",
+      "event": "measure.completed",
+      "params": {
+        "providerId": "dev-pack-checks",
+        "violationCount": 1
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 0,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-09T19:26:18.1035403+09:00",
+      "event": "stage.warning",
+      "params": {
+        "stage": "deviationCheck",
+        "text": "블루프린트 대비 괴리가 감지됐다.",
+        "reasonCode": "checklist.blueprint_deviation"
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 0,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-09T19:26:23.1768480+09:00",
+      "event": "proposal.generated",
+      "params": {
+        "provider": "ollama",
+        "model": "qwen3:8b",
+        "durationMs": 5070,
+        "fallback": false,
+        "reasonCode": "",
+        "text": "",
+        "failReason": ""
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "ollama",
+        "model": "qwen3:8b"
+      },
+      "attempt": 1,
+      "loopIteration": 0,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-09T19:26:23.1781578+09:00",
+      "event": "proposal.created",
+      "params": {
+        "proposalId": "proposal-1783592783175"
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "ollama",
+        "model": "qwen3:8b"
+      },
+      "attempt": 1,
+      "loopIteration": 0,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-09T19:26:31.3039684+09:00",
+      "event": "review.tier1_completed",
+      "params": {
+        "proposalId": "proposal-1783592783175",
+        "verdict": "approved",
+        "model": "qwen3:14b",
+        "durationMs": 8122,
+        "checkCount": 3,
+        "uncertainCount": 0,
+        "attempts": 3,
+        "text": ""
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "attempt": 1,
+      "loopIteration": 0,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
     }
   ]
 }

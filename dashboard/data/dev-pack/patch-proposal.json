@@ -1,20 +1,20 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783592132694",
-  "title": "smallTouchTargets 측정값 조정",
+  "id": "proposal-1783592783175",
+  "title": "터치 타겟 크기 조정",
   "lifecycle": "submitted",
   "createdBy": {
     "provider": "ollama",
     "model": "qwen3:8b"
   },
-  "revisionOf": "proposal-1783591270365",
-  "summary": "smallTouchTargets 측정값을 2에서 0으로 변경하여 터치 표적 크기 문제를 해결하고자 함.",
+  "revisionOf": "proposal-1783592132694",
+  "summary": "smallTouchTargets 측정값을 2에서 0으로 변경하여 대시보드 스타일 시트의 버튼 및 요소 크기를 조정하고 사용자 경험을 향상시킵니다.",
   "changes": [
     {
       "path": "smallTouchTargets",
       "before": 2,
       "after": 0,
-      "note": "smallTouchTargets 측정값이 2에서 0으로 변경되어 터치 표적 크기 문제를 해결하고자 함. 근거는 dashboard/style.css:260; dashboard/style.css:271"
+      "note": "smallTouchTargets 측정값이 2에서 0으로 변경됨. 이는 대시보드 스타일 시트에서 버튼 및 요소의 크기를 조정하여 터치 타겟을 확장함으로써 사용자 경험을 향상시키기 위한 변경"
     }
   ],
   "impact": [

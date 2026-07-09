@@ -1,38 +1,29 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783592066380",
-  "title": "시뮬레이션 성능 개선",
+  "id": "proposal-1783592715979",
+  "title": "완료율 개선",
   "lifecycle": "submitted",
   "createdBy": {
     "provider": "ollama",
     "model": "qwen3:8b"
   },
-  "revisionOf": "patch-2026-07-08-01",
-  "summary": "시뮬레이션 전체 실행을 통해 목표 범위(45~60)에 도달하도록 completionRate를 개선하고, avgRewardPerRun의 데이터 변동성과 목표 범위(8~20)에 대한 문제를 해결해야 한다.",
+  "revisionOf": "proposal-1783592066380",
+  "summary": "시뮬레이션 전체 과정을 완료할 수 있는 비율을 측정하여 시스템의 완성도와 사용자 경험을 향상시킵니다.",
   "changes": [
     {
       "path": "completionRate",
-      "before": 100,
+      "before": 0,
       "after": [
         45,
         60
       ],
-      "note": "시뮬레이션 전체 실행을 통해 모든 단계를 완료할 수 있도록 개선하여 목표 범위(45~60)에 도달하도록 함"
-    },
-    {
-      "path": "avgRewardPerRun",
-      "before": 0,
-      "after": [
-        8,
-        20
-      ],
-      "note": "측정값이 0으로 stddev=0인 것으로 보아 데이터 변동성이 없고, 목표인 8~20 사이에 위치하지 않아 개선이 필요하다."
+      "note": "시뮬레이션 전체 실행을 통해 전체 과정을 완료할 수 있는 비율을 측정하여, 시스템의 완성도와 사용자 경험을 개선하는 데 기여합니다."
     }
   ],
   "impact": [
     {
       "label": "위반 항목",
-      "value": "2"
+      "value": "1"
     },
     {
       "label": "예상 비용",

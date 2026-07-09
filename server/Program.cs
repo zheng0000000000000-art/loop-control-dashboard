@@ -266,7 +266,7 @@ static int RunSimTestCli(string[] args)
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
     var projectId = args.Length > 1 && !string.IsNullOrWhiteSpace(args[1]) ? args[1] : "ruined-lab";
-    const int seed = 42;
+    var seed = args.Length > 2 && int.TryParse(args[2], out var customSeed) ? customSeed : 42;
     const int runs = 500;
 
     try

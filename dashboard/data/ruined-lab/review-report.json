@@ -125,6 +125,66 @@
       ],
       "reason": "1층 체크리스트에서 불확실하거나 상위 검토가 필요한 항목이 발견됐다.",
       "createdAt": "2026-07-09T19:14:36.1878977+09:00"
+    },
+    {
+      "id": "review-1783592723201",
+      "proposalId": "proposal-1783592715979",
+      "verdict": "uncertain",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "low",
+      "findings": [
+        {
+          "target": "completionRate",
+          "checkId": "note-direction-match",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "note는 completionRate의 증가를 목표로 하며, before 0에서 after [45,60]로 증가하는 방향과 일치합니다.",
+          "comment": "note는 completionRate의 증가를 목표로 하며, before 0에서 after [45,60]로 증가하는 방향과 일치합니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "completionRate",
+          "checkId": "risk-note-present",
+          "answer": false,
+          "expected": true,
+          "confidence": "low",
+          "note": "변경 항목에 위험 또는 영향에 대한 명확한 설명이 포함되어 있지 않음",
+          "comment": "변경 항목에 위험 또는 영향에 대한 명확한 설명이 포함되어 있지 않음",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": true,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "completionRate",
+          "checkId": "no-unrelated-change",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "제안은 completionRate에 대한 변경만 포함하며, 다른 메트릭과 관련된 변경은 없음",
+          "comment": "제안은 completionRate에 대한 변경만 포함하며, 다른 메트릭과 관련된 변경은 없음",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트에서 불확실하거나 상위 검토가 필요한 항목이 발견됐다.",
+      "createdAt": "2026-07-09T19:25:23.2022784+09:00"
     }
   ]
 }
