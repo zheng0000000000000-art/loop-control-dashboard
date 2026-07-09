@@ -113,16 +113,21 @@ public sealed class Storage
         }
     }
 
-    // 서버 시작 시 JSON 파일을 검증하고 최신 복원 지점으로 복구한다.
-    public void ValidateAndRestoreAllProjects()
+    // 서버 시작 시 JSON 파일을 검증하고 최신 복원 지점으로 복구한다. 복원이 일어난 프로젝트 ID 목록을 반환한다.
+    public List<string> ValidateAndRestoreAllProjects()
     {
+        var restored = new List<string>();
+
         foreach (var project in ProjectIds())
         {
             lock (GetProjectLock(project))
             {
                 try
                 {
-                    ValidateAndRestoreProject(project);
+                    if (ValidateAndRestoreProject(project))
+                    {
+                        restored.Add(project);
+                    }
                 }
                 catch (Exception error)
                 {
@@ -130,6 +135,8 @@ public sealed class Storage
                 }
             }
         }
+
+        return restored;
     }
 
     // 프로젝트 파일 경로를 계산한다.
@@ -254,8 +261,8 @@ public sealed class Storage
             .Where(id => !string.IsNullOrWhiteSpace(id))!;
     }
 
-    // 프로젝트 JSON 파일을 검증하고 필요하면 복원한다.
-    private void ValidateAndRestoreProject(string projectId)
+    // 프로젝트 JSON 파일을 검증하고 필요하면 복원한다. 실제로 복원했으면 true를 반환한다.
+    private bool ValidateAndRestoreProject(string projectId)
     {
         var brokenFiles = StartupCheckedFiles
             .Where(fileName => File.Exists(ProjectFilePath(projectId, fileName)))
@@ -264,7 +271,7 @@ public sealed class Storage
 
         if (brokenFiles.Count == 0)
         {
-            return;
+            return false;
         }
 
         var restoredFrom = TryRestoreLatest(projectId);
@@ -272,7 +279,7 @@ public sealed class Storage
         if (restoredFrom is null)
         {
             Console.Error.WriteLine($"[warning] Project {projectId} has broken JSON but no restore point. Startup continues without restoring this project.");
-            return;
+            return false;
         }
 
         var bundle = ReadBundle(projectId);
@@ -294,6 +301,7 @@ public sealed class Storage
             Engine.GetLoopIteration(bundle.State)
         );
         WriteBundle(projectId, bundle);
+        return true;
     }
 
     // JSON 파싱 가능 여부를 확인한다.

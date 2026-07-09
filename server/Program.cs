@@ -17,9 +17,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
 {
-    builder.WebHost.UseUrls("http://localhost:5173");
+    var bindUrls = builder.Configuration["BindUrls"];
+    builder.WebHost.UseUrls(string.IsNullOrWhiteSpace(bindUrls) ? "http://localhost:5173" : bindUrls);
 }
 
+var remoteActionToken = builder.Configuration["RemoteActionToken"];
+var ntfyOptions = new NtfyOptions(
+    builder.Configuration.GetValue<bool>("Ntfy:Enabled"),
+    builder.Configuration["Ntfy:Server"] is { Length: > 0 } server ? server : "https://ntfy.sh",
+    builder.Configuration["Ntfy:Topic"] ?? "");
 var workspaceRoot = Directory.GetParent(builder.Environment.ContentRootPath)?.FullName
     ?? throw new InvalidOperationException("Workspace root was not found.");
 var dashboardRoot = Path.Combine(workspaceRoot, "dashboard");
@@ -31,9 +37,32 @@ var jsonOptions = new JsonSerializerOptions
     Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
 };
 
-storage.ValidateAndRestoreAllProjects();
+foreach (var restoredProjectId in storage.ValidateAndRestoreAllProjects())
+{
+    Notifier.NotifyRestored(ntfyOptions, ReadProjectDisplayName(storage, restoredProjectId));
+}
 
 var app = builder.Build();
+
+// 원격 쓰기 액션에 토큰을 요구한다. 토큰 미설정 시 통과, GET은 항상 무관.
+app.Use(async (context, next) =>
+{
+    if (!string.IsNullOrWhiteSpace(remoteActionToken) &&
+        HttpMethods.IsPost(context.Request.Method) &&
+        context.Request.Path.StartsWithSegments("/api"))
+    {
+        var provided = context.Request.Headers["X-Action-Token"].ToString();
+
+        if (!string.Equals(provided, remoteActionToken, StringComparison.Ordinal))
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsJsonAsync(new { reasonCode = "auth.invalid_token", reason = "X-Action-Token header is missing or invalid" });
+            return;
+        }
+    }
+
+    await next();
+});
 
 app.MapGet("/api/projects/{projectId}/state", (string projectId) => ReadFile(storage, projectId, Storage.StateFile, jsonOptions));
 app.MapGet("/api/projects/{projectId}/runlog", (string projectId) => ReadFile(storage, projectId, Storage.RunLogFile, jsonOptions));
@@ -47,7 +76,7 @@ app.MapPost("/api/projects/{projectId}/actions/measure", (string projectId) =>
 {
     lock (storage.GetProjectLock(projectId))
     {
-        return Measure(storage, projectId, jsonOptions);
+        return Measure(storage, projectId, jsonOptions, ntfyOptions);
     }
 });
 
@@ -56,7 +85,7 @@ app.MapPost("/api/projects/{projectId}/actions/approve", async (string projectId
     var body = await ReadBodyObject(request);
     lock (storage.GetProjectLock(projectId))
     {
-        return Approve(storage, projectId, body, jsonOptions);
+        return Approve(storage, projectId, body, jsonOptions, ntfyOptions);
     }
 });
 
@@ -65,7 +94,7 @@ app.MapPost("/api/projects/{projectId}/actions/reject", async (string projectId,
     var body = await ReadBodyObject(request);
     lock (storage.GetProjectLock(projectId))
     {
-        return Reject(storage, projectId, body, jsonOptions);
+        return Reject(storage, projectId, body, jsonOptions, ntfyOptions);
     }
 });
 
@@ -74,7 +103,7 @@ app.MapPost("/api/projects/{projectId}/actions/edit-change", async (string proje
     var body = await ReadBodyObject(request);
     lock (storage.GetProjectLock(projectId))
     {
-        return EditChange(storage, projectId, body, jsonOptions);
+        return EditChange(storage, projectId, body, jsonOptions, ntfyOptions);
     }
 });
 
@@ -117,14 +146,14 @@ static IResult ReadFile(Storage storage, string projectId, string fileName, Json
 }
 
 // 측정 공급자를 실행하고 블루프린트 괴리를 판정한다.
-static IResult Measure(Storage storage, string projectId, JsonSerializerOptions jsonOptions)
+static IResult Measure(Storage storage, string projectId, JsonSerializerOptions jsonOptions, NtfyOptions ntfy)
 {
-    var outcome = RunMeasureCore(storage, projectId, jsonOptions);
+    var outcome = RunMeasureCore(storage, projectId, jsonOptions, ntfy);
     return outcome.Problem ?? BundleResult(outcome.Bundle!, jsonOptions);
 }
 
 // 측정 실행 본체. HTTP 라우트와 CLI가 함께 사용한다.
-static MeasureOutcome RunMeasureCore(Storage storage, string projectId, JsonSerializerOptions jsonOptions)
+static MeasureOutcome RunMeasureCore(Storage storage, string projectId, JsonSerializerOptions jsonOptions, NtfyOptions ntfy)
 {
     var bundle = storage.ReadBundle(projectId);
     var provider = bundle.Definition["measurementProvider"] as JsonObject;
@@ -143,8 +172,8 @@ static MeasureOutcome RunMeasureCore(Storage storage, string projectId, JsonSeri
     storage.CreateRestorePoint(projectId);
     var targetRoot = ResolveMeasurementTargetRoot(storage.ProjectPath(projectId), provider!);
     bundle.Measurement = DevPackMeasures.Measure(targetRoot, providerId, bundle.Blueprint);
-    var violationCount = ApplyMeasurementResult(bundle, providerId);
-    Persist(storage, projectId, bundle, jsonOptions);
+    var violationCount = ApplyMeasurementResult(bundle, providerId, ntfy);
+    Persist(storage, projectId, bundle, jsonOptions, ntfy);
     return new MeasureOutcome(bundle, null, violationCount);
 }
 
@@ -172,11 +201,12 @@ static int RunMeasureCli(string[] args)
         var dataRoot = Path.Combine(workspaceRoot, "dashboard", "data");
         var storage = new Storage(dataRoot);
         storage.ValidateAndRestoreAllProjects();
+        var cliNtfy = new NtfyOptions(false, "", "");
 
         MeasureOutcome outcome;
         lock (storage.GetProjectLock(projectId))
         {
-            outcome = RunMeasureCore(storage, projectId, cliJsonOptions);
+            outcome = RunMeasureCore(storage, projectId, cliJsonOptions, cliNtfy);
         }
 
         if (outcome.Problem is not null || outcome.Bundle is null)
@@ -218,7 +248,7 @@ static JsonObject CliError(string message)
 }
 
 // 측정 결과를 상태, 로그, 제안에 반영하고 위반 수를 반환한다.
-static int ApplyMeasurementResult(ProjectBundle bundle, string providerId)
+static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyOptions ntfy)
 {
     var checks = EvaluateBlueprintChecks(bundle.Blueprint, bundle.Measurement);
     var violations = checks.Where(check => check.Implemented && !check.Passed).ToList();
@@ -294,6 +324,7 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId)
         }
 
         SetTier1Details(state, stages.ReviewStageId, tier1);
+        Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), tier1.Verdict);
     }
     else if (bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted")
     {
@@ -711,7 +742,7 @@ static string EvidenceSummary(List<string> evidence, int take)
 }
 
 // 승인 액션을 처리하고 결과 파일을 기록한다.
-static IResult Approve(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions)
+static IResult Approve(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions, NtfyOptions ntfy)
 {
     var bundle = storage.ReadBundle(projectId);
     var reviewStage = Engine.GetHumanReviewStage(bundle.Definition, bundle.State);
@@ -760,11 +791,11 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
     bundle.RunLog = runLog;
     bundle.Proposal["lifecycle"] = "decided";
     AppendReport(bundle.Reviews, report);
-    return Persist(storage, projectId, bundle, jsonOptions);
+    return Persist(storage, projectId, bundle, jsonOptions, ntfy);
 }
 
 // 거절 액션을 처리하고 결과 파일을 기록한다.
-static IResult Reject(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions)
+static IResult Reject(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions, NtfyOptions ntfy)
 {
     var bundle = storage.ReadBundle(projectId);
     var reviewStage = Engine.GetHumanReviewStage(bundle.Definition, bundle.State);
@@ -796,11 +827,11 @@ static IResult Reject(Storage storage, string projectId, JsonObject body, JsonSe
     bundle.RunLog = runLog;
     bundle.Proposal["lifecycle"] = "decided";
     AppendReport(bundle.Reviews, report);
-    return Persist(storage, projectId, bundle, jsonOptions);
+    return Persist(storage, projectId, bundle, jsonOptions, ntfy);
 }
 
 // 변경 항목 편집 액션을 처리하고 결과 파일을 기록한다.
-static IResult EditChange(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions)
+static IResult EditChange(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions, NtfyOptions ntfy)
 {
     if (body.ContainsKey("path") || body.ContainsKey("before"))
     {
@@ -850,7 +881,7 @@ static IResult EditChange(Storage storage, string projectId, JsonObject body, Js
         ["producedBy"] = new JsonObject { ["provider"] = "human", ["model"] = null },
         ["cost"] = RuntimeCost(),
     }, Engine.GetLoopIteration(bundle.State));
-    return Persist(storage, projectId, bundle, jsonOptions);
+    return Persist(storage, projectId, bundle, jsonOptions, ntfy);
 }
 
 // 확인 액션을 처리하고 결과 파일을 기록한다.
@@ -937,14 +968,39 @@ static IResult? ValidateReviewReady(ProjectBundle bundle, JsonObject? reviewStag
 }
 
 // 파일을 기록하고 가드레일 판정 후 응답을 만든다.
-static IResult Persist(Storage storage, string projectId, ProjectBundle bundle, JsonSerializerOptions jsonOptions)
+static IResult Persist(Storage storage, string projectId, ProjectBundle bundle, JsonSerializerOptions jsonOptions, NtfyOptions ntfy)
 {
     var guarded = Guardrails.Enforce(bundle.Definition, bundle.State, bundle.RunLog);
     bundle.State = guarded.State;
     bundle.RunLog = guarded.RunLog;
+    NotifyGuardrailTransition(ntfy, bundle, guarded);
     storage.WriteBundle(projectId, bundle);
     storage.SaveLoopSnapshot(projectId, bundle);
     return BundleResult(bundle, jsonOptions);
+}
+
+// 가드레일 정지·체크포인트 일시정지가 이번 호출에서 방금 발생했으면 알린다.
+static void NotifyGuardrailTransition(NtfyOptions ntfy, ProjectBundle bundle, GuardrailResult guarded)
+{
+    if (!guarded.Changed)
+    {
+        return;
+    }
+
+    var lastEntry = guarded.RunLog["entries"]?.AsArray().OfType<JsonObject>().LastOrDefault();
+    var lastEvent = lastEntry?["event"]?.GetValue<string>();
+    var projectName = ProjectDisplayName(bundle.State);
+
+    if (lastEvent == "guardrail.halted")
+    {
+        var text = lastEntry?["params"]?.AsObject()["text"]?.GetValue<string>() ?? "";
+        Notifier.NotifyGuardrailHalted(ntfy, projectName, text);
+    }
+    else if (lastEvent == "checkpoint.paused")
+    {
+        var checkpointId = lastEntry?["params"]?.AsObject()["checkpointId"]?.GetValue<string>() ?? "";
+        Notifier.NotifyCheckpointPaused(ntfy, projectName, checkpointId);
+    }
 }
 
 // 파일을 기록하고 추가 판정 없이 응답을 만든다.
@@ -1141,6 +1197,31 @@ static IResult JsonResult(JsonNode node, JsonSerializerOptions jsonOptions, int 
 static IResult ProblemResult(int statusCode, string reasonCode, string reason)
 {
     return Results.Json(new JsonObject { ["reasonCode"] = reasonCode, ["reason"] = reason }, statusCode: statusCode);
+}
+
+// state 객체에서 프로젝트 표시 이름을 읽는다.
+static string ProjectDisplayName(JsonObject state)
+{
+    return state["projectName"]?.GetValue<string>() ?? "project";
+}
+
+// 프로젝트 ID로 상태 파일을 읽어 표시 이름을 얻는다.
+static string ReadProjectDisplayName(Storage storage, string projectId)
+{
+    try
+    {
+        return ProjectDisplayName(storage.ReadProjectFile(projectId, Storage.StateFile).AsObject());
+    }
+    catch
+    {
+        return projectId;
+    }
+}
+
+// 제안 제목을 읽는다.
+static string ProposalTitle(JsonObject proposal)
+{
+    return proposal["title"]?.GetValue<string>() ?? "제안";
 }
 
 // 런타임 비용 0 객체를 만든다.

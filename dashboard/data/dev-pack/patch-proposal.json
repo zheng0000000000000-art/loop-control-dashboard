@@ -1,20 +1,20 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783568549708",
-  "title": "블루프린트 괴리 해소 제안",
+  "id": "proposal-1783571650077",
+  "title": "after 값 0으로 설정",
   "lifecycle": "superseded",
   "createdBy": {
-    "provider": "rule-engine",
-    "model": null
+    "provider": "ollama",
+    "model": "qwen3:8b"
   },
-  "revisionOf": "proposal-1783568544620",
-  "summary": "측정 결과가 블루프린트 기준을 벗어난 항목을 수정 대상으로 제안한다.",
+  "revisionOf": "proposal-1783571637531",
+  "summary": "이전 시도에서 측정값 1과 after 값 0이 일치하지 않아 거절되었으므로, after 값을 0으로 설정해야 한다는 점을 명시하였다.",
   "changes": [
     {
       "path": "koPoliteEndings",
       "before": 1,
       "after": 0,
-      "note": "dashboard/data/lang/ko.json:3"
+      "note": "이전 시도에서 측정값 1과 after 값 0이 일치하지 않아 거절되었으므로, 측정값은 유지되며 after 값이 0으로 설정되어야 한다는 점을 명시하였다."
     }
   ],
   "impact": [

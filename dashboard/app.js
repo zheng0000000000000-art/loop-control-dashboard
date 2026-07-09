@@ -92,6 +92,7 @@ let scenarioRunning = false;
 let measureRunning = false;
 let serverBacked = false;
 let pollTimer = null;
+let actionToken = null;
 
 initialize();
 
@@ -1489,9 +1490,24 @@ async function postProjectAction(action, body) {
   try {
     response = await fetch(apiProjectActionPath(action), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildActionHeaders(),
       body: JSON.stringify(body ?? {}),
     });
+
+    if (response.status === 401) {
+      actionToken = window.prompt(t("remote.tokenPrompt")) || null;
+
+      if (!actionToken) {
+        showActionError({ reason: t("remote.tokenRequired"), reasonCode: "auth.token_required" });
+        return false;
+      }
+
+      response = await fetch(apiProjectActionPath(action), {
+        method: "POST",
+        headers: buildActionHeaders(),
+        body: JSON.stringify(body ?? {}),
+      });
+    }
   } catch (error) {
     showActionError(error);
     return false;
@@ -1506,6 +1522,17 @@ async function postProjectAction(action, body) {
 
   applyServerBundle(payload);
   return true;
+}
+
+// 액션 요청 헤더를 만든다. 토큰은 메모리에만 보관하고 있으면 첨부한다.
+function buildActionHeaders() {
+  const headers = { "Content-Type": "application/json" };
+
+  if (actionToken) {
+    headers["X-Action-Token"] = actionToken;
+  }
+
+  return headers;
 }
 
 // 서버 응답 묶음을 메모리 상태에 적용한다.

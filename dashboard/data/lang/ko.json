@@ -3,6 +3,10 @@
   "schema": {
     "warning": "구버전 데이터가 감지됐다. 예상 버전 {expected}, 대상: {files}. 동작은 계속하지만 마이그레이션은 수행하지 않는다."
   },
+  "remote": {
+    "tokenPrompt": "원격 액션 토큰을 입력한다",
+    "tokenRequired": "토큰이 필요하다. 원격 액션 토큰을 입력해야 승인/거절/측정을 실행할 수 있다."
+  },
   "header": {
     "eyebrow": "루프 관제 · 로컬 우선 데모",
     "projectSelect": "활성 프로젝트",

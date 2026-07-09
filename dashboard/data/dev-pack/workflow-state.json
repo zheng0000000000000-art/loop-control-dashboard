@@ -74,12 +74,11 @@
       "metrics": [
         {
           "label": "1층 검토 판정",
-          "value": "needs_changes"
+          "value": "uncertain"
         }
       ],
       "issues": [
-        "note-nonempty: note 필드는 'dashboard/data/lang/ko.json:3'로 비어 있지 않지만, 의미 있는 설명이 아닙니다.",
-        "after-matches-goal: note에 따르면 ko.json:3의 값이 변경되어야 하지만 after 값은 0으로 설정됨"
+        "no-scope-creep: 제안은 koPoliteEndings 메트릭과 관련된 수정만 포함하고 있으며, blueprint 위반 해소와 무관한 항목은 포함되어 있지 않다."
       ]
     },
     "apply": {
@@ -88,5 +87,13 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-09T12:42:45.6421862+09:00"
+  "lastUpdated": "2026-07-09T13:36:47.9843392+09:00",
+  "acknowledgedGuardrails": [
+    {
+      "id": "loopIteration",
+      "type": "loopIteration",
+      "loopIteration": 0,
+      "acknowledgedAt": "2026-07-09T13:32:02.3444819+09:00"
+    }
+  ]
 }

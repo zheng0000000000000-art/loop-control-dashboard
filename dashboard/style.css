@@ -908,7 +908,7 @@ textarea {
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 800px) {
   .app-shell {
     padding: 12px;
   }
@@ -916,9 +916,9 @@ textarea {
   .dashboard-grid {
     grid-template-columns: 1fr;
     grid-template-areas:
+      "approval"
       "pipeline"
       "detail"
-      "approval"
       "log";
   }
 
@@ -934,5 +934,10 @@ textarea {
 
   .change-item {
     grid-template-columns: 1fr;
+  }
+
+  .button-approve,
+  .button-reject {
+    min-height: 44px;
   }
 }
