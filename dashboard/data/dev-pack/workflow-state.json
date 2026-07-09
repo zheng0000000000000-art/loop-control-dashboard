@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
-  "currentStage": "changeReview",
-  "overallStatus": "warning",
+  "currentStage": "apply",
+  "overallStatus": "in_progress",
   "loopState": "running",
   "mode": "normal",
   "suspendedTracks": [
@@ -13,19 +13,15 @@
       "suspectConfidence": "temporal"
     }
   ],
-  "loopIteration": 1,
+  "loopIteration": 2,
   "stages": {
     "goals": "passed",
     "measure": "passed",
     "deviationCheck": "warning",
-    "changeReview": "pending_review",
-    "apply": "blocked"
+    "changeReview": "approved",
+    "apply": "in_progress"
   },
-  "blockInfo": {
-    "apply": {
-      "kind": "waiting"
-    }
-  },
+  "blockInfo": {},
   "stageDetails": {
     "goals": {
       "summary": "개발 팩은 저장소의 핵심 규칙을 측정하고 블루프린트 기준과 비교한다.",
@@ -137,7 +133,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-10T00:00:23.5864983+09:00",
+  "lastUpdated": "2026-07-10T00:15:30.5071266+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",

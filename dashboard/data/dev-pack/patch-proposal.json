@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "proposal-1783609223596",
   "title": "악화 롤백 제안: skillDomainViolations",
-  "lifecycle": "submitted",
+  "lifecycle": "decided",
   "kind": "rollback",
   "createdBy": {
     "provider": "rule-engine",
