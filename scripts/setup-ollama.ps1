@@ -108,9 +108,48 @@ function Select-FallbackModel {
   return $pulled
 }
 
-# definition 파일의 tier1 model/fallbackModel 값을 텍스트 치환으로 갱신한다.
+# 실행자(제안 생성) 모델을 고른다: 검토 모델과 같은 qwen3 계열의 설치된 8b급, 없으면 qwen3:8b를 받는다.
+# JSON 스키마 준수 실측상 계열이 다른 8b 모델(예: llama3.1:8b)은 응답 형식이 불안정해 검토 모델과 같은 계열을 우선한다.
+function Select-ExecutorModel {
+  param([string[]]$Installed, [string]$ReviewModel)
+
+  $qwen3EightB = $Installed | Where-Object { $_ -ne $ReviewModel -and $_ -match '(?i)^qwen3' -and $_ -match '(?i)8b' } | Select-Object -First 1
+  if ($qwen3EightB) {
+    return $qwen3EightB
+  }
+
+  $pulled = "qwen3:8b"
+  Write-Host "설치된 qwen3 8b급 모델이 없어 $pulled 을(를) 받는다."
+  ollama pull $pulled
+  return $pulled
+}
+
+# 텍스트 안에서 parentKey 아래 tier1 블록 하나를 찾아 그 범위 안의 필드만 치환한다.
+# tier1 블록에는 중첩 객체가 없으므로 여는 중괄호 다음 첫 닫는 중괄호까지가 블록 전체다.
+function Set-Tier1Field {
+  param([string]$Content, [string]$ParentKey, [string]$FieldName, [string]$Value)
+
+  $parentIdx = $Content.IndexOf('"' + $ParentKey + '"')
+  if ($parentIdx -lt 0) { return $Content }
+
+  $tier1Idx = $Content.IndexOf('"tier1"', $parentIdx)
+  if ($tier1Idx -lt 0) { return $Content }
+
+  $braceOpen = $Content.IndexOf('{', $tier1Idx)
+  $braceClose = $Content.IndexOf('}', $braceOpen)
+  if ($braceOpen -lt 0 -or $braceClose -lt 0) { return $Content }
+
+  $block = $Content.Substring($braceOpen, $braceClose - $braceOpen + 1)
+  $pattern = '("' + $FieldName + '":\s*)"[^"]*"'
+  if ($block -notmatch $pattern) { return $Content }
+
+  $updatedBlock = [regex]::Replace($block, $pattern, ('$1"' + $Value + '"'))
+  return $Content.Substring(0, $braceOpen) + $updatedBlock + $Content.Substring($braceClose + 1)
+}
+
+# definition 파일의 reviewerPolicy.tier1과 executorPolicy.tier1 모델 값을 갱신한다.
 function Update-DefinitionModels {
-  param([string]$Path, [string]$Model, [string]$FallbackModel)
+  param([string]$Path, [string]$ReviewModel, [string]$FallbackModel, [string]$ExecutorModel)
 
   if (-not (Test-Path $Path)) {
     Write-Host "definition 없음, 건너뜀: $Path"
@@ -118,9 +157,11 @@ function Update-DefinitionModels {
   }
 
   $content = Get-Content -Path $Path -Raw -Encoding utf8
-  $content = $content -replace '("model":\s*)"[^"]*"', "`$1""$Model"""
-  $content = $content -replace '("fallbackModel":\s*)"[^"]*"', "`$1""$FallbackModel"""
-  Set-Content -Path $Path -Value $content -NoNewline -Encoding utf8
+  $content = Set-Tier1Field -Content $content -ParentKey "reviewerPolicy" -FieldName "model" -Value $ReviewModel
+  $content = Set-Tier1Field -Content $content -ParentKey "reviewerPolicy" -FieldName "fallbackModel" -Value $FallbackModel
+  $content = Set-Tier1Field -Content $content -ParentKey "executorPolicy" -FieldName "model" -Value $ExecutorModel
+  # Set-Content -Encoding utf8는 Windows PowerShell 5.1에서 BOM을 붙이므로 BOM 없는 UTF-8로 직접 쓴다.
+  [System.IO.File]::WriteAllText($Path, $content, (New-Object System.Text.UTF8Encoding($false)))
   Write-Host "definition 갱신: $Path"
 }
 
@@ -131,11 +172,14 @@ $installed = Get-InstalledModelNames
 $reviewModel = Select-ReviewModel -Installed $installed
 $installed = Get-InstalledModelNames
 $fallbackModel = Select-FallbackModel -Installed $installed -ReviewModel $reviewModel
+$installed = Get-InstalledModelNames
+$executorModel = Select-ExecutorModel -Installed $installed -ReviewModel $reviewModel
 
 foreach ($path in $DefinitionPaths) {
-  Update-DefinitionModels -Path $path -Model $reviewModel -FallbackModel $fallbackModel
+  Update-DefinitionModels -Path $path -ReviewModel $reviewModel -FallbackModel $fallbackModel -ExecutorModel $executorModel
 }
 
 ollama list
-Write-Host "선택된 검토 모델(tier1 model): $reviewModel"
-Write-Host "선택된 폴백 모델(tier1 fallbackModel): $fallbackModel"
+Write-Host "선택된 검토 모델(reviewerPolicy.tier1.model): $reviewModel"
+Write-Host "선택된 검토 폴백 모델(reviewerPolicy.tier1.fallbackModel): $fallbackModel"
+Write-Host "선택된 실행자 모델(executorPolicy.tier1.model): $executorModel"

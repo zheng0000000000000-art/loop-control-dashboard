@@ -81,7 +81,15 @@
     "escalation": {
       "maxLocalRetries": 2,
       "requiresApprovalAbove": "rule-engine"
-    }
+    },
+    "tier1": {
+      "provider": "ollama",
+      "model": "qwen3:8b",
+      "endpoint": "http://127.0.0.1:11434",
+      "timeoutSeconds": 90,
+      "maxRetries": 2
+    },
+    "maxRegenerations": 1
   },
   "checkpoints": [
     { "id": "loop-milestone", "on": "loopIteration", "every": 5, "action": "pause_notify" }

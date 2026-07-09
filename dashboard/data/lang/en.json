@@ -91,6 +91,8 @@
     "stage.warning": "{stage} warning: {text}",
     "stage.blocked": "{stage} blocked: {failedChecks}{text}",
     "proposal.created": "Change Proposal created: {proposalId}",
+    "proposal.generated": "Proposal content generated: {provider} {model}, {durationMs}ms, fallback {fallback} {reasonCode} {text}",
+    "proposal.superseded": "Proposal superseded: {proposalId} ({reasonCode})",
     "proposal.edited": "Change Proposal edited: {target} ({before} -> {after}) {text}",
     "review.approved": "Review approved: {proposalId} {text}{editedSuffix}",
     "review.rejected": "Review rejected: {proposalId} {text}",

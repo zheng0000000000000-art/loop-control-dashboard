@@ -60,6 +60,246 @@
       ],
       "reason": "1층 체크리스트에서 수정 필요 항목이 발견됐다.",
       "createdAt": "2026-07-09T11:44:59.6666776+09:00"
+    },
+    {
+      "id": "review-1783567261257",
+      "proposalId": "proposal-1783567253967",
+      "verdict": "needs_changes",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "koPoliteEndings",
+          "checkId": "note-nonempty",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "note 필드에 의미 있는 설명이 포함되어 있습니다.",
+          "comment": "note 필드에 의미 있는 설명이 포함되어 있습니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "after-matches-goal",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "note는 존댓말 사용 여부를 정확히 반영하기 위해 마크를 추가해야 한다고 명시하지만, after 값은 0으로 감소하여 일치하지 않는다.",
+          "comment": "note는 존댓말 사용 여부를 정확히 반영하기 위해 마크를 추가해야 한다고 명시하지만, after 값은 0으로 감소하여 일치하지 않는다.",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "변경 제안은 koPoliteEndings 메트릭과 직접적으로 관련되어 있음",
+          "comment": "변경 제안은 koPoliteEndings 메트릭과 직접적으로 관련되어 있음",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트에서 수정 필요 항목이 발견됐다.",
+      "createdAt": "2026-07-09T12:21:01.2582125+09:00"
+    },
+    {
+      "id": "review-1783567273120",
+      "proposalId": "proposal-1783567266096",
+      "verdict": "needs_changes",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "koPoliteEndings",
+          "checkId": "note-nonempty",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "note 필드에 의미 있는 설명이 포함되어 있습니다.",
+          "comment": "note 필드에 의미 있는 설명이 포함되어 있습니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "after-matches-goal",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "note에 따르면 after 값이 0으로 감소해 일치하지 않아 수정이 필요하다.",
+          "comment": "note에 따르면 after 값이 0으로 감소해 일치하지 않아 수정이 필요하다.",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "제안은 koPoliteEndings 지표와 관련된 수정 사항만 포함하고 있다.",
+          "comment": "제안은 koPoliteEndings 지표와 관련된 수정 사항만 포함하고 있다.",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트에서 수정 필요 항목이 발견됐다.",
+      "createdAt": "2026-07-09T12:21:13.1202294+09:00"
+    },
+    {
+      "id": "review-1783567407245",
+      "proposalId": "proposal-1783567398049",
+      "verdict": "needs_changes",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "koPoliteEndings",
+          "checkId": "note-nonempty",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "note 값은 'dashboard/data/lang/ko.json:3'로, 파일 경로와 줄 수만 포함하고 의미 있는 설명이 아님",
+          "comment": "note 값은 'dashboard/data/lang/ko.json:3'로, 파일 경로와 줄 수만 포함하고 의미 있는 설명이 아님",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "after-matches-goal",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "note에 따르면 변경이 필요하지만 after 값은 0으로 변경되지 않았다.",
+          "comment": "note에 따르면 변경이 필요하지만 after 값은 0으로 변경되지 않았다.",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "변경 항목은 koPoliteEndings 메트릭과 직접 관련되어 있음",
+          "comment": "변경 항목은 koPoliteEndings 메트릭과 직접 관련되어 있음",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트에서 수정 필요 항목이 발견됐다.",
+      "createdAt": "2026-07-09T12:23:27.2458740+09:00"
+    },
+    {
+      "id": "review-1783567411726",
+      "proposalId": "proposal-1783567409287",
+      "verdict": "needs_changes",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "koPoliteEndings",
+          "checkId": "note-nonempty",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "note 필드는 'dashboard/data/lang/ko.json:3'로 비어 있지 않지만, 이는 의미 있는 설명이 아니다.",
+          "comment": "note 필드는 'dashboard/data/lang/ko.json:3'로 비어 있지 않지만, 이는 의미 있는 설명이 아니다.",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "after-matches-goal",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "koPoliteEndings의 after 값(0)은 note에 언급된 dashboard/data/lang/ko.json:3의 변경 방향과 일치하지 않음",
+          "comment": "koPoliteEndings의 after 값(0)은 note에 언급된 dashboard/data/lang/ko.json:3의 변경 방향과 일치하지 않음",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "koPoliteEndings",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "제안은 koPoliteEndings 메트릭과 관련된 변경만 포함하며, blueprint 위반 해소와 무관한 항목은 없음",
+          "comment": "제안은 koPoliteEndings 메트릭과 관련된 변경만 포함하며, blueprint 위반 해소와 무관한 항목은 없음",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트에서 수정 필요 항목이 발견됐다.",
+      "createdAt": "2026-07-09T12:23:31.7269942+09:00"
     }
   ]
 }

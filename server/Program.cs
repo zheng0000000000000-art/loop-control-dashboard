@@ -169,15 +169,10 @@ static void ApplyMeasurementResult(ProjectBundle bundle, string providerId)
             ["cost"] = RuntimeCost(),
         }, Engine.GetLoopIteration(state));
 
-        bundle.Proposal = CreateMeasurementProposal(bundle.Proposal, violations);
-        runLog = Engine.AppendLog(runLog, new JsonObject
-        {
-            ["event"] = "proposal.created",
-            ["params"] = new JsonObject { ["proposalId"] = bundle.Proposal["id"]?.GetValue<string>() ?? "" },
-            ["level"] = "info",
-            ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
-            ["cost"] = RuntimeCost(),
-        }, Engine.GetLoopIteration(state));
+        var generation = GenerateProposalWithFallback(bundle.Definition, bundle.Proposal, violations, previousReviewReport: null);
+        bundle.Proposal = generation.Proposal;
+        runLog = Engine.AppendLog(runLog, generation.LogEntry, Engine.GetLoopIteration(state));
+        runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
 
         var tier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
         runLog = Engine.AppendLog(runLog, tier1.LogEntry, Engine.GetLoopIteration(state));
@@ -185,6 +180,34 @@ static void ApplyMeasurementResult(ProjectBundle bundle, string providerId)
         if (tier1.Report is not null)
         {
             AppendReport(bundle.Reviews, tier1.Report);
+        }
+
+        var maxRegenerations = Number(bundle.Definition["executorPolicy"]?.AsObject()["maxRegenerations"], 0);
+
+        for (var regeneration = 0; regeneration < maxRegenerations && tier1.Verdict == "needs_changes"; regeneration += 1)
+        {
+            var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
+            runLog = Engine.AppendLog(runLog, new JsonObject
+            {
+                ["event"] = "proposal.superseded",
+                ["params"] = new JsonObject { ["proposalId"] = supersededId, ["reasonCode"] = "review.needs_changes_regenerate" },
+                ["level"] = "info",
+                ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+                ["cost"] = RuntimeCost(),
+            }, Engine.GetLoopIteration(state));
+
+            generation = GenerateProposalWithFallback(bundle.Definition, bundle.Proposal, violations, previousReviewReport: tier1.Report);
+            bundle.Proposal = generation.Proposal;
+            runLog = Engine.AppendLog(runLog, generation.LogEntry, Engine.GetLoopIteration(state));
+            runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
+
+            tier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
+            runLog = Engine.AppendLog(runLog, tier1.LogEntry, Engine.GetLoopIteration(state));
+
+            if (tier1.Report is not null)
+            {
+                AppendReport(bundle.Reviews, tier1.Report);
+            }
         }
 
         SetTier1Details(state, stages.ReviewStageId, tier1);
@@ -407,6 +430,96 @@ static bool IsMetricWithinBlueprint(JsonObject item, JsonNode value)
     }
 
     return true;
+}
+
+// 실행자로 제안을 생성하고 실패 시 rule-engine으로 강등한다.
+static ProposalGeneration GenerateProposalWithFallback(JsonObject definition, JsonObject currentProposal, List<MetricCheck> violations, JsonObject? previousReviewReport)
+{
+    var revisionOf = currentProposal["lifecycle"]?.GetValue<string>() == "submitted" ? currentProposal["id"]?.GetValue<string>() : null;
+    var generated = OllamaExecutor.Generate(definition, violations, previousReviewReport);
+
+    if (!generated.Unavailable)
+    {
+        var proposal = new JsonObject
+        {
+            ["schemaVersion"] = 2,
+            ["id"] = $"proposal-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+            ["title"] = generated.Title,
+            ["lifecycle"] = "submitted",
+            ["createdBy"] = new JsonObject { ["provider"] = generated.Provider, ["model"] = generated.Model },
+            ["revisionOf"] = revisionOf,
+            ["summary"] = generated.Summary,
+            ["changes"] = BuildExecutorChanges(violations, generated.Notes),
+            ["impact"] = new JsonArray
+            {
+                new JsonObject { ["label"] = "위반 항목", ["value"] = violations.Count.ToString(CultureInfo.InvariantCulture) },
+                new JsonObject { ["label"] = "예상 비용", ["value"] = "$0.00" },
+            },
+        };
+
+        return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null));
+    }
+
+    var fallbackProposal = CreateMeasurementProposal(currentProposal, violations);
+    return new ProposalGeneration(fallbackProposal, GeneratedLogEntry("rule-engine", null, generated.DurationMs, true, generated.Error));
+}
+
+// 실행자 생성 결과로 changes 배열을 만든다. 수치는 서버가 채운다.
+static JsonArray BuildExecutorChanges(List<MetricCheck> violations, Dictionary<string, string> notes)
+{
+    var changes = new JsonArray();
+
+    foreach (var violation in violations)
+    {
+        changes.Add(new JsonObject
+        {
+            ["path"] = violation.MetricId,
+            ["before"] = violation.Value is null ? null : Engine.CloneNode(violation.Value),
+            ["after"] = violation.Goal is null ? violation.Expected : Engine.CloneNode(violation.Goal),
+            ["note"] = notes.GetValueOrDefault(violation.MetricId, ""),
+        });
+    }
+
+    return changes;
+}
+
+// 제안 생성 로그 항목을 만든다.
+static JsonObject GeneratedLogEntry(string provider, string? model, long durationMs, bool fallback, string? error)
+{
+    return new JsonObject
+    {
+        ["event"] = "proposal.generated",
+        ["params"] = new JsonObject
+        {
+            ["provider"] = provider,
+            ["model"] = model,
+            ["durationMs"] = durationMs,
+            ["fallback"] = fallback,
+            ["reasonCode"] = fallback ? "system.executor_degraded" : "",
+            ["text"] = fallback ? (error ?? "") : "",
+        },
+        ["level"] = fallback ? "warning" : "info",
+        ["producedBy"] = new JsonObject { ["provider"] = provider, ["model"] = model },
+        ["cost"] = RuntimeCost(),
+    };
+}
+
+// 제안 생성 완료 로그 항목을 만든다.
+static JsonObject ProposalCreatedLog(JsonObject proposal)
+{
+    var createdBy = proposal["createdBy"] as JsonObject;
+    return new JsonObject
+    {
+        ["event"] = "proposal.created",
+        ["params"] = new JsonObject { ["proposalId"] = proposal["id"]?.GetValue<string>() ?? "" },
+        ["level"] = "info",
+        ["producedBy"] = new JsonObject
+        {
+            ["provider"] = createdBy?["provider"]?.GetValue<string>() ?? "rule-engine",
+            ["model"] = createdBy?["model"]?.DeepClone(),
+        },
+        ["cost"] = RuntimeCost(),
+    };
 }
 
 // 측정 위반 목록을 변경 제안으로 변환한다.
@@ -986,3 +1099,5 @@ static string ValueText(JsonNode node)
 public sealed record MeasurementStages(string? MeasureStageId, string? DeviationStageId, string? ReviewStageId, string? ApplyStageId);
 
 public sealed record MetricCheck(string MetricId, JsonNode? Value, JsonNode? Goal, bool Implemented, bool Passed, string Expected, List<string> Evidence);
+
+public sealed record ProposalGeneration(JsonObject Proposal, JsonObject LogEntry);
