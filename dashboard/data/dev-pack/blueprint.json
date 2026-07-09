@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 2,
+  "items": [
+    {
+      "metricId": "domainWordsInEngine",
+      "target": 0,
+      "priority": "high",
+      "note": "Engine.cs·engine.js 안의 도메인 단어(게임 용어, 특정 단계 id 문자열) 개수"
+    },
+    {
+      "metricId": "functionsWithoutComment",
+      "target": 0,
+      "priority": "high",
+      "note": "코드 파일에서 기능 주석이 없는 함수/메서드 개수"
+    },
+    {
+      "metricId": "directiveAcceptanceCriteria",
+      "band": [3, 99],
+      "priority": "high",
+      "note": "지시서의 검수 기준 항목 수 — 3개 미만이면 지시서 미달"
+    },
+    {
+      "metricId": "koPoliteEndings",
+      "target": 0,
+      "priority": "normal",
+      "note": "ko.json 내 '~요'·'습니다' 종결 개수 (다체 원칙)"
+    },
+    {
+      "metricId": "verdictInProposalFile",
+      "target": 0,
+      "priority": "high",
+      "note": "proposal 파일 안에 판정 값(approved/rejected)이 존재하는 횟수 — report가 유일 저장소"
+    },
+    {
+      "metricId": "devRoleInRuntimeLogs",
+      "target": 0,
+      "priority": "normal",
+      "note": "서버 액션이 만든 로그 중 role=dev인 엔트리 수"
+    },
+    {
+      "metricId": "schemaVersionMissing",
+      "target": 0,
+      "priority": "normal",
+      "note": "schemaVersion 필드가 없는 데이터 파일 수"
+    }
+  ]
+}
