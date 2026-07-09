@@ -2,10 +2,12 @@
 // 발송은 항상 비동기·베스트에포트이며 실패해도 루프를 막지 않는다.
 using System.Text;
 using System.Text.Json.Nodes;
+using System.Collections.Concurrent;
 
 public static class Notifier
 {
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(10) };
+    private static readonly ConcurrentDictionary<string, bool> ReminderKeys = new();
 
     // 가드레일 정지를 알린다.
     public static void NotifyGuardrailHalted(NtfyOptions options, string projectName, string text)
@@ -23,6 +25,22 @@ public static class Notifier
     public static void NotifyReviewPending(NtfyOptions options, string projectName, string proposalTitle, string verdict)
     {
         Send(options, "결재함 도착", $"{projectName}: {proposalTitle} (1층 판정: {verdict})", urgent: false);
+    }
+
+    // 오래된 결재 대기를 한 항목당 한 번 알린다.
+    public static void NotifyPendingReminder(NtfyOptions options, string itemKey, string projectName, string title, TimeSpan waitingFor)
+    {
+        if (options.ReminderAfterHours <= 0 || waitingFor.TotalHours < options.ReminderAfterHours)
+        {
+            return;
+        }
+
+        if (!ReminderKeys.TryAdd(itemKey, true))
+        {
+            return;
+        }
+
+        Send(options, "결재 대기 리마인더", $"{projectName}: {title} ({Math.Floor(waitingFor.TotalHours)}시간 대기)", urgent: false);
     }
 
     // 손상 데이터 자동 복원을 알린다.
@@ -72,4 +90,4 @@ public static class Notifier
     }
 }
 
-public sealed record NtfyOptions(bool Enabled, string Server, string Topic);
+public sealed record NtfyOptions(bool Enabled, string Server, string Topic, double ReminderAfterHours);

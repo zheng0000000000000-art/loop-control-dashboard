@@ -16,6 +16,19 @@
     "languageToggle": "KO",
     "regressedBadge": "{count} regressed"
   },
+  "inbox": {
+    "badge": "Review {count}",
+    "title": "Global Decision Inbox",
+    "projectOptionCount": "review {count}",
+    "waitingHours": "waiting {count}h",
+    "waitingDays": "waiting {count}d",
+    "kinds": {
+      "approval": "Approval",
+      "checkpoint": "Checkpoint",
+      "guardrail": "Guardrail",
+      "regression": "Regression"
+    }
+  },
   "degraded": {
     "banner": "Escalation blocked — {days} days until reset"
   },
@@ -138,10 +151,15 @@
     "noHumanGate": "No decision gate is configured for this workflow.",
     "noProposalTitle": "No Change Proposal",
     "noProposalBody": "No change proposal is attached to the current stage.",
+    "noPendingTitle": "No Pending Decision",
+    "noPendingBody": "This project has no item waiting for a human decision.",
+    "otherProjectPending": "{count} pending in another project — view",
+    "closedProposalHistory": "Closed Proposal History",
     "untitledProposal": "Untitled Change Proposal",
     "proposal": "Change Proposal",
     "revisionOf": "Revision Of",
     "lifecycle": "Lifecycle",
+    "waiting": "Waiting",
     "latestVerdict": "Latest verdict",
     "provider": "Origin",
     "model": "Model",

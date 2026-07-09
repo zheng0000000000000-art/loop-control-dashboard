@@ -178,6 +178,45 @@ textarea {
   gap: 10px;
 }
 
+.inbox-menu {
+  position: relative;
+}
+
+.inbox-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 8px;
+  width: min(360px, calc(100vw - 48px));
+  max-height: 420px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 16px 36px rgb(17 24 39 / 18%);
+}
+
+.inbox-item {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--panel-soft);
+  text-align: left;
+  cursor: pointer;
+}
+
+.inbox-item:hover {
+  border-color: var(--blue);
+}
+
 .schema-warning {
   padding: 12px 18px;
   border-right: 1px solid var(--line);
@@ -622,6 +661,29 @@ textarea {
 .proposal-summary {
   margin: 0;
   line-height: 1.5;
+}
+
+.empty-state-large {
+  min-height: 96px;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  font-weight: 800;
+}
+
+.closed-proposal-history {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  background: var(--panel-soft);
+}
+
+.closed-proposal-history summary {
+  cursor: pointer;
+  font-weight: 900;
 }
 
 .proposal-meta {

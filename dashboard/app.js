@@ -48,6 +48,9 @@ const elements = {
   schemaWarning: document.querySelector("#schemaWarning"),
   overallStatus: document.querySelector("#overallStatus"),
   regressedBadge: document.querySelector("#regressedBadge"),
+  inboxMenu: document.querySelector("#inboxMenu"),
+  inboxBadge: document.querySelector("#inboxBadge"),
+  inboxDropdown: document.querySelector("#inboxDropdown"),
   totalCostLabel: document.querySelector("#totalCostLabel"),
   totalCost: document.querySelector("#totalCost"),
   subscriptionCallsLabel: document.querySelector("#subscriptionCallsLabel"),
@@ -94,6 +97,7 @@ let measureRunning = false;
 let serverBacked = false;
 let pollTimer = null;
 let actionToken = null;
+let globalInbox = { schemaVersion: EXPECTED_SCHEMA_VERSION, items: [] };
 
 initialize();
 
@@ -173,16 +177,26 @@ function bindEvents() {
   elements.regressedBadge.addEventListener("click", () => {
     elements.approvalPanel.scrollIntoView({ behavior: "smooth", block: "start" });
   });
+  elements.inboxBadge.addEventListener("click", () => {
+    elements.inboxDropdown.hidden = !elements.inboxDropdown.hidden;
+  });
+  document.addEventListener("click", (event) => {
+    if (!elements.inboxMenu.contains(event.target)) {
+      elements.inboxDropdown.hidden = true;
+    }
+  });
   document.addEventListener("keydown", handleKeyboardShortcut);
 }
 
 // 프로젝트 선택 목록을 렌더링한다.
 function populateProjectSelect() {
   const projects = projectsConfig?.projects ?? [];
+  const counts = getInboxCountsByProject();
   elements.projectSelect.replaceChildren(
     ...projects.map((project) => {
+      const count = counts.get(project.id) ?? 0;
       return createElement("option", {
-        text: project.name,
+        text: count > 0 ? `${project.name} (${t("inbox.projectOptionCount", { count })})` : project.name,
         attributes: { value: project.id },
       });
     }),
@@ -208,6 +222,11 @@ async function loadProject(projectId) {
   const loaded = await loadProjectData(activeProject.id, projectPath);
 
   ({ definition, workflowState, runLog, proposal, scenario, reviewReport, blueprint, measurement } = loaded);
+  if (serverBacked) {
+    globalInbox = await loadGlobalInbox();
+  } else {
+    globalInbox = { schemaVersion: EXPECTED_SCHEMA_VERSION, items: [] };
+  }
   proposal = normalizeProposal(proposal);
   reviewReport = normalizeReviewReport(reviewReport);
   blueprint = normalizeBlueprint(blueprint);
@@ -360,6 +379,7 @@ function render() {
 
   ensureSelectedStage();
   renderPipelineMinimap();
+  renderInbox();
   renderStageList();
   renderStageDetail();
   renderApprovalPanel();
@@ -394,6 +414,47 @@ function renderRegressedBadge() {
 
   elements.regressedBadge.hidden = false;
   elements.regressedBadge.textContent = t("header.regressedBadge", { count });
+}
+
+// 헤더 전역 인박스 배지와 드롭다운을 렌더링한다.
+function renderInbox() {
+  const items = getInboxItems();
+
+  populateProjectSelect();
+  elements.projectSelect.value = activeProject?.id ?? "";
+
+  if (items.length === 0) {
+    elements.inboxMenu.hidden = true;
+    elements.inboxDropdown.hidden = true;
+    elements.inboxDropdown.replaceChildren();
+    return;
+  }
+
+  elements.inboxMenu.hidden = false;
+  elements.inboxBadge.textContent = t("inbox.badge", { count: items.length });
+  elements.inboxDropdown.replaceChildren(
+    createElement("p", { className: "section-label", text: t("inbox.title") }),
+    ...items.map((item) => renderInboxItem(item)),
+  );
+}
+
+// 인박스 항목 버튼을 렌더링한다.
+function renderInboxItem(item) {
+  const button = createElement("button", {
+    className: "inbox-item",
+    attributes: { type: "button" },
+  });
+  button.append(
+    createElement("strong", { text: item.projectName ?? item.projectId }),
+    createElement("span", { text: `${formatInboxKind(item.kind)} · ${item.title ?? ""}` }),
+    createElement("span", { className: "muted", text: `${item.summary ?? ""} · ${formatWaitingSince(item.waitingSince)}` }),
+  );
+  button.addEventListener("click", async () => {
+    elements.inboxDropdown.hidden = true;
+    await loadProject(item.projectId);
+    elements.approvalPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  return button;
 }
 
 // 헤더의 단계 미니맵을 렌더링한다.
@@ -604,15 +665,31 @@ function renderApprovalPanel() {
     return;
   }
 
-  if (!context.hasProposal) {
+  if (!context.hasPendingProposal) {
+    const otherCount = getInboxItems().filter((item) => item.projectId !== activeProject?.id).length;
     const emptyTitle = createElement("div", { className: "button-row" });
     emptyTitle.append(
-      createElement("h3", { className: "proposal-title", text: t("approval.noProposalTitle") }),
+      createElement("h3", { className: "proposal-title", text: t("approval.noPendingTitle") }),
       createStatusBadge(context.status),
     );
+    const otherLink = otherCount > 0
+      ? createElement("button", {
+          className: "button button-secondary",
+          text: t("approval.otherProjectPending", { count: otherCount }),
+          attributes: { type: "button" },
+        })
+      : null;
+    if (otherLink) {
+      otherLink.addEventListener("click", () => {
+        elements.inboxMenu.hidden = false;
+        elements.inboxDropdown.hidden = false;
+      });
+    }
     elements.approvalPanel.append(
       emptyTitle,
-      createElement("p", { className: "empty-state", text: t("approval.noProposalBody") }),
+      createElement("p", { className: "empty-state empty-state-large", text: t("approval.noPendingBody") }),
+      ...(otherLink ? [otherLink] : []),
+      renderClosedProposalHistory(),
     );
     return;
   }
@@ -641,6 +718,7 @@ function renderApprovalPanel() {
     createMetaItem(t("approval.proposal"), proposal.id ?? t("approval.none")),
     createMetaItem(t("approval.revisionOf"), proposal.revisionOf ?? t("approval.none")),
     createMetaItem(t("approval.lifecycle"), formatLifecycle(proposal.lifecycle ?? "draft")),
+    createMetaItem(t("approval.waiting"), formatWaitingSince(getCurrentProposalWaitingSince())),
     createMetaItem(t("approval.latestVerdict"), formatLatestVerdict(proposal.id)),
     createMetaItem(t("risk.assessedRisk"), formatRisk(risk.risk)),
     createMetaItem(t("risk.providedRisk"), risk.providedRisk ? formatRisk(risk.providedRisk) : t("approval.none")),
@@ -723,6 +801,21 @@ function renderApprovalPanel() {
     reviewHistory,
     actions,
   );
+}
+
+// 끝난 제안의 검토 이력을 접힌 목록으로 렌더링한다.
+function renderClosedProposalHistory() {
+  if (!hasProposalData(proposal) || proposal.lifecycle === "submitted") {
+    return createElement("section");
+  }
+
+  const details = createElement("details", { className: "closed-proposal-history" });
+  details.append(
+    createElement("summary", { text: t("approval.closedProposalHistory") }),
+    createElement("p", { className: "proposal-summary", text: proposal.summary ?? t("detail.noStageSummary") }),
+    renderReviewHistory(proposal.id),
+  );
+  return details;
 }
 
 // 튜닝 제안의 예측 지표(현재 → 예측)를 렌더링한다. "예측" 라벨을 항상 붙인다.
@@ -1282,17 +1375,19 @@ function downloadWorkspaceJson() {
 function getReviewContext() {
   const reviewStage = getHumanReviewStage(definition, workflowState);
   const hasProposal = hasProposalData(proposal);
+  const hasPendingProposal = hasProposal && proposal.lifecycle === "submitted";
   const status = reviewStage ? getStageStatus(workflowState, reviewStage.id) : "not_started";
   const gate = reviewStage ? evaluateGate(definition, workflowState, reviewStage.id) : null;
 
   return {
     reviewStage,
     hasProposal,
+    hasPendingProposal,
     status,
     gate,
     canReview:
       status === "pending_review" &&
-      hasProposal &&
+      hasPendingProposal &&
       isLoopInteractive() &&
       (gate === null || gate.passed),
   };
@@ -1525,6 +1620,7 @@ async function refreshRuntimeData() {
     }),
     loadOptionalVersionedJson(apiProjectFilePath(activeProject.id, "measurement"), PROJECT_FILE_NAMES.measurement, null),
   ]);
+  globalInbox = await loadGlobalInbox();
 
   applyServerBundle({
     state: nextState,
@@ -1533,6 +1629,15 @@ async function refreshRuntimeData() {
     reviewReport: nextReviewReport,
     measurement: nextMeasurement,
   });
+}
+
+// 전역 결재 인박스를 서버에서 읽는다.
+async function loadGlobalInbox() {
+  try {
+    return normalizeInbox(await fetchJson("/api/inbox"));
+  } catch {
+    return { schemaVersion: EXPECTED_SCHEMA_VERSION, items: [] };
+  }
 }
 
 // 서버 액션을 호출하고 화면 상태를 갱신한다.
@@ -1709,6 +1814,14 @@ function normalizeMeasurement(value) {
   return cloneData(value);
 }
 
+// 인박스 데이터를 화면 계약에 맞게 정규화한다.
+function normalizeInbox(value) {
+  return {
+    schemaVersion: value?.schemaVersion ?? EXPECTED_SCHEMA_VERSION,
+    items: Array.isArray(value?.items) ? value.items : [],
+  };
+}
+
 // 제안 패치를 적용한다.
 function applyProposalPatch(currentProposal, patch) {
   if (!patch || !hasProposalData(currentProposal)) {
@@ -1788,7 +1901,7 @@ function applyLanguage() {
 // 문서 제목의 승인 대기 개수를 갱신한다.
 function updateDocumentTitle() {
   const baseTitle = t("documentTitle");
-  const pendingCount = Object.values(workflowState.stages ?? {}).filter((status) => status === "pending_review").length;
+  const pendingCount = getInboxItems().length;
   document.title = pendingCount > 0 ? `(${pendingCount}) ${baseTitle}` : baseTitle;
 }
 
@@ -2071,6 +2184,49 @@ function formatDateTime(value) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+// 인박스 항목 종류를 표시 문자열로 변환한다.
+function formatInboxKind(kind) {
+  return translations[language]?.inbox?.kinds?.[kind] ?? kind;
+}
+
+// 대기 시작 시각을 경과 시간으로 표시한다.
+function formatWaitingSince(value) {
+  if (!value) {
+    return t("approval.unknown");
+  }
+
+  const elapsedMs = Math.max(0, Date.now() - new Date(value).getTime());
+  const hours = Math.floor(elapsedMs / 3600000);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) {
+    return t("inbox.waitingDays", { count: days });
+  }
+
+  return t("inbox.waitingHours", { count: hours });
+}
+
+// 현재 프로젝트 제안의 전역 인박스 대기 시각을 찾는다.
+function getCurrentProposalWaitingSince() {
+  return getInboxItems().find((item) => item.projectId === activeProject?.id && item.proposalId === proposal?.id)?.waitingSince;
+}
+
+// 전역 인박스 항목 목록을 반환한다.
+function getInboxItems() {
+  return Array.isArray(globalInbox?.items) ? globalInbox.items : [];
+}
+
+// 프로젝트별 인박스 항목 수를 계산한다.
+function getInboxCountsByProject() {
+  const counts = new Map();
+
+  getInboxItems().forEach((item) => {
+    counts.set(item.projectId, (counts.get(item.projectId) ?? 0) + 1);
+  });
+
+  return counts;
 }
 
 // 상태 또는 차단 종류를 표시 문자열로 변환한다.
