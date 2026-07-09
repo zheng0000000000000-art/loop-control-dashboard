@@ -1260,6 +1260,126 @@
       ],
       "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
       "createdAt": "2026-07-09T20:13:03.3489451+09:00"
+    },
+    {
+      "id": "review-1783602298244",
+      "proposalId": "proposal-1783602289342",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "low",
+      "findings": [
+        {
+          "target": "maxFunctionLength",
+          "checkId": "note-nonempty",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "변경 항목의 note는 '함수 길이를 단축하여 가독성과 유지보수성을 향상시키고, 목표 범위 내로 조정하고자 함'으로 비어 있지 않고 의미 있는 설명을 포함하고 있음",
+          "comment": "변경 항목의 note는 '함수 길이를 단축하여 가독성과 유지보수성을 향상시키고, 목표 범위 내로 조정하고자 함'으로 비어 있지 않고 의미 있는 설명을 포함하고 있음",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "maxFunctionLength",
+          "checkId": "after-matches-goal",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "after 값 [0,80]은 note에서 언급한 '목표 범위 내로 조정'과 일치함",
+          "comment": "after 값 [0,80]은 note에서 언급한 '목표 범위 내로 조정'과 일치함",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "maxFunctionLength",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "변경 제안은 maxFunctionLength 설정 조정에 초점이 맞춰져 있으며, blueprint 위반과 무관한 항목은 포함되어 있지 않음",
+          "comment": "변경 제안은 maxFunctionLength 설정 조정에 초점이 맞춰져 있으며, blueprint 위반과 무관한 항목은 포함되어 있지 않음",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "createdAt": "2026-07-09T22:04:58.2449265+09:00"
+    },
+    {
+      "id": "review-1783602379093",
+      "proposalId": "proposal-1783602370924",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "low",
+      "findings": [
+        {
+          "target": "maxFunctionLength",
+          "checkId": "note-nonempty",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "변경 항목의 note는 '함수 길이를 단축하여 가독성과 유지보수성을 개선하고, 목표 범위 내로 조정하는 것이 목적입니다.'로 비어 있지 않고 의미 있는 설명입니다.",
+          "comment": "변경 항목의 note는 '함수 길이를 단축하여 가독성과 유지보수성을 개선하고, 목표 범위 내로 조정하는 것이 목적입니다.'로 비어 있지 않고 의미 있는 설명입니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "maxFunctionLength",
+          "checkId": "after-matches-goal",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "after 값 [0,80]은 note에서 언급된 '목표 범위 내로 조정'과 일치합니다.",
+          "comment": "after 값 [0,80]은 note에서 언급된 '목표 범위 내로 조정'과 일치합니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "maxFunctionLength",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "변경 제안은 maxFunctionLength에 대한 개선을 목표로 하며, blueprint 위반과 무관함",
+          "comment": "변경 제안은 maxFunctionLength에 대한 개선을 목표로 하며, blueprint 위반과 무관함",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "createdAt": "2026-07-09T22:06:19.0937866+09:00"
     }
   ]
 }

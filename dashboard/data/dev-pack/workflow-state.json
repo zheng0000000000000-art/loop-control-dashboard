@@ -1,20 +1,24 @@
 {
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
-  "currentStage": "deviationCheck",
-  "overallStatus": "completed",
-  "loopState": "aligned",
+  "currentStage": "changeReview",
+  "overallStatus": "warning",
+  "loopState": "running",
   "mode": "normal",
   "suspendedTracks": [],
   "loopIteration": 0,
   "stages": {
     "goals": "passed",
     "measure": "passed",
-    "deviationCheck": "passed",
-    "changeReview": "not_started",
-    "apply": "not_started"
+    "deviationCheck": "warning",
+    "changeReview": "pending_review",
+    "apply": "blocked"
   },
-  "blockInfo": {},
+  "blockInfo": {
+    "apply": {
+      "kind": "waiting"
+    }
+  },
   "stageDetails": {
     "goals": {
       "summary": "개발 팩은 저장소의 핵심 규칙을 측정하고 블루프린트 기준과 비교한다.",
@@ -36,7 +40,7 @@
       "issues": []
     },
     "deviationCheck": {
-      "summary": "측정 결과가 블루프린트 기준을 만족한다.",
+      "summary": "측정 결과에서 1개 괴리가 감지됐다.",
       "metrics": [
         {
           "label": "domainWordsInEngine",
@@ -89,21 +93,33 @@
         {
           "label": "skillDomainViolations",
           "value": "0 / 0"
-        }
-      ],
-      "issues": []
-    },
-    "changeReview": {
-      "summary": "악화가 감지되어 1층 검토를 건너뛰고 사람 결재로 직행했다.",
-      "metrics": [
+        },
         {
-          "label": "라우팅",
-          "value": "사람 직행"
+          "label": "programCsLines",
+          "value": "2418 / 0~2661"
+        },
+        {
+          "label": "appJsLines",
+          "value": "2446 / 0~2692"
+        },
+        {
+          "label": "maxFunctionLength",
+          "value": "235 / 0~80"
         }
       ],
       "issues": [
-        "functionsWithoutComment: 0→2로 악화"
+        "maxFunctionLength: 측정값 235이 기준 0~80을 벗어났다. 근거: server/Program.cs:687-921"
       ]
+    },
+    "changeReview": {
+      "summary": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "metrics": [
+        {
+          "label": "1층 검토 판정",
+          "value": "approved"
+        }
+      ],
+      "issues": []
     },
     "apply": {
       "summary": "승인 후 사람이 저장소를 수정하고 다시 측정해 해소 여부를 확인한다.",
@@ -111,7 +127,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-09T21:57:23.8401224+09:00",
+  "lastUpdated": "2026-07-09T22:06:06.0877219+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",

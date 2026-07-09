@@ -8,6 +8,18 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.FileProviders;
 
+var cliCommand = args.Length > 0 ? args[0].TrimStart('-') : "";
+
+if (string.Equals(cliCommand, "snapshot-behavior", StringComparison.OrdinalIgnoreCase))
+{
+    return BehaviorSnapshotCli.Snapshot();
+}
+
+if (string.Equals(cliCommand, "verify-behavior", StringComparison.OrdinalIgnoreCase))
+{
+    return BehaviorSnapshotCli.Verify();
+}
+
 if (args.Length > 0 && string.Equals(args[0], "measure", StringComparison.OrdinalIgnoreCase))
 {
     return RunMeasureCli(args);

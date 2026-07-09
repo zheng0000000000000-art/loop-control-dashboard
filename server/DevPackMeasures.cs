@@ -74,6 +74,9 @@ public static class DevPackMeasures
             "newFontFamilies" => CountNewFontFamilies(root),
             "skillsWithoutVersion" => CountSkillsWithoutVersion(root),
             "skillDomainViolations" => CountSkillDomainViolations(root),
+            "programCsLines" => CountFileLines(root, Path.Combine("server", "Program.cs"), metricId),
+            "appJsLines" => CountFileLines(root, Path.Combine("dashboard", "app.js"), metricId),
+            "maxFunctionLength" => CountMaxFunctionLength(root),
             _ => Metric(metricId, (JsonNode?)null, ["미구현"]),
         };
     }
@@ -497,6 +500,93 @@ public static class DevPackMeasures
         }
 
         return Metric("skillDomainViolations", count, evidence);
+    }
+
+    // skills 문서에서 도메인과 트리거 정보를 읽는다.
+    // 지정한 파일의 줄 수를 측정한다.
+    private static JsonObject CountFileLines(string root, string relativePath, string metricId)
+    {
+        var file = Path.Combine(root, relativePath);
+
+        if (!File.Exists(file))
+        {
+            return Metric(metricId, 0, [$"{relativePath.Replace('\\', '/')} 없음"]);
+        }
+
+        var count = File.ReadLines(file).Count();
+        return Metric(metricId, count, [$"{relativePath.Replace('\\', '/')}:{count} lines"]);
+    }
+
+    // 코드 파일에서 가장 긴 함수 길이를 근사 측정한다.
+    private static JsonObject CountMaxFunctionLength(string root)
+    {
+        var maxLength = 0;
+        var evidence = new List<string>();
+
+        foreach (var file in EnumerateCodeFiles(root))
+        {
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index += 1)
+            {
+                if (!IsFunctionStart(lines[index], file))
+                {
+                    continue;
+                }
+
+                var length = FunctionLength(lines, index);
+                if (length <= maxLength)
+                {
+                    continue;
+                }
+
+                maxLength = length;
+                evidence.Clear();
+                AddEvidence(evidence, $"{RelativePath(root, file)}:{index + 1}-{index + length}");
+            }
+        }
+
+        return Metric("maxFunctionLength", maxLength, evidence.Count == 0 ? ["함수 없음"] : evidence);
+    }
+
+    // 함수 선언으로 볼 수 있는 줄인지 확인한다.
+    private static bool IsFunctionStart(string line, string file)
+    {
+        if (file.EndsWith(".js", StringComparison.OrdinalIgnoreCase))
+        {
+            return Regex.IsMatch(line, @"^\s*(?:export\s+)?function\s+\w+\s*\(");
+        }
+
+        return Regex.IsMatch(line, @"^\s*(?:(?:public|private|protected|internal)\s+)?(?:static\s+)?(?:async\s+)?[\w<>\[\],.?]+\s+\w+\s*\(");
+    }
+
+    // 함수 시작 줄부터 닫는 중괄호까지의 줄 수를 근사 계산한다.
+    private static int FunctionLength(string[] lines, int start)
+    {
+        var depth = 0;
+        var opened = false;
+
+        for (var index = start; index < lines.Length; index += 1)
+        {
+            foreach (var character in lines[index])
+            {
+                if (character == '{')
+                {
+                    depth += 1;
+                    opened = true;
+                }
+                else if (character == '}')
+                {
+                    depth -= 1;
+                }
+            }
+
+            if (opened && depth <= 0)
+            {
+                return index - start + 1;
+            }
+        }
+
+        return 1;
     }
 
     // skills 문서에서 도메인과 트리거 정보를 읽는다.

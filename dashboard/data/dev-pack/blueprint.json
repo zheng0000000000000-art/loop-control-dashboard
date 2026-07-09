@@ -15,7 +15,10 @@
     },
     {
       "metricId": "directiveAcceptanceCriteria",
-      "band": [3, 99],
+      "band": [
+        3,
+        99
+      ],
       "priority": "high",
       "note": "지시서의 검수 기준 항목 수 — 3개 미만이면 지시서 미달"
     },
@@ -78,6 +81,33 @@
       "target": 0,
       "priority": "normal",
       "note": "verification 문서에서 그 작업의 변경 파일과 무관한 도메인 스킬을 참조한 건수"
+    },
+    {
+      "metricId": "programCsLines",
+      "band": [
+        0,
+        2661
+      ],
+      "priority": "normal",
+      "note": "Program.cs ? ?. ?? ?? ?? 2419?, ??? +10%"
+    },
+    {
+      "metricId": "appJsLines",
+      "band": [
+        0,
+        2692
+      ],
+      "priority": "normal",
+      "note": "dashboard/app.js ? ?. ?? ?? ?? 2447?, ??? +10%"
+    },
+    {
+      "metricId": "maxFunctionLength",
+      "band": [
+        0,
+        80
+      ],
+      "priority": "normal",
+      "note": "??? ??? ??? ?? ?? ??. ???? ?? ???"
     }
   ]
 }

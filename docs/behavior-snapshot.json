@@ -1,0 +1,213 @@
+{
+  "schemaVersion": 1,
+  "simtune": {
+    "projectId": "ruined-lab",
+    "seed": 42,
+    "reachedBand": false,
+    "candidatesUsed": 40,
+    "baselineDistance": 45,
+    "finalDistance": 45,
+    "baselineProgressedRooms": 2.992,
+    "finalProgressedRooms": 3,
+    "changedLevers": [
+      {
+        "path": "rooms[1].rewards.healAmount",
+        "before": 8,
+        "after": 10
+      }
+    ],
+    "predictedMetrics": [
+      {
+        "metricId": "completionRate",
+        "before": 0,
+        "after": 0,
+        "band": "45~60"
+      },
+      {
+        "metricId": "room1DeathRate",
+        "before": 0,
+        "after": 0,
+        "band": "0~20"
+      },
+      {
+        "metricId": "room3DeathRate",
+        "before": 0.8,
+        "after": 0,
+        "band": "0~35"
+      },
+      {
+        "metricId": "avgRewardPerRun",
+        "before": 8.076,
+        "after": 8.82,
+        "band": "8~20"
+      }
+    ],
+    "residualViolations": [
+      "completionRate=0 (밴드 45~60 밖)"
+    ],
+    "trace": [
+      "[tuning] baseline: distance=45 progress=2.992 score=45.000001 candidates=1",
+      "[tuning] step=±1 후보 25개 시도, distance 45→45, progress 2.992→3, score 45.000001→45.000001",
+      "[tuning] step=±2 후보 4개 시도, distance 45→45, progress 2.992→2.996, score 45.000001→45.000001",
+      "[tuning] step=±3 후보 5개 시도, distance 45→45, progress 2.992→2.998, score 45.000001→45.000001",
+      "[tuning] two-lever 후보 5개 시도, distance 45→45, progress 2.992→2.994, score 45.000001→45.000001",
+      "[tuning] 채택: candidates=40 distance=45 progress=3 score=45.000001 levers=rooms[1].rewards.healAmount"
+    ]
+  },
+  "measurements": [
+    {
+      "projectId": "ruined-lab",
+      "providerId": "ruined-lab-sim",
+      "metrics": [
+        {
+          "metricId": "avgRewardPerRun",
+          "value": 8.076,
+          "evidence": [
+            "stddev=6.46"
+          ]
+        },
+        {
+          "metricId": "completionRate",
+          "value": 0,
+          "evidence": [
+            "시뮬레이션 전체 실행"
+          ]
+        },
+        {
+          "metricId": "room1DeathRate",
+          "value": 0,
+          "evidence": [
+            "rooms[0]"
+          ]
+        },
+        {
+          "metricId": "room3DeathRate",
+          "value": 0.8,
+          "evidence": [
+            "rooms[2]"
+          ]
+        }
+      ]
+    },
+    {
+      "projectId": "dev-pack",
+      "providerId": "dev-pack-checks",
+      "metrics": [
+        {
+          "metricId": "appJsLines",
+          "value": 0,
+          "evidence": [
+            "dashboard/app.js 없음"
+          ]
+        },
+        {
+          "metricId": "devRoleInRuntimeLogs",
+          "value": 0,
+          "evidence": []
+        },
+        {
+          "metricId": "directiveAcceptanceCriteria",
+          "value": 0,
+          "evidence": [
+            "docs/directives 폴더 없음"
+          ]
+        },
+        {
+          "metricId": "domainWordsInEngine",
+          "value": 0,
+          "evidence": [
+            "server/Engine.cs 없음",
+            "dashboard/engine.js 없음"
+          ]
+        },
+        {
+          "metricId": "functionsWithoutComment",
+          "value": 0,
+          "evidence": []
+        },
+        {
+          "metricId": "hardcodedColors",
+          "value": 0,
+          "evidence": []
+        },
+        {
+          "metricId": "inlineStyles",
+          "value": 0,
+          "evidence": []
+        },
+        {
+          "metricId": "koPoliteEndings",
+          "value": 0,
+          "evidence": [
+            "dashboard/data/lang/ko.json 없음"
+          ]
+        },
+        {
+          "metricId": "maxFunctionLength",
+          "value": 159,
+          "evidence": [
+            "app.js:712-870"
+          ]
+        },
+        {
+          "metricId": "newFontFamilies",
+          "value": 0,
+          "evidence": [
+            "dashboard/style.css 없음"
+          ]
+        },
+        {
+          "metricId": "programCsLines",
+          "value": 0,
+          "evidence": [
+            "server/Program.cs 없음"
+          ]
+        },
+        {
+          "metricId": "schemaVersionMissing",
+          "value": 0,
+          "evidence": [
+            "dashboard/data 없음"
+          ]
+        },
+        {
+          "metricId": "skillDomainViolations",
+          "value": 0,
+          "evidence": [
+            "docs/verification 없음"
+          ]
+        },
+        {
+          "metricId": "skillsWithoutVersion",
+          "value": 0,
+          "evidence": [
+            "skills 폴더 없음"
+          ]
+        },
+        {
+          "metricId": "smallTouchTargets",
+          "value": 0,
+          "evidence": [
+            "dashboard/style.css 없음"
+          ]
+        },
+        {
+          "metricId": "verdictInProposalFile",
+          "value": 0,
+          "evidence": []
+        }
+      ]
+    }
+  ],
+  "scenarioReplay": {
+    "projectId": "ruined-lab",
+    "eventCount": 7,
+    "appliedEvents": 6,
+    "blockedTransitions": 1,
+    "finalCurrentStage": "patchApproval",
+    "finalLoopState": "paused",
+    "finalOverallStatus": "warning",
+    "finalProposalLifecycle": "submitted",
+    "logCount": 6
+  }
+}
