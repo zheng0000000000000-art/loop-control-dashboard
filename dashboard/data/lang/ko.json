@@ -103,6 +103,7 @@
     "review.rejected": "검토 거절: {proposalId} {text}",
     "review.needs_changes": "검토 결과 수정 필요: {proposalId} {text}",
     "review.tier1_completed": "1층 검토 완료: {proposalId}, {verdict}, 모델 {model}, {durationMs}ms {reasonCode} {text}",
+    "review.refeedback_insufficient": "재지시 정보 부족: {checkIds} {text}",
     "guardrail.halted": "가드레일 정지: {text}",
     "checkpoint.paused": "체크포인트 일시 정지: {checkpointId}, 루프 {loopIteration}",
     "checkpoint.acknowledged": "체크포인트 확인: {checkpointId}",

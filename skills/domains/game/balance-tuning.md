@@ -1,6 +1,6 @@
 # 스킬: 게임 밸런스 튜닝
 
-버전: 1 | 대상: 도메인 game
+버전: 1 | 도메인: game | 트리거: server/GameSimulator.cs, server/BalanceTuner.cs, dashboard/data/ruined-lab/**, docs/verification/balance-tuning.md | 대상: 게임 밸런스 튜닝
 
 ## 절차
 

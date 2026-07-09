@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-09T20:21:22.1821149+09:00",
+  "measuredAt": "2026-07-09T20:28:36.0206256+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
@@ -63,6 +63,11 @@
     },
     {
       "metricId": "skillsWithoutVersion",
+      "value": 0,
+      "evidence": []
+    },
+    {
+      "metricId": "skillDomainViolations",
       "value": 0,
       "evidence": []
     }

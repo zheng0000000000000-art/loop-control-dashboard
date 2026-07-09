@@ -72,6 +72,12 @@
       "target": 0,
       "priority": "normal",
       "note": "skills/ 문서 중 '버전:' 줄이 없는 파일 수"
+    },
+    {
+      "metricId": "skillDomainViolations",
+      "target": 0,
+      "priority": "normal",
+      "note": "verification 문서에서 그 작업의 변경 파일과 무관한 도메인 스킬을 참조한 건수"
     }
   ]
 }

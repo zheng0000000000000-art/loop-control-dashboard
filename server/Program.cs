@@ -23,6 +23,11 @@ if (args.Length > 0 && string.Equals(args[0], "simtune", StringComparison.Ordina
     return RunSimTuneCli(args);
 }
 
+if (args.Length > 0 && string.Equals(args[0], "refeedbacktest", StringComparison.OrdinalIgnoreCase))
+{
+    return RunRefeedbackTestCli();
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
@@ -395,6 +400,46 @@ static int RunSimTuneCli(string[] args)
     }
 }
 
+// 재지시 정보 부족 가드를 서버 파일 쓰기 없이 검증하는 CLI다.
+static int RunRefeedbackTestCli()
+{
+    var cliJsonOptions = new JsonSerializerOptions
+    {
+        WriteIndented = false,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+    var report = new JsonObject
+    {
+        ["verdict"] = "needs_changes",
+        ["findings"] = new JsonArray
+        {
+            new JsonObject
+            {
+                ["target"] = "mock-target",
+                ["checkId"] = "mock-check",
+                ["passed"] = false,
+                ["note"] = "",
+            },
+        },
+    };
+    var tier1 = new Tier1ReviewResult(report, new JsonObject(), "needs_changes", null);
+    var runLog = new JsonObject { ["schemaVersion"] = 3, ["entries"] = new JsonArray() };
+    var state = new JsonObject { ["loopIteration"] = 0 };
+    var escalated = TryEscalateInsufficientRefeedback(ref tier1, ref runLog, state);
+    var result = new JsonObject
+    {
+        ["escalated"] = escalated,
+        ["verdict"] = tier1.Verdict,
+        ["reasonCode"] = tier1.ReasonCode,
+        ["reportVerdict"] = report["verdict"]?.GetValue<string>() ?? "",
+        ["event"] = runLog["entries"]?.AsArray().LastOrDefault()?.AsObject()["event"]?.GetValue<string>() ?? "",
+        ["checkIds"] = Engine.CloneNode(runLog["entries"]?.AsArray().LastOrDefault()?.AsObject()["params"]?.AsObject()["checkIds"] ?? new JsonArray()),
+    };
+
+    Console.WriteLine(result.ToJsonString(cliJsonOptions));
+    return escalated && tier1.Verdict == "uncertain" ? 0 : 1;
+}
+
 // 측정 결과를 상태, 로그, 제안에 반영하고 위반 수를 반환한다.
 static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyOptions ntfy, JsonObject previousMeasurement, string projectPath)
 {
@@ -537,6 +582,11 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
 
                 for (var regeneration = 0; regeneration < tuningMaxRegenerations && tuningTier1.Verdict == "needs_changes"; regeneration += 1)
                 {
+                    if (TryEscalateInsufficientRefeedback(ref tuningTier1, ref runLog, state))
+                    {
+                        break;
+                    }
+
                     var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
                     runLog = Engine.AppendLog(runLog, new JsonObject
                     {
@@ -584,6 +634,11 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
 
             for (var regeneration = 0; regeneration < maxRegenerations && tier1.Verdict == "needs_changes"; regeneration += 1)
             {
+                if (TryEscalateInsufficientRefeedback(ref tier1, ref runLog, state))
+                {
+                    break;
+                }
+
                 var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
                 runLog = Engine.AppendLog(runLog, new JsonObject
                 {
@@ -823,6 +878,71 @@ static void SetTier1Details(JsonObject state, string? stageId, Tier1ReviewResult
             : "1층 체크리스트 결과를 사람이 확인해야 한다.",
         ["metrics"] = metrics,
         ["issues"] = issues,
+    };
+}
+
+// 검토 지적이 재생성 지시로 충분한지 검사하고 부족하면 사람 검토로 격상한다.
+static bool TryEscalateInsufficientRefeedback(ref Tier1ReviewResult tier1, ref JsonObject runLog, JsonObject state)
+{
+    var missingCheckIds = FindInsufficientRefeedback(tier1.Report);
+
+    if (missingCheckIds.Count == 0)
+    {
+        return false;
+    }
+
+    if (tier1.Report is not null)
+    {
+        tier1.Report["verdict"] = "uncertain";
+        tier1.Report["reason"] = "검토 지적이 재생성 지시로 충분하지 않아 사람 검토로 올렸다.";
+    }
+
+    runLog = Engine.AppendLog(runLog, RefeedbackInsufficientLog(missingCheckIds), Engine.GetLoopIteration(state));
+    tier1 = new Tier1ReviewResult(tier1.Report, tier1.LogEntry, "uncertain", "review.refeedback_insufficient");
+    return true;
+}
+
+// 실패 finding 중 재지시 정보가 부족한 checkId를 찾는다.
+static List<string> FindInsufficientRefeedback(JsonObject? report)
+{
+    var result = new List<string>();
+    var findings = report?["findings"]?.AsArray();
+
+    if (findings is null)
+    {
+        return result;
+    }
+
+    foreach (var finding in findings.OfType<JsonObject>().Where(finding => finding["passed"]?.GetValue<bool>() == false))
+    {
+        var text = finding["note"]?.GetValue<string>() ?? finding["comment"]?.GetValue<string>() ?? "";
+        var normalized = Regex.Replace(text, @"\s+", "");
+
+        if (normalized.Length >= 10)
+        {
+            continue;
+        }
+
+        result.Add(finding["checkId"]?.GetValue<string>() ?? finding["target"]?.GetValue<string>() ?? "unknown");
+    }
+
+    return result.Distinct(StringComparer.Ordinal).ToList();
+}
+
+// 재지시 정보 부족 로그 항목을 만든다.
+static JsonObject RefeedbackInsufficientLog(List<string> checkIds)
+{
+    return new JsonObject
+    {
+        ["event"] = "review.refeedback_insufficient",
+        ["params"] = new JsonObject
+        {
+            ["checkIds"] = new JsonArray(checkIds.Select(id => (JsonNode)id).ToArray()),
+            ["text"] = "검토 지적 정보가 부족해 재생성하지 않고 사람 검토로 올렸다.",
+        },
+        ["level"] = "warning",
+        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+        ["cost"] = RuntimeCost(),
     };
 }
 

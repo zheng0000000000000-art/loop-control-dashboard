@@ -73,6 +73,7 @@ public static class DevPackMeasures
             "smallTouchTargets" => CountSmallTouchTargets(root),
             "newFontFamilies" => CountNewFontFamilies(root),
             "skillsWithoutVersion" => CountSkillsWithoutVersion(root),
+            "skillDomainViolations" => CountSkillDomainViolations(root),
             _ => Metric(metricId, (JsonNode?)null, ["미구현"]),
         };
     }
@@ -436,7 +437,7 @@ public static class DevPackMeasures
         var count = 0;
         var evidence = new List<string>();
 
-        foreach (var file in Directory.EnumerateFiles(skillsDirectory, "*.md", SearchOption.TopDirectoryOnly))
+        foreach (var file in Directory.EnumerateFiles(skillsDirectory, "*.md", SearchOption.AllDirectories))
         {
             var hasVersionLine = File.ReadAllLines(file).Any(line => line.Contains("버전:", StringComparison.Ordinal));
 
@@ -450,6 +451,172 @@ public static class DevPackMeasures
         }
 
         return Metric("skillsWithoutVersion", count, evidence);
+    }
+
+    // verification 문서의 참조 스킬이 변경 경로와 맞지 않는 횟수를 센다.
+    private static JsonObject CountSkillDomainViolations(string root)
+    {
+        var verificationDirectory = Path.Combine(root, "docs", "verification");
+        var skills = ReadSkillRoutingRules(root);
+        var count = 0;
+        var evidence = new List<string>();
+
+        if (!Directory.Exists(verificationDirectory))
+        {
+            return Metric("skillDomainViolations", 0, ["docs/verification 없음"]);
+        }
+
+        foreach (var file in Directory.EnumerateFiles(verificationDirectory, "*.md", SearchOption.TopDirectoryOnly))
+        {
+            var lines = File.ReadAllLines(file);
+            var referencedSkills = ExtractSectionItems(lines, "참조한 스킬");
+
+            if (referencedSkills.Count == 0)
+            {
+                continue;
+            }
+
+            var changedPaths = ExtractSectionItems(lines, "변경 경로");
+            foreach (var reference in referencedSkills)
+            {
+                var skill = ResolveSkillReference(reference, skills);
+
+                if (skill is null || skill.Domain == "common" || skill.Triggers.Contains("항상", StringComparer.Ordinal))
+                {
+                    continue;
+                }
+
+                if (changedPaths.Any(path => SkillMatchesPath(skill, path)))
+                {
+                    continue;
+                }
+
+                count += 1;
+                AddEvidence(evidence, $"{RelativePath(root, file)} -> {skill.Path}");
+            }
+        }
+
+        return Metric("skillDomainViolations", count, evidence);
+    }
+
+    // skills 문서에서 도메인과 트리거 정보를 읽는다.
+    private static List<SkillRoutingRule> ReadSkillRoutingRules(string root)
+    {
+        var skillsDirectory = Path.Combine(root, "skills");
+
+        if (!Directory.Exists(skillsDirectory))
+        {
+            return [];
+        }
+
+        return Directory.EnumerateFiles(skillsDirectory, "*.md", SearchOption.AllDirectories)
+            .Select(file =>
+            {
+                var lines = File.ReadAllLines(file);
+                var versionLine = lines.FirstOrDefault(line => line.Contains("버전:", StringComparison.Ordinal)) ?? "";
+                var domain = ExtractHeaderPart(versionLine, "도메인") ?? "common";
+                var triggerText = ExtractHeaderPart(versionLine, "트리거") ?? "";
+                var triggers = triggerText.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+                return new SkillRoutingRule(RelativePath(root, file), Path.GetFileName(file), domain, triggers);
+            })
+            .ToList();
+    }
+
+    // 스킬 참조 문자열을 실제 스킬 규칙으로 해석한다.
+    private static SkillRoutingRule? ResolveSkillReference(string reference, List<SkillRoutingRule> skills)
+    {
+        var normalized = NormalizeListItem(reference);
+        return skills.FirstOrDefault(skill =>
+            normalized.Contains(skill.Path, StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains(skill.FileName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    // 스킬 트리거가 변경 경로와 일치하는지 확인한다.
+    private static bool SkillMatchesPath(SkillRoutingRule skill, string changedPath)
+    {
+        var normalizedPath = NormalizeListItem(changedPath).Replace('\\', '/').Trim('/');
+
+        foreach (var trigger in skill.Triggers)
+        {
+            var normalizedTrigger = trigger.Replace('\\', '/').Trim();
+
+            if (normalizedTrigger.EndsWith("/**", StringComparison.Ordinal))
+            {
+                var prefix = normalizedTrigger[..^3].TrimEnd('/');
+                if (normalizedPath.Equals(prefix, StringComparison.OrdinalIgnoreCase) ||
+                    normalizedPath.StartsWith($"{prefix}/", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                continue;
+            }
+
+            var regex = "^" + Regex.Escape(normalizedTrigger).Replace("\\*", "[^/]*") + "$";
+            if (Regex.IsMatch(normalizedPath, regex, RegexOptions.IgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // 헤더 줄에서 특정 필드 값을 읽는다.
+    private static string? ExtractHeaderPart(string line, string key)
+    {
+        var match = Regex.Match(line, $@"{Regex.Escape(key)}:\s*([^|]+)");
+        return match.Success ? match.Groups[1].Value.Trim() : null;
+    }
+
+    // 마크다운 섹션 안의 목록 항목을 추출한다.
+    private static List<string> ExtractSectionItems(string[] lines, string title)
+    {
+        var inSection = false;
+        var sectionLevel = 0;
+        var items = new List<string>();
+
+        foreach (var line in lines)
+        {
+            var heading = Regex.Match(line, @"^(#+)\s+(.+)$");
+            if (heading.Success)
+            {
+                var level = heading.Groups[1].Value.Length;
+                var headingTitle = heading.Groups[2].Value.Trim();
+
+                if (inSection && level <= sectionLevel)
+                {
+                    break;
+                }
+
+                if (headingTitle.Contains(title, StringComparison.Ordinal))
+                {
+                    inSection = true;
+                    sectionLevel = level;
+                }
+
+                continue;
+            }
+
+            if (!inSection)
+            {
+                continue;
+            }
+
+            var item = Regex.Match(line, @"^\s*(?:[-*]\s+|\d+[\.)]\s+)(.+)$");
+            if (item.Success)
+            {
+                items.Add(NormalizeListItem(item.Groups[1].Value));
+            }
+        }
+
+        return items;
+    }
+
+    // 목록 항목에서 마크다운 장식을 제거한다.
+    private static string NormalizeListItem(string text)
+    {
+        return text.Trim().Trim('`').Replace("\\", "/");
     }
 
     // 디자인 정적 검사 대상 파일(HTML·JS, style.css 제외)을 반환한다.
@@ -629,3 +796,5 @@ public static class DevPackMeasures
             !normalized.EndsWith("/data/projects.json", StringComparison.OrdinalIgnoreCase);
     }
 }
+
+public sealed record SkillRoutingRule(string Path, string FileName, string Domain, List<string> Triggers);

@@ -210,6 +210,7 @@ public static class OllamaExecutor
         foreach (var finding in findings.OfType<JsonObject>().Where(f => f["passed"]?.GetValue<bool>() == false))
         {
             var target = finding["target"]?.GetValue<string>();
+            var checkId = finding["checkId"]?.GetValue<string>() ?? "unknown";
             var note = finding["note"]?.GetValue<string>() ?? finding["comment"]?.GetValue<string>();
 
             if (string.IsNullOrWhiteSpace(target) || string.IsNullOrWhiteSpace(note))
@@ -217,7 +218,8 @@ public static class OllamaExecutor
                 continue;
             }
 
-            result[target] = result.TryGetValue(target, out var existing) ? $"{existing} / {note}" : note;
+            var structuredNote = $"{checkId}: {note}";
+            result[target] = result.TryGetValue(target, out var existing) ? $"{existing} / {structuredNote}" : structuredNote;
         }
 
         return result;

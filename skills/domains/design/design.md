@@ -1,6 +1,6 @@
 # 스킬: UI 작업법
 
-버전: 1 | 대상: `dashboard/index.html`·`style.css`·`app.js`에 화면 요소를 추가·수정할 때
+버전: 1 | 도메인: design | 트리거: dashboard/index.html, dashboard/style.css, dashboard/app.js | 대상: `dashboard/index.html`·`style.css`·`app.js`에 화면 요소를 추가·수정할 때
 
 ## 절차
 

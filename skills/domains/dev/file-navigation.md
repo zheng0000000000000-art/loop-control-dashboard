@@ -1,6 +1,6 @@
 # 스킬: 저장소 보는 법
 
-버전: 1 | 대상: 이 저장소에서 무언가를 고치기 전에 어디를 봐야 할지 모를 때
+버전: 1 | 도메인: dev | 트리거: server/**, dashboard/data/**, docs/verification/**, docs/DECISIONS.md, AGENTS.md, CLAUDE.md, skills/** | 대상: 이 저장소에서 무언가를 고치기 전에 어디를 봐야 할지 모를 때
 
 ## 절차
 
