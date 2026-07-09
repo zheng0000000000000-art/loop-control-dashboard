@@ -133,6 +133,8 @@
     "tuning.applied": "Tuning applied, remeasured: {comparisons}",
     "tuning.no_solution": "No tuning solution: {candidatesUsed} candidates, {text}",
     "executor.escalated": "Executor escalated: {from} -> {to} ({text})",
+    "context.budget": "Context budget: {contextFileCount} files, {contextBytes} bytes, estimated {estimatedContextTokens} tokens ({estimation})",
+    "dispatch.stale_base": "Import blocked: workspace files changed after dispatch ({files})",
     "scenario.step": "Scenario step: {text}",
     "measure.completed": "Measurement completed: {providerId}, {violationCount} violations",
     "contribution.submitted": "Contribution received: {kind}, status {status} — {content}"

@@ -133,6 +133,8 @@
     "tuning.applied": "튜닝 적용 후 재측정: {comparisons}",
     "tuning.no_solution": "튜닝 해 없음: 후보 {candidatesUsed}개, {text}",
     "executor.escalated": "실행자 승격: {from} -> {to} ({text})",
+    "context.budget": "컨텍스트 예산: 파일 {contextFileCount}개, {contextBytes}바이트, 추정 {estimatedContextTokens}토큰 ({estimation})",
+    "dispatch.stale_base": "반입 차단: dispatch 이후 작업공간 파일이 변경됨 ({files})",
     "scenario.step": "시나리오 단계: {text}",
     "measure.completed": "측정 완료: {providerId}, 위반 {violationCount}개",
     "contribution.submitted": "기여 접수: {kind}, 상태 {status} — {content}"

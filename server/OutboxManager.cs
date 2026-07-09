@@ -1,6 +1,7 @@
 // 격리 실행 outbox와 반입 대기 상태를 관리한다.
 // 저장소 사본 실행, 변경 추출, 반입 적용을 처리한다.
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -66,7 +67,11 @@ public sealed class OutboxManager
         {
             var stopwatch = Stopwatch.StartNew();
             var copyRoot = Path.Combine(Path.GetTempPath(), $"loop-dispatch-{taskId}");
+            var baseCommit = ReadGitHead();
+            var originalHashes = SnapshotOriginalHashes();
             CopyWorkspace(copyRoot);
+            // 사본에 포함된 파일 전체의 컨텍스트 예산을 실행 전에 실측한다.
+            var contextBudget = ContextBudget.Measure(copyRoot);
             var execution = await RunExecutorAsync(copyRoot, executor, instruction);
             var changes = CollectChanges(copyRoot, taskDirectory);
             var measure = await RunMeasureAsync(copyRoot);
@@ -78,16 +83,20 @@ public sealed class OutboxManager
             var hasChanges = changes.ChangedFiles.Count > 0 || changes.DeletedFiles.Count > 0;
             var status = execution.TimedOut || execution.ExitCode != 0 || !hasChanges || !passedStrictGate ? "failed" : "import_pending";
             var meta = BaseMeta(taskId, projectId, executor, instruction, status, stopwatch.ElapsedMilliseconds, SubscriptionCalls(executor));
+            meta["baseCommit"] = baseCommit;
             meta["executorExitCode"] = execution.ExitCode;
             meta["timedOut"] = execution.TimedOut;
             meta["changedFiles"] = new JsonArray(changes.ChangedFiles.Select(file => JsonValue.Create(file)).ToArray<JsonNode?>());
             meta["deletedFiles"] = new JsonArray(changes.DeletedFiles.Select(file => JsonValue.Create(file)).ToArray<JsonNode?>());
+            meta["originalFileHashes"] = BuildOriginalFileHashes(changes.ChangedFiles, originalHashes);
             meta["measureExitCode"] = measure.ExitCode;
             meta["measureSummary"] = measure.Stdout;
             meta["behaviorExitCode"] = behavior.ExitCode;
             meta["behaviorSummary"] = behavior.Stdout;
             meta["strictGate"] = strictGate;
             meta["completedAt"] = DateTimeOffset.Now.ToString("O");
+            // 컨텍스트 예산 측정값을 task 메타와 run-log 이벤트로 남긴다.
+            ContextBudget.Attach(meta, workspaceRoot, projectId, taskId, contextBudget);
 
             WriteText(Path.Combine(taskDirectory, "executor-report.md"), BuildExecutorReport(execution));
             WriteText(Path.Combine(taskDirectory, "diff.patch"), changes.Patch);
@@ -164,6 +173,7 @@ public sealed class OutboxManager
             throw new DispatchHttpException(409, "dispatch.not_import_pending", "task is not waiting for import");
         }
 
+        VerifyFreshBase(meta);
         CreateImportRestore(taskDirectory, meta);
         foreach (var file in meta["changedFiles"]?.AsArray().Select(node => node?.GetValue<string>()).Where(value => !string.IsNullOrWhiteSpace(value)) ?? [])
         {
@@ -270,6 +280,33 @@ public sealed class OutboxManager
             executor.Equals("codex", StringComparison.OrdinalIgnoreCase)
             ? 1
             : 0;
+    }
+
+    // 현재 워크스페이스 HEAD를 참고용으로 읽는다.
+    private string ReadGitHead()
+    {
+        var result = RunProcessAsync(workspaceRoot, "git", ["rev-parse", "HEAD"], 10).GetAwaiter().GetResult();
+        return result.ExitCode == 0 ? result.Stdout.Trim() : "";
+    }
+
+    // 사본 생성 전 원본 파일 해시를 기록한다.
+    private Dictionary<string, string> SnapshotOriginalHashes()
+    {
+        return RelativeFiles(workspaceRoot)
+            .Where(path => !ShouldIgnoreRelative(path))
+            .ToDictionary(path => ToSlash(path), path => Sha256Hex(Path.Combine(workspaceRoot, path)), StringComparer.OrdinalIgnoreCase);
+    }
+
+    // 변경 파일에 해당하는 원본 해시만 meta에 남긴다.
+    private static JsonObject BuildOriginalFileHashes(IEnumerable<string> changedFiles, Dictionary<string, string> originalHashes)
+    {
+        var hashes = new JsonObject();
+        foreach (var file in changedFiles)
+        {
+            hashes[file] = originalHashes.TryGetValue(file, out var hash) ? hash : "absent";
+        }
+
+        return hashes;
     }
 
     // 작업 공간을 임시 사본으로 복사한다.
@@ -513,6 +550,40 @@ public sealed class OutboxManager
         }
     }
 
+    // 반입 전 원본 해시와 현재 파일 해시를 비교한다.
+    private void VerifyFreshBase(JsonObject meta)
+    {
+        if (meta["originalFileHashes"] is not JsonObject hashes)
+        {
+            meta["staleCheck"] = "skipped_legacy";
+            return;
+        }
+
+        var staleFiles = new JsonArray();
+        foreach (var file in meta["changedFiles"]?.AsArray().Select(node => node?.GetValue<string>()).Where(value => !string.IsNullOrWhiteSpace(value)) ?? [])
+        {
+            var expected = hashes[file!]?.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(expected))
+            {
+                continue;
+            }
+
+            var current = CurrentHashOrAbsent(file!);
+            if (!string.Equals(expected, current, StringComparison.OrdinalIgnoreCase))
+            {
+                staleFiles.Add(file);
+            }
+        }
+
+        if (staleFiles.Count > 0)
+        {
+            var files = string.Join(", ", staleFiles.Select(node => node?.GetValue<string>()));
+            throw new DispatchHttpException(409, "dispatch.stale_base", $"Import blocked because workspace files changed after dispatch: {files}");
+        }
+
+        meta["staleCheck"] = "passed";
+    }
+
     // 작업 항목 디렉터리를 안전하게 계산한다.
     private string ResolveTaskDirectory(string taskId)
     {
@@ -537,6 +608,20 @@ public sealed class OutboxManager
         }
 
         return fullPath;
+    }
+
+    // 현재 워크스페이스 파일 해시나 absent 상태를 반환한다.
+    private string CurrentHashOrAbsent(string relative)
+    {
+        var path = SafeWorkspacePath(relative);
+        return File.Exists(path) ? Sha256Hex(path) : "absent";
+    }
+
+    // 파일 SHA-256을 소문자 16진수로 계산한다.
+    private static string Sha256Hex(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
     }
 
     // JSON 파일을 기록한다.
