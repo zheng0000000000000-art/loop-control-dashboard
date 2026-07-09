@@ -13,7 +13,8 @@
     "totalCost": "Execution Cost",
     "subscriptionCalls": "Subscription Runs",
     "subscriptionCallsByRole": "runtime {runtime} · dev {dev}",
-    "languageToggle": "KO"
+    "languageToggle": "KO",
+    "regressedBadge": "{count} regressed"
   },
   "degraded": {
     "banner": "Escalation blocked — {days} days until reset"
@@ -107,6 +108,10 @@
     "checkpoint.acknowledged": "Checkpoint acknowledged: {checkpointId}",
     "guardrail.acknowledged": "Guardrail acknowledged: {id}",
     "system.restored": "System restored: {text}",
+    "measurement.regressed": "Regression detected: {metricId} {before} -> {after} ({reasonCode})",
+    "review.routed": "Review routed: {proposalId} ({reasonCode}) {text}",
+    "track.resumed": "Track resumed: {metricId}",
+    "track.dismissed": "Track dismissed: {metricId} ({reasonCode})",
     "executor.escalated": "Executor escalated: {from} -> {to} ({text})",
     "scenario.step": "Scenario step: {text}",
     "measure.completed": "Measurement completed: {providerId}, {violationCount} violations"
@@ -144,7 +149,8 @@
     "impact": "Expected Impact",
     "noChanges": "No proposed changes are available.",
     "noImpact": "No expected impact is available.",
-    "rejectionPrompt": "Reason for rejecting this change proposal"
+    "rejectionPrompt": "Reason for rejecting this change proposal",
+    "rollbackBadge": "Rollback"
   },
   "risk": {
     "assessedRisk": "Assessed risk",

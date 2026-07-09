@@ -15,6 +15,8 @@
   --blue-bg: #e8f0ff;
   --gray: #5b6472;
   --gray-bg: #edf0f4;
+  --orange: #b5540a;
+  --orange-bg: #ffe9d6;
   --ink: #111827;
   --selected-bg: #eef6f2;
   --panel-soft: #fbfcfe;
@@ -40,6 +42,8 @@
   --blue-bg: #172a4f;
   --gray: #c0c8d2;
   --gray-bg: #2a3038;
+  --orange: #ffab5e;
+  --orange-bg: #40270f;
   --ink: #f3f6f9;
   --selected-bg: #1e3028;
   --panel-soft: #1c232b;
@@ -363,6 +367,12 @@ textarea {
   background: var(--gray-bg);
 }
 
+.status-regressed,
+.status-rollback {
+  color: var(--orange);
+  background: var(--orange-bg);
+}
+
 [data-theme="dark"] .status-completed,
 [data-theme="dark"] .status-passed,
 [data-theme="dark"] .status-approved,
@@ -399,6 +409,12 @@ textarea {
 [data-theme="dark"] .status-suspended_tracks {
   color: #c7d0dc;
   background: #303741;
+}
+
+[data-theme="dark"] .status-regressed,
+[data-theme="dark"] .status-rollback {
+  color: #ffab5e;
+  background: #40270f;
 }
 
 .stage-list,

@@ -170,9 +170,10 @@ static MeasureOutcome RunMeasureCore(Storage storage, string projectId, JsonSeri
     }
 
     storage.CreateRestorePoint(projectId);
+    var previousMeasurement = bundle.Measurement;
     var targetRoot = ResolveMeasurementTargetRoot(storage.ProjectPath(projectId), provider!);
     bundle.Measurement = DevPackMeasures.Measure(targetRoot, providerId, bundle.Blueprint);
-    var violationCount = ApplyMeasurementResult(bundle, providerId, ntfy);
+    var violationCount = ApplyMeasurementResult(bundle, providerId, ntfy, previousMeasurement);
     Persist(storage, projectId, bundle, jsonOptions, ntfy);
     return new MeasureOutcome(bundle, null, violationCount);
 }
@@ -248,10 +249,12 @@ static JsonObject CliError(string message)
 }
 
 // 측정 결과를 상태, 로그, 제안에 반영하고 위반 수를 반환한다.
-static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyOptions ntfy)
+static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyOptions ntfy, JsonObject previousMeasurement)
 {
     var checks = EvaluateBlueprintChecks(bundle.Blueprint, bundle.Measurement);
     var violations = checks.Where(check => check.Implemented && !check.Passed).ToList();
+    var previousChecks = EvaluateBlueprintChecks(bundle.Blueprint, previousMeasurement);
+    var regressions = DetectRegressions(previousChecks, checks);
     var stages = ResolveMeasurementStages(bundle.Definition);
     var state = bundle.State;
     var runLog = Engine.AppendLog(bundle.RunLog, new JsonObject
@@ -265,6 +268,7 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
 
     state = ApplyMeasurementStagePatch(bundle.Definition, state, checks, violations, stages);
     SetMeasurementDetails(state, stages.DeviationStageId, checks, violations);
+    runLog = ResumeSatisfiedTracks(state, runLog, checks);
 
     if (violations.Count > 0)
     {
@@ -282,49 +286,95 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
             ["cost"] = RuntimeCost(),
         }, Engine.GetLoopIteration(state));
 
-        var generation = GenerateProposalWithFallback(bundle.Definition, bundle.Proposal, violations, previousReviewReport: null);
-        bundle.Proposal = generation.Proposal;
-        runLog = Engine.AppendLog(runLog, generation.LogEntry, Engine.GetLoopIteration(state));
-        runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
-
-        var tier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
-        runLog = Engine.AppendLog(runLog, tier1.LogEntry, Engine.GetLoopIteration(state));
-
-        if (tier1.Report is not null)
+        if (regressions.Count > 0)
         {
-            AppendReport(bundle.Reviews, tier1.Report);
-        }
+            var relatedProposalId = FindRecentApprovedProposalId(bundle.Reviews, previousMeasurement);
 
-        var maxRegenerations = Number(bundle.Definition["executorPolicy"]?.AsObject()["maxRegenerations"], 0);
+            foreach (var regression in regressions)
+            {
+                runLog = Engine.AppendLog(runLog, new JsonObject
+                {
+                    ["event"] = "measurement.regressed",
+                    ["params"] = new JsonObject
+                    {
+                        ["metricId"] = regression.MetricId,
+                        ["before"] = regression.PreviousValue is null ? null : Engine.CloneNode(regression.PreviousValue),
+                        ["after"] = regression.CurrentValue is null ? null : Engine.CloneNode(regression.CurrentValue),
+                        ["reasonCode"] = "checklist.metric_regressed",
+                    },
+                    ["level"] = "warning",
+                    ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+                    ["cost"] = RuntimeCost(),
+                }, Engine.GetLoopIteration(state));
 
-        for (var regeneration = 0; regeneration < maxRegenerations && tier1.Verdict == "needs_changes"; regeneration += 1)
-        {
-            var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
+                AddSuspendedTrack(state, regression, relatedProposalId);
+            }
+
+            bundle.Proposal = CreateRollbackProposal(regressions, relatedProposalId);
+            runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
             runLog = Engine.AppendLog(runLog, new JsonObject
             {
-                ["event"] = "proposal.superseded",
-                ["params"] = new JsonObject { ["proposalId"] = supersededId, ["reasonCode"] = "review.needs_changes_regenerate" },
-                ["level"] = "info",
+                ["event"] = "review.routed",
+                ["params"] = new JsonObject
+                {
+                    ["proposalId"] = bundle.Proposal["id"]?.GetValue<string>() ?? "",
+                    ["reasonCode"] = "regression_direct_to_human",
+                    ["text"] = "악화 롤백은 체크리스트가 검토할 내용이 없어 1층을 건너뛰고 사람 결재로 직행한다.",
+                },
+                ["level"] = "warning",
                 ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
                 ["cost"] = RuntimeCost(),
             }, Engine.GetLoopIteration(state));
 
-            generation = GenerateProposalWithFallback(bundle.Definition, bundle.Proposal, violations, previousReviewReport: tier1.Report);
+            SetRegressionReviewDetails(state, stages.ReviewStageId, regressions);
+            Notifier.NotifyMeasurementRegressed(ntfy, ProjectDisplayName(state), regressions.Select(r => r.MetricId).ToList());
+        }
+        else
+        {
+            var generation = GenerateProposalWithFallback(bundle.Definition, bundle.Proposal, violations, previousReviewReport: null);
             bundle.Proposal = generation.Proposal;
             runLog = Engine.AppendLog(runLog, generation.LogEntry, Engine.GetLoopIteration(state));
             runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
 
-            tier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
+            var tier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
             runLog = Engine.AppendLog(runLog, tier1.LogEntry, Engine.GetLoopIteration(state));
 
             if (tier1.Report is not null)
             {
                 AppendReport(bundle.Reviews, tier1.Report);
             }
-        }
 
-        SetTier1Details(state, stages.ReviewStageId, tier1);
-        Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), tier1.Verdict);
+            var maxRegenerations = Number(bundle.Definition["executorPolicy"]?.AsObject()["maxRegenerations"], 0);
+
+            for (var regeneration = 0; regeneration < maxRegenerations && tier1.Verdict == "needs_changes"; regeneration += 1)
+            {
+                var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
+                runLog = Engine.AppendLog(runLog, new JsonObject
+                {
+                    ["event"] = "proposal.superseded",
+                    ["params"] = new JsonObject { ["proposalId"] = supersededId, ["reasonCode"] = "review.needs_changes_regenerate" },
+                    ["level"] = "info",
+                    ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+                    ["cost"] = RuntimeCost(),
+                }, Engine.GetLoopIteration(state));
+
+                generation = GenerateProposalWithFallback(bundle.Definition, bundle.Proposal, violations, previousReviewReport: tier1.Report);
+                bundle.Proposal = generation.Proposal;
+                runLog = Engine.AppendLog(runLog, generation.LogEntry, Engine.GetLoopIteration(state));
+                runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
+
+                tier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
+                runLog = Engine.AppendLog(runLog, tier1.LogEntry, Engine.GetLoopIteration(state));
+
+                if (tier1.Report is not null)
+                {
+                    AppendReport(bundle.Reviews, tier1.Report);
+                }
+            }
+
+            SetTier1Details(state, stages.ReviewStageId, tier1);
+            Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), tier1.Verdict);
+        }
     }
     else if (bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted")
     {
@@ -638,6 +688,164 @@ static JsonObject ProposalCreatedLog(JsonObject proposal)
     };
 }
 
+// 직전 측정에서는 충족했으나 이번 측정에서 위반으로 바뀐 metric을 찾는다.
+static List<MetricRegression> DetectRegressions(List<MetricCheck> previousChecks, List<MetricCheck> currentChecks)
+{
+    var previousByMetric = previousChecks
+        .Where(check => check.Implemented)
+        .ToDictionary(check => check.MetricId, StringComparer.Ordinal);
+    var regressions = new List<MetricRegression>();
+
+    foreach (var current in currentChecks.Where(check => check.Implemented && !check.Passed))
+    {
+        if (previousByMetric.TryGetValue(current.MetricId, out var previous) && previous.Passed)
+        {
+            regressions.Add(new MetricRegression(current.MetricId, previous.Value, current.Value, current.Goal, current.Expected, current.Evidence));
+        }
+    }
+
+    return regressions;
+}
+
+// 직전 측정 이후 사람이 승인한 가장 최근 proposal id를 찾는다. 없으면 null(원인 미상).
+static string? FindRecentApprovedProposalId(JsonObject reviews, JsonObject previousMeasurement)
+{
+    var sinceText = previousMeasurement["measuredAt"]?.GetValue<string>();
+    var since = DateTimeOffset.TryParse(sinceText, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedSince)
+        ? parsedSince
+        : DateTimeOffset.MinValue;
+
+    return (reviews["reports"]?.AsArray() ?? new JsonArray())
+        .OfType<JsonObject>()
+        .Where(report => report["verdict"]?.GetValue<string>() == "approved" &&
+            report["reviewer"]?.AsObject()["type"]?.GetValue<string>() == "human" &&
+            DateTimeOffset.TryParse(report["createdAt"]?.GetValue<string>(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var createdAt) &&
+            createdAt >= since)
+        .OrderByDescending(report => report["createdAt"]?.GetValue<string>(), StringComparer.Ordinal)
+        .Select(report => report["proposalId"]?.GetValue<string>())
+        .FirstOrDefault();
+}
+
+// 악화 metric 목록으로 롤백 제안을 만든다. rule-engine이 역산하며 Ollama를 쓰지 않는다.
+static JsonObject CreateRollbackProposal(List<MetricRegression> regressions, string? relatedProposalId)
+{
+    var changes = new JsonArray();
+    var metricNames = new List<string>();
+    var suspectText = relatedProposalId ?? "원인 미상";
+
+    foreach (var regression in regressions)
+    {
+        metricNames.Add(regression.MetricId);
+        changes.Add(new JsonObject
+        {
+            ["path"] = regression.MetricId,
+            ["before"] = regression.CurrentValue is null ? null : Engine.CloneNode(regression.CurrentValue),
+            ["after"] = regression.PreviousValue is null ? null : Engine.CloneNode(regression.PreviousValue),
+            ["note"] = $"직전 승인 {suspectText} 이후 {regression.MetricId}이 {ValueTextOrNone(regression.PreviousValue)}→{ValueTextOrNone(regression.CurrentValue)}로 악화됨. 되돌리거나 원인 조사 필요",
+        });
+    }
+
+    return new JsonObject
+    {
+        ["schemaVersion"] = 2,
+        ["id"] = $"proposal-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+        ["title"] = $"악화 롤백 제안: {string.Join(", ", metricNames)}",
+        ["lifecycle"] = "submitted",
+        ["kind"] = "rollback",
+        ["createdBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+        ["revisionOf"] = relatedProposalId,
+        ["summary"] = "직전에 충족되던 지표가 악화되어 자동 롤백을 제안한다. 체크리스트가 검토할 내용이 없어 1층을 건너뛰고 사람 결재로 직행한다.",
+        ["changes"] = changes,
+        ["impact"] = new JsonArray
+        {
+            new JsonObject { ["label"] = "악화 항목", ["value"] = regressions.Count.ToString(CultureInfo.InvariantCulture) },
+            new JsonObject { ["label"] = "예상 비용", ["value"] = "$0.00" },
+        },
+    };
+}
+
+// 악화 라우팅을 검토 단계 상세에 반영한다(1층 검토를 건너뛴 사실을 표시).
+static void SetRegressionReviewDetails(JsonObject state, string? stageId, List<MetricRegression> regressions)
+{
+    if (stageId is null)
+    {
+        return;
+    }
+
+    var issues = regressions
+        .Select(regression => $"{regression.MetricId}: {ValueTextOrNone(regression.PreviousValue)}→{ValueTextOrNone(regression.CurrentValue)}로 악화")
+        .ToList();
+
+    state["stageDetails"] ??= new JsonObject();
+    state["stageDetails"]!.AsObject()[stageId] = new JsonObject
+    {
+        ["summary"] = "악화가 감지되어 1층 검토를 건너뛰고 사람 결재로 직행했다.",
+        ["metrics"] = new JsonArray { new JsonObject { ["label"] = "라우팅", ["value"] = "사람 직행" } },
+        ["issues"] = new JsonArray(issues.Select(issue => (JsonNode)issue).ToArray()),
+    };
+}
+
+// suspendedTracks에 악화 항목을 추가한다(이미 있으면 건너뜀).
+static void AddSuspendedTrack(JsonObject state, MetricRegression regression, string? relatedProposalId)
+{
+    var tracks = state["suspendedTracks"]?.AsArray() ?? new JsonArray();
+    state["suspendedTracks"] = tracks;
+
+    var alreadySuspended = tracks.OfType<JsonObject>().Any(track => track["metricId"]?.GetValue<string>() == regression.MetricId);
+
+    if (alreadySuspended)
+    {
+        return;
+    }
+
+    tracks.Add(new JsonObject
+    {
+        ["metricId"] = regression.MetricId,
+        ["detectedAt"] = DateTimeOffset.Now.ToString("O"),
+        ["relatedProposalId"] = relatedProposalId,
+        ["suspectConfidence"] = "temporal",
+    });
+}
+
+// suspendedTracks 중 충족으로 복귀한 항목을 해제하고 로그를 남긴다.
+static JsonObject ResumeSatisfiedTracks(JsonObject state, JsonObject runLog, List<MetricCheck> checks)
+{
+    var tracks = state["suspendedTracks"]?.AsArray();
+
+    if (tracks is null || tracks.Count == 0)
+    {
+        return runLog;
+    }
+
+    var checksByMetric = checks.Where(check => check.Implemented).ToDictionary(check => check.MetricId, StringComparer.Ordinal);
+    var remaining = new JsonArray();
+    var nextRunLog = runLog;
+
+    foreach (var track in tracks.OfType<JsonObject>())
+    {
+        var metricId = track["metricId"]?.GetValue<string>() ?? "";
+
+        if (checksByMetric.TryGetValue(metricId, out var check) && check.Passed)
+        {
+            nextRunLog = Engine.AppendLog(nextRunLog, new JsonObject
+            {
+                ["event"] = "track.resumed",
+                ["params"] = new JsonObject { ["metricId"] = metricId },
+                ["level"] = "info",
+                ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+                ["cost"] = RuntimeCost(),
+            }, Engine.GetLoopIteration(state));
+        }
+        else
+        {
+            remaining.Add(Engine.CloneNode(track));
+        }
+    }
+
+    state["suspendedTracks"] = remaining;
+    return nextRunLog;
+}
+
 // 측정 위반 목록을 변경 제안으로 변환한다.
 static JsonObject CreateMeasurementProposal(JsonObject currentProposal, List<MetricCheck> violations)
 {
@@ -823,11 +1031,61 @@ static IResult Reject(Storage storage, string projectId, JsonObject body, JsonSe
         ["cost"] = RuntimeCost(),
     }, Engine.GetLoopIteration(state));
 
+    runLog = ClearRejectedSuspendedTracks(state, bundle.Proposal, runLog);
     bundle.State = state;
     bundle.RunLog = runLog;
     bundle.Proposal["lifecycle"] = "decided";
     AppendReport(bundle.Reviews, report);
     return Persist(storage, projectId, bundle, jsonOptions, ntfy);
+}
+
+// 거절된 제안이 다루던 metric의 suspendedTracks 항목을 정리한다("유지하고 관찰" 선택).
+static JsonObject ClearRejectedSuspendedTracks(JsonObject state, JsonObject proposal, JsonObject runLog)
+{
+    var tracks = state["suspendedTracks"]?.AsArray();
+
+    if (tracks is null || tracks.Count == 0)
+    {
+        return runLog;
+    }
+
+    var rejectedMetricIds = (proposal["changes"]?.AsArray() ?? new JsonArray())
+        .OfType<JsonObject>()
+        .Select(change => change["path"]?.GetValue<string>())
+        .Where(path => !string.IsNullOrWhiteSpace(path))
+        .ToHashSet(StringComparer.Ordinal);
+
+    if (rejectedMetricIds.Count == 0)
+    {
+        return runLog;
+    }
+
+    var remaining = new JsonArray();
+    var nextRunLog = runLog;
+
+    foreach (var track in tracks.OfType<JsonObject>())
+    {
+        var metricId = track["metricId"]?.GetValue<string>() ?? "";
+
+        if (rejectedMetricIds.Contains(metricId))
+        {
+            nextRunLog = Engine.AppendLog(nextRunLog, new JsonObject
+            {
+                ["event"] = "track.dismissed",
+                ["params"] = new JsonObject { ["metricId"] = metricId, ["reasonCode"] = "review.rejected" },
+                ["level"] = "info",
+                ["producedBy"] = new JsonObject { ["provider"] = "human", ["model"] = null },
+                ["cost"] = RuntimeCost(),
+            }, Engine.GetLoopIteration(state));
+        }
+        else
+        {
+            remaining.Add(Engine.CloneNode(track));
+        }
+    }
+
+    state["suspendedTracks"] = remaining;
+    return nextRunLog;
 }
 
 // 변경 항목 편집 액션을 처리하고 결과 파일을 기록한다.
@@ -1262,9 +1520,17 @@ static string ValueText(JsonNode node)
     return node is JsonValue ? node.ToString() : node.ToJsonString();
 }
 
+// 값이 없을 수 있는 노드를 표시용 문자열로 만든다.
+static string ValueTextOrNone(JsonNode? node)
+{
+    return node is null ? "없음" : ValueText(node);
+}
+
 public sealed record MeasurementStages(string? MeasureStageId, string? DeviationStageId, string? ReviewStageId, string? ApplyStageId);
 
 public sealed record MetricCheck(string MetricId, JsonNode? Value, JsonNode? Goal, bool Implemented, bool Passed, string Expected, List<string> Evidence);
+
+public sealed record MetricRegression(string MetricId, JsonNode? PreviousValue, JsonNode? CurrentValue, JsonNode? Goal, string Expected, List<string> Evidence);
 
 public sealed record ProposalGeneration(JsonObject Proposal, JsonObject LogEntry);
 

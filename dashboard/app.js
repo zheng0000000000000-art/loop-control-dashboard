@@ -47,6 +47,7 @@ const elements = {
   pipelineMinimap: document.querySelector("#pipelineMinimap"),
   schemaWarning: document.querySelector("#schemaWarning"),
   overallStatus: document.querySelector("#overallStatus"),
+  regressedBadge: document.querySelector("#regressedBadge"),
   totalCostLabel: document.querySelector("#totalCostLabel"),
   totalCost: document.querySelector("#totalCost"),
   subscriptionCallsLabel: document.querySelector("#subscriptionCallsLabel"),
@@ -169,6 +170,9 @@ function bindEvents() {
   });
   elements.replayScenario.addEventListener("click", replayScenario);
   elements.downloadJson.addEventListener("click", downloadWorkspaceJson);
+  elements.regressedBadge.addEventListener("click", () => {
+    elements.approvalPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   document.addEventListener("keydown", handleKeyboardShortcut);
 }
 
@@ -349,6 +353,7 @@ function render() {
   renderSchemaWarning();
   elements.projectName.textContent = workflowState.projectName ?? activeProject?.name ?? "";
   setStatusBadge(elements.overallStatus, getOverallBadgeStatus(), getOverallBadgeLabel());
+  renderRegressedBadge();
   elements.totalCost.textContent = formatCurrency(sumEstimatedCost(runLog));
   elements.subscriptionCalls.textContent = formatSubscriptionCallsByRole(runLog);
   elements.replayScenario.disabled = scenarioRunning || getScenarioEvents().length === 0;
@@ -376,6 +381,19 @@ function renderSchemaWarning() {
       .join(", "),
     expected: `${EXPECTED_SCHEMA_VERSION}/${RUN_LOG_SCHEMA_VERSION}`,
   });
+}
+
+// 헤더의 악화 배지를 렌더링한다.
+function renderRegressedBadge() {
+  const count = Array.isArray(workflowState.suspendedTracks) ? workflowState.suspendedTracks.length : 0;
+
+  if (count === 0) {
+    elements.regressedBadge.hidden = true;
+    return;
+  }
+
+  elements.regressedBadge.hidden = false;
+  elements.regressedBadge.textContent = t("header.regressedBadge", { count });
 }
 
 // 헤더의 단계 미니맵을 렌더링한다.
@@ -609,6 +627,10 @@ function renderApprovalPanel() {
     }),
     createStatusBadge(context.status),
   );
+
+  if (proposal.kind === "rollback") {
+    titleRow.append(createStatusBadge("rollback", t("approval.rollbackBadge")));
+  }
 
   const meta = createElement("div", { className: "proposal-meta" });
   meta.append(

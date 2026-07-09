@@ -31,6 +31,12 @@ public static class Notifier
         Send(options, "데이터 자동 복원", $"{projectName}: 파손된 파일을 최근 복원 지점으로 되돌렸다.", urgent: false);
     }
 
+    // 충족하던 지표의 악화를 알린다(긴급).
+    public static void NotifyMeasurementRegressed(NtfyOptions options, string projectName, List<string> metricIds)
+    {
+        Send(options, "악화 감지", $"{projectName}: {string.Join(", ", metricIds)} 악화 — 롤백 제안이 결재 대기 중", urgent: true);
+    }
+
     // ntfy JSON publish API로 알림을 비동기 발송한다. 실패는 콘솔에만 남긴다.
     private static void Send(NtfyOptions options, string title, string message, bool urgent)
     {

@@ -13,7 +13,8 @@
     "totalCost": "누적 실행 비용",
     "subscriptionCalls": "구독 실행 횟수",
     "subscriptionCallsByRole": "런타임 {runtime} · 개발 {dev}",
-    "languageToggle": "영문"
+    "languageToggle": "영문",
+    "regressedBadge": "악화 {count}건"
   },
   "degraded": {
     "banner": "승격 봉쇄 중 — 리셋까지 {days}일"
@@ -107,6 +108,10 @@
     "checkpoint.acknowledged": "체크포인트 확인: {checkpointId}",
     "guardrail.acknowledged": "가드레일 확인: {id}",
     "system.restored": "시스템 복원: {text}",
+    "measurement.regressed": "악화 감지: {metricId} {before} -> {after} ({reasonCode})",
+    "review.routed": "검토 라우팅: {proposalId} ({reasonCode}) {text}",
+    "track.resumed": "보류 해제: {metricId}",
+    "track.dismissed": "보류 정리: {metricId} ({reasonCode})",
     "executor.escalated": "실행자 승격: {from} -> {to} ({text})",
     "scenario.step": "시나리오 단계: {text}",
     "measure.completed": "측정 완료: {providerId}, 위반 {violationCount}개"
@@ -144,7 +149,8 @@
     "impact": "예상 영향",
     "noChanges": "표시할 변경 항목이 없다.",
     "noImpact": "예상 영향 정보가 없다.",
-    "rejectionPrompt": "변경 제안 거절 사유"
+    "rejectionPrompt": "변경 제안 거절 사유",
+    "rollbackBadge": "롤백"
   },
   "risk": {
     "assessedRisk": "산정 위험도",

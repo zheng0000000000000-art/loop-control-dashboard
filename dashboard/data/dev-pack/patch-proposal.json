@@ -1,25 +1,26 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783571650077",
-  "title": "after 값 0으로 설정",
+  "id": "proposal-1783590563696",
+  "title": "악화 롤백 제안: functionsWithoutComment",
   "lifecycle": "superseded",
+  "kind": "rollback",
   "createdBy": {
-    "provider": "ollama",
-    "model": "qwen3:8b"
+    "provider": "rule-engine",
+    "model": null
   },
-  "revisionOf": "proposal-1783571637531",
-  "summary": "이전 시도에서 측정값 1과 after 값 0이 일치하지 않아 거절되었으므로, after 값을 0으로 설정해야 한다는 점을 명시하였다.",
+  "revisionOf": null,
+  "summary": "직전에 충족되던 지표가 악화되어 자동 롤백을 제안한다. 체크리스트가 검토할 내용이 없어 1층을 건너뛰고 사람 결재로 직행한다.",
   "changes": [
     {
-      "path": "koPoliteEndings",
+      "path": "functionsWithoutComment",
       "before": 1,
       "after": 0,
-      "note": "이전 시도에서 측정값 1과 after 값 0이 일치하지 않아 거절되었으므로, 측정값은 유지되며 after 값이 0으로 설정되어야 한다는 점을 명시하였다."
+      "note": "직전 승인 원인 미상 이후 functionsWithoutComment이 0→1로 악화됨. 되돌리거나 원인 조사 필요"
     }
   ],
   "impact": [
     {
-      "label": "위반 항목",
+      "label": "악화 항목",
       "value": "1"
     },
     {
