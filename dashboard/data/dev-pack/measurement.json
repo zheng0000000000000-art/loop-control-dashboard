@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-10T10:22:34.8231680+09:00",
+  "measuredAt": "2026-07-10T11:46:02.2744493+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
@@ -55,7 +55,7 @@
       "metricId": "smallTouchTargets",
       "value": 1,
       "evidence": [
-        "dashboard/style.css:1097"
+        "dashboard/style.css:1133"
       ]
     },
     {
@@ -78,23 +78,23 @@
     },
     {
       "metricId": "programCsLines",
-      "value": 2684,
+      "value": 2689,
       "evidence": [
-        "server/Program.cs:2684 lines"
+        "server/Program.cs:2689 lines"
       ]
     },
     {
       "metricId": "appJsLines",
-      "value": 2617,
+      "value": 2669,
       "evidence": [
-        "dashboard/app.js:2617 lines"
+        "dashboard/app.js:2669 lines"
       ]
     },
     {
       "metricId": "maxFunctionLength",
       "value": 246,
       "evidence": [
-        "server/Program.cs:785-1030"
+        "server/Program.cs:790-1035"
       ]
     }
   ]

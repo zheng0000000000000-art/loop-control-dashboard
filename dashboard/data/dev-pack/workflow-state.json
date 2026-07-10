@@ -19,7 +19,7 @@
       "suspectConfidence": "temporal"
     }
   ],
-  "loopIteration": 7,
+  "loopIteration": 8,
   "stages": {
     "goals": "passed",
     "measure": "passed",
@@ -105,11 +105,11 @@
         },
         {
           "label": "programCsLines",
-          "value": "2684 / 0~2661"
+          "value": "2689 / 0~2661"
         },
         {
           "label": "appJsLines",
-          "value": "2617 / 0~2692"
+          "value": "2669 / 0~2692"
         },
         {
           "label": "maxFunctionLength",
@@ -117,10 +117,10 @@
         }
       ],
       "issues": [
-        "smallTouchTargets: 측정값 1이 기준 0을 벗어났다. 근거: dashboard/style.css:1097",
+        "smallTouchTargets: 측정값 1이 기준 0을 벗어났다. 근거: dashboard/style.css:1133",
         "skillDomainViolations: 측정값 2이 기준 0을 벗어났다. 근거: docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md",
-        "programCsLines: 측정값 2684이 기준 0~2661을 벗어났다. 근거: server/Program.cs:2684 lines",
-        "maxFunctionLength: 측정값 246이 기준 0~80을 벗어났다. 근거: server/Program.cs:785-1030"
+        "programCsLines: 측정값 2689이 기준 0~2661을 벗어났다. 근거: server/Program.cs:2689 lines",
+        "maxFunctionLength: 측정값 246이 기준 0~80을 벗어났다. 근거: server/Program.cs:790-1035"
       ]
     },
     "changeReview": {
@@ -132,7 +132,7 @@
         }
       ],
       "issues": [
-        "no-scope-creep: changes에 blueprint 위반 해소와 무관한 항목이 섞여 있는가"
+        "no-scope-creep: changes에 blueprint 위반 해소와 무관한 항목이 섞여 있는가: Program.cs 파일의 코드 줄 수 줄이기"
       ]
     },
     "apply": {
@@ -141,7 +141,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-10T11:26:25.8681320+09:00",
+  "lastUpdated": "2026-07-10T11:56:06.9205111+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
