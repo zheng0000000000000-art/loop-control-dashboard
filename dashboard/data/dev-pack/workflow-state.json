@@ -127,16 +127,14 @@
       ]
     },
     "changeReview": {
-      "summary": "1층 체크리스트 결과를 사람이 확인해야 한다.",
+      "summary": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
       "metrics": [
         {
           "label": "1층 검토 판정",
-          "value": "uncertain"
+          "value": "approved"
         }
       ],
-      "issues": [
-        "no-scope-creep: 제안은 smallTouchTargets 문제 해결에 초점이 맞춰져 있으나, 측정 요약에는 skillDomainViolations와 같은 blueprint 위반 항목이 포함되어 있다."
-      ]
+      "issues": []
     },
     "apply": {
       "summary": "변경 승인이 완료될 때까지 차단된다.",
@@ -151,7 +149,7 @@
       ]
     }
   },
-  "lastUpdated": "2026-07-10T22:14:48.5084448+09:00",
+  "lastUpdated": "2026-07-10T22:15:17.2399445+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
@@ -163,7 +161,7 @@
       "id": "guardrail",
       "type": "loopIteration",
       "loopIteration": 10,
-      "acknowledgedAt": "2026-07-10T22:14:48.5084260+09:00"
+      "acknowledgedAt": "2026-07-10T22:15:17.2399332+09:00"
     }
   ],
   "acknowledgedCheckpoints": [

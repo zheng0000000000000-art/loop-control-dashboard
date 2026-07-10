@@ -1,27 +1,27 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783689262084",
-  "title": "UI/UX 개선 및 코드 품질 향상",
+  "id": "proposal-1783689287779",
+  "title": "사용성 및 코드 품질 개선",
   "lifecycle": "submitted",
   "createdBy": {
     "provider": "ollama",
     "model": "qwen3:8b"
   },
-  "revisionOf": null,
-  "summary": "버튼 스타일 조정, 지침 정확성 개선, 함수 길이 단축을 통해 사용자 터치 오류 감소 및 코드 가독성 향상 목표",
+  "revisionOf": "proposal-1783689262084",
+  "summary": "작은 터치 타겟, 도메인 위반 식별, 함수 길이 최적화를 통해 사용성과 코드 품질을 향상시킵니다.",
   "assumptions": [],
   "changes": [
     {
       "path": "smallTouchTargets",
       "before": 1,
       "after": 0,
-      "note": "타겟 크기 측정값을 줄이기 위해 버튼의 스타일을 조정하여 사용자 터치 시 오류를 줄이는 것이 목적"
+      "note": "작은 터치 타겟을 개선하여 사용자가 쉽게 터치할 수 있도록 하여, 사용성 향상을 기대합니다."
     },
     {
       "path": "skillDomainViolations",
       "before": 2,
       "after": 0,
-      "note": "기존 지침은 적용 지침으로서 작성되어야 하며, 인용 대상이 될 수 없어 수정하여 정확한 내용 전달을 목표로 한다."
+      "note": "기존 문서의 검토 항목이 적용 지침이 아닌 직접적인 인용 내용으로 수정되어, 도메인 위반 사항을 정확히 식별할 수 있도록 함"
     },
     {
       "path": "maxFunctionLength",
@@ -30,7 +30,7 @@
         0,
         80
       ],
-      "note": "함수 길이를 단축하여 가독성과 유지보수성을 향상시키고, 코드의 복잡성을 줄이는 데 목적이 있다."
+      "note": "함수 길이를 줄여 가독성과 유지보수성을 향상시키고, 코드의 복잡도를 낮추는 것을 목표로 합니다."
     }
   ],
   "impact": [
