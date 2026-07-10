@@ -168,18 +168,8 @@ function bindEvents() {
     loadProject(event.target.value).catch(renderLoadError);
   });
   elements.tokenStatusBtn.addEventListener("click", async () => {
-    if (actionToken) {
-      actionToken = null;
-      localStorage.removeItem("actionToken");
-      updateTokenStatusBtn();
-    } else {
-      const entered = (await promptModal(t("remote.tokenPromptPersist"), { password: true })) || null;
-      if (entered) {
-        actionToken = entered;
-        localStorage.setItem("actionToken", actionToken);
-        updateTokenStatusBtn();
-      }
-    }
+    if (actionToken) setActionToken(null);
+    else await refreshActionToken();
   });
   elements.languageToggle.addEventListener("click", () => {
     language = language === "ko" ? "en" : "ko";
@@ -1905,34 +1895,16 @@ async function postProjectAction(action, body) {
     });
 
     if (response.status === 401) {
-      if (actionToken) {
-        actionToken = null;
-        localStorage.removeItem("actionToken");
-        updateTokenStatusBtn();
-      }
-
-      const entered = (await promptModal(t("remote.tokenPromptPersist"), { password: true })) || null;
-
-      if (!entered) {
+      if (!await refreshActionToken()) {
         showActionError({ reason: t("remote.tokenCancelled"), reasonCode: "auth.token_required" });
         return false;
       }
-
-      actionToken = entered;
-      localStorage.setItem("actionToken", actionToken);
-      updateTokenStatusBtn();
-
       response = await fetch(apiProjectActionPath(action), {
         method: "POST",
         headers: buildActionHeaders(),
         body: JSON.stringify(body ?? {}),
       });
-
-      if (response.status === 401) {
-        actionToken = null;
-        localStorage.removeItem("actionToken");
-        updateTokenStatusBtn();
-      }
+      if (response.status === 401) setActionToken(null);
     }
   } catch (error) {
     showActionError(error);
@@ -1969,34 +1941,16 @@ async function postOutboxImportAction(taskId, action, body) {
     });
 
     if (response.status === 401) {
-      if (actionToken) {
-        actionToken = null;
-        localStorage.removeItem("actionToken");
-        updateTokenStatusBtn();
-      }
-
-      const entered = (await promptModal(t("remote.tokenPromptPersist"), { password: true })) || null;
-
-      if (!entered) {
+      if (!await refreshActionToken()) {
         showActionError({ reason: t("remote.tokenCancelled"), reasonCode: "auth.token_required" });
         return { ok: false, payload: null };
       }
-
-      actionToken = entered;
-      localStorage.setItem("actionToken", actionToken);
-      updateTokenStatusBtn();
-
       response = await fetch(url, {
         method: "POST",
         headers: buildActionHeaders(),
         body: JSON.stringify(body ?? {}),
       });
-
-      if (response.status === 401) {
-        actionToken = null;
-        localStorage.removeItem("actionToken");
-        updateTokenStatusBtn();
-      }
+      if (response.status === 401) setActionToken(null);
     }
   } catch (error) {
     showActionError(error);
@@ -2225,17 +2179,27 @@ function applyLanguage() {
   elements.approvalEyebrow.textContent = t("panels.approvalEyebrow");
   elements.logEyebrow.textContent = t("panels.logEyebrow");
   elements.logTitle.textContent = t("panels.logTitle");
-  updateTokenStatusBtn();
+  setActionToken(actionToken);
 
   if (!workflowState) {
     elements.detailTitle.textContent = t("panels.detailTitleLoading");
   }
 }
 
-// 헤더 토큰 상태 버튼 텍스트를 현재 토큰 설정 여부에 맞춰 갱신한다.
-function updateTokenStatusBtn() {
-  if (!elements.tokenStatusBtn) return;
-  elements.tokenStatusBtn.textContent = actionToken ? t("remote.tokenSet") : t("remote.tokenNotSet");
+// 토큰을 저장·삭제하고 버튼 UI를 갱신한다.
+function setActionToken(value) {
+  actionToken = value;
+  if (value) localStorage.setItem("actionToken", value);
+  else localStorage.removeItem("actionToken");
+  elements.tokenStatusBtn.textContent = value ? t("remote.tokenSet") : t("remote.tokenNotSet");
+}
+// 기존 토큰을 지우고 새 토큰을 입력받아 저장한다. 취소 시 false 반환.
+async function refreshActionToken() {
+  setActionToken(null);
+  const entered = (await promptModal(t("remote.tokenPromptPersist"), { password: true })) || null;
+  if (!entered) return false;
+  setActionToken(entered);
+  return true;
 }
 
 // 문서 제목의 승인 대기 개수를 갱신한다.
