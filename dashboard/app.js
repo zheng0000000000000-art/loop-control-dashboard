@@ -56,6 +56,7 @@ const elements = {
   totalCost: document.querySelector("#totalCost"),
   subscriptionCallsLabel: document.querySelector("#subscriptionCallsLabel"),
   subscriptionCalls: document.querySelector("#subscriptionCalls"),
+  tokenStatusBtn: document.querySelector("#tokenStatusBtn"),
   languageToggle: document.querySelector("#languageToggle"),
   themeToggle: document.querySelector("#themeToggle"),
   replayScenario: document.querySelector("#replayScenario"),
@@ -99,7 +100,7 @@ let measureRunning = false;
 let reviewActionRunning = false;
 let serverBacked = false;
 let pollTimer = null;
-let actionToken = null;
+let actionToken = localStorage.getItem("actionToken") || null;
 let globalInbox = { schemaVersion: EXPECTED_SCHEMA_VERSION, items: [] };
 
 initialize();
@@ -165,6 +166,20 @@ async function fetchOptionalJson(path, fallback) {
 function bindEvents() {
   elements.projectSelect.addEventListener("change", (event) => {
     loadProject(event.target.value).catch(renderLoadError);
+  });
+  elements.tokenStatusBtn.addEventListener("click", async () => {
+    if (actionToken) {
+      actionToken = null;
+      localStorage.removeItem("actionToken");
+      updateTokenStatusBtn();
+    } else {
+      const entered = (await promptModal(t("remote.tokenPromptPersist"), { password: true })) || null;
+      if (entered) {
+        actionToken = entered;
+        localStorage.setItem("actionToken", actionToken);
+        updateTokenStatusBtn();
+      }
+    }
   });
   elements.languageToggle.addEventListener("click", () => {
     language = language === "ko" ? "en" : "ko";
@@ -1890,18 +1905,34 @@ async function postProjectAction(action, body) {
     });
 
     if (response.status === 401) {
-      actionToken = (await promptModal(t("remote.tokenPrompt"), { password: true })) || null;
+      if (actionToken) {
+        actionToken = null;
+        localStorage.removeItem("actionToken");
+        updateTokenStatusBtn();
+      }
 
-      if (!actionToken) {
-        showActionError({ reason: t("remote.tokenRequired"), reasonCode: "auth.token_required" });
+      const entered = (await promptModal(t("remote.tokenPromptPersist"), { password: true })) || null;
+
+      if (!entered) {
+        showActionError({ reason: t("remote.tokenCancelled"), reasonCode: "auth.token_required" });
         return false;
       }
+
+      actionToken = entered;
+      localStorage.setItem("actionToken", actionToken);
+      updateTokenStatusBtn();
 
       response = await fetch(apiProjectActionPath(action), {
         method: "POST",
         headers: buildActionHeaders(),
         body: JSON.stringify(body ?? {}),
       });
+
+      if (response.status === 401) {
+        actionToken = null;
+        localStorage.removeItem("actionToken");
+        updateTokenStatusBtn();
+      }
     }
   } catch (error) {
     showActionError(error);
@@ -1938,18 +1969,34 @@ async function postOutboxImportAction(taskId, action, body) {
     });
 
     if (response.status === 401) {
-      actionToken = (await promptModal(t("remote.tokenPrompt"), { password: true })) || null;
+      if (actionToken) {
+        actionToken = null;
+        localStorage.removeItem("actionToken");
+        updateTokenStatusBtn();
+      }
 
-      if (!actionToken) {
-        showActionError({ reason: t("remote.tokenRequired"), reasonCode: "auth.token_required" });
+      const entered = (await promptModal(t("remote.tokenPromptPersist"), { password: true })) || null;
+
+      if (!entered) {
+        showActionError({ reason: t("remote.tokenCancelled"), reasonCode: "auth.token_required" });
         return { ok: false, payload: null };
       }
+
+      actionToken = entered;
+      localStorage.setItem("actionToken", actionToken);
+      updateTokenStatusBtn();
 
       response = await fetch(url, {
         method: "POST",
         headers: buildActionHeaders(),
         body: JSON.stringify(body ?? {}),
       });
+
+      if (response.status === 401) {
+        actionToken = null;
+        localStorage.removeItem("actionToken");
+        updateTokenStatusBtn();
+      }
     }
   } catch (error) {
     showActionError(error);
@@ -1966,7 +2013,7 @@ async function postOutboxImportAction(taskId, action, body) {
   return { ok: true, payload };
 }
 
-// 액션 요청 헤더를 만든다. 토큰은 메모리에만 보관하고 있으면 첨부한다.
+// 액션 요청 헤더를 만든다. 토큰은 localStorage에 영속화하며 설정돼 있으면 첨부한다.
 function buildActionHeaders() {
   const headers = { "Content-Type": "application/json" };
 
@@ -2178,10 +2225,17 @@ function applyLanguage() {
   elements.approvalEyebrow.textContent = t("panels.approvalEyebrow");
   elements.logEyebrow.textContent = t("panels.logEyebrow");
   elements.logTitle.textContent = t("panels.logTitle");
+  updateTokenStatusBtn();
 
   if (!workflowState) {
     elements.detailTitle.textContent = t("panels.detailTitleLoading");
   }
+}
+
+// 헤더 토큰 상태 버튼 텍스트를 현재 토큰 설정 여부에 맞춰 갱신한다.
+function updateTokenStatusBtn() {
+  if (!elements.tokenStatusBtn) return;
+  elements.tokenStatusBtn.textContent = actionToken ? t("remote.tokenSet") : t("remote.tokenNotSet");
 }
 
 // 문서 제목의 승인 대기 개수를 갱신한다.
