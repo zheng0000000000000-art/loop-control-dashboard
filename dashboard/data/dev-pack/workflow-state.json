@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
   "currentStage": "apply",
-  "overallStatus": "in_progress",
-  "loopState": "running",
+  "overallStatus": "warning",
+  "loopState": "paused",
   "mode": "normal",
   "suspendedTracks": [
     {
@@ -11,9 +11,15 @@
       "detectedAt": "2026-07-10T00:00:23.5963707+09:00",
       "relatedProposalId": null,
       "suspectConfidence": "temporal"
+    },
+    {
+      "metricId": "smallTouchTargets",
+      "detectedAt": "2026-07-10T09:39:27.4424984+09:00",
+      "relatedProposalId": "proposal-1783630076578",
+      "suspectConfidence": "temporal"
     }
   ],
-  "loopIteration": 4,
+  "loopIteration": 5,
   "stages": {
     "goals": "passed",
     "measure": "passed",
@@ -43,7 +49,7 @@
       "issues": []
     },
     "deviationCheck": {
-      "summary": "측정 결과에서 3개 괴리가 감지됐다.",
+      "summary": "측정 결과에서 4개 괴리가 감지됐다.",
       "metrics": [
         {
           "label": "domainWordsInEngine",
@@ -55,7 +61,7 @@
         },
         {
           "label": "directiveAcceptanceCriteria",
-          "value": "6 / 3~99"
+          "value": "7 / 3~99"
         },
         {
           "label": "koPoliteEndings",
@@ -83,7 +89,7 @@
         },
         {
           "label": "smallTouchTargets",
-          "value": "0 / 0"
+          "value": "1 / 0"
         },
         {
           "label": "newFontFamilies",
@@ -103,7 +109,7 @@
         },
         {
           "label": "appJsLines",
-          "value": "2446 / 0~2692"
+          "value": "2617 / 0~2692"
         },
         {
           "label": "maxFunctionLength",
@@ -111,6 +117,7 @@
         }
       ],
       "issues": [
+        "smallTouchTargets: 측정값 1이 기준 0을 벗어났다. 근거: dashboard/style.css:1097",
         "skillDomainViolations: 측정값 2이 기준 0을 벗어났다. 근거: docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md",
         "programCsLines: 측정값 2684이 기준 0~2661을 벗어났다. 근거: server/Program.cs:2684 lines",
         "maxFunctionLength: 측정값 246이 기준 0~80을 벗어났다. 근거: server/Program.cs:785-1030"
@@ -125,7 +132,8 @@
         }
       ],
       "issues": [
-        "no-scope-creep: changes에 blueprint 위반 해소와 무관한 항목이 섞여 있는가"
+        "after-matches-goal: 제안의 after 값은 [0,2661]이지만, 측정 요약의 programCsLines 값은 여전히 2684로 변경되지 않았음",
+        "no-scope-creep: changes에 blueprint 위반 해소와 무관한 항목인 'Program.cs 파일의 코드 줄 수 줄이기'가 포함되어 있음"
       ]
     },
     "apply": {
@@ -134,7 +142,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-10T05:49:37.6540536+09:00",
+  "lastUpdated": "2026-07-10T09:51:38.5614691+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
@@ -142,5 +150,11 @@
       "loopIteration": 0,
       "acknowledgedAt": "2026-07-09T13:32:02.3444819+09:00"
     }
-  ]
+  ],
+  "pausedAt": "2026-07-10T09:51:38.5614587+09:00",
+  "pausedBy": {
+    "type": "checkpoint",
+    "checkpointId": "loop-milestone"
+  },
+  "checkpointId": "loop-milestone"
 }

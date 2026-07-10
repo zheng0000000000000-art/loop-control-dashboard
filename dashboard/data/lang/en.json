@@ -230,5 +230,18 @@
     "review": "Review",
     "humanWaiting": "Human wait",
     "total": "Total"
+  },
+  "outbox": {
+    "viewDiff": "View diff",
+    "approveImport": "Approve import",
+    "rejectImport": "Reject import",
+    "rejectPrompt": "Enter reason for rejecting this import",
+    "importSuccess": "Import complete — commit is not automatic. Run git status then commit manually.",
+    "contextBytes": "{bytes} bytes",
+    "cutoffRisk": "cutoff risk {risk}",
+    "staleCheck": "base check {check}",
+    "changedFiles": "{count} changed files",
+    "diffLoading": "Loading diff…",
+    "diffLoadFailed": "Failed to load diff"
   }
 }

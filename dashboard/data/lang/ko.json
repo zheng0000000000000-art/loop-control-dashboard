@@ -230,5 +230,18 @@
     "review": "??",
     "humanWaiting": "?? ??",
     "total": "??"
+  },
+  "outbox": {
+    "viewDiff": "diff 보기",
+    "approveImport": "반입 승인",
+    "rejectImport": "반입 거절",
+    "rejectPrompt": "반입 거절 사유를 입력한다",
+    "importSuccess": "반입 완료 — 커밋은 자동이 아니다. git status 확인 후 직접 커밋한다.",
+    "contextBytes": "컨텍스트 {bytes}바이트",
+    "cutoffRisk": "컷오프 위험 {risk}",
+    "staleCheck": "기반 검사 {check}",
+    "changedFiles": "변경 {count}개",
+    "diffLoading": "diff 로딩 중…",
+    "diffLoadFailed": "diff 로드 실패"
   }
 }
