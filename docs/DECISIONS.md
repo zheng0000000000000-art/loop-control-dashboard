@@ -30,3 +30,6 @@
   전량 확인 가능한 크기로 잡았다. 이상 감지(반입 후 재측정에서 위반 증가, 또는 적용 중
   예외)는 즉시 halt 상태로 전환하고 사람이 `docs/audit/tier2-import-approvals-state.json`의
   `halted`를 직접 고쳐야 재개된다(자동 해제 없음). 상세: `docs/verification/tier2-auto-import-approval.md`.
+- 2026-07-10: 사람이 채팅으로 `Tier2Approver.Enabled: true` 활성화를 명시적으로 확인했다 —
+  `server/appsettings.json`에 반영. 위 결정에서 갈라둔 "장치 구축"과 "활성화"의 두 단계 중
+  후자를 사람이 별도로 확정한 사례다.

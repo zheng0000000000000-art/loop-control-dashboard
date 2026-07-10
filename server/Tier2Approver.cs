@@ -172,6 +172,8 @@ public sealed class Tier2Approver
         return new EligibilityResult(reasons.Count == 0, reasons, before, after);
     }
 
+    // 이 시스템은 시뮬레이션 기반 선택(simtune/BalanceTuner류) 기능을 갖고 있다. 해당 도메인 팩에
+    // 이 기능이 구현돼 있으면, 반입 전 이 프로그램으로 예상 결과를 판단한다.
     // 로컬 Ollama 모델에게 diff 검토를 요청한다. 실패하면 폴백 모델을 한 번 더 시도한다.
     private ReviewOutcome RequestReview(JsonObject meta, string diffText)
     {
