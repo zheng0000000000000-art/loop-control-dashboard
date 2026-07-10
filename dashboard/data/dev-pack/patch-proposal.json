@@ -1,36 +1,27 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783687414910",
+  "id": "proposal-1783688183926",
   "title": "UI/UX 및 코드 품질 개선",
   "lifecycle": "decided",
   "createdBy": {
     "provider": "ollama",
     "model": "qwen3:8b"
   },
-  "revisionOf": "proposal-1783687344280",
-  "summary": "타겟 크기 향상, 기술 도메인 정리, 코드 줄 수 및 함수 길이 단축을 통해 사용성, 접근성, 가독성과 유지보수성을 개선합니다.",
+  "revisionOf": "proposal-1783688038565",
+  "summary": "작은 터치 타겟 조정, 도메인 위반 방지, 함수 길이 단축을 통한 사용성 및 코드 품질 개선을 목표로 합니다.",
   "assumptions": [],
   "changes": [
     {
       "path": "smallTouchTargets",
       "before": 1,
       "after": 0,
-      "note": "타겟 크기 향상을 통해 사용자가 터치할 수 있는 영역을 확대하여 사용성과 접근성을 개선할 예정"
+      "note": "작은 터치 타겟을 조정하여 사용자가 보다 쉽게 타겟을 클릭할 수 있도록 개선합니다."
     },
     {
       "path": "skillDomainViolations",
       "before": 2,
       "after": 0,
-      "note": "기술 도메인 범위를 벗어난 내용을 제거함으로써 관련성 있는 정보만을 유지하여 정확한 도메인 검증을 지원합니다."
-    },
-    {
-      "path": "programCsLines",
-      "before": 2801,
-      "after": [
-        0,
-        2661
-      ],
-      "note": "Program.cs 파일의 코드 줄 수를 2801 줄에서 2661 줄로 줄여서 코드의 가독성과 유지보수성을 향상시키고자 함"
+      "note": "기존 리뷰 finding이 적용 지침임을 명시하여, 잘못된 도메인 적용을 방지하고 위반 수치를 2에서 0으로 감소시키는 데 목적을 설명합니다."
     },
     {
       "path": "maxFunctionLength",
@@ -39,13 +30,13 @@
         0,
         80
       ],
-      "note": "함수 길이를 단축하여 가독성과 유지보수성을 향상시키고, 코드의 복잡도를 낮추는 것이 목적입니다."
+      "note": "함수 길이를 단축하여 가독성과 유지보수성을 향상시키고, 코드 품질 기준에 부합하도록 개선하고자 함"
     }
   ],
   "impact": [
     {
       "label": "위반 항목",
-      "value": "4"
+      "value": "3"
     },
     {
       "label": "예상 비용",

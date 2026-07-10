@@ -19,7 +19,7 @@
       "suspectConfidence": "temporal"
     }
   ],
-  "loopIteration": 8,
+  "loopIteration": 9,
   "stages": {
     "goals": "passed",
     "measure": "passed",
@@ -49,7 +49,7 @@
       "issues": []
     },
     "deviationCheck": {
-      "summary": "측정 결과에서 4개 괴리가 감지됐다.",
+      "summary": "측정 결과에서 3개 괴리가 감지됐다.",
       "metrics": [
         {
           "label": "domainWordsInEngine",
@@ -61,7 +61,7 @@
         },
         {
           "label": "directiveAcceptanceCriteria",
-          "value": "6 / 3~99"
+          "value": "5 / 3~99"
         },
         {
           "label": "koPoliteEndings",
@@ -105,7 +105,7 @@
         },
         {
           "label": "programCsLines",
-          "value": "2801 / 0~2661"
+          "value": "2517 / 0~2661"
         },
         {
           "label": "appJsLines",
@@ -119,21 +119,18 @@
       "issues": [
         "smallTouchTargets: 측정값 1이 기준 0을 벗어났다. 근거: dashboard/style.css:1133",
         "skillDomainViolations: 측정값 2이 기준 0을 벗어났다. 근거: docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md",
-        "programCsLines: 측정값 2801이 기준 0~2661을 벗어났다. 근거: server/Program.cs:2801 lines",
-        "maxFunctionLength: 측정값 261이 기준 0~80을 벗어났다. 근거: server/Program.cs:790-1050"
+        "maxFunctionLength: 측정값 261이 기준 0~80을 벗어났다. 근거: server/Program.cs:506-766"
       ]
     },
     "changeReview": {
-      "summary": "1층 체크리스트 결과를 사람이 확인해야 한다.",
+      "summary": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
       "metrics": [
         {
           "label": "1층 검토 판정",
-          "value": "uncertain"
+          "value": "approved"
         }
       ],
-      "issues": [
-        "no-scope-creep: changes에 blueprint 위반 해소와 무관한 항목이 섞여 있음"
-      ]
+      "issues": []
     },
     "apply": {
       "summary": "승인된 변경을 반영하는 중이다 — 실제로 반영한 뒤 재측정하면 다음 단계로 넘어간다.",
@@ -146,7 +143,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-10T21:44:00.0096717+09:00",
+  "lastUpdated": "2026-07-10T22:00:39.6404483+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
@@ -165,7 +162,6 @@
   "applyBaselineViolations": [
     "smallTouchTargets=1",
     "skillDomainViolations=2",
-    "programCsLines=2801",
     "maxFunctionLength=261"
   ]
 }

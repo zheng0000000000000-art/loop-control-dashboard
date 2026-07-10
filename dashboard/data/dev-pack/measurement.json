@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-10T21:43:27.7804709+09:00",
+  "measuredAt": "2026-07-10T21:56:17.4468690+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
@@ -16,9 +16,9 @@
     },
     {
       "metricId": "directiveAcceptanceCriteria",
-      "value": 6,
+      "value": 5,
       "evidence": [
-        "docs/directives/07-retrospective-queue.md"
+        "docs/directives/16-mobile-approve-token-fix.md"
       ]
     },
     {
@@ -78,9 +78,9 @@
     },
     {
       "metricId": "programCsLines",
-      "value": 2801,
+      "value": 2517,
       "evidence": [
-        "server/Program.cs:2801 lines"
+        "server/Program.cs:2517 lines"
       ]
     },
     {
@@ -94,7 +94,7 @@
       "metricId": "maxFunctionLength",
       "value": 261,
       "evidence": [
-        "server/Program.cs:790-1050"
+        "server/Program.cs:506-766"
       ]
     }
   ]
