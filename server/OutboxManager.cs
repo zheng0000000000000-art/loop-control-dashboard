@@ -18,6 +18,7 @@ public sealed class OutboxManager
     };
     private readonly string workspaceRoot;
     private readonly string outboxRoot;
+    private readonly Tier2Approver tier2Approver;
     private readonly JsonSerializerOptions jsonOptions = new()
     {
         WriteIndented = true,
@@ -30,6 +31,7 @@ public sealed class OutboxManager
         this.workspaceRoot = Path.GetFullPath(workspaceRoot);
         outboxRoot = Path.Combine(this.workspaceRoot, "outbox");
         Directory.CreateDirectory(outboxRoot);
+        tier2Approver = new Tier2Approver(this.workspaceRoot, Tier2ApproverOptions.Load(this.workspaceRoot));
     }
 
     // 실행 지시를 격리 사본에서 실행하고 outbox 항목을 만든다.
@@ -69,6 +71,8 @@ public sealed class OutboxManager
             var copyRoot = Path.Combine(Path.GetTempPath(), $"loop-dispatch-{taskId}");
             var baseCommit = ReadGitHead();
             var originalHashes = SnapshotOriginalHashes();
+            // tier-2 자동 승인이 켜져 있을 때만 반입 전 위반 기준선을 실측한다(꺼져 있으면 기존과 동일한 비용).
+            var baselineMeasure = tier2Approver.Options.Enabled ? await RunMeasureAsync(workspaceRoot, noBuild: true) : null;
             CopyWorkspace(copyRoot);
             // 사본에 포함된 파일 전체의 컨텍스트 예산을 실행 전에 실측한다.
             var contextBudget = ContextBudget.Measure(copyRoot);
@@ -98,6 +102,12 @@ public sealed class OutboxManager
             // 컨텍스트 예산 측정값을 task 메타와 run-log 이벤트로 남긴다.
             ContextBudget.Attach(meta, workspaceRoot, projectId, taskId, contextBudget);
 
+            if (baselineMeasure is not null)
+            {
+                meta["gateViolationsBefore"] = ParseViolationCount(baselineMeasure.Stdout);
+                meta["gateViolationsAfter"] = ParseViolationCount(measure.Stdout);
+            }
+
             WriteText(Path.Combine(taskDirectory, "executor-report.md"), BuildExecutorReport(execution));
             WriteText(Path.Combine(taskDirectory, "diff.patch"), changes.Patch);
             WriteJson(Path.Combine(taskDirectory, "measure-result.json"), new JsonObject
@@ -112,9 +122,12 @@ public sealed class OutboxManager
                 ["stdout"] = behavior.Stdout,
                 ["stderr"] = behavior.Stderr,
             });
-            WriteJson(Path.Combine(taskDirectory, "meta.json"), meta);
             TryDeleteDirectory(copyRoot);
-            return meta;
+
+            // 게이트 클린(위반 비증가) + 코어/기준 파일 무수정 반입만 상위 티어 AI가 여기서 즉시 검토·승인한다.
+            var finalMeta = status == "import_pending" ? tier2Approver.MaybeAutoApprove(this, taskId, taskDirectory, meta) : meta;
+            WriteJson(Path.Combine(taskDirectory, "meta.json"), finalMeta);
+            return finalMeta;
         }
         finally
         {
@@ -175,6 +188,30 @@ public sealed class OutboxManager
 
         VerifyFreshBase(meta);
         CreateImportRestore(taskDirectory, meta);
+        ApplyChangedFiles(taskDirectory, meta);
+        meta["status"] = "imported";
+        meta["importedAt"] = DateTimeOffset.Now.ToString("O");
+        WriteJson(metaPath, meta);
+        return meta;
+    }
+
+    // 게이트 클린 반입을 tier-2 승인자를 대신해 적용한다(사람 토큰 경로가 아닌 서버 내부 경로 전용).
+    internal JsonObject ApplyAutoImport(string taskId, string taskDirectory, JsonObject meta)
+    {
+        var metaPath = Path.Combine(taskDirectory, "meta.json");
+        VerifyFreshBase(meta);
+        CreateImportRestore(taskDirectory, meta);
+        ApplyChangedFiles(taskDirectory, meta);
+        meta["status"] = "imported";
+        meta["importedAt"] = DateTimeOffset.Now.ToString("O");
+        meta["importedBy"] = "tier2-ai-approver";
+        WriteJson(metaPath, meta);
+        return meta;
+    }
+
+    // 반입 대기 diff의 변경·삭제 파일을 실제 작업 공간에 적용한다.
+    private void ApplyChangedFiles(string taskDirectory, JsonObject meta)
+    {
         foreach (var file in meta["changedFiles"]?.AsArray().Select(node => node?.GetValue<string>()).Where(value => !string.IsNullOrWhiteSpace(value)) ?? [])
         {
             var destination = SafeWorkspacePath(file!);
@@ -190,11 +227,6 @@ public sealed class OutboxManager
                 File.Delete(destination);
             }
         }
-
-        meta["status"] = "imported";
-        meta["importedAt"] = DateTimeOffset.Now.ToString("O");
-        WriteJson(metaPath, meta);
-        return meta;
     }
 
     // 반입 대기 diff를 거절 상태로 표시한다.
@@ -362,10 +394,37 @@ public sealed class OutboxManager
         return await RunProcessAsync(copyRoot, "dotnet", ["run", "--project", "server", "--", "dispatch-executor", executor, instruction], 5);
     }
 
-    // 격리 사본에서 dev-pack 측정을 실행한다.
-    private static async Task<ProcessResult> RunMeasureAsync(string copyRoot)
+    // dev-pack 측정을 지정한 루트에서 실행한다(Tier2Approver가 반입 전후 기준선 비교에도 재사용한다).
+    // noBuild: 실제 워크스페이스(사본이 아님)를 측정할 때 쓴다 — 그 경로는 항상 실행 중인 서버 자신의
+    // bin 산출물이 이미 잠겨 있는 상태에서 호출되므로, 재빌드를 시도하면 apphost.exe 복사 충돌로 실패한다.
+    internal static async Task<ProcessResult> RunMeasureAsync(string root, bool noBuild = false)
     {
-        return await RunProcessAsync(copyRoot, "dotnet", ["run", "--project", "server", "--", "measure", "dev-pack"], 60);
+        var arguments = noBuild
+            ? new[] { "run", "--project", "server", "--no-build", "--", "measure", "dev-pack" }
+            : new[] { "run", "--project", "server", "--", "measure", "dev-pack" };
+        return await RunProcessAsync(root, "dotnet", arguments, 60);
+    }
+
+    // measure CLI 한 줄 JSON 출력에서 violationCount를 뽑는다. 파싱 실패는 안전 쪽(최댓값)으로 처리한다.
+    internal static int ParseViolationCount(string stdout)
+    {
+        try
+        {
+            var start = stdout.IndexOf('{');
+            var end = stdout.LastIndexOf('}');
+
+            if (start < 0 || end < start)
+            {
+                return int.MaxValue;
+            }
+
+            var node = JsonNode.Parse(stdout[start..(end + 1)])!.AsObject();
+            return node["violationCount"]?.GetValue<int>() ?? int.MaxValue;
+        }
+        catch
+        {
+            return int.MaxValue;
+        }
     }
 
     // 격리 사본에서 동작 동일성을 검증한다.

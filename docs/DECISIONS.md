@@ -12,3 +12,21 @@
   안전하게 뺄 수 있는 부분(스킬 트리거 매칭)만 SkillRouter.cs로 옮기고, 나머지는 강제로
   압축하지 않고 위반으로 보고한다 — 진짜 해소는 이미 반입 대기 중인 self-refactor-dispatch
   (Orchestrator.cs/ProposalFlow.cs 분리) 몫이다. 같은 지표를 두 번 손대는 대신 기존 트랙에 맡긴다.
+- 2026-07-10: **제한된 이양안(#10 재작업) — outbox 반입 중 게이트 클린 건만 tier-2 AI 결재자에게 위임.**
+  사람이 채팅으로 승인한 결정을 구현한다(`server/Tier2Approver.cs`). 범위는 outbox 반입
+  1건뿐이다 — proposal 자체의 승인/거절은 여전히 사람 전용(변경 없음). 자동 승인 조건은
+  ①게이트 위반 비증가 ②코어 3파일(Engine.cs/Storage.cs/Guardrails.cs) 무수정 ③기준 파일
+  (workflow-definition.json/blueprint.json) 무수정, 세 조건 모두 AND. 조건 미달·리뷰어 거절·
+  연결 실패는 전부 기존과 동일하게 사람 대기로 남는다. 상위 티어 AI는 로컬에 설치된 가장 큰
+  모델 `qwen3:14b`(reviewerPolicy.tier1과 동일 — 더 큰 모델이 없어 "상위 티어"는 역할 분리를
+  의미, 모델 크기 서열은 아님)로 정했다.
+  **08b648c가 "enabled:true 자가 커밋"으로 revert된 전례**를 반복하지 않기 위해, 이번 커밋은
+  장치(게이트·감사 로그·일일 캡·이상 감지 자동정지)를 짓는 것까지만 하고
+  `Tier2Approver.Enabled`는 `server/appsettings.json`에 **기본값 false로 커밋**한다 — 켜는
+  결정은 별도로 사람이 그 값을 true로 바꿔야 한다. 일일 캡은 이 프로젝트에 outbox 반입
+  수준에 대응하는 기존 캡 개념이 없어(guardrails의 maxSubscriptionCalls 등은 프로젝트별
+  루프 개념이라 그대로 못 씀) 새로 정했다 — 기본값 5/일. 근거: 반입 빈도가 늘고 있다는
+  지시서 #15의 실측(하루 여러 회차)에 비춰, 사람이 감사 로그를 하루 한 번만 훑어봐도
+  전량 확인 가능한 크기로 잡았다. 이상 감지(반입 후 재측정에서 위반 증가, 또는 적용 중
+  예외)는 즉시 halt 상태로 전환하고 사람이 `docs/audit/tier2-import-approvals-state.json`의
+  `halted`를 직접 고쳐야 재개된다(자동 해제 없음). 상세: `docs/verification/tier2-auto-import-approval.md`.

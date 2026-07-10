@@ -14,14 +14,19 @@ AI가 만들고, AI가 검토하고, AI가 결재를 배우는 — 사람은 기
 
 
 완료·검수 통과 #9(AI 1급 사용자), #11(Context Budget+헤더 참조화), #11-R(재적용+반입 stale 가드)
-revert됨 #10 1차 시도(08b648c) — 이양 고정점 위반(enabledtrue 자가 커밋). 재작업 예정
+완료·검수 통과 #10 재작업(제한된 이양안) — outbox 반입 중 게이트 클린 건만 tier-2 AI(qwen3:14b)가 검토·승인,
+  proposal 승인/거절은 그대로 사람 전용. `Tier2Approver.Enabled`는 기본값 false로 커밋(사람이 직접 켜야 함).
+  감사 로그 docs/audit/tier2-import-approvals.md, 일일 캡 5, 이상 감지 시 자동 halt. 상세 docs/verification/tier2-auto-import-approval.md
+완료 모바일 승인 버튼 무반응 버그 — window.prompt()가 401 토큰 재입력에서 막혀(iOS PWA 등에서 미지원/미표시) 렌더러가 멈추는 게 원인.
+  페이지 내 모달(promptModal)로 교체. 상세 docs/verification/mobile-approve-button-fix.md
 진행 중 #12(템플릿 렌더러) — outbox task-20260710070612000 반입 대기  #15(반입 결재 UI) — sonnet 헤드리스 작업 중
 기준선 숫자 dispatch 사본 = 2.78MB  추정 696k 토큰  131파일 → #14(Context Pack)의 절감 목표
 
 
 대기열 (4축 재배치)
 
-#12 → #13(실행자 사다리+할당량 원장) → #15(반입 UI) → #14(Context Pack) → #10(AI 결재자 재작업) → #7(회고 큐) → #8(규범 스토어)
+#12 → #13(실행자 사다리+할당량 원장) → #15(반입 UI) → #14(Context Pack) → #7(회고 큐) → #8(규범 스토어)
+(#10은 제한된 이양안으로 완료 — 활성화 여부만 사람 결정 남음)
 
 실행자 규칙 기본 코덱스(CLI 미설치, 수동 채널), 헤드리스는 claude-code(sonnet), 소진 징후 시 강등. 발행·결재·반입 = 항상 사람.
 

@@ -45,6 +45,11 @@ if (args.Length > 0 && string.Equals(args[0], "refeedbacktest", StringComparison
     return RunRefeedbackTestCli();
 }
 
+if (args.Length > 0 && string.Equals(args[0], "tier2test", StringComparison.OrdinalIgnoreCase))
+{
+    return Tier2ApproverTestCli.Run(args);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))

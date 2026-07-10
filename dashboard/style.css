@@ -1076,6 +1076,42 @@ textarea {
   }
 }
 
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(17 24 39 / 45%);
+}
+
+.modal-dialog {
+  display: grid;
+  gap: 12px;
+  width: min(360px, 100%);
+  padding: 20px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 16px 36px rgb(17 24 39 / 24%);
+}
+
+.modal-message {
+  color: var(--text);
+}
+
+.modal-input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--panel-soft);
+  color: var(--text);
+  font-size: 16px;
+}
+
 .inbox-import-item {
   display: grid;
   gap: 6px;

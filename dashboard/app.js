@@ -581,7 +581,7 @@ function renderImportPendingItem(item) {
   });
 
   rejectBtn.addEventListener("click", async () => {
-    const reason = window.prompt(t("outbox.rejectPrompt"));
+    const reason = await promptModal(t("outbox.rejectPrompt"));
     if (!reason) {
       return;
     }
@@ -1335,7 +1335,7 @@ async function rejectProposal() {
     return;
   }
 
-  const reason = window.prompt(t("approval.rejectionPrompt"));
+  const reason = await promptModal(t("approval.rejectionPrompt"));
 
   if (reason === null) {
     return;
@@ -1885,7 +1885,7 @@ async function postProjectAction(action, body) {
     });
 
     if (response.status === 401) {
-      actionToken = window.prompt(t("remote.tokenPrompt")) || null;
+      actionToken = (await promptModal(t("remote.tokenPrompt"), { password: true })) || null;
 
       if (!actionToken) {
         showActionError({ reason: t("remote.tokenRequired"), reasonCode: "auth.token_required" });
@@ -1933,7 +1933,7 @@ async function postOutboxImportAction(taskId, action, body) {
     });
 
     if (response.status === 401) {
-      actionToken = window.prompt(t("remote.tokenPrompt")) || null;
+      actionToken = (await promptModal(t("remote.tokenPrompt"), { password: true })) || null;
 
       if (!actionToken) {
         showActionError({ reason: t("remote.tokenRequired"), reasonCode: "auth.token_required" });
@@ -2341,6 +2341,58 @@ function createElement(tagName, options = {}) {
   }
 
   return node;
+}
+
+// window.prompt 대신 페이지 내 모달로 입력을 받는다 — iOS 홈 화면 PWA 등에서 window.prompt가
+// 응답 없이 조용히 막혀 버튼이 반응 없는 것처럼 보이는 문제를 피한다.
+function promptModal(message, { password = false } = {}) {
+  return new Promise((resolve) => {
+    const overlay = createElement("div", { className: "modal-overlay" });
+    const dialog = createElement("div", { className: "modal-dialog" });
+    const messageEl = createElement("p", { className: "modal-message", text: message });
+    const input = createElement("input", {
+      className: "modal-input",
+      attributes: { type: password ? "password" : "text" },
+    });
+    const actions = createElement("div", { className: "button-row" });
+    const okButton = createElement("button", {
+      className: "button button-approve",
+      text: t("modal.ok"),
+      attributes: { type: "button" },
+    });
+    const cancelButton = createElement("button", {
+      className: "button button-secondary",
+      text: t("modal.cancel"),
+      attributes: { type: "button" },
+    });
+
+    const close = (value) => {
+      overlay.remove();
+      resolve(value);
+    };
+
+    okButton.addEventListener("click", () => close(input.value.trim() || null));
+    cancelButton.addEventListener("click", () => close(null));
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) {
+        close(null);
+      }
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        close(input.value.trim() || null);
+      } else if (event.key === "Escape") {
+        close(null);
+      }
+    });
+
+    actions.append(okButton, cancelButton);
+    dialog.append(messageEl, input, actions);
+    overlay.append(dialog);
+    document.body.append(overlay);
+    input.focus();
+  });
 }
 
 // 실행 로그 이벤트를 표시 문자열로 변환한다.
