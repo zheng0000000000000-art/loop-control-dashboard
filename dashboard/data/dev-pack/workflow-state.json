@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
-  "currentStage": "apply",
+  "currentStage": "changeReview",
   "overallStatus": "warning",
-  "loopState": "halted",
+  "loopState": "running",
   "mode": "normal",
   "suspendedTracks": [
     {
@@ -19,15 +19,19 @@
       "suspectConfidence": "temporal"
     }
   ],
-  "loopIteration": 10,
+  "loopIteration": 6,
   "stages": {
     "goals": "passed",
     "measure": "passed",
     "deviationCheck": "warning",
-    "changeReview": "approved",
-    "apply": "in_progress"
+    "changeReview": "pending_review",
+    "apply": "blocked"
   },
-  "blockInfo": {},
+  "blockInfo": {
+    "apply": {
+      "kind": "waiting"
+    }
+  },
   "stageDetails": {
     "goals": {
       "summary": "개발 팩은 저장소의 핵심 규칙을 측정하고 블루프린트 기준과 비교한다.",
@@ -132,7 +136,8 @@
         }
       ],
       "issues": [
-        "no-scope-creep: changes에 blueprint 위반 해소와 무관한 항목이 포함되어 있음"
+        "after-matches-goal: after 값은 배열 [0,80]이지만 note는 함수 길이 제한을 줄여 가독성과 유지보수성을 개선하고자 함으로, 0으로 설정하는 것은 note와 일치하지 않음",
+        "no-scope-creep: changes에 blueprint 위반 해소와 무관한 항목이 섞여 있는가"
       ]
     },
     "apply": {
@@ -141,7 +146,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-10T12:13:54.2706937+09:00",
+  "lastUpdated": "2026-07-10T12:20:10.7632938+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
@@ -156,22 +161,5 @@
       "loopIteration": 5,
       "acknowledgedAt": "2026-07-10T09:51:46.6476225+09:00"
     }
-  ],
-  "applyBaselineViolations": [
-    "smallTouchTargets=1",
-    "skillDomainViolations=2",
-    "programCsLines=2751",
-    "maxFunctionLength=256"
-  ],
-  "haltedAt": "2026-07-10T12:13:54.2705201+09:00",
-  "haltedBy": {
-    "type": "guardrail",
-    "breaches": [
-      {
-        "type": "loopIteration",
-        "actual": 10,
-        "limit": 10
-      }
-    ]
-  }
+  ]
 }
