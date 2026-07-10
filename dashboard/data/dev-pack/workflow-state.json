@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
   "currentStage": "apply",
-  "overallStatus": "in_progress",
-  "loopState": "running",
+  "overallStatus": "warning",
+  "loopState": "halted",
   "mode": "normal",
   "suspendedTracks": [
     {
@@ -19,7 +19,7 @@
       "suspectConfidence": "temporal"
     }
   ],
-  "loopIteration": 9,
+  "loopIteration": 10,
   "stages": {
     "goals": "passed",
     "measure": "passed",
@@ -105,7 +105,7 @@
         },
         {
           "label": "programCsLines",
-          "value": "2741 / 0~2661"
+          "value": "2751 / 0~2661"
         },
         {
           "label": "appJsLines",
@@ -113,14 +113,14 @@
         },
         {
           "label": "maxFunctionLength",
-          "value": "246 / 0~80"
+          "value": "256 / 0~80"
         }
       ],
       "issues": [
         "smallTouchTargets: 측정값 1이 기준 0을 벗어났다. 근거: dashboard/style.css:1133",
         "skillDomainViolations: 측정값 2이 기준 0을 벗어났다. 근거: docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md",
-        "programCsLines: 측정값 2741이 기준 0~2661을 벗어났다. 근거: server/Program.cs:2741 lines",
-        "maxFunctionLength: 측정값 246이 기준 0~80을 벗어났다. 근거: server/Program.cs:790-1035"
+        "programCsLines: 측정값 2751이 기준 0~2661을 벗어났다. 근거: server/Program.cs:2751 lines",
+        "maxFunctionLength: 측정값 256이 기준 0~80을 벗어났다. 근거: server/Program.cs:790-1045"
       ]
     },
     "changeReview": {
@@ -141,7 +141,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-10T12:02:00.9748066+09:00",
+  "lastUpdated": "2026-07-10T12:13:54.2706937+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
@@ -160,7 +160,18 @@
   "applyBaselineViolations": [
     "smallTouchTargets=1",
     "skillDomainViolations=2",
-    "programCsLines=2741",
-    "maxFunctionLength=246"
-  ]
+    "programCsLines=2751",
+    "maxFunctionLength=256"
+  ],
+  "haltedAt": "2026-07-10T12:13:54.2705201+09:00",
+  "haltedBy": {
+    "type": "guardrail",
+    "breaches": [
+      {
+        "type": "loopIteration",
+        "actual": 10,
+        "limit": 10
+      }
+    ]
+  }
 }
