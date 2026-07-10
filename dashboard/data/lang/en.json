@@ -7,6 +7,10 @@
     "tokenPrompt": "Enter the remote action token",
     "tokenRequired": "A token is required to approve, reject, or measure remotely."
   },
+  "modal": {
+    "ok": "OK",
+    "cancel": "Cancel"
+  },
   "header": {
     "eyebrow": "LOOP CONTROL · LOCAL-FIRST DEMO",
     "projectSelect": "Active Project",

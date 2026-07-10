@@ -19,7 +19,7 @@
       "suspectConfidence": "temporal"
     }
   ],
-  "loopIteration": 6,
+  "loopIteration": 7,
   "stages": {
     "goals": "passed",
     "measure": "passed",
@@ -61,7 +61,7 @@
         },
         {
           "label": "directiveAcceptanceCriteria",
-          "value": "5 / 3~99"
+          "value": "6 / 3~99"
         },
         {
           "label": "koPoliteEndings",
@@ -124,14 +124,16 @@
       ]
     },
     "changeReview": {
-      "summary": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "summary": "1층 체크리스트 결과를 사람이 확인해야 한다.",
       "metrics": [
         {
           "label": "1층 검토 판정",
-          "value": "approved"
+          "value": "uncertain"
         }
       ],
-      "issues": []
+      "issues": [
+        "no-scope-creep: changes에 blueprint 위반 해소와 무관한 항목이 섞여 있는가"
+      ]
     },
     "apply": {
       "summary": "승인 후 사람이 저장소를 수정하고 다시 측정해 해소 여부를 확인한다.",
@@ -139,7 +141,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-10T10:20:42.3546342+09:00",
+  "lastUpdated": "2026-07-10T11:26:25.8681320+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",

@@ -7,6 +7,10 @@
     "tokenPrompt": "원격 액션 토큰을 입력한다",
     "tokenRequired": "토큰이 필요하다. 원격 액션 토큰을 입력해야 승인/거절/측정을 실행할 수 있다."
   },
+  "modal": {
+    "ok": "확인",
+    "cancel": "취소"
+  },
   "header": {
     "eyebrow": "루프 관제 · 로컬 우선 데모",
     "projectSelect": "활성 프로젝트",
