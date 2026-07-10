@@ -19,6 +19,9 @@ AI가 만들고, AI가 검토하고, AI가 결재를 배우는 — 사람은 기
   감사 로그 docs/audit/tier2-import-approvals.md, 일일 캡 5, 이상 감지 시 자동 halt. 상세 docs/verification/tier2-auto-import-approval.md
 완료 모바일 승인 버튼 무반응 버그 — window.prompt()가 401 토큰 재입력에서 막혀(iOS PWA 등에서 미지원/미표시) 렌더러가 멈추는 게 원인.
   페이지 내 모달(promptModal)로 교체. 상세 docs/verification/mobile-approve-button-fix.md
+완료 Tier2Approver 활성화(사람 확인) + 승인 후 재측정만으로 재승인을 요구하던 버그 수정
+  (apply 단계가 위반 잔존 시 무조건 blocked로 리셋되던 것 — applyBaselineViolations 기준선 비교로 해결).
+  상세 docs/verification/apply-stage-reapproval-bug.md
 완료(반입 대기) #15(반입 결재 UI) — 커밋 7df4bde로 UI 자체는 이미 머지됨, 검수 통과(docs/verification/import-approval-ui.md)
 진행 중(반입 대기, 사람 결정) #12(템플릿 렌더러) — outbox task-20260710070612000 / #7(회고 큐) — outbox task-20260710090000000
   둘 다 서버 코드는 outbox에서 검수까지 끝났고 사람의 approve-import만 남았다. 에이전트는 반입을 대행하지 않는다.
