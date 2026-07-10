@@ -8,7 +8,8 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.FileProviders;
 
-CliRouter.MeasureCore = RunMeasureCore;
+MeasurementService.ApplyResult = ApplyMeasurementResult;
+MeasurementService.PersistBundle = (s, p, b, o, n) => { Persist(s, p, b, o, n); };
 CliRouter.EscalateRefeedback = TryEscalateInsufficientRefeedback;
 if (CliRouter.TryRun(args) is int code) return code;
 
@@ -270,40 +271,8 @@ static IResult ProjectContext(Storage storage, string projectId, JsonSerializerO
 // 측정 공급자를 실행하고 블루프린트 괴리를 판정한다.
 static IResult Measure(Storage storage, string projectId, JsonSerializerOptions jsonOptions, NtfyOptions ntfy)
 {
-    var outcome = RunMeasureCore(storage, projectId, jsonOptions, ntfy);
+    var outcome = MeasurementService.RunMeasureCore(storage, projectId, jsonOptions, ntfy);
     return outcome.Problem ?? BundleResult(outcome.Bundle!, jsonOptions);
-}
-
-// 측정 실행 본체. HTTP 라우트와 CLI가 함께 사용한다.
-static MeasureOutcome RunMeasureCore(Storage storage, string projectId, JsonSerializerOptions jsonOptions, NtfyOptions ntfy)
-{
-    var bundle = storage.ReadBundle(projectId);
-    var provider = bundle.Definition["measurementProvider"] as JsonObject;
-    var providerId = provider?["id"]?.GetValue<string>();
-
-    if (string.IsNullOrWhiteSpace(providerId))
-    {
-        return new MeasureOutcome(null, ProblemResult(409, "checklist.provider_missing", "Measurement provider is not configured"), 0);
-    }
-
-    if (providerId != "dev-pack-checks" && providerId != "ruined-lab-sim")
-    {
-        return new MeasureOutcome(null, ProblemResult(409, "checklist.provider_unknown", $"Measurement provider is not supported: {providerId}"), 0);
-    }
-
-    storage.CreateRestorePoint(projectId);
-    var previousMeasurement = bundle.Measurement;
-    var measureTimer = System.Diagnostics.Stopwatch.StartNew();
-    bundle.Measurement = providerId switch
-    {
-        "dev-pack-checks" => DevPackMeasures.Measure(ResolveMeasurementTargetRoot(storage.ProjectPath(projectId), provider!), providerId, bundle.Blueprint),
-        "ruined-lab-sim" => GameSimulator.Measure(storage.ProjectPath(projectId), providerId, bundle.Blueprint, provider!),
-        _ => bundle.Measurement,
-    };
-    measureTimer.Stop();
-    var violationCount = ApplyMeasurementResult(bundle, providerId, ntfy, previousMeasurement, storage.ProjectPath(projectId), measureTimer.ElapsedMilliseconds);
-    Persist(storage, projectId, bundle, jsonOptions, ntfy);
-    return new MeasureOutcome(bundle, null, violationCount);
 }
 
 // 측정 결과를 상태, 로그, 제안에 반영하고 위반 수를 반환한다.
@@ -356,207 +325,20 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
 
         if (regressions.Count > 0)
         {
-            var relatedProposalId = FindRecentApprovedProposalId(bundle.Reviews, previousMeasurement);
-
-            foreach (var regression in regressions)
-            {
-                runLog = Engine.AppendLog(runLog, new JsonObject
-                {
-                    ["event"] = "measurement.regressed",
-                    ["params"] = new JsonObject
-                    {
-                        ["metricId"] = regression.MetricId,
-                        ["before"] = regression.PreviousValue is null ? null : Engine.CloneNode(regression.PreviousValue),
-                        ["after"] = regression.CurrentValue is null ? null : Engine.CloneNode(regression.CurrentValue),
-                        ["reasonCode"] = "checklist.metric_regressed",
-                    },
-                    ["level"] = "warning",
-                    ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
-                    ["cost"] = RuntimeCost(),
-                }, Engine.GetLoopIteration(state));
-
-                AddSuspendedTrack(state, regression, relatedProposalId);
-            }
-
-            bundle.Proposal = CreateRollbackProposal(regressions, relatedProposalId);
-            runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
-            runLog = Engine.AppendLog(runLog, new JsonObject
-            {
-                ["event"] = "review.routed",
-                ["params"] = new JsonObject
-                {
-                    ["proposalId"] = bundle.Proposal["id"]?.GetValue<string>() ?? "",
-                    ["reasonCode"] = "regression_direct_to_human",
-                    ["text"] = "악화 롤백은 체크리스트가 검토할 내용이 없어 1층을 건너뛰고 사람 결재로 직행한다.",
-                },
-                ["level"] = "warning",
-                ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
-                ["cost"] = RuntimeCost(),
-            }, Engine.GetLoopIteration(state));
-
-            SetRegressionReviewDetails(state, stages.ReviewStageId, regressions);
-            Notifier.NotifyMeasurementRegressed(ntfy, ProjectDisplayName(state), regressions.Select(r => r.MetricId).ToList());
+            runLog = ApplyMeasurementRegressionCase(bundle, stages, regressions, previousMeasurement, ntfy, state, runLog);
         }
         else if (providerId == "ruined-lab-sim")
         {
-            var gameDataPath = Path.Combine(projectPath, "game-data.json");
-            var gameData = JsonNode.Parse(File.ReadAllText(gameDataPath))!.AsObject();
-            var seed = Number(bundle.Definition["measurementProvider"]?.AsObject()["seed"], 42);
-            var tuning = BalanceTuner.Search(gameData, bundle.Blueprint, bundle.Definition, seed);
-
-            if (!tuning.ReachedBand && tuning.ChangedLevers.Count == 0)
-            {
-                if (bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted")
-                {
-                    var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
-                    bundle.Proposal["lifecycle"] = "superseded";
-                    runLog = Engine.AppendLog(runLog, new JsonObject
-                    {
-                        ["event"] = "proposal.superseded",
-                        ["params"] = new JsonObject { ["proposalId"] = supersededId, ["reasonCode"] = "tuning.no_solution" },
-                        ["level"] = "info",
-                        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
-                        ["cost"] = RuntimeCost(),
-                    }, Engine.GetLoopIteration(state));
-                }
-
-                runLog = Engine.AppendLog(runLog, TuningNoSolutionLog(tuning), Engine.GetLoopIteration(state));
-                state = ApplyNoSolutionState(bundle.Definition, state, stages);
-                SetNoSolutionDetails(state, stages.DeviationStageId, tuning);
-            }
-            else
-            {
-                var replacedProposalId = bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted"
-                    ? bundle.Proposal["id"]?.GetValue<string>()
-                    : null;
-                var tuningGeneration = GenerateTuningProposalWithFallback(bundle.Definition, bundle.Proposal, tuning, previousReviewReport: null);
-                bundle.Proposal = tuningGeneration.Proposal;
-                runLog = Engine.AppendLog(runLog, tuningGeneration.LogEntry, Engine.GetLoopIteration(state));
-                if (!string.IsNullOrWhiteSpace(replacedProposalId))
-                {
-                    runLog = Engine.AppendLog(runLog, new JsonObject
-                    {
-                        ["event"] = "proposal.superseded",
-                        ["params"] = new JsonObject { ["proposalId"] = replacedProposalId, ["reasonCode"] = "tuning.replaced" },
-                        ["level"] = "info",
-                        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
-                        ["cost"] = RuntimeCost(),
-                    }, Engine.GetLoopIteration(state));
-                }
-
-                runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
-
-                var tuningTier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
-                runLog = Engine.AppendLog(runLog, tuningTier1.LogEntry, Engine.GetLoopIteration(state));
-
-                if (tuningTier1.Report is not null)
-                {
-                    AppendReport(bundle.Reviews, tuningTier1.Report);
-                }
-
-                var tuningMaxRegenerations = Number(bundle.Definition["executorPolicy"]?.AsObject()["maxRegenerations"], 0);
-
-                for (var regeneration = 0; regeneration < tuningMaxRegenerations && tuningTier1.Verdict == "needs_changes"; regeneration += 1)
-                {
-                    if (TryEscalateInsufficientRefeedback(ref tuningTier1, ref runLog, state))
-                    {
-                        break;
-                    }
-
-                    var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
-                    runLog = Engine.AppendLog(runLog, new JsonObject
-                    {
-                        ["event"] = "proposal.superseded",
-                        ["params"] = new JsonObject { ["proposalId"] = supersededId, ["reasonCode"] = "review.needs_changes_regenerate" },
-                        ["level"] = "info",
-                        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
-                        ["cost"] = RuntimeCost(),
-                    }, Engine.GetLoopIteration(state));
-
-                    tuningGeneration = GenerateTuningProposalWithFallback(bundle.Definition, bundle.Proposal, tuning, previousReviewReport: tuningTier1.Report);
-                    bundle.Proposal = tuningGeneration.Proposal;
-                    runLog = Engine.AppendLog(runLog, tuningGeneration.LogEntry, Engine.GetLoopIteration(state));
-                    runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
-
-                    tuningTier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
-                    runLog = Engine.AppendLog(runLog, tuningTier1.LogEntry, Engine.GetLoopIteration(state));
-
-                    if (tuningTier1.Report is not null)
-                    {
-                        AppendReport(bundle.Reviews, tuningTier1.Report);
-                    }
-                }
-
-                SetTier1Details(state, stages.ReviewStageId, tuningTier1);
-                Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), tuningTier1.Verdict);
-            }
+            (state, runLog) = ApplyMeasurementTuningCase(bundle, stages, ntfy, state, runLog, projectPath);
         }
         else
         {
-            var generation = GenerateProposalWithFallback(bundle.Definition, bundle.Proposal, violations, previousReviewReport: null);
-            bundle.Proposal = generation.Proposal;
-            runLog = Engine.AppendLog(runLog, generation.LogEntry, Engine.GetLoopIteration(state));
-            runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
-
-            var tier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
-            runLog = Engine.AppendLog(runLog, tier1.LogEntry, Engine.GetLoopIteration(state));
-
-            if (tier1.Report is not null)
-            {
-                AppendReport(bundle.Reviews, tier1.Report);
-            }
-
-            var maxRegenerations = Number(bundle.Definition["executorPolicy"]?.AsObject()["maxRegenerations"], 0);
-
-            for (var regeneration = 0; regeneration < maxRegenerations && tier1.Verdict == "needs_changes"; regeneration += 1)
-            {
-                if (TryEscalateInsufficientRefeedback(ref tier1, ref runLog, state))
-                {
-                    break;
-                }
-
-                var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
-                runLog = Engine.AppendLog(runLog, new JsonObject
-                {
-                    ["event"] = "proposal.superseded",
-                    ["params"] = new JsonObject { ["proposalId"] = supersededId, ["reasonCode"] = "review.needs_changes_regenerate" },
-                    ["level"] = "info",
-                    ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
-                    ["cost"] = RuntimeCost(),
-                }, Engine.GetLoopIteration(state));
-
-                generation = GenerateProposalWithFallback(bundle.Definition, bundle.Proposal, violations, previousReviewReport: tier1.Report);
-                bundle.Proposal = generation.Proposal;
-                runLog = Engine.AppendLog(runLog, generation.LogEntry, Engine.GetLoopIteration(state));
-                runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
-
-                tier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
-                runLog = Engine.AppendLog(runLog, tier1.LogEntry, Engine.GetLoopIteration(state));
-
-                if (tier1.Report is not null)
-                {
-                    AppendReport(bundle.Reviews, tier1.Report);
-                }
-            }
-
-            SetTier1Details(state, stages.ReviewStageId, tier1);
-            Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), tier1.Verdict);
+            runLog = ApplyMeasurementDevPackCase(bundle, stages, violations, ntfy, state, runLog);
         }
     }
     else
     {
-        var suggestedBlueprintProposal = CreateSuggestedBlueprintProposal(bundle.Definition, bundle.Blueprint, bundle.Measurement, bundle.Proposal);
-        if (suggestedBlueprintProposal is not null)
-        {
-            bundle.Proposal = suggestedBlueprintProposal;
-            runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
-            state = ApplySuggestedBlueprintProposalState(bundle.Definition, state, stages);
-            Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), "human_review");
-        }
-        else if (bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted")
-        {
-            bundle.Proposal["lifecycle"] = "superseded";
-        }
+        (state, runLog) = ApplyMeasurementCompliantCase(bundle, stages, ntfy, state, runLog);
     }
 
     // 위의 여러 분기(회귀 롤백·튜닝·기준 추가 제안 등) 중 어느 것이 실행됐든, 최종적으로
@@ -567,6 +349,219 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
     bundle.State = state;
     bundle.RunLog = runLog;
     return violations.Count;
+}
+
+// 악화(회귀) 감지 시 롤백 제안을 생성하고 로그를 남긴다.
+static JsonObject ApplyMeasurementRegressionCase(ProjectBundle bundle, MeasurementStages stages, List<MetricRegression> regressions, JsonObject previousMeasurement, NtfyOptions ntfy, JsonObject state, JsonObject runLog)
+{
+    var relatedProposalId = FindRecentApprovedProposalId(bundle.Reviews, previousMeasurement);
+
+    foreach (var regression in regressions)
+    {
+        runLog = Engine.AppendLog(runLog, new JsonObject
+        {
+            ["event"] = "measurement.regressed",
+            ["params"] = new JsonObject
+            {
+                ["metricId"] = regression.MetricId,
+                ["before"] = regression.PreviousValue is null ? null : Engine.CloneNode(regression.PreviousValue),
+                ["after"] = regression.CurrentValue is null ? null : Engine.CloneNode(regression.CurrentValue),
+                ["reasonCode"] = "checklist.metric_regressed",
+            },
+            ["level"] = "warning",
+            ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+            ["cost"] = RuntimeCost(),
+        }, Engine.GetLoopIteration(state));
+
+        AddSuspendedTrack(state, regression, relatedProposalId);
+    }
+
+    bundle.Proposal = CreateRollbackProposal(regressions, relatedProposalId);
+    runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
+    runLog = Engine.AppendLog(runLog, new JsonObject
+    {
+        ["event"] = "review.routed",
+        ["params"] = new JsonObject
+        {
+            ["proposalId"] = bundle.Proposal["id"]?.GetValue<string>() ?? "",
+            ["reasonCode"] = "regression_direct_to_human",
+            ["text"] = "악화 롤백은 체크리스트가 검토할 내용이 없어 1층을 건너뛰고 사람 결재로 직행한다.",
+        },
+        ["level"] = "warning",
+        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+        ["cost"] = RuntimeCost(),
+    }, Engine.GetLoopIteration(state));
+
+    SetRegressionReviewDetails(state, stages.ReviewStageId, regressions);
+    Notifier.NotifyMeasurementRegressed(ntfy, ProjectDisplayName(state), regressions.Select(r => r.MetricId).ToList());
+    return runLog;
+}
+
+// 게임 시뮬레이터 튜닝 경로 — 해 없음 또는 튜닝 제안 생성과 1층 검토를 처리한다.
+static (JsonObject state, JsonObject runLog) ApplyMeasurementTuningCase(ProjectBundle bundle, MeasurementStages stages, NtfyOptions ntfy, JsonObject state, JsonObject runLog, string projectPath)
+{
+    var gameDataPath = Path.Combine(projectPath, "game-data.json");
+    var gameData = JsonNode.Parse(File.ReadAllText(gameDataPath))!.AsObject();
+    var seed = Number(bundle.Definition["measurementProvider"]?.AsObject()["seed"], 42);
+    var tuning = BalanceTuner.Search(gameData, bundle.Blueprint, bundle.Definition, seed);
+
+    if (!tuning.ReachedBand && tuning.ChangedLevers.Count == 0)
+    {
+        if (bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted")
+        {
+            var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
+            bundle.Proposal["lifecycle"] = "superseded";
+            runLog = Engine.AppendLog(runLog, new JsonObject
+            {
+                ["event"] = "proposal.superseded",
+                ["params"] = new JsonObject { ["proposalId"] = supersededId, ["reasonCode"] = "tuning.no_solution" },
+                ["level"] = "info",
+                ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+                ["cost"] = RuntimeCost(),
+            }, Engine.GetLoopIteration(state));
+        }
+
+        runLog = Engine.AppendLog(runLog, TuningNoSolutionLog(tuning), Engine.GetLoopIteration(state));
+        state = ApplyNoSolutionState(bundle.Definition, state, stages);
+        SetNoSolutionDetails(state, stages.DeviationStageId, tuning);
+        return (state, runLog);
+    }
+
+    var replacedProposalId = bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted"
+        ? bundle.Proposal["id"]?.GetValue<string>()
+        : null;
+    var tuningGeneration = GenerateTuningProposalWithFallback(bundle.Definition, bundle.Proposal, tuning, previousReviewReport: null);
+    bundle.Proposal = tuningGeneration.Proposal;
+    runLog = Engine.AppendLog(runLog, tuningGeneration.LogEntry, Engine.GetLoopIteration(state));
+    if (!string.IsNullOrWhiteSpace(replacedProposalId))
+    {
+        runLog = Engine.AppendLog(runLog, new JsonObject
+        {
+            ["event"] = "proposal.superseded",
+            ["params"] = new JsonObject { ["proposalId"] = replacedProposalId, ["reasonCode"] = "tuning.replaced" },
+            ["level"] = "info",
+            ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+            ["cost"] = RuntimeCost(),
+        }, Engine.GetLoopIteration(state));
+    }
+
+    runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
+    var tuningTier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
+    runLog = Engine.AppendLog(runLog, tuningTier1.LogEntry, Engine.GetLoopIteration(state));
+    if (tuningTier1.Report is not null)
+    {
+        AppendReport(bundle.Reviews, tuningTier1.Report);
+    }
+
+    var tuningMaxRegenerations = Number(bundle.Definition["executorPolicy"]?.AsObject()["maxRegenerations"], 0);
+    (tuningTier1, runLog) = RunTuningRegenerationLoop(bundle, state, tuning, tuningMaxRegenerations, tuningTier1, runLog);
+    SetTier1Details(state, stages.ReviewStageId, tuningTier1);
+    Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), tuningTier1.Verdict);
+    return (state, runLog);
+}
+
+// 튜닝 제안 재생성 반복 — 1층 검토가 needs_changes를 반환하는 동안 제안을 다시 만든다.
+static (Tier1ReviewResult tuningTier1, JsonObject runLog) RunTuningRegenerationLoop(ProjectBundle bundle, JsonObject state, TuningResult tuning, int maxRegenerations, Tier1ReviewResult tuningTier1, JsonObject runLog)
+{
+    for (var regeneration = 0; regeneration < maxRegenerations && tuningTier1.Verdict == "needs_changes"; regeneration += 1)
+    {
+        if (TryEscalateInsufficientRefeedback(ref tuningTier1, ref runLog, state))
+        {
+            break;
+        }
+
+        var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
+        runLog = Engine.AppendLog(runLog, new JsonObject
+        {
+            ["event"] = "proposal.superseded",
+            ["params"] = new JsonObject { ["proposalId"] = supersededId, ["reasonCode"] = "review.needs_changes_regenerate" },
+            ["level"] = "info",
+            ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+            ["cost"] = RuntimeCost(),
+        }, Engine.GetLoopIteration(state));
+
+        var tuningGeneration = GenerateTuningProposalWithFallback(bundle.Definition, bundle.Proposal, tuning, previousReviewReport: tuningTier1.Report);
+        bundle.Proposal = tuningGeneration.Proposal;
+        runLog = Engine.AppendLog(runLog, tuningGeneration.LogEntry, Engine.GetLoopIteration(state));
+        runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
+
+        tuningTier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
+        runLog = Engine.AppendLog(runLog, tuningTier1.LogEntry, Engine.GetLoopIteration(state));
+        if (tuningTier1.Report is not null)
+        {
+            AppendReport(bundle.Reviews, tuningTier1.Report);
+        }
+    }
+    return (tuningTier1, runLog);
+}
+
+// 표준 측정 위반 경로 — 제안 생성·1층 검토·재생성 반복을 처리한다.
+static JsonObject ApplyMeasurementDevPackCase(ProjectBundle bundle, MeasurementStages stages, List<MetricCheck> violations, NtfyOptions ntfy, JsonObject state, JsonObject runLog)
+{
+    var generation = GenerateProposalWithFallback(bundle.Definition, bundle.Proposal, violations, previousReviewReport: null);
+    bundle.Proposal = generation.Proposal;
+    runLog = Engine.AppendLog(runLog, generation.LogEntry, Engine.GetLoopIteration(state));
+    runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
+
+    var tier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
+    runLog = Engine.AppendLog(runLog, tier1.LogEntry, Engine.GetLoopIteration(state));
+    if (tier1.Report is not null)
+    {
+        AppendReport(bundle.Reviews, tier1.Report);
+    }
+
+    var maxRegenerations = Number(bundle.Definition["executorPolicy"]?.AsObject()["maxRegenerations"], 0);
+    for (var regeneration = 0; regeneration < maxRegenerations && tier1.Verdict == "needs_changes"; regeneration += 1)
+    {
+        if (TryEscalateInsufficientRefeedback(ref tier1, ref runLog, state))
+        {
+            break;
+        }
+
+        var supersededId = bundle.Proposal["id"]?.GetValue<string>() ?? "";
+        runLog = Engine.AppendLog(runLog, new JsonObject
+        {
+            ["event"] = "proposal.superseded",
+            ["params"] = new JsonObject { ["proposalId"] = supersededId, ["reasonCode"] = "review.needs_changes_regenerate" },
+            ["level"] = "info",
+            ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = null },
+            ["cost"] = RuntimeCost(),
+        }, Engine.GetLoopIteration(state));
+
+        generation = GenerateProposalWithFallback(bundle.Definition, bundle.Proposal, violations, previousReviewReport: tier1.Report);
+        bundle.Proposal = generation.Proposal;
+        runLog = Engine.AppendLog(runLog, generation.LogEntry, Engine.GetLoopIteration(state));
+        runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
+
+        tier1 = OllamaReviewer.Review(bundle.Definition, bundle.Proposal, bundle.Measurement, AssessRisk(bundle.Definition, bundle.Proposal));
+        runLog = Engine.AppendLog(runLog, tier1.LogEntry, Engine.GetLoopIteration(state));
+        if (tier1.Report is not null)
+        {
+            AppendReport(bundle.Reviews, tier1.Report);
+        }
+    }
+
+    SetTier1Details(state, stages.ReviewStageId, tier1);
+    Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), tier1.Verdict);
+    return runLog;
+}
+
+// 위반 없음 경로 — blueprint 기준 추가 제안을 생성하거나 기존 제안을 정리한다.
+static (JsonObject state, JsonObject runLog) ApplyMeasurementCompliantCase(ProjectBundle bundle, MeasurementStages stages, NtfyOptions ntfy, JsonObject state, JsonObject runLog)
+{
+    var suggestedBlueprintProposal = CreateSuggestedBlueprintProposal(bundle.Definition, bundle.Blueprint, bundle.Measurement, bundle.Proposal);
+    if (suggestedBlueprintProposal is not null)
+    {
+        bundle.Proposal = suggestedBlueprintProposal;
+        runLog = Engine.AppendLog(runLog, ProposalCreatedLog(bundle.Proposal), Engine.GetLoopIteration(state));
+        state = ApplySuggestedBlueprintProposalState(bundle.Definition, state, stages);
+        Notifier.NotifyReviewPending(ntfy, ProjectDisplayName(state), ProposalTitle(bundle.Proposal), "human_review");
+    }
+    else if (bundle.Proposal["lifecycle"]?.GetValue<string>() == "submitted")
+    {
+        bundle.Proposal["lifecycle"] = "superseded";
+    }
+    return (state, runLog);
 }
 
 // definition의 suggestedBlueprintMetrics 중 아직 blueprint에 없는 항목을 기준 추가 proposal로 만든다.
@@ -1492,26 +1487,6 @@ static MeasurementStages ResolveMeasurementStages(JsonObject definition)
     return new MeasurementStages(measureStageId, deviationStageId, reviewStageId, applyStageId);
 }
 
-// measurementProvider의 대상 경로를 실제 디렉터리로 해석한다.
-static string ResolveMeasurementTargetRoot(string projectPath, JsonObject provider)
-{
-    var targetPath = provider["targetPath"]?.GetValue<string>() ?? ".";
-    var candidate = Path.GetFullPath(Path.Combine(projectPath, targetPath));
-
-    if (Directory.Exists(Path.Combine(candidate, "server")) && Directory.Exists(Path.Combine(candidate, "dashboard")))
-    {
-        return candidate;
-    }
-
-    var parent = Directory.GetParent(candidate)?.FullName;
-    if (parent is not null && Directory.Exists(Path.Combine(parent, "server")) && Directory.Exists(Path.Combine(parent, "dashboard")))
-    {
-        return parent;
-    }
-
-    return candidate;
-}
-
 // definition에 측정 공급자 설정이 있는지 확인한다.
 static bool HasMeasurementProvider(JsonObject definition)
 {
@@ -1620,7 +1595,7 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
     if (isTuningApproval && tuningChanges is not null && tuningChanges.Count > 0)
     {
         ApplyTuningChanges(storage, projectId, tuningChanges);
-        var remeasure = RunMeasureCore(storage, projectId, jsonOptions, ntfy);
+        var remeasure = MeasurementService.RunMeasureCore(storage, projectId, jsonOptions, ntfy);
 
         if (remeasure.Bundle is not null)
         {

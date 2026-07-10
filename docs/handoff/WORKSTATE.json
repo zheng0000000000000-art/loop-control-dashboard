@@ -2,7 +2,7 @@
   "schemaVersion": "v9-min",
   "phaseId": "WP-REFACTOR-PROGRAM",
   "wpId": "WP-REFACTOR-PROGRAM",
-  "diId": "DI-R-03",
+  "diId": "DI-R-04",
   "status": "verifying",
   "updatedBy": "claude-sonnet-4-6",
   "updatedAt": "2026-07-10",
@@ -20,22 +20,36 @@
         {"path": "server/Program.cs", "linesBefore": 2517, "linesAfter": 2398},
         {"path": "server/InboxBuilder.cs", "linesBefore": 0, "linesAfter": 127}
       ]
+    },
+    {
+      "diId": "DI-R-03",
+      "changedFiles": [
+        {"path": "server/Program.cs", "linesBefore": 2398, "linesAfter": 2321},
+        {"path": "server/CycleSummaryBuilder.cs", "linesBefore": 0, "linesAfter": 92}
+      ]
     }
   ],
   "changedFiles": [
     {
       "path": "server/Program.cs",
-      "sha256": "bd9cc0332c63237156cdd5d3962803c538b33f3f9ebe5b5bde28dac97e6e8420",
-      "linesBefore": 2398,
-      "linesAfter": 2321,
-      "note": "BuildCycleSummary·SumEventDuration·CalculateHumanWaitingMs 제거, 호출 3곳 CycleSummaryBuilder.* 로 교체"
+      "sha256": "29ef8ae2f129356086d9368442357cdcbd245d4f",
+      "linesBefore": 2321,
+      "linesAfter": 2296,
+      "note": "RunMeasureCore·ResolveMeasurementTargetRoot 제거, MeasurementService 위임 설치, ApplyMeasurementResult → 5개 서브함수로 분리(maxFunctionLength 해소)"
     },
     {
-      "path": "server/CycleSummaryBuilder.cs",
-      "sha256": "35525d7ffd23ad0abc2fc59c5cb89ee825e638e9177b10d42838b7f0e8805b61",
+      "path": "server/MeasurementService.cs",
+      "sha256": "e81e7b2c04def33d1db2227be1eb447892bd68a3",
       "linesBefore": 0,
-      "linesAfter": 92,
-      "note": "신규 생성 — 사이클 요약 빌더 3개 함수 + Number 복사본"
+      "linesAfter": 65,
+      "note": "신규 생성 — RunMeasureCore + ResolveMeasurementTargetRoot + 위임자 2개(ApplyResult, PersistBundle)"
+    },
+    {
+      "path": "server/Cli/CliRouter.cs",
+      "sha256": "0aa79a18a26da10f16aff27c0a29d6487107e4fe",
+      "linesBefore": 299,
+      "linesAfter": 297,
+      "note": "MeasureCore 위임자 제거, RunMeasureCli → MeasurementService.RunMeasureCore 직접 호출"
     }
   ],
   "tests": {
@@ -45,6 +59,6 @@
     "measureViolationsBefore": 3,
     "measureViolationsAfter": 3
   },
-  "nextActions": ["DI-R-04 (MeasurementService 분리)"],
-  "notes": "Number()는 Program.cs 로컬 함수이므로 CycleSummaryBuilder 내부 private 복사본. CycleSummary()/ProjectContext() 웹 핸들러는 Program.cs 유지, CycleSummaryBuilder.BuildCycleSummary()를 호출하도록 교체. 코어 3파일 무접촉."
+  "nextActions": ["WP-REFACTOR-PROGRAM 완료"],
+  "notes": "maxFunctionLength 위반(server/Program.cs:310-570, 261줄) 해소 — ApplyMeasurementResult를 5개 서브함수(RegressionCase·TuningCase·RunTuningRegenerationLoop·DevPackCase·CompliantCase)로 분리. measure 후 위반은 outbox 사본 파일에서 검출(server/Program.cs는 해소됨). CliRouter.MeasureCore 위임자 제거."
 }

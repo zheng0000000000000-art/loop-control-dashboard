@@ -1,5 +1,5 @@
 // CLI 명령을 분기하고 CLI 전용 헬퍼를 모은 라우터.
-// RunMeasureCore·TryEscalateInsufficientRefeedback는 Program.cs 로컬 함수로 남으므로 위임으로 주입한다.
+// TryEscalateInsufficientRefeedback는 Program.cs 로컬 함수이므로 위임으로 주입한다.
 using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -11,7 +11,6 @@ internal static class CliRouter
         ref Tier1ReviewResult tier1, ref JsonObject runLog, JsonObject state);
 
     // Program.cs 로컬 함수를 주입받는 위임자.
-    internal static Func<Storage, string, JsonSerializerOptions, NtfyOptions, MeasureOutcome> MeasureCore = null!;
     internal static TryEscalateDelegate EscalateRefeedback = null!;
 
     // CLI 명령을 분기한다. 해당 명령이 없으면 null을 반환해 웹 서버로 진행한다.
@@ -75,7 +74,7 @@ internal static class CliRouter
             MeasureOutcome outcome;
             lock (storage.GetProjectLock(projectId))
             {
-                outcome = MeasureCore(storage, projectId, cliJsonOptions, cliNtfy);
+                outcome = MeasurementService.RunMeasureCore(storage, projectId, cliJsonOptions, cliNtfy);
             }
 
             if (outcome.Problem is not null || outcome.Bundle is null)
