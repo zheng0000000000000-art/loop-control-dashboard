@@ -1142,6 +1142,20 @@ static JsonObject ApplyMeasurementStagePatch(JsonObject definition, JsonObject s
 
     if (violations.Count > 0)
     {
+        // 방금 승인돼 적용이 진행 중인데 위반 집합이 승인 시점과 그대로면, 아직 아무도 고치지
+        // 않았다는 뜻이다 — 이때 재측정만으로 적용을 blocked로 되돌리고 새 검토를 열면 사람이
+        // 매번 다시 승인해야 하는 것처럼 보인다. 위반 집합이 실제로 달라졌을 때만 새 회차를 연다.
+        var applyInProgress = stages.ApplyStageId is not null && Engine.GetStageStatus(state, stages.ApplyStageId) == "in_progress";
+
+        if (applyInProgress && ViolationSignatureUnchanged(state, violations))
+        {
+            return Engine.ApplyStatePatch(definition, state, new JsonObject
+            {
+                ["loopState"] = "running",
+                ["stageStatuses"] = stageStatuses,
+            });
+        }
+
         if (stages.ReviewStageId is not null)
         {
             stageStatuses[stages.ReviewStageId] = "pending_review";
@@ -1184,6 +1198,29 @@ static JsonObject ApplyMeasurementStagePatch(JsonObject definition, JsonObject s
         ["stageStatuses"] = stageStatuses,
         ["blockInfo"] = blockInfo,
     });
+}
+
+// 현재 위반 집합이 직전 승인 시점에 저장해 둔 기준선과 같은지 비교한다.
+static bool ViolationSignatureUnchanged(JsonObject state, List<MetricCheck> violations)
+{
+    var baseline = state["applyBaselineViolations"]?.AsArray();
+
+    if (baseline is null)
+    {
+        return false;
+    }
+
+    var baselineSet = baseline.Select(node => node?.GetValue<string>() ?? "").ToHashSet(StringComparer.Ordinal);
+    var currentSet = BuildViolationSignature(violations).Select(node => node!.GetValue<string>()).ToHashSet(StringComparer.Ordinal);
+    return baselineSet.SetEquals(currentSet);
+}
+
+// 위반 목록을 "metricId=value" 형태의 비교 가능한 서명 배열로 만든다.
+static JsonArray BuildViolationSignature(List<MetricCheck> violations)
+{
+    return new JsonArray(violations
+        .Select(violation => (JsonNode?)JsonValue.Create($"{violation.MetricId}={violation.Value?.ToJsonString() ?? "null"}"))
+        .ToArray());
 }
 
 // 측정 결과를 단계 상세 지표와 이슈로 기록한다.
@@ -1966,14 +2003,29 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
     }, Engine.GetLoopIteration(state));
 
     var nextStage = Engine.GetNextStage(bundle.Definition, stageId);
-    state = nextStage is null
-        ? Engine.ApplyStatePatch(bundle.Definition, state, new JsonObject { ["overallStatus"] = "completed" })
-        : Engine.ApplyStatePatch(bundle.Definition, state, new JsonObject
+    var nextStageId = nextStage?["id"]?.GetValue<string>();
+    var entersApplyStage = nextStageId is not null && nextStageId == ResolveMeasurementStages(bundle.Definition).ApplyStageId;
+    var approvePatch = new JsonObject();
+    if (nextStage is null)
+    {
+        approvePatch["overallStatus"] = "completed";
+    }
+    else
+    {
+        approvePatch["currentStage"] = nextStageId;
+        approvePatch["stageStatuses"] = new JsonObject { [nextStageId!] = "in_progress" };
+        approvePatch["overallStatus"] = "in_progress";
+
+        if (entersApplyStage)
         {
-            ["currentStage"] = nextStage["id"]!.GetValue<string>(),
-            ["stageStatuses"] = new JsonObject { [nextStage["id"]!.GetValue<string>()] = "in_progress" },
-            ["overallStatus"] = "in_progress",
-        });
+            // 적용 단계로 들어갈 때 현재 위반 집합을 기준선으로 남긴다 — 재측정만으로
+            // 아직 아무것도 안 고쳤는데 새 검토가 열리는 것을 막기 위함(ViolationSignatureUnchanged).
+            var currentViolations = EvaluateBlueprintChecks(bundle.Blueprint, bundle.Measurement).Where(check => check.Implemented && !check.Passed).ToList();
+            approvePatch["applyBaselineViolations"] = BuildViolationSignature(currentViolations);
+        }
+    }
+
+    state = Engine.ApplyStatePatch(bundle.Definition, state, approvePatch);
 
     bundle.State = state;
     bundle.RunLog = runLog;

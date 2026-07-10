@@ -195,6 +195,11 @@ public static class Engine
             nextState["suspendedTracks"] = CloneNode(patch["suspendedTracks"]!);
         }
 
+        if (patch["applyBaselineViolations"] is not null)
+        {
+            nextState["applyBaselineViolations"] = CloneNode(patch["applyBaselineViolations"]!);
+        }
+
         if (patch["stageStatuses"] is JsonObject stageStatuses)
         {
             nextState["stages"] ??= new JsonObject();
