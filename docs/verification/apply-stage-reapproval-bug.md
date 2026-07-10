@@ -46,12 +46,35 @@
 2. 새로 생성된 proposal을 승인 → `currentStage: "apply"`, `apply: "in_progress"`,
    `applyBaselineViolations: ["smallTouchTargets=1","skillDomainViolations=2","programCsLines=2741","maxFunctionLength=246"]`.
 3. 아무 코드도 고치지 않고 측정 재실행(`POST /actions/measure`) → **`currentStage: "apply"`,
-   `apply: "in_progress"`, `changeReview: "approved"` 그대로 유지** — 새 proposal 객체는 다시
-   만들어지지만(기존에도 매 측정마다 생성되던 동작, 변경 없음) `changeReview` 상태가
-   `pending_review`로 안 열리므로 프런트의 `canReview`(단계 상태 기준)가 계속 false — 사용자에게
-   재승인을 요구하지 않는다.
+   `apply: "in_progress"`, `changeReview: "approved"` 그대로 유지**.
 4. `dotnet run --project server -- measure dev-pack` CLI 경로도 동일하게 확인(HTTP·CLI가
    같은 `RunMeasureCore`를 타므로 Tier2Approver의 자체 측정 호출에도 동일하게 적용됨을 확인).
+
+## 추가 발견 — "승인 버튼이 막혀 있다" (사람이 실사용 중 직접 신고)
+
+1차 수정 직후에도 새 proposal 객체는 여전히 매 측정마다 다시 생성됐다(`lifecycle: "submitted"`).
+그런데 대시보드의 `getReviewContext()`는 `hasPendingProposal = proposal.lifecycle === "submitted"`만
+보고, `canReview`는 별도로 단계 상태(`pending_review`)까지 확인한다 — 즉 **새 proposal이 화면에는
+"검토 대상"으로 표시되는데, 승인/거절 버튼은 비활성화**돼 있었다. 사람이 이걸 "승인이 막혀 있다"로
+신고했다. `ApplyMeasurementResult`에서 회귀 판정·제안 생성(dev-pack 규칙 기반/ruined-lab 튜닝
+공통 경로)이 `apply` 단계가 이미 진행 중이고 위반 집합이 그대로일 때도 무조건 실행됐던 게 원인 —
+1차 수정에서는 단계 전이만 막았지 제안 재생성 자체는 막지 않았었다.
+
+`ApplyMeasurementResult`에 동일한 `applyStageAlreadyInProgress` 조건(1차 수정과 같은 함수
+`ViolationSignatureUnchanged` 재사용)을 추가해, 그 경우 회귀/제안/1층 검토 로직 전체를
+건너뛰도록 `if (applyStageAlreadyInProgress) {} else if (violations.Count > 0) {...} else {...}`
+3분기로 재구성했다.
+
+### 실측(실제 서버, 이어서)
+
+5. 위 3번 상태에서 다시 측정 실행 → **`proposalId`가 그대로**(새 proposal 미생성),
+   `proposalLifecycle: "decided"` 유지 — 화면에 "검토 대상"이 뜨지 않고 승인 패널은
+   빈 상태(`approval.noPendingBody`)로 정상 표시된다.
+6. `dotnet run --project server -- measure dev-pack` CLI로도 동일 확인.
+
+(참고: 이 재현·검증 도중 Program.cs를 직접 수정하고 있었으므로, 그 중간 한 번은
+`programCsLines`/`maxFunctionLength` 실측값 자체가 내 편집으로 바뀌어 정상적으로 새 검토가
+열렸다 — "값이 실제로 달라지면 새 회차를 연다"는 설계가 의도대로 동작한 것이지 결함이 아니다.)
 
 ## 부수 효과 고지
 
@@ -62,12 +85,13 @@
 ## 게이트
 
 ```json
-{"gate":"dev-pack","violations":4,"attempt":4}
+{"gate":"dev-pack","violations":4,"attempt":5}
 ```
 
-기존과 동일한 4건(`smallTouchTargets`/`skillDomainViolations`/`maxFunctionLength`은 순수 기존 위반,
-`programCsLines`는 이번 수정으로 2689 → 2741(+52줄) 악화 — 버그 수정 로직 자체가
-`Program.cs`(Approve 핸들러·`ApplyMeasurementStagePatch`)에 있어 불가피하게 그 파일에 추가됨).
+기존과 동일한 4건(`smallTouchTargets`/`skillDomainViolations`은 순수 기존 위반,
+`programCsLines`=2751(band 0~2661)·`maxFunctionLength`=256(band 0~80)은 두 차례 수정으로
+2684 → 2751(+67줄) 악화 — 버그 수정 로직 자체가 `Program.cs`(Approve 핸들러·
+`ApplyMeasurementStagePatch`·`ApplyMeasurementResult`)에 있어 불가피하게 그 파일에 추가됨).
 새로 생긴 위반 카테고리는 없다(`violations` 개수 4로 불변) — `functionsWithoutComment` 등은
 계속 0.
 
@@ -81,5 +105,6 @@
   값이 조금이라도 바뀌면(악화든 개선이든) "무언가 시도됐다"로 보고 새 검토를 연다. 값은
   그대로인데 evidence(파일 위치 등)만 바뀐 경우는 여전히 "unchanged"로 본다 — 지시서 없이
   진행한 판단이라 여기 남긴다.
-- 매 측정마다 proposal 객체 자체는 여전히 다시 생성된다(단계가 안 열려 있어도) — 이는
-  이번 버그와 별개의 기존 동작이라 범위를 넘는다고 보고 손대지 않았다.
+- (수정됨) 처음에는 "매 측정마다 proposal이 다시 생성되는 것은 범위 밖"이라고 판단했으나,
+  사람이 실사용 중 "승인이 막혀 있다"로 신고해 실제로는 UI에 혼란을 주는 결함임이 확인돼
+  위 "추가 발견" 절의 수정으로 함께 해소했다.

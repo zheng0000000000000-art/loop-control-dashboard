@@ -795,6 +795,12 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
     var regressions = DetectRegressions(previousChecks, checks);
     var stages = ResolveMeasurementStages(bundle.Definition);
     var state = bundle.State;
+    // 이미 승인된 반영이 진행 중(apply:in_progress)인데 위반 집합이 승인 시점과 그대로면
+    // 아직 아무도 안 고쳤다는 뜻이다 — 이때도 새 제안을 만들면, 사람이 이미 승인해 둔 화면에
+    // "새 제안"이 떠서 승인 버튼만 비활성으로 막힌 것처럼 보이게 된다.
+    var applyStageAlreadyInProgress = stages.ApplyStageId is not null
+        && Engine.GetStageStatus(state, stages.ApplyStageId) == "in_progress"
+        && ViolationSignatureUnchanged(state, violations);
     var runLog = Engine.AppendLog(bundle.RunLog, new JsonObject
     {
         ["event"] = "measure.completed",
@@ -808,7 +814,11 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
     SetMeasurementDetails(state, stages.DeviationStageId, checks, violations);
     runLog = ResumeSatisfiedTracks(state, runLog, checks);
 
-    if (violations.Count > 0)
+    if (applyStageAlreadyInProgress)
+    {
+        // 새 제안·회귀 판정·tier1 검토를 만들지 않는다 — 이미 승인된 반영이 끝날 때까지 그대로 둔다.
+    }
+    else if (violations.Count > 0)
     {
         runLog = Engine.AppendLog(runLog, new JsonObject
         {
