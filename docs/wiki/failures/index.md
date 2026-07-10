@@ -7,3 +7,5 @@
 | [FAIL-2026-003](cases/FAIL-2026-003-approve-button-stuck-on-new-proposal.md) | 승인된 화면에 새 제안이 떠 승인 버튼이 막힌 것처럼 보임 | 해결됨 | ui_state, known_failure | dashboard-approval, proposal-rendering |
 | [FAIL-2026-004](cases/FAIL-2026-004-parallel-executor-worktree-contamination.md) | 병렬 헤드리스 실행자가 작업트리를 오염시킴 | 완화됨 | concurrency, design_learning | executor-orchestration |
 | [FAIL-2026-005](cases/FAIL-2026-005-headless-launch-observability.md) | 헤드리스 실행자 미실행을 진행 중으로 오판 | 해결됨 | observability, known_failure | executor-orchestration |
+| [FAIL-2026-006](cases/FAIL-2026-006-storage-project-path-prefix-escape.md) | Storage 프로젝트 경로가 sibling prefix 디렉터리를 통과시킴 | 확인됨 | path_escape, design_learning | storage-project-path |
+| [FAIL-2026-007](cases/FAIL-2026-007-outbox-read-prefix-escape.md) | outbox 조회가 encoded backslash로 sibling 디렉터리를 읽음 | 확인됨 | path_escape, design_learning | outbox-read |
