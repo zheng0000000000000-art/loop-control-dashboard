@@ -6462,6 +6462,27 @@
         "subscriptionCalls": 0,
         "role": "runtime"
       }
+    },
+    {
+      "createdAt": "2026-07-10T09:51:46.6484078+09:00",
+      "event": "checkpoint.acknowledged",
+      "params": {
+        "checkpointId": "loop-milestone"
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "human",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 5,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
     }
   ]
 }

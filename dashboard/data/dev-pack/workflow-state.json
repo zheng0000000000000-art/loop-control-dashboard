@@ -3,7 +3,7 @@
   "projectName": "개발 팩 — 자기 검수 루프",
   "currentStage": "apply",
   "overallStatus": "warning",
-  "loopState": "paused",
+  "loopState": "running",
   "mode": "normal",
   "suspendedTracks": [
     {
@@ -142,7 +142,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-10T09:51:38.5614691+09:00",
+  "lastUpdated": "2026-07-10T09:51:46.6477122+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
@@ -151,10 +151,11 @@
       "acknowledgedAt": "2026-07-09T13:32:02.3444819+09:00"
     }
   ],
-  "pausedAt": "2026-07-10T09:51:38.5614587+09:00",
-  "pausedBy": {
-    "type": "checkpoint",
-    "checkpointId": "loop-milestone"
-  },
-  "checkpointId": "loop-milestone"
+  "acknowledgedCheckpoints": [
+    {
+      "checkpointId": "loop-milestone",
+      "loopIteration": 5,
+      "acknowledgedAt": "2026-07-10T09:51:46.6476225+09:00"
+    }
+  ]
 }
