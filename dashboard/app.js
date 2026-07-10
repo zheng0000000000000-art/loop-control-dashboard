@@ -189,6 +189,11 @@ function bindEvents() {
     }
   });
   document.addEventListener("keydown", handleKeyboardShortcut);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      refreshRuntimeData().catch(() => {});
+    }
+  });
 }
 
 // 프로젝트 선택 목록을 렌더링한다.
