@@ -1,54 +1,49 @@
-STATUS — 진행 상황 스냅샷 (모바일·새 세션 인수인계용)
+# STATUS — 진행 스냅샷 (세션 이어받기용)
 
+> 갱신: 2026-07-10. 이 파일 + docs/handoff/ + docs/verification/ 만 읽으면 어떤 세션이든 이어받는다.
+> **새 세션 진입 순서**: ①이 파일 ②docs/handoff/WORKSTATE.json(현재 DI) ③docs/handoff/CODEX-QUEUE.md ④outputs/review-log.md(최근 검수) → 자동 루프 상태 확인 → 다음 작업.
 
-갱신 규칙 매 커밋이 아니라 큰 단계 마감 시. 이 파일 + docsdirectives + docsverification 만 읽으면 어떤 세션이든 이어받을 수 있어야 한다.
-마지막 갱신 2026-07-10 (Claude)
+## 한 줄 정의 / 북극성
 
+AI가 만들고(sonnet), AI가 검토하고(코덱스+검수자), AI가 결재를 배우는 — 사람은 기준만 정하는 로컬 자율 런타임. 고정점: **결재·반입·기준변경·이양결정은 항상 사람.**
 
+## 현재 위치 (2026-07-10)
 
-한 줄 정의
+**리팩토링 WP-REFACTOR-PROGRAM** (Program.cs 스파게티 해체):
+- DI-R-01 CliRouter 분리 — 완료·커밋(88ea409), verify-behavior=true
+- DI-R-02 InboxBuilder 분리 — 완료·커밋(b2e355a)
+- DI-R-03 CycleSummaryBuilder 분리 — 완료·커밋(4675c4d), Program.cs 2321
+- **DI-R-04 MeasurementService 분리 + maxFunctionLength 해소 — 진행 중** (sonnet 헤드리스, 조율자가 검수·커밋 예정). 이게 WP 마지막.
 
-AI가 만들고, AI가 검토하고, AI가 결재를 배우는 — 사람은 기준만 정하는 로컬 자율 런타임. (북극성 개정 2026-07-10 궁극 목표 = AI가 AI를 다루는 런타임, 고정점 = 이양 결정은 항상 사람)
+## 자동 루프 (세션 종료 후에도 계속 돎, Cowork 앱 켜져 있는 동안)
 
-현재 위치
+| 루프 | 주기 | 역할 |
+| --- | --- | --- |
+| sonnet 헤드리스 | 발사식(claude -p CLI) | server/ 구현·리팩토링. 다음 DI를 검수자/새세션이 발사 |
+| **조율자** (scheduled task `recursion1-result-check`) | 5분 | 단일 커미터 — sonnet(server)·코덱스(docs) 산출물 검수(VERIFY-PROTOCOL)·커밋. 결재 대행 안 함 |
+| 코덱스 | 15분 | QA·버그헌팅. sonnet 작업 확인(git log·WORKSTATE·verification)→호출부 정합성·회귀 QA. CODEX-AUTO-15min 루틴 |
 
+## 협업 인프라 (docs/handoff/)
 
-완료·검수 통과 #9(AI 1급 사용자), #11(Context Budget+헤더 참조화), #11-R(재적용+반입 stale 가드)
-완료·검수 통과 #10 재작업(제한된 이양안) — outbox 반입 중 게이트 클린 건만 tier-2 AI(qwen3:14b)가 검토·승인,
-  proposal 승인/거절은 그대로 사람 전용. `Tier2Approver.Enabled`는 기본값 false로 커밋(사람이 직접 켜야 함).
-  감사 로그 docs/audit/tier2-import-approvals.md, 일일 캡 5, 이상 감지 시 자동 halt. 상세 docs/verification/tier2-auto-import-approval.md
-완료 모바일 승인 버튼 무반응 버그 — window.prompt()가 401 토큰 재입력에서 막혀(iOS PWA 등에서 미지원/미표시) 렌더러가 멈추는 게 원인.
-  페이지 내 모달(promptModal)로 교체. 상세 docs/verification/mobile-approve-button-fix.md
-완료 Tier2Approver 활성화(사람 확인) + "승인해도 새로고침하면 다시 승인해야/버튼이 막힌 것처럼 보인다" 버그 2건 수정
-  (apply 단계 리셋 + 제안 재생성 둘 다 applyBaselineViolations 기준선 비교로 해결, 사람이 실사용 중 신고해 2차 발견·수정).
-  상세 docs/verification/apply-stage-reapproval-bug.md
-완료 백그라운드 탭이 최신 상태를 못 받아오던 문제 — 모바일 브라우저가 탭 백그라운드 시 폴링 타이머를 멈춰
-  화면이 오래된 데이터로 고정되던 것. visibilitychange 리스너로 재포그라운드 시 즉시 갱신. 상세 docs/verification/stale-tab-visibility-refresh.md
-완료 적용/내보내기 단계 상세(stageDetails)가 배지와 어긋나던 실제 데이터 버그 — SetApplyStageDetails로
-  단계 상태 확정 시점(함수 맨 끝)마다 다시 씀. dev-pack·ruined-lab 둘 다 확인. 상세 docs/verification/apply-stage-detail-desync.md
-완료(반입 대기) #15(반입 결재 UI) — 커밋 7df4bde로 UI 자체는 이미 머지됨, 검수 통과(docs/verification/import-approval-ui.md)
-진행 중(반입 대기, 사람 결정) #12(템플릿 렌더러) — outbox task-20260710070612000 / #7(회고 큐) — outbox task-20260710090000000
-  둘 다 서버 코드는 outbox에서 검수까지 끝났고 사람의 approve-import만 남았다. 에이전트는 반입을 대행하지 않는다.
-착수 전 #13(실행자 사다리+할당량 원장) — 지시서 없음. #14(Context Pack) — 지시서 없음. #8(규범 스토어) — 지시서 없음.
-기준선 숫자 dispatch 사본 = 2.78MB  추정 696k 토큰  131파일 → #14(Context Pack)의 절감 목표
+- `COLLAB-STRUCTURE.md` — 3자 역할·영역 소유·핸드오프
+- `CODEX-ROLE-bug-hunter.md` — 코덱스 상시 역할(QA)
+- `CODEX-AUTO-15min-routine.md` — 코덱스 15분 자동 루틴
+- `VERIFY-PROTOCOL-universal.md` — 보편 검수 프로토콜(누구든 검수)
+- `CODEX-QUEUE.md` — 코덱스 작업 큐
+- `WORKSTATE.json` — 단일 상태 원본(v9)
 
+## 새 세션이 할 일
 
-대기열 (4축 재배치)
+1. R-04 완료됐나 확인(server/MeasurementService.cs 존재 + WORKSTATE diId). 조율자가 이미 커밋했을 수 있음(git log).
+2. R-04까지 끝났으면 WP-REFACTOR-PROGRAM 완결 → 다음: 코덱스 S-01/S-02 재현 결과 반영(경로검증 수정 지시), 또는 대기열의 #10(AI결재자 재작업, 단 Tier2 이미 활성)·한정 이양 구현.
+3. 실행자 발사는 FAIL-2026-005 교훈대로: 프롬프트 인자 직접 전달 + RedirectStandardOutput + PID/산출물로 실행 확인("launched"≠실행).
+4. 헤드리스는 **순차**(같은 server/ 영역 동시 금지 — FAIL-2026-004).
 
-#12(반입 대기) → #13(실행자 사다리+할당량 원장, 지시서 없음) → #14(Context Pack, 지시서 없음) → #7(반입 대기) → #8(규범 스토어, 지시서 없음)
-(#10은 제한된 이양안으로 완료 + 활성화까지 사람이 확정. #15는 이미 반입·검수 완료.)
+## 사람 대기 (결재 게이트)
 
-실행자 규칙 기본 코덱스(CLI 미설치, 수동 채널), 헤드리스는 claude-code(sonnet), 소진 징후 시 강등. 발행·결재·반입 = 항상 사람.
+- outbox 반입: #12(task-...070612000)는 stale로 **거절** 대상(리팩토링으로 base 바뀜), #7·#8 outbox는 검토.
+- 미결 확인: stale 에러 UI 노출 개선, S-01/S-02(경로검증 sibling-prefix escape) 코덱스 재현 결과.
 
-자동화 상태
+## 대기열 (리팩토링 후)
 
-
-30분 폴링 새 push 감지 → 자동 검수 → 통과 시 다음 지시서 초안 생성 (데스크톱 Cowork 앱이 켜져 있을 때만 동작)
-재귀 실험 Claude가 지시서 작성 → sonnet/codex 헤드리스 수행 → outbox 제출 → 사람 결재. 1호(#12)·2호(#15)·3호(#7) 실측 완료. 2호에서 실행자가 지시 게이트 질문(경로 불일치)을 스스로 제기 — 재지시로 A안 진행. #12·#7은 outbox 반입만 남음(사람 결정)
-
-
-모바일 일반 채팅에서 이어받는 법
-
-새 채팅에 이렇게 시작 httpsgithub.comzheng0000000000000-artloop-control-dashboard 의 docsSTATUS.md 를 읽고 이어서 협업하자. 원칙은 docsdirectives_header.md 와 docsDECISIONS.md, 대기열은 STATUS 참조.
-
-주의 모바일 채팅은 조언·지시서 작성·검토만 가능(코드 실행·로컬 접근 불가). 실행·결재는 데스크톱대시보드(Tailscale 100.x.x.x5173)에서.
+한정 이양(게이트 클린 반입을 상위 AI 승인, 감사·캡·DECISIONS 기록) → #10 AI결재자 정리 → #13 실행자 사다리·할당량 원장 → #14 Context Pack → #7 회고 → #8 규범스토어. 상세: outputs/directive-queue.md.
