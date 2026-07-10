@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
-  "currentStage": "apply",
+  "currentStage": "changeReview",
   "overallStatus": "warning",
-  "loopState": "halted",
+  "loopState": "running",
   "mode": "normal",
   "suspendedTracks": [
     {
@@ -17,12 +17,6 @@
       "detectedAt": "2026-07-10T09:39:27.4424984+09:00",
       "relatedProposalId": "proposal-1783630076578",
       "suspectConfidence": "temporal"
-    },
-    {
-      "metricId": "functionsWithoutComment",
-      "detectedAt": "2026-07-10T22:10:26.6017659+09:00",
-      "relatedProposalId": "proposal-1783688183926",
-      "suspectConfidence": "temporal"
     }
   ],
   "loopIteration": 10,
@@ -30,10 +24,14 @@
     "goals": "passed",
     "measure": "passed",
     "deviationCheck": "warning",
-    "changeReview": "approved",
-    "apply": "in_progress"
+    "changeReview": "pending_review",
+    "apply": "blocked"
   },
-  "blockInfo": {},
+  "blockInfo": {
+    "apply": {
+      "kind": "waiting"
+    }
+  },
   "stageDetails": {
     "goals": {
       "summary": "개발 팩은 저장소의 핵심 규칙을 측정하고 블루프린트 기준과 비교한다.",
@@ -55,7 +53,7 @@
       "issues": []
     },
     "deviationCheck": {
-      "summary": "측정 결과에서 4개 괴리가 감지됐다.",
+      "summary": "측정 결과에서 3개 괴리가 감지됐다.",
       "metrics": [
         {
           "label": "domainWordsInEngine",
@@ -63,7 +61,7 @@
         },
         {
           "label": "functionsWithoutComment",
-          "value": "1 / 0"
+          "value": "0 / 0"
         },
         {
           "label": "directiveAcceptanceCriteria",
@@ -123,7 +121,6 @@
         }
       ],
       "issues": [
-        "functionsWithoutComment: 측정값 1이 기준 0을 벗어났다. 근거: server/InboxBuilder.cs:131",
         "smallTouchTargets: 측정값 1이 기준 0을 벗어났다. 근거: dashboard/style.css:1133",
         "skillDomainViolations: 측정값 2이 기준 0을 벗어났다. 근거: docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md",
         "maxFunctionLength: 측정값 261이 기준 0~80을 벗어났다. 근거: server/Program.cs:387-647"
@@ -138,30 +135,35 @@
         }
       ],
       "issues": [
-        "note-nonempty: note의 값은 'dashboard/style.css:1133'로, 의미 있는 설명이 아니다.",
-        "after-matches-goal: smallTouchTargets의 after 값은 0으로, note에 언급된 dashboard/style.css:1133은 이 변경이 관련된 파일이며, 이는 after 값이 note의 방향과 일치하지 않음을 나타낸다.",
-        "after-matches-goal: note에 따르면 변경이 server/Program.cs:387-647에 적용되어야 하지만 after 값은 [0,80]으로, maxFunctionLength 메트릭의 before 값 261과 동일하며 명확한 변경 방향을 보여주지 않는다.",
-        "no-scope-creep: changes에 blueprint 위반 해소와 무관한 항목이 포함되어 있음"
+        "no-scope-creep: 제안은 smallTouchTargets 문제 해결에 초점이 맞춰져 있으나, 측정 요약에는 skillDomainViolations와 같은 blueprint 위반 항목이 포함되어 있다."
       ]
     },
     "apply": {
-      "summary": "승인된 변경을 반영하는 중이다 — 실제로 반영한 뒤 재측정하면 다음 단계로 넘어간다.",
+      "summary": "변경 승인이 완료될 때까지 차단된다.",
       "metrics": [
         {
           "label": "적용 상태",
-          "value": "진행 중"
+          "value": "차단됨"
         }
       ],
-      "issues": []
+      "issues": [
+        "이전 단계가 아직 완료되지 않았다."
+      ]
     }
   },
-  "lastUpdated": "2026-07-10T22:14:15.1437269+09:00",
+  "lastUpdated": "2026-07-10T22:14:48.5084448+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
       "type": "loopIteration",
       "loopIteration": 0,
       "acknowledgedAt": "2026-07-09T13:32:02.3444819+09:00"
+    },
+    {
+      "id": "guardrail",
+      "type": "loopIteration",
+      "loopIteration": 10,
+      "acknowledgedAt": "2026-07-10T22:14:48.5084260+09:00"
     }
   ],
   "acknowledgedCheckpoints": [
@@ -176,16 +178,5 @@
     "smallTouchTargets=1",
     "skillDomainViolations=2",
     "maxFunctionLength=261"
-  ],
-  "haltedAt": "2026-07-10T22:14:15.1433838+09:00",
-  "haltedBy": {
-    "type": "guardrail",
-    "breaches": [
-      {
-        "type": "loopIteration",
-        "actual": 10,
-        "limit": 10
-      }
-    ]
-  }
+  ]
 }

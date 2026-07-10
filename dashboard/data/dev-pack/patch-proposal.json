@@ -1,32 +1,27 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783689069084",
-  "title": "블루프린트 괴리 해소 제안",
-  "lifecycle": "decided",
+  "id": "proposal-1783689262084",
+  "title": "UI/UX 개선 및 코드 품질 향상",
+  "lifecycle": "submitted",
   "createdBy": {
-    "provider": "rule-engine",
-    "model": null
+    "provider": "ollama",
+    "model": "qwen3:8b"
   },
-  "revisionOf": "proposal-1783689026602",
-  "summary": "측정 결과가 블루프린트 기준을 벗어난 항목을 수정 대상으로 제안한다.",
+  "revisionOf": null,
+  "summary": "버튼 스타일 조정, 지침 정확성 개선, 함수 길이 단축을 통해 사용자 터치 오류 감소 및 코드 가독성 향상 목표",
+  "assumptions": [],
   "changes": [
-    {
-      "path": "functionsWithoutComment",
-      "before": 1,
-      "after": 0,
-      "note": "server/InboxBuilder.cs:131"
-    },
     {
       "path": "smallTouchTargets",
       "before": 1,
       "after": 0,
-      "note": "dashboard/style.css:1133"
+      "note": "타겟 크기 측정값을 줄이기 위해 버튼의 스타일을 조정하여 사용자 터치 시 오류를 줄이는 것이 목적"
     },
     {
       "path": "skillDomainViolations",
       "before": 2,
       "after": 0,
-      "note": "docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md"
+      "note": "기존 지침은 적용 지침으로서 작성되어야 하며, 인용 대상이 될 수 없어 수정하여 정확한 내용 전달을 목표로 한다."
     },
     {
       "path": "maxFunctionLength",
@@ -35,13 +30,13 @@
         0,
         80
       ],
-      "note": "server/Program.cs:387-647"
+      "note": "함수 길이를 단축하여 가독성과 유지보수성을 향상시키고, 코드의 복잡성을 줄이는 데 목적이 있다."
     }
   ],
   "impact": [
     {
       "label": "위반 항목",
-      "value": "4"
+      "value": "3"
     },
     {
       "label": "예상 비용",
