@@ -24,6 +24,8 @@ AI가 만들고, AI가 검토하고, AI가 결재를 배우는 — 사람은 기
   상세 docs/verification/apply-stage-reapproval-bug.md
 완료 백그라운드 탭이 최신 상태를 못 받아오던 문제 — 모바일 브라우저가 탭 백그라운드 시 폴링 타이머를 멈춰
   화면이 오래된 데이터로 고정되던 것. visibilitychange 리스너로 재포그라운드 시 즉시 갱신. 상세 docs/verification/stale-tab-visibility-refresh.md
+완료 적용/내보내기 단계 상세(stageDetails)가 배지와 어긋나던 실제 데이터 버그 — SetApplyStageDetails로
+  단계 상태 확정 시점(함수 맨 끝)마다 다시 씀. dev-pack·ruined-lab 둘 다 확인. 상세 docs/verification/apply-stage-detail-desync.md
 완료(반입 대기) #15(반입 결재 UI) — 커밋 7df4bde로 UI 자체는 이미 머지됨, 검수 통과(docs/verification/import-approval-ui.md)
 진행 중(반입 대기, 사람 결정) #12(템플릿 렌더러) — outbox task-20260710070612000 / #7(회고 큐) — outbox task-20260710090000000
   둘 다 서버 코드는 outbox에서 검수까지 끝났고 사람의 approve-import만 남았다. 에이전트는 반입을 대행하지 않는다.
