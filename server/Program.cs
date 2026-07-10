@@ -1039,6 +1039,11 @@ static int ApplyMeasurementResult(ProjectBundle bundle, string providerId, NtfyO
         }
     }
 
+    // 위의 여러 분기(회귀 롤백·튜닝·기준 추가 제안 등) 중 어느 것이 실행됐든, 최종적으로
+    // 확정된 적용 단계 상태를 기준으로 그 단계 상세를 한 번에 맞춰 쓴다 — 분기마다 각자
+    // 갱신하면 나중 분기가 앞선 갱신을 덮어써 화면과 실제 상태가 어긋나기 쉽다.
+    SetApplyStageDetails(state, stages.ApplyStageId);
+
     bundle.State = state;
     bundle.RunLog = runLog;
     return violations.Count;
@@ -1231,6 +1236,46 @@ static JsonArray BuildViolationSignature(List<MetricCheck> violations)
     return new JsonArray(violations
         .Select(violation => (JsonNode?)JsonValue.Create($"{violation.MetricId}={violation.Value?.ToJsonString() ?? "null"}"))
         .ToArray());
+}
+
+// 적용/내보내기 단계 상세를 현재 단계 상태에 맞게 다시 쓴다 — 예전에는 이 단계가 한 번
+// blocked로 채워지면 completed로 넘어간 뒤에도 그 문구가 그대로 남아 화면과 실제 상태가 어긋났다.
+static void SetApplyStageDetails(JsonObject state, string? stageId)
+{
+    if (stageId is null)
+    {
+        return;
+    }
+
+    var status = Engine.GetStageStatus(state, stageId);
+    var summary = "아직 시작되지 않았다.";
+    var metricValue = "대기";
+    var issues = new JsonArray();
+
+    if (status == "completed")
+    {
+        summary = "승인된 변경이 적용 완료됐다.";
+        metricValue = "완료";
+    }
+    else if (status == "in_progress")
+    {
+        summary = "승인된 변경을 반영하는 중이다 — 실제로 반영한 뒤 재측정하면 다음 단계로 넘어간다.";
+        metricValue = "진행 중";
+    }
+    else if (status == "blocked")
+    {
+        summary = "변경 승인이 완료될 때까지 차단된다.";
+        metricValue = "차단됨";
+        issues.Add("이전 단계가 아직 완료되지 않았다.");
+    }
+
+    state["stageDetails"] ??= new JsonObject();
+    state["stageDetails"]!.AsObject()[stageId] = new JsonObject
+    {
+        ["summary"] = summary,
+        ["metrics"] = new JsonArray(new JsonObject { ["label"] = "적용 상태", ["value"] = metricValue }),
+        ["issues"] = issues,
+    };
 }
 
 // 측정 결과를 단계 상세 지표와 이슈로 기록한다.
@@ -2036,6 +2081,11 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
     }
 
     state = Engine.ApplyStatePatch(bundle.Definition, state, approvePatch);
+
+    if (entersApplyStage)
+    {
+        SetApplyStageDetails(state, nextStageId);
+    }
 
     bundle.State = state;
     bundle.RunLog = runLog;

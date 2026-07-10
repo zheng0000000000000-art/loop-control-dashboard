@@ -44,3 +44,10 @@
   재생성은 막지 않아, 이미 승인된 화면에 새 제안이 뜨고 버튼만 비활성화된 채로 남았던 것.
   같은 조건으로 제안 재생성·회귀 판정도 함께 건너뛰도록 확장했다. 상세:
   `docs/verification/apply-stage-reapproval-bug.md`.
+- 2026-07-10: ruined-lab 스크린샷 재신고("내보내기 진행 중"인데 상세엔 "아직 완료 안 됨")를
+  조사해 별개의 실제 데이터 버그를 찾았다 — 적용/내보내기 단계는 배지(`stages.X`)만
+  갱신되고 그 설명 텍스트(`stageDetails.X`)는 채우는 코드가 아예 없어 아주 예전에 한 번
+  박힌 문구가 그대로 남아 있었다. `SetApplyStageDetails`로 채우되, 처음엔
+  `ApplyMeasurementStagePatch` 직후에 불렀다가 회귀·튜닝·기준 추가 제안 분기가 이후에
+  또 단계를 바꾸는 걸 발견해(실측 중 자체 버그를 재발견) 호출 위치를 함수 맨 끝으로
+  옮겼다. 상세: `docs/verification/apply-stage-detail-desync.md`.
