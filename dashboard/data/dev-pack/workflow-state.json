@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
-  "currentStage": "changeReview",
-  "overallStatus": "warning",
+  "currentStage": "apply",
+  "overallStatus": "in_progress",
   "loopState": "running",
   "mode": "normal",
   "suspendedTracks": [
@@ -19,19 +19,15 @@
       "suspectConfidence": "temporal"
     }
   ],
-  "loopIteration": 6,
+  "loopIteration": 7,
   "stages": {
     "goals": "passed",
     "measure": "passed",
     "deviationCheck": "warning",
-    "changeReview": "pending_review",
-    "apply": "blocked"
+    "changeReview": "approved",
+    "apply": "in_progress"
   },
-  "blockInfo": {
-    "apply": {
-      "kind": "waiting"
-    }
-  },
+  "blockInfo": {},
   "stageDetails": {
     "goals": {
       "summary": "개발 팩은 저장소의 핵심 규칙을 측정하고 블루프린트 기준과 비교한다.",
@@ -109,22 +105,22 @@
         },
         {
           "label": "programCsLines",
-          "value": "2751 / 0~2661"
+          "value": "2801 / 0~2661"
         },
         {
           "label": "appJsLines",
-          "value": "2669 / 0~2692"
+          "value": "2674 / 0~2692"
         },
         {
           "label": "maxFunctionLength",
-          "value": "256 / 0~80"
+          "value": "261 / 0~80"
         }
       ],
       "issues": [
         "smallTouchTargets: 측정값 1이 기준 0을 벗어났다. 근거: dashboard/style.css:1133",
         "skillDomainViolations: 측정값 2이 기준 0을 벗어났다. 근거: docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md",
-        "programCsLines: 측정값 2751이 기준 0~2661을 벗어났다. 근거: server/Program.cs:2751 lines",
-        "maxFunctionLength: 측정값 256이 기준 0~80을 벗어났다. 근거: server/Program.cs:790-1045"
+        "programCsLines: 측정값 2801이 기준 0~2661을 벗어났다. 근거: server/Program.cs:2801 lines",
+        "maxFunctionLength: 측정값 261이 기준 0~80을 벗어났다. 근거: server/Program.cs:790-1050"
       ]
     },
     "changeReview": {
@@ -132,21 +128,26 @@
       "metrics": [
         {
           "label": "1층 검토 판정",
-          "value": "uncertain"
+          "value": "needs_changes"
         }
       ],
       "issues": [
-        "after-matches-goal: after 값은 배열 [0,80]이지만 note는 함수 길이 제한을 줄여 가독성과 유지보수성을 개선하고자 함으로, 0으로 설정하는 것은 note와 일치하지 않음",
-        "no-scope-creep: changes에 blueprint 위반 해소와 무관한 항목이 섞여 있는가"
+        "after-matches-goal: note는 타겟 크기 개선으로 사용성을 향상시킬 것이라 예상하지만, after 값은 0으로 before 값 1보다 감소하여 일치하지 않습니다.",
+        "after-matches-goal: after 값 [0,2661]은 note에서 언급된 목표 범위와 일치하지만, programCsLines의 현재 값 2801은 목표 범위를 벗어나므로 after 값이 note의 방향과 일치하지 않습니다."
       ]
     },
     "apply": {
-      "summary": "승인 후 사람이 저장소를 수정하고 다시 측정해 해소 여부를 확인한다.",
-      "metrics": [],
+      "summary": "승인된 변경을 반영하는 중이다 — 실제로 반영한 뒤 재측정하면 다음 단계로 넘어간다.",
+      "metrics": [
+        {
+          "label": "적용 상태",
+          "value": "진행 중"
+        }
+      ],
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-10T12:20:10.7632938+09:00",
+  "lastUpdated": "2026-07-10T21:33:45.7715681+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
@@ -161,5 +162,11 @@
       "loopIteration": 5,
       "acknowledgedAt": "2026-07-10T09:51:46.6476225+09:00"
     }
+  ],
+  "applyBaselineViolations": [
+    "smallTouchTargets=1",
+    "skillDomainViolations=2",
+    "programCsLines=2801",
+    "maxFunctionLength=261"
   ]
 }

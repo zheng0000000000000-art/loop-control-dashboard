@@ -1,59 +1,80 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783609731344",
-  "title": "레버 변경 성공",
-  "lifecycle": "decided",
-  "kind": "tuning",
+  "id": "proposal-1783654821573",
+  "title": "방별 도달률 기준 추가 제안",
+  "lifecycle": "superseded",
+  "kind": "blueprint_metric",
   "createdBy": {
-    "provider": "ollama",
-    "model": "qwen3:8b"
+    "provider": "rule-engine",
+    "model": null
   },
   "revisionOf": null,
-  "summary": "레버 변경으로 인해 rooms[0].enemies.hp가 20에서 25로 증가했으며, 밴드 도달은 성공했고 잔여 위반은 없었습니다.",
-  "assumptions": [],
+  "summary": "측정에 포함된 방별 도달률을 blueprint 기준 후보로 올린다. 기준 반영은 사람 결재 후에만 가능하다.",
+  "assumptions": [
+    "방별 도달률은 문턱형 완주율을 보조하는 연속형 관찰 지표다."
+  ],
   "changes": [
     {
-      "path": "rooms[0].enemies.hp",
-      "before": 20,
-      "after": 25,
-      "note": "레버를 20에서 25로 증가시킴으로써, 플레이어가 첫 번째 방에서 적과의 싸움을 성공적으로 통과할 가능성이 높아졌으며, 이는 완료율의 감소와 평균 보상 증가로 예측됩니다."
+      "path": "blueprint.items[4]",
+      "before": null,
+      "after": {
+        "metricId": "room1ReachRate",
+        "band": [
+          95,
+          100
+        ],
+        "priority": "normal",
+        "note": "첫 방에 도달한 런 비율"
+      },
+      "note": "측정은 존재하지만 기준에는 없는 room1ReachRate 지표를 blueprint 추가 후보로 올린다."
+    },
+    {
+      "path": "blueprint.items[5]",
+      "before": null,
+      "after": {
+        "metricId": "room2ReachRate",
+        "band": [
+          80,
+          100
+        ],
+        "priority": "normal",
+        "note": "두 번째 방에 도달한 런 비율"
+      },
+      "note": "측정은 존재하지만 기준에는 없는 room2ReachRate 지표를 blueprint 추가 후보로 올린다."
+    },
+    {
+      "path": "blueprint.items[6]",
+      "before": null,
+      "after": {
+        "metricId": "room3ReachRate",
+        "band": [
+          60,
+          100
+        ],
+        "priority": "normal",
+        "note": "세 번째 방에 도달한 런 비율"
+      },
+      "note": "측정은 존재하지만 기준에는 없는 room3ReachRate 지표를 blueprint 추가 후보로 올린다."
+    },
+    {
+      "path": "blueprint.items[7]",
+      "before": null,
+      "after": {
+        "metricId": "room4ReachRate",
+        "band": [
+          45,
+          100
+        ],
+        "priority": "normal",
+        "note": "네 번째 방에 도달한 런 비율"
+      },
+      "note": "측정은 존재하지만 기준에는 없는 room4ReachRate 지표를 blueprint 추가 후보로 올린다."
     }
   ],
-  "predictedMetrics": [
-    {
-      "metricId": "completionRate",
-      "before": 71.2,
-      "after": 57.199999999999996,
-      "band": "45~60"
-    },
-    {
-      "metricId": "room1DeathRate",
-      "before": 0,
-      "after": 0,
-      "band": "0~20"
-    },
-    {
-      "metricId": "room3DeathRate",
-      "before": 0,
-      "after": 0,
-      "band": "0~35"
-    },
-    {
-      "metricId": "avgRewardPerRun",
-      "before": 9.024,
-      "after": 9.568,
-      "band": "8~20"
-    }
-  ],
-  "predictedReachedBand": true,
   "impact": [
     {
-      "label": "레버 변경",
-      "value": "1"
-    },
-    {
-      "label": "탐색 후보 수",
-      "value": "40"
+      "label": "기준 후보",
+      "value": "4"
     },
     {
       "label": "예상 비용",

@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-10T12:20:10.7526146+09:00",
+  "measuredAt": "2026-07-10T12:44:08.4574884+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
@@ -78,23 +78,23 @@
     },
     {
       "metricId": "programCsLines",
-      "value": 2751,
+      "value": 2801,
       "evidence": [
-        "server/Program.cs:2751 lines"
+        "server/Program.cs:2801 lines"
       ]
     },
     {
       "metricId": "appJsLines",
-      "value": 2669,
+      "value": 2674,
       "evidence": [
-        "dashboard/app.js:2669 lines"
+        "dashboard/app.js:2674 lines"
       ]
     },
     {
       "metricId": "maxFunctionLength",
-      "value": 256,
+      "value": 261,
       "evidence": [
-        "server/Program.cs:790-1045"
+        "server/Program.cs:790-1050"
       ]
     }
   ]

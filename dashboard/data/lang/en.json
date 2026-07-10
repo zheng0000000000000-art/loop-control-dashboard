@@ -5,7 +5,11 @@
   },
   "remote": {
     "tokenPrompt": "Enter the remote action token",
-    "tokenRequired": "A token is required to approve, reject, or measure remotely."
+    "tokenRequired": "A token is required to approve, reject, or measure remotely.",
+    "tokenPromptPersist": "Enter the remote action token (will be saved — you won't be asked again)",
+    "tokenCancelled": "Token required — use the [Set token] button at the top right",
+    "tokenSet": "Token set \u2713",
+    "tokenNotSet": "Set token"
   },
   "modal": {
     "ok": "OK",

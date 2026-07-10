@@ -5,7 +5,11 @@
   },
   "remote": {
     "tokenPrompt": "원격 액션 토큰을 입력한다",
-    "tokenRequired": "토큰이 필요하다. 원격 액션 토큰을 입력해야 승인/거절/측정을 실행할 수 있다."
+    "tokenRequired": "토큰이 필요하다. 원격 액션 토큰을 입력해야 승인/거절/측정을 실행할 수 있다.",
+    "tokenPromptPersist": "원격 액션 토큰을 입력한다 (저장되어 다음번에는 묻지 않습니다)",
+    "tokenCancelled": "토큰이 필요합니다 — 우측 상단 [토큰 설정] 버튼에서 입력하세요",
+    "tokenSet": "토큰 설정됨 ✓",
+    "tokenNotSet": "토큰 설정"
   },
   "modal": {
     "ok": "확인",
