@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
   "currentStage": "apply",
-  "overallStatus": "warning",
+  "overallStatus": "in_progress",
   "loopState": "running",
   "mode": "normal",
   "suspendedTracks": [
@@ -19,7 +19,7 @@
       "suspectConfidence": "temporal"
     }
   ],
-  "loopIteration": 5,
+  "loopIteration": 6,
   "stages": {
     "goals": "passed",
     "measure": "passed",
@@ -61,7 +61,7 @@
         },
         {
           "label": "directiveAcceptanceCriteria",
-          "value": "7 / 3~99"
+          "value": "5 / 3~99"
         },
         {
           "label": "koPoliteEndings",
@@ -124,17 +124,14 @@
       ]
     },
     "changeReview": {
-      "summary": "1층 체크리스트 결과를 사람이 확인해야 한다.",
+      "summary": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
       "metrics": [
         {
           "label": "1층 검토 판정",
-          "value": "uncertain"
+          "value": "approved"
         }
       ],
-      "issues": [
-        "after-matches-goal: 제안의 after 값은 [0,2661]이지만, 측정 요약의 programCsLines 값은 여전히 2684로 변경되지 않았음",
-        "no-scope-creep: changes에 blueprint 위반 해소와 무관한 항목인 'Program.cs 파일의 코드 줄 수 줄이기'가 포함되어 있음"
-      ]
+      "issues": []
     },
     "apply": {
       "summary": "승인 후 사람이 저장소를 수정하고 다시 측정해 해소 여부를 확인한다.",
@@ -142,7 +139,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-10T09:52:02.4038043+09:00",
+  "lastUpdated": "2026-07-10T10:20:42.3546342+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
