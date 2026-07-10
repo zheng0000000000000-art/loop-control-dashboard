@@ -3,24 +3,19 @@
   "simtune": {
     "projectId": "ruined-lab",
     "seed": 42,
-    "reachedBand": false,
-    "candidatesUsed": 40,
-    "baselineDistance": 45,
-    "finalDistance": 45,
-    "baselineProgressedRooms": 2.992,
-    "finalProgressedRooms": 3,
-    "changedLevers": [
-      {
-        "path": "rooms[1].rewards.healAmount",
-        "before": 8,
-        "after": 10
-      }
-    ],
+    "reachedBand": true,
+    "candidatesUsed": 1,
+    "baselineDistance": 0,
+    "finalDistance": 0,
+    "baselineProgressedRooms": 3.572,
+    "finalProgressedRooms": 3.572,
+    "restartAttempts": 0,
+    "changedLevers": [],
     "predictedMetrics": [
       {
         "metricId": "completionRate",
-        "before": 0,
-        "after": 0,
+        "before": 57.199999999999996,
+        "after": 57.199999999999996,
         "band": "45~60"
       },
       {
@@ -31,27 +26,20 @@
       },
       {
         "metricId": "room3DeathRate",
-        "before": 0.8,
+        "before": 0,
         "after": 0,
         "band": "0~35"
       },
       {
         "metricId": "avgRewardPerRun",
-        "before": 8.076,
-        "after": 8.82,
+        "before": 9.568,
+        "after": 9.568,
         "band": "8~20"
       }
     ],
-    "residualViolations": [
-      "completionRate=0 (밴드 45~60 밖)"
-    ],
+    "residualViolations": [],
     "trace": [
-      "[tuning] baseline: distance=45 progress=2.992 score=45.000001 candidates=1",
-      "[tuning] step=±1 후보 25개 시도, distance 45→45, progress 2.992→3, score 45.000001→45.000001",
-      "[tuning] step=±2 후보 4개 시도, distance 45→45, progress 2.992→2.996, score 45.000001→45.000001",
-      "[tuning] step=±3 후보 5개 시도, distance 45→45, progress 2.992→2.998, score 45.000001→45.000001",
-      "[tuning] two-lever 후보 5개 시도, distance 45→45, progress 2.992→2.994, score 45.000001→45.000001",
-      "[tuning] 채택: candidates=40 distance=45 progress=3 score=45.000001 levers=rooms[1].rewards.healAmount"
+      "[tuning] baseline: distance=0 progress=3.572 score=0 candidates=1"
     ]
   },
   "measurements": [
@@ -61,14 +49,14 @@
       "metrics": [
         {
           "metricId": "avgRewardPerRun",
-          "value": 8.076,
+          "value": 9.568,
           "evidence": [
-            "stddev=6.46"
+            "stddev=7.83"
           ]
         },
         {
           "metricId": "completionRate",
-          "value": 0,
+          "value": 57.199999999999996,
           "evidence": [
             "시뮬레이션 전체 실행"
           ]
@@ -81,10 +69,38 @@
           ]
         },
         {
+          "metricId": "room1ReachRate",
+          "value": 100,
+          "evidence": [
+            "rooms[0]"
+          ]
+        },
+        {
+          "metricId": "room2ReachRate",
+          "value": 100,
+          "evidence": [
+            "rooms[1]"
+          ]
+        },
+        {
           "metricId": "room3DeathRate",
-          "value": 0.8,
+          "value": 0,
           "evidence": [
             "rooms[2]"
+          ]
+        },
+        {
+          "metricId": "room3ReachRate",
+          "value": 100,
+          "evidence": [
+            "rooms[2]"
+          ]
+        },
+        {
+          "metricId": "room4ReachRate",
+          "value": 100,
+          "evidence": [
+            "rooms[3]"
           ]
         }
       ]
@@ -146,7 +162,7 @@
           "metricId": "maxFunctionLength",
           "value": 159,
           "evidence": [
-            "app.js:712-870"
+            "app.js:852-1010"
           ]
         },
         {
