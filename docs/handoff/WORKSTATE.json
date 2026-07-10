@@ -2,35 +2,49 @@
   "schemaVersion": "v9-min",
   "phaseId": "WP-REFACTOR-PROGRAM",
   "wpId": "WP-REFACTOR-PROGRAM",
-  "diId": "DI-R-01",
+  "diId": "DI-R-03",
   "status": "verifying",
   "updatedBy": "claude-sonnet-4-6",
   "updatedAt": "2026-07-10",
+  "history": [
+    {
+      "diId": "DI-R-01",
+      "changedFiles": [
+        {"path": "server/Program.cs", "linesBefore": 2801, "linesAfter": 2517},
+        {"path": "server/Cli/CliRouter.cs", "linesBefore": 0, "linesAfter": 244}
+      ]
+    },
+    {
+      "diId": "DI-R-02",
+      "changedFiles": [
+        {"path": "server/Program.cs", "linesBefore": 2517, "linesAfter": 2398},
+        {"path": "server/InboxBuilder.cs", "linesBefore": 0, "linesAfter": 127}
+      ]
+    }
+  ],
   "changedFiles": [
     {
       "path": "server/Program.cs",
-      "sha256": "2fd6afbf95f1d5af23c1b56f867d14fd2e910041d27798661e11bb62e6bf2697",
-      "linesBefore": 2801,
-      "linesAfter": 2517,
-      "note": "CLI 분기 8개 + 헬퍼 7개 제거, CliRouter 주입 3줄 추가"
+      "sha256": "bd9cc0332c63237156cdd5d3962803c538b33f3f9ebe5b5bde28dac97e6e8420",
+      "linesBefore": 2398,
+      "linesAfter": 2321,
+      "note": "BuildCycleSummary·SumEventDuration·CalculateHumanWaitingMs 제거, 호출 3곳 CycleSummaryBuilder.* 로 교체"
     },
     {
-      "path": "server/Cli/CliRouter.cs",
-      "sha256": "336672af1c427a94d48e28fd4c8db594b4b1e75d7d1784312ebf209d878cccb2",
+      "path": "server/CycleSummaryBuilder.cs",
+      "sha256": "35525d7ffd23ad0abc2fc59c5cb89ee825e638e9177b10d42838b7f0e8805b61",
       "linesBefore": 0,
-      "linesAfter": 244,
-      "note": "신규 생성 — 8개 CLI 명령 분기 + 7개 전용 헬퍼"
+      "linesAfter": 92,
+      "note": "신규 생성 — 사이클 요약 빌더 3개 함수 + Number 복사본"
     }
   ],
   "tests": {
     "behaviorEqual": true,
     "buildWarnings": 0,
     "buildErrors": 0,
-    "measureViolationsBefore": 4,
-    "measureViolationsAfter": 3,
-    "simtestReproducible": true,
-    "refeedbacktestEscalated": true
+    "measureViolationsBefore": 3,
+    "measureViolationsAfter": 3
   },
-  "nextActions": ["DI-R-02 (InboxBuilder 분리)"],
-  "notes": "RunMeasureCore·TryEscalateInsufficientRefeedback는 Program.cs 로컬 함수이므로 위임자(Func/delegate) 주입 패턴 사용. Number()는 1줄 순수 함수이므로 CliRouter 내부에 복사. 코어 3파일 무접촉 확인."
+  "nextActions": ["DI-R-04 (MeasurementService 분리)"],
+  "notes": "Number()는 Program.cs 로컬 함수이므로 CycleSummaryBuilder 내부 private 복사본. CycleSummary()/ProjectContext() 웹 핸들러는 Program.cs 유지, CycleSummaryBuilder.BuildCycleSummary()를 호출하도록 교체. 코어 3파일 무접촉."
 }

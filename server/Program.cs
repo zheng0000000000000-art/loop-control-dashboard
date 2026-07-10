@@ -225,7 +225,7 @@ static IResult CycleSummary(Storage storage, string projectId, JsonSerializerOpt
     try
     {
         var bundle = storage.ReadBundle(projectId);
-        return JsonResult(BuildCycleSummary(bundle.State, bundle.RunLog, bundle.Proposal), jsonOptions);
+        return JsonResult(CycleSummaryBuilder.BuildCycleSummary(bundle.State, bundle.RunLog, bundle.Proposal), jsonOptions);
     }
     catch (FileNotFoundException)
     {
@@ -251,7 +251,7 @@ static IResult ProjectContext(Storage storage, string projectId, JsonSerializerO
             ["schemaVersion"] = 2,
             ["projectId"] = projectId,
             ["blueprint"] = Engine.CloneNode(bundle.Blueprint),
-            ["recentCycle"] = BuildCycleSummary(bundle.State, bundle.RunLog, bundle.Proposal),
+            ["recentCycle"] = CycleSummaryBuilder.BuildCycleSummary(bundle.State, bundle.RunLog, bundle.Proposal),
             ["pending"] = pending,
             ["relevantSkillPaths"] = SkillRouter.RelevantPaths(workspaceRoot, projectId),
         }, jsonOptions);
@@ -264,83 +264,6 @@ static IResult ProjectContext(Storage storage, string projectId, JsonSerializerO
     {
         return ProblemResult(500, "system.read_failed", error.Message);
     }
-}
-
-// run-log와 현재 proposal로 회차 시간 분해 JSON을 만든다.
-static JsonObject BuildCycleSummary(JsonObject state, JsonObject runLog, JsonObject proposal)
-{
-    var loopIteration = Engine.GetLoopIteration(state);
-    var entries = (runLog["entries"]?.AsArray() ?? new JsonArray())
-        .OfType<JsonObject>()
-        .Where(entry => Number(entry["loopIteration"], loopIteration) == loopIteration)
-        .OrderBy(entry => entry["createdAt"]?.GetValue<string>() ?? "", StringComparer.Ordinal)
-        .ToList();
-    var measurementMs = SumEventDuration(entries, "measure.completed");
-    var generationMs = SumEventDuration(entries, "proposal.generated");
-    var reviewMs = SumEventDuration(entries, "review.tier1_completed");
-    var humanWaitingMs = CalculateHumanWaitingMs(entries, proposal);
-
-    return new JsonObject
-    {
-        ["schemaVersion"] = 2,
-        ["loopIteration"] = loopIteration,
-        ["segments"] = new JsonObject
-        {
-            ["measurementMs"] = measurementMs,
-            ["generationMs"] = generationMs,
-            ["reviewMs"] = reviewMs,
-            ["humanWaitingMs"] = humanWaitingMs,
-            ["totalMs"] = measurementMs + generationMs + reviewMs + humanWaitingMs,
-        },
-    };
-}
-
-// 특정 이벤트의 durationMs 값을 합산한다.
-static long SumEventDuration(List<JsonObject> entries, string eventName)
-{
-    return entries
-        .Where(entry => entry["event"]?.GetValue<string>() == eventName)
-        .Select(entry => Number(entry["params"]?.AsObject()["durationMs"], 0))
-        .Sum(value => (long)Math.Max(0, value));
-}
-
-// 제출된 proposal이 사람 결재를 기다린 시간을 계산한다.
-static long CalculateHumanWaitingMs(List<JsonObject> entries, JsonObject proposal)
-{
-    var proposalId = proposal["id"]?.GetValue<string>() ?? "";
-    var lifecycle = proposal["lifecycle"]?.GetValue<string>() ?? "";
-
-    if (string.IsNullOrWhiteSpace(proposalId))
-    {
-        return 0;
-    }
-
-    var createdAt = entries
-        .Where(entry => entry["event"]?.GetValue<string>() == "proposal.created" &&
-            entry["params"]?.AsObject()["proposalId"]?.GetValue<string>() == proposalId)
-        .Select(entry => entry["createdAt"]?.GetValue<string>())
-        .FirstOrDefault();
-
-    if (!DateTimeOffset.TryParse(createdAt, CultureInfo.InvariantCulture, DateTimeStyles.None, out var start))
-    {
-        return 0;
-    }
-
-    var decidedAt = entries
-        .Where(entry => (entry["event"]?.GetValue<string>() == "review.approved" ||
-                entry["event"]?.GetValue<string>() == "review.rejected") &&
-            entry["params"]?.AsObject()["proposalId"]?.GetValue<string>() == proposalId)
-        .Select(entry => entry["createdAt"]?.GetValue<string>())
-        .FirstOrDefault();
-
-    if (DateTimeOffset.TryParse(decidedAt, CultureInfo.InvariantCulture, DateTimeStyles.None, out var end))
-    {
-        return Math.Max(0, (long)(end - start).TotalMilliseconds);
-    }
-
-    return lifecycle == "submitted"
-        ? Math.Max(0, (long)(DateTimeOffset.Now - start).TotalMilliseconds)
-        : 0;
 }
 
 
@@ -2066,7 +1989,7 @@ static IResult BundleResult(ProjectBundle bundle, JsonSerializerOptions jsonOpti
         ["proposal"] = Engine.CloneNode(bundle.Proposal),
         ["reviewReport"] = Engine.CloneNode(bundle.Reviews),
         ["measurement"] = Engine.CloneNode(bundle.Measurement),
-        ["cycleSummary"] = BuildCycleSummary(bundle.State, bundle.RunLog, bundle.Proposal),
+        ["cycleSummary"] = CycleSummaryBuilder.BuildCycleSummary(bundle.State, bundle.RunLog, bundle.Proposal),
     }, jsonOptions);
 }
 

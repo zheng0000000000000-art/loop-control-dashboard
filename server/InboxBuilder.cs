@@ -124,10 +124,11 @@ internal static class InboxBuilder
         return changes.Count == 0 ? proposal["summary"]?.GetValue<string>() ?? "" : string.Join(", ", changes);
     }
 
-    // 노드 값을 표시 문자열로 만든다(SummarizeProposal 전용 복사본, Program.cs 로컬 함수에 접근 불가).
+    // 노드 값을 표시 문자열로 만든다(SummarizeProposal 전용 복사본, Program.cs 로컬 함수 접근 불가).
     private static string ValueText(JsonNode node) =>
         node is System.Text.Json.Nodes.JsonValue ? node.ToString() : node.ToJsonString();
 
+    // 값이 없을 수 있는 노드를 표시용 문자열로 만든다.
     private static string ValueTextOrNone(JsonNode? node) =>
         node is null ? "없음" : ValueText(node);
 }
