@@ -1075,3 +1075,69 @@ textarea {
     min-height: 44px;
   }
 }
+
+.inbox-import-item {
+  display: grid;
+  gap: 6px;
+  cursor: default;
+}
+
+.inbox-import-info {
+  display: grid;
+  gap: 4px;
+}
+
+.inbox-import-actions {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.inbox-import-actions .button {
+  font-size: 12px;
+  min-height: 32px;
+  padding: 0 10px;
+}
+
+.inbox-import-diff {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.outbox-diff-meta {
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.outbox-diff-patch {
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-x: auto;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 8px;
+  white-space: pre;
+}
+
+.diff-patch-add {
+  color: var(--green);
+  display: block;
+}
+
+.diff-patch-del {
+  color: var(--red);
+  display: block;
+}
+
+.diff-patch-hdr {
+  color: var(--blue);
+  display: block;
+}
+
+.diff-patch-meta {
+  color: var(--text-muted, var(--muted, #6b7280));
+  display: block;
+}

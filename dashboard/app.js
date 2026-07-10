@@ -500,6 +500,10 @@ function renderInbox() {
 
 // 인박스 항목 버튼을 렌더링한다.
 function renderInboxItem(item) {
+  if (item.kind === "import_pending") {
+    return renderImportPendingItem(item);
+  }
+
   const button = createElement("button", {
     className: "inbox-item",
     attributes: { type: "button" },
@@ -515,6 +519,132 @@ function renderInboxItem(item) {
     elements.approvalPanel.scrollIntoView({ behavior: "smooth", block: "start" });
   });
   return button;
+}
+
+// 반입 대기 항목을 diff·승인·거절 버튼과 함께 렌더링한다.
+function renderImportPendingItem(item) {
+  const container = createElement("div", { className: "inbox-item inbox-import-item" });
+
+  const info = createElement("div", { className: "inbox-import-info" });
+  info.append(
+    createElement("strong", { text: item.projectName ?? item.projectId }),
+    createElement("span", { text: `${formatInboxKind(item.kind)} · ${item.title ?? ""}` }),
+    createElement("span", { className: "muted", text: `${item.summary ?? ""} · ${formatWaitingSince(item.waitingSince)}` }),
+  );
+
+  const diffArea = createElement("div", { className: "inbox-import-diff" });
+  diffArea.hidden = true;
+
+  const viewDiffBtn = createElement("button", {
+    className: "button button-secondary",
+    text: t("outbox.viewDiff"),
+    attributes: { type: "button" },
+  });
+  const approveBtn = createElement("button", {
+    className: "button button-approve",
+    text: t("outbox.approveImport"),
+    attributes: { type: "button" },
+  });
+  const rejectBtn = createElement("button", {
+    className: "button button-reject",
+    text: t("outbox.rejectImport"),
+    attributes: { type: "button" },
+  });
+
+  viewDiffBtn.addEventListener("click", async () => {
+    if (!diffArea.hidden) {
+      diffArea.hidden = true;
+      return;
+    }
+    diffArea.hidden = false;
+    diffArea.textContent = t("outbox.diffLoading");
+    try {
+      const data = await fetchJson(`/api/outbox/${encodeURIComponent(item.taskId)}`);
+      diffArea.replaceChildren(renderOutboxDiff(data));
+    } catch {
+      diffArea.textContent = t("outbox.diffLoadFailed");
+    }
+  });
+
+  approveBtn.addEventListener("click", async () => {
+    approveBtn.disabled = true;
+    rejectBtn.disabled = true;
+    const { ok } = await postOutboxImportAction(item.taskId, "approve-import", {});
+    if (ok) {
+      window.alert(t("outbox.importSuccess"));
+      globalInbox = await loadGlobalInbox();
+      render();
+    } else {
+      approveBtn.disabled = false;
+      rejectBtn.disabled = false;
+    }
+  });
+
+  rejectBtn.addEventListener("click", async () => {
+    const reason = window.prompt(t("outbox.rejectPrompt"));
+    if (!reason) {
+      return;
+    }
+    approveBtn.disabled = true;
+    rejectBtn.disabled = true;
+    const { ok } = await postOutboxImportAction(item.taskId, "reject-import", { reason });
+    if (ok) {
+      globalInbox = await loadGlobalInbox();
+      render();
+    } else {
+      approveBtn.disabled = false;
+      rejectBtn.disabled = false;
+    }
+  });
+
+  const actions = createElement("div", { className: "button-row inbox-import-actions" });
+  actions.append(viewDiffBtn, approveBtn, rejectBtn);
+
+  container.append(info, actions, diffArea);
+  return container;
+}
+
+// outbox task diff 와 메타 정보를 렌더링한다.
+function renderOutboxDiff(data) {
+  const wrap = createElement("div", { className: "outbox-diff-wrap" });
+
+  const metaParts = [];
+  if (data.contextBytes != null) {
+    metaParts.push(t("outbox.contextBytes", { bytes: data.contextBytes }));
+  }
+  if (data.cutoffRisk != null) {
+    metaParts.push(t("outbox.cutoffRisk", { risk: data.cutoffRisk }));
+  }
+  if (data.staleCheck != null) {
+    metaParts.push(t("outbox.staleCheck", { check: data.staleCheck }));
+  }
+  const fileCount = (data.changedFiles?.length ?? 0) + (data.deletedFiles?.length ?? 0);
+  if (fileCount > 0) {
+    metaParts.push(t("outbox.changedFiles", { count: fileCount }));
+  }
+  if (metaParts.length > 0) {
+    wrap.append(createElement("p", { className: "muted outbox-diff-meta", text: metaParts.join(" · ") }));
+  }
+
+  if (data.diff) {
+    const pre = createElement("pre", { className: "outbox-diff-patch" });
+    for (const line of data.diff.split("\n")) {
+      const span = createElement("span", { text: line + "\n" });
+      if (line.startsWith("---") || line.startsWith("+++")) {
+        span.className = "diff-patch-hdr";
+      } else if (line.startsWith("+")) {
+        span.className = "diff-patch-add";
+      } else if (line.startsWith("-")) {
+        span.className = "diff-patch-del";
+      } else if (line.startsWith("@@") || line.startsWith("deleted ")) {
+        span.className = "diff-patch-meta";
+      }
+      pre.append(span);
+    }
+    wrap.append(pre);
+  }
+
+  return wrap;
 }
 
 // 헤더의 단계 미니맵을 렌더링한다.
@@ -1788,6 +1918,47 @@ async function postProjectAction(action, body) {
 
   applyServerBundle(payload);
   return true;
+}
+
+// outbox 반입 액션을 호출하고 성공 여부와 페이로드를 반환한다.
+async function postOutboxImportAction(taskId, action, body) {
+  const url = `/api/projects/${encodeURIComponent(activeProject.id)}/outbox/${encodeURIComponent(taskId)}/${action}`;
+  let response;
+
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: buildActionHeaders(),
+      body: JSON.stringify(body ?? {}),
+    });
+
+    if (response.status === 401) {
+      actionToken = window.prompt(t("remote.tokenPrompt")) || null;
+
+      if (!actionToken) {
+        showActionError({ reason: t("remote.tokenRequired"), reasonCode: "auth.token_required" });
+        return { ok: false, payload: null };
+      }
+
+      response = await fetch(url, {
+        method: "POST",
+        headers: buildActionHeaders(),
+        body: JSON.stringify(body ?? {}),
+      });
+    }
+  } catch (error) {
+    showActionError(error);
+    return { ok: false, payload: null };
+  }
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    showActionError(payload ?? { reason: response.statusText, reasonCode: String(response.status) });
+    return { ok: false, payload };
+  }
+
+  return { ok: true, payload };
 }
 
 // 액션 요청 헤더를 만든다. 토큰은 메모리에만 보관하고 있으면 첨부한다.
