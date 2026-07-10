@@ -1,27 +1,32 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783688183926",
-  "title": "UI/UX 및 코드 품질 개선",
+  "id": "proposal-1783689069084",
+  "title": "블루프린트 괴리 해소 제안",
   "lifecycle": "decided",
   "createdBy": {
-    "provider": "ollama",
-    "model": "qwen3:8b"
+    "provider": "rule-engine",
+    "model": null
   },
-  "revisionOf": "proposal-1783688038565",
-  "summary": "작은 터치 타겟 조정, 도메인 위반 방지, 함수 길이 단축을 통한 사용성 및 코드 품질 개선을 목표로 합니다.",
-  "assumptions": [],
+  "revisionOf": "proposal-1783689026602",
+  "summary": "측정 결과가 블루프린트 기준을 벗어난 항목을 수정 대상으로 제안한다.",
   "changes": [
+    {
+      "path": "functionsWithoutComment",
+      "before": 1,
+      "after": 0,
+      "note": "server/InboxBuilder.cs:131"
+    },
     {
       "path": "smallTouchTargets",
       "before": 1,
       "after": 0,
-      "note": "작은 터치 타겟을 조정하여 사용자가 보다 쉽게 타겟을 클릭할 수 있도록 개선합니다."
+      "note": "dashboard/style.css:1133"
     },
     {
       "path": "skillDomainViolations",
       "before": 2,
       "after": 0,
-      "note": "기존 리뷰 finding이 적용 지침임을 명시하여, 잘못된 도메인 적용을 방지하고 위반 수치를 2에서 0으로 감소시키는 데 목적을 설명합니다."
+      "note": "docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md"
     },
     {
       "path": "maxFunctionLength",
@@ -30,13 +35,13 @@
         0,
         80
       ],
-      "note": "함수 길이를 단축하여 가독성과 유지보수성을 향상시키고, 코드 품질 기준에 부합하도록 개선하고자 함"
+      "note": "server/Program.cs:387-647"
     }
   ],
   "impact": [
     {
       "label": "위반 항목",
-      "value": "3"
+      "value": "4"
     },
     {
       "label": "예상 비용",

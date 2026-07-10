@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-10T21:56:17.4468690+09:00",
+  "measuredAt": "2026-07-10T22:10:54.0869693+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
@@ -11,14 +11,16 @@
     },
     {
       "metricId": "functionsWithoutComment",
-      "value": 0,
-      "evidence": []
+      "value": 1,
+      "evidence": [
+        "server/InboxBuilder.cs:131"
+      ]
     },
     {
       "metricId": "directiveAcceptanceCriteria",
-      "value": 5,
+      "value": 6,
       "evidence": [
-        "docs/directives/16-mobile-approve-token-fix.md"
+        "docs/directives/R01-cli-extract.md"
       ]
     },
     {
@@ -78,9 +80,9 @@
     },
     {
       "metricId": "programCsLines",
-      "value": 2517,
+      "value": 2398,
       "evidence": [
-        "server/Program.cs:2517 lines"
+        "server/Program.cs:2398 lines"
       ]
     },
     {
@@ -94,7 +96,7 @@
       "metricId": "maxFunctionLength",
       "value": 261,
       "evidence": [
-        "server/Program.cs:506-766"
+        "server/Program.cs:387-647"
       ]
     }
   ]
