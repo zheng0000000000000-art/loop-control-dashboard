@@ -156,9 +156,10 @@ app.MapPost("/api/projects/{projectId}/actions/self-refactor-dispatch", async (s
     }, jsonOptions);
 });
 
-app.MapPost("/api/projects/{projectId}/outbox/{taskId}/approve-import", (string projectId, string taskId, HttpRequest request) =>
+app.MapPost("/api/projects/{projectId}/outbox/{taskId}/approve-import", async (string projectId, string taskId, HttpRequest request) =>
 {
-    return DispatchResult(() => outboxManager.ApproveImport(taskId, remoteActionToken ?? "", request.Headers["X-Action-Token"].ToString()), jsonOptions);
+    var body = await ReadBodyObject(request);
+    return DispatchResult(() => outboxManager.ApproveImport(taskId, body, remoteActionToken ?? "", request.Headers["X-Action-Token"].ToString()), jsonOptions);
 });
 
 app.MapPost("/api/projects/{projectId}/outbox/{taskId}/reject-import", async (string projectId, string taskId, HttpRequest request) =>
@@ -1519,6 +1520,7 @@ static string EvidenceSummary(List<string> evidence, int take)
 // 승인 액션을 처리하고 결과 파일을 기록한다.
 static IResult Approve(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions, NtfyOptions ntfy, GitDataCommitOptions gitDataCommitOptions)
 {
+    var actor = ExtractActor(body);
     var bundle = storage.ReadBundle(projectId);
     var reviewStage = Engine.GetHumanReviewStage(bundle.Definition, bundle.State);
     var proposalId = bundle.Proposal["id"]?.GetValue<string>() ?? "proposal";
@@ -1548,7 +1550,7 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
         ["event"] = "review.approved",
         ["params"] = new JsonObject { ["proposalId"] = proposalId, ["edited"] = Bool(bundle.Proposal["edited"]) },
         ["level"] = "info",
-        ["producedBy"] = new JsonObject { ["provider"] = "human", ["model"] = null },
+        ["producedBy"] = actor.AttachTo(new JsonObject { ["provider"] = "human", ["model"] = null }),
         ["cost"] = RuntimeCost(),
     }, Engine.GetLoopIteration(state));
 
@@ -1606,7 +1608,7 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
         }
     }
 
-    GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(committedBundle.State), "approve", proposalId);
+    GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(committedBundle.State), "approve", proposalId, actor.ToLabel());
     return result;
 }
 
@@ -1674,6 +1676,7 @@ static JsonObject BuildTuningAppliedLog(JsonArray? predictedMetrics, JsonObject 
 // 거절 액션을 처리하고 결과 파일을 기록한다.
 static IResult Reject(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions, NtfyOptions ntfy, GitDataCommitOptions gitDataCommitOptions)
 {
+    var actor = ExtractActor(body);
     var bundle = storage.ReadBundle(projectId);
     var reviewStage = Engine.GetHumanReviewStage(bundle.Definition, bundle.State);
     var proposalId = bundle.Proposal["id"]?.GetValue<string>() ?? "proposal";
@@ -1696,7 +1699,7 @@ static IResult Reject(Storage storage, string projectId, JsonObject body, JsonSe
         ["event"] = "review.rejected",
         ["params"] = new JsonObject { ["proposalId"] = proposalId, ["text"] = reason },
         ["level"] = "warning",
-        ["producedBy"] = new JsonObject { ["provider"] = "human", ["model"] = null },
+        ["producedBy"] = actor.AttachTo(new JsonObject { ["provider"] = "human", ["model"] = null }),
         ["cost"] = RuntimeCost(),
     }, Engine.GetLoopIteration(state));
 
@@ -1706,7 +1709,7 @@ static IResult Reject(Storage storage, string projectId, JsonObject body, JsonSe
     bundle.Proposal["lifecycle"] = "decided";
     AppendReport(bundle.Reviews, report);
     var result = Persist(storage, projectId, bundle, jsonOptions, ntfy);
-    GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(bundle.State), "reject", proposalId);
+    GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(bundle.State), "reject", proposalId, actor.ToLabel());
     return result;
 }
 
@@ -1819,6 +1822,7 @@ static IResult EditChange(Storage storage, string projectId, JsonObject body, Js
 // 확인 액션을 처리하고 결과 파일을 기록한다.
 static IResult Acknowledge(Storage storage, string projectId, JsonObject body, JsonSerializerOptions jsonOptions, GitDataCommitOptions gitDataCommitOptions)
 {
+    var actor = ExtractActor(body);
     var type = body["type"]?.GetValue<string>();
     var id = body["id"]?.GetValue<string>();
 
@@ -1837,12 +1841,12 @@ static IResult Acknowledge(Storage storage, string projectId, JsonObject body, J
             ["event"] = "checkpoint.acknowledged",
             ["params"] = new JsonObject { ["checkpointId"] = id },
             ["level"] = "info",
-            ["producedBy"] = new JsonObject { ["provider"] = "human", ["model"] = null },
+            ["producedBy"] = actor.AttachTo(new JsonObject { ["provider"] = "human", ["model"] = null }),
             ["cost"] = RuntimeCost(),
         }, Engine.GetLoopIteration(bundle.State));
         var result = PersistWithoutGuardrail(storage, projectId, bundle, jsonOptions);
         var proposalId = bundle.Proposal["id"]?.GetValue<string>();
-        GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(bundle.State), "acknowledge-checkpoint", proposalId);
+        GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(bundle.State), "acknowledge-checkpoint", proposalId, actor.ToLabel());
         return result;
     }
     else if (type == "guardrail")
@@ -1855,12 +1859,12 @@ static IResult Acknowledge(Storage storage, string projectId, JsonObject body, J
             ["event"] = "guardrail.acknowledged",
             ["params"] = new JsonObject { ["id"] = id },
             ["level"] = "info",
-            ["producedBy"] = new JsonObject { ["provider"] = "human", ["model"] = null },
+            ["producedBy"] = actor.AttachTo(new JsonObject { ["provider"] = "human", ["model"] = null }),
             ["cost"] = RuntimeCost(),
         }, Engine.GetLoopIteration(bundle.State));
         var result = PersistWithoutGuardrail(storage, projectId, bundle, jsonOptions);
         var proposalId = bundle.Proposal["id"]?.GetValue<string>();
-        GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(bundle.State), "acknowledge-guardrail", proposalId);
+        GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(bundle.State), "acknowledge-guardrail", proposalId, actor.ToLabel());
         return result;
     }
     else
@@ -2231,6 +2235,16 @@ static string ProposalTitle(JsonObject proposal)
     return proposal["title"]?.GetValue<string>() ?? "제안";
 }
 
+// 요청 본문에서 주체 정보를 추출한다. 명시 없으면 unknown으로 기록한다.
+static ActorInfo ExtractActor(JsonObject body)
+{
+    var actor = body["actor"]?.AsObject();
+    return new ActorInfo(
+        actor?["actorType"]?.GetValue<string>() ?? "unknown",
+        actor?["actorId"]?.GetValue<string>() ?? "unknown",
+        actor?["actorPath"]?.GetValue<string>() ?? "unknown");
+}
+
 // 런타임 비용 0 객체를 만든다.
 static JsonObject RuntimeCost()
 {
@@ -2292,5 +2306,21 @@ public sealed record MetricCheck(string MetricId, JsonNode? Value, JsonNode? Goa
 public sealed record MetricRegression(string MetricId, JsonNode? PreviousValue, JsonNode? CurrentValue, JsonNode? Goal, string Expected, List<string> Evidence);
 
 public sealed record ProposalGeneration(JsonObject Proposal, JsonObject LogEntry);
+
+// 결재·반입 액션의 주체(actor) 정보 — actorType(human|agent|unknown), actorId, actorPath(ui|api|cli|unknown).
+public sealed record ActorInfo(string ActorType, string ActorId, string ActorPath)
+{
+    // 커밋 메시지용 간단 레이블을 만든다.
+    public string ToLabel() => $"{ActorType}/{ActorPath}";
+
+    // producedBy 노드에 actor 필드를 추가한다.
+    public JsonObject AttachTo(JsonObject producedBy)
+    {
+        producedBy["actorType"] = ActorType;
+        producedBy["actorId"] = ActorId;
+        producedBy["actorPath"] = ActorPath;
+        return producedBy;
+    }
+}
 
 public sealed record MeasureOutcome(ProjectBundle? Bundle, IResult? Problem, int ViolationCount);

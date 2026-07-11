@@ -174,7 +174,7 @@ public sealed class OutboxManager
     }
 
     // 반입 대기 diff를 본 저장소에 적용한다.
-    public JsonObject ApproveImport(string taskId, string configuredToken, string providedToken)
+    public JsonObject ApproveImport(string taskId, JsonObject body, string configuredToken, string providedToken)
     {
         RequireDispatchToken(configuredToken, providedToken);
         var taskDirectory = ResolveTaskDirectory(taskId);
@@ -186,11 +186,15 @@ public sealed class OutboxManager
             throw new DispatchHttpException(409, "dispatch.not_import_pending", "task is not waiting for import");
         }
 
+        var (actorType, actorId, actorPath) = ExtractActorFields(body);
         VerifyFreshBase(meta);
         CreateImportRestore(taskDirectory, meta);
         ApplyChangedFiles(taskDirectory, meta);
         meta["status"] = "imported";
         meta["importedAt"] = DateTimeOffset.Now.ToString("O");
+        meta["importedByActorType"] = actorType;
+        meta["importedByActorId"] = actorId;
+        meta["importedByActorPath"] = actorPath;
         WriteJson(metaPath, meta);
         return meta;
     }
@@ -236,11 +240,25 @@ public sealed class OutboxManager
         var taskDirectory = ResolveTaskDirectory(taskId);
         var metaPath = Path.Combine(taskDirectory, "meta.json");
         var meta = ReadJson(metaPath);
+        var (actorType, actorId, actorPath) = ExtractActorFields(body);
         meta["status"] = "rejected";
         meta["rejectedAt"] = DateTimeOffset.Now.ToString("O");
         meta["rejectReason"] = body["reason"]?.GetValue<string>() ?? "";
+        meta["rejectedByActorType"] = actorType;
+        meta["rejectedByActorId"] = actorId;
+        meta["rejectedByActorPath"] = actorPath;
         WriteJson(metaPath, meta);
         return meta;
+    }
+
+    // 요청 본문에서 주체(actor) 필드를 추출한다. 명시 없으면 unknown으로 기록한다.
+    private static (string actorType, string actorId, string actorPath) ExtractActorFields(JsonObject body)
+    {
+        var actor = body["actor"]?.AsObject();
+        return (
+            actor?["actorType"]?.GetValue<string>() ?? "unknown",
+            actor?["actorId"]?.GetValue<string>() ?? "unknown",
+            actor?["actorPath"]?.GetValue<string>() ?? "unknown");
     }
 
     // 토큰 설정과 헤더 값을 검사한다.

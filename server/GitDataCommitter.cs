@@ -7,7 +7,8 @@ public sealed record GitDataCommitOptions(string WorkspaceRoot, bool AutoCommitD
 public static class GitDataCommitter
 {
     // 사람 액션으로 변경된 운영 데이터를 커밋하고 설정에 따라 push한다.
-    public static void CommitHumanAction(GitDataCommitOptions options, string projectId, int loopIteration, string action, string? proposalId)
+    // [loop] 접두사는 루프 이터레이션을 나타내며 주체(actor)를 뜻하지 않는다 — 주체는 actor 필드로 구분한다.
+    public static void CommitHumanAction(GitDataCommitOptions options, string projectId, int loopIteration, string action, string? proposalId, string actor = "unknown")
     {
         if (!options.AutoCommitData)
         {
@@ -25,7 +26,7 @@ public static class GitDataCommitter
 
             RunGit(options.WorkspaceRoot, "add", "-A", "--", "dashboard/data");
 
-            var message = $"[loop] {projectId} 회차{loopIteration}: {action} {proposalId ?? "none"}";
+            var message = $"[loop] {projectId} 회차{loopIteration}: {action} {proposalId ?? "none"} (actor: {actor})";
             var commit = RunGit(options.WorkspaceRoot, "commit", "-m", message);
 
             if (commit.ExitCode != 0)
