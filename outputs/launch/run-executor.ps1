@@ -27,8 +27,9 @@ $argline = '-p "' + $prompt.Replace('"', '\"') + '" --output-format json --dange
 if (Test-Path $sentinel) { Remove-Item $sentinel -Force }
 
 # 지시서의 '## 허용 파일 (allowlist)' 목록을 읽는다 — FILE-CLAIMS의 입력이다(P0-06).
+# 주의: `return @()` 는 PowerShell이 $null로 접는다. 쉼표 연산자(,)로 빈 배열을 보존한다.
 function Get-Allowlist([string]$directivePath) {
-  if (-not (Test-Path $directivePath)) { return @() }
+  if ([string]::IsNullOrWhiteSpace($directivePath) -or -not (Test-Path $directivePath)) { return ,@() }
   $lines = Get-Content $directivePath -Encoding UTF8
   $inSection = $false
   $paths = @()
@@ -40,36 +41,44 @@ function Get-Allowlist([string]$directivePath) {
       if ($p -notmatch '^\(') { $paths += $p }                # '(실행 산출물)' 같은 주석 줄은 뺀다
     }
   }
-  return $paths
+  return ,$paths
 }
 
 # 파일 소유권 claim을 등록/해제한다(P0-06). 사후 검출(allowlist)을 실행 중 예약으로 확장한다.
-function Set-Claim([string]$status, [int]$pid_, [string[]]$paths, [string]$exitCode) {
+# allowlistSource: 어느 지시서에서 뽑았는가. null이면 "allowlist를 모른다" — 빈 목록과 다르다.
+# 모르는 것을 '비어 있음'으로 적으면 하네스가 "아무 파일도 안 잡았다"로 오판한다.
+function Set-Claim([string]$status, [int]$pid_, $paths, $allowlistSource, $exitCode) {
   $claimsFile = Join-Path $root 'docs\handoff\FILE-CLAIMS.json'
   if (Test-Path $claimsFile) {
     $doc = Get-Content $claimsFile -Raw -Encoding UTF8 | ConvertFrom-Json
   } else {
-    $doc = [pscustomobject]@{ schemaVersion = 1; claims = @() }
+    $doc = [pscustomobject]@{ schemaVersion = 2; claims = @() }
   }
   $claims = @($doc.claims | Where-Object { $_.claimId -ne "$TaskId-$pid_" })   # 같은 claim은 갱신
   $claims += [pscustomobject]@{
-    claimId   = "$TaskId-$pid_"
-    actor     = 'sonnet'
-    taskId    = $TaskId
-    paths     = $paths
-    pid       = $pid_
-    claimedAt = $started
-    expiresAt = ([datetime]$started).AddHours(2).ToString('o')   # 2시간 뒤 자동 만료 후보
-    status    = $status                                          # active | released
-    exitCode  = $exitCode
+    claimId         = "$TaskId-$pid_"
+    actor           = 'sonnet'
+    taskId          = $TaskId
+    paths           = @($paths)          # 항상 배열. 비어 있으면 [] 로 남는다
+    allowlistSource = $allowlistSource   # null = 지시서를 못 찾음(= allowlist 미상)
+    pid             = $pid_
+    claimedAt       = $started
+    expiresAt       = ([datetime]$started).AddHours(2).ToString('o')   # 2시간 뒤 만료 후보(보조 근거)
+    status          = $status                                          # active | released
+    exitCode        = $exitCode
   }
-  [pscustomobject]@{ schemaVersion = 1; claims = $claims } |
-    ConvertTo-Json -Depth 6 | Set-Content $claimsFile -Encoding UTF8
+  $out = [pscustomobject]@{ schemaVersion = 2; claims = $claims } | ConvertTo-Json -Depth 6
+  # ConvertTo-Json은 항목이 1개인 배열을 객체로 접는다 — claims는 항상 배열이어야 한다.
+  if ($claims.Count -eq 1 -and $out -notmatch '"claims":\s*\[') {
+    $out = $out -replace '("claims":\s*)(\{)', '$1[$2' -replace '(\})(\s*\})\s*$', '$1]$2'
+  }
+  $out | Set-Content $claimsFile -Encoding UTF8
 }
 
 $directive = Join-Path $root "docs\handoff\queue\directive-$TaskId*.md"
 $dPath     = (Get-ChildItem $directive -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
 $allow     = Get-Allowlist $dPath
+if (-not $dPath) { Write-Warning "지시서를 못 찾았다($TaskId). allowlistSource=null 로 남긴다 — 빈 allowlist가 아니라 '미상'이다." }
 
 $started = (Get-Date).ToString('o')
 $proc = Start-Process claude.exe -ArgumentList $argline `
@@ -84,7 +93,7 @@ $null = $proc.Handle
 $proc.Id | Out-File (Join-Path $root 'outputs\sonnet-active.pid') -Encoding ascii
 
 # claim 등록: "이 파일들은 지금 이 PID가 잡고 있다". 실행 중 다른 주체가 만지면 scope-check가 검출한다.
-Set-Claim -status 'active' -pid_ $proc.Id -paths $allow -exitCode $null
+Set-Claim -status 'active' -pid_ $proc.Id -paths $allow -allowlistSource $dPath -exitCode $null
 
 $proc.WaitForExit()
 $exitCode = $proc.ExitCode
@@ -92,7 +101,7 @@ $exitCode = $proc.ExitCode
 if ($null -eq $exitCode) { $exitCode = -1 }
 
 # claim 해제. 지우지 않고 released로 남긴다 — 누가 언제 무엇을 잡았는지가 이력이다(고아 코드 109줄 사건).
-Set-Claim -status 'released' -pid_ $proc.Id -paths $allow -exitCode "$exitCode"
+Set-Claim -status 'released' -pid_ $proc.Id -paths $allow -allowlistSource $dPath -exitCode $exitCode
 
 # 상위 모델 usage를 뽑는다(LEDGER-05). 파싱 실패는 조용히 넘기지 않고 null로 남긴다 — 모르는 것을 0으로 적지 않는다.
 $usage = $null; $report = $null

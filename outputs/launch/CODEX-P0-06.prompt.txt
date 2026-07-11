@@ -23,16 +23,29 @@
 `docs/handoff/FILE-CLAIMS.json` 이 **실재한다.** 발사 래퍼가 실행자를 띄울 때 지시서의 `## 허용 파일 (allowlist)`을 파싱해 **claim으로 등록**하고, 종료 시 `released`로 바꾼다.
 
 ```json
-{ "schemaVersion": 1,
+{ "schemaVersion": 2,
   "claims": [
     { "claimId": "LEDGER-04-34288", "actor": "sonnet", "taskId": "LEDGER-04",
       "paths": ["server/OllamaExecutor.cs", "server/Program.cs", "..."],
+      "allowlistSource": "docs/handoff/queue/directive-LEDGER04-metricid-normalization.md",
       "pid": 34288,
       "claimedAt": "2026-07-12T04:00:09+09:00",
       "expiresAt": "2026-07-12T06:00:09+09:00",
       "releasedAt": "2026-07-12T04:10:34+09:00",
-      "status": "released", "exitCode": -1 } ] }
+      "status": "released", "exitCode": -1 },
+    { "claimId": "SMOKE-01-11612", "actor": "sonnet", "taskId": "SMOKE-01",
+      "paths": [], "allowlistSource": null,
+      "pid": 11612, "status": "released", "exitCode": 0 } ] }
 ```
+
+### ★ `allowlistSource`가 `null`이면 **"allowlist를 모른다"**는 뜻이다 — 빈 목록과 다르다
+
+발사 래퍼의 첫 판에 버그가 있었다: 지시서를 못 찾으면 `paths`를 **`null`**로 적었다(PowerShell이 빈 배열을 `$null`로 접는다). 검수자가 잡아 고쳤다.
+
+- **`paths: [], allowlistSource: <지시서 경로>`** → **"이 작업은 아무 파일도 잡지 않는다"**(진짜 빈 목록).
+- **`paths: [], allowlistSource: null`** → **"allowlist를 모른다"**(지시서를 못 찾았다. 스모크 테스트 등).
+
+**이 둘을 같게 취급하지 마라.** `allowlistSource: null`인 claim에 대해 "아무 파일도 안 잡았으니 충돌 없음"이라고 판정하면 **모르는 것을 안전으로 오판**하는 것이다. **경고로 출력해라.**
 
 ### 만들 것 (세 가지)
 

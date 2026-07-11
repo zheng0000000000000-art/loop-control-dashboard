@@ -1,5 +1,6 @@
 ﻿{
-    "schemaVersion":  1,
+    "schemaVersion":  2,
+    "note":  null,
     "claims":  [
                    {
                        "claimId":  "LEDGER-04-34288",
@@ -14,6 +15,7 @@
                                      "docs/verification/ledger04-metricid-normalization.md",
                                      "docs/directives/LEDGER04-metricid-normalization.md"
                                  ],
+                       "allowlistSource":  "docs/handoff/queue/directive-LEDGER04-metricid-normalization.md",
                        "pid":  34288,
                        "claimedAt":  "2026-07-12T04:00:09.2006692+09:00",
                        "expiresAt":  "2026-07-12T06:00:09.2006692+09:00",
@@ -25,12 +27,16 @@
                        "claimId":  "SMOKE-01-11612",
                        "actor":  "sonnet",
                        "taskId":  "SMOKE-01",
-                       "paths":  null,
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
                        "pid":  11612,
                        "claimedAt":  "2026-07-12T04:21:24.1286484+09:00",
                        "expiresAt":  "2026-07-12T06:21:24.1286484+09:00",
                        "status":  "released",
-                       "exitCode":  "0"
+                       "exitCode":  0,
+                       "note":  "지시서 없는 스모크 테스트. allowlistSource=null 은 allowlist 미상을 뜻한다(빈 목록과 다르다)."
                    }
                ]
 }
