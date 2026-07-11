@@ -1,0 +1,24 @@
+﻿{
+    "schemaVersion":  2,
+    "taskId":  "RESUME-01",
+    "pid":  35544,
+    "exitCode":  0,
+    "startedAt":  "2026-07-12T04:55:36.9994878+09:00",
+    "exitedAt":  "2026-07-12T04:55:56.7557577+09:00",
+    "outLog":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-RESUME-01.out.log",
+    "outJson":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-RESUME-01.out.json",
+    "processed":  true,
+    "argLength":  572,
+    "usage":  {
+                  "inputTokens":  4,
+                  "outputTokens":  223,
+                  "cacheCreationTokens":  10456,
+                  "cacheReadTokens":  36828,
+                  "totalCostUsd":  0.054474400000000006,
+                  "numTurns":  2,
+                  "durationMs":  16325,
+                  "isError":  false,
+                  "stopReason":  "end_turn",
+                  "sessionId":  "32282058-2bd3-482a-beac-2f439d3ed039"
+              }
+}

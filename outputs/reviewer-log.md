@@ -507,3 +507,56 @@ LEDGER-04 실행자(`OllamaExecutor.cs`·`Program.cs`)와 코덱스(`server/Harn
 - **4.6%는 작다.** 바닥짐 24k 중 우리 몫은 `CLAUDE.md` ~3.5k뿐이고, **나머지 ~20k는 Claude Code의 시스템 프롬프트·도구 정의라 우리가 못 건드린다.**
 - **더 큰 레버는 턴 수다.** 실행자가 저장소를 헤매면 턴이 늘고, 턴마다 프리픽스가 통째로 다시 실린다. Context Pack의 `readOrder`가 정확히 이걸 노린 장치인데 **아직 효과를 측정한 적이 없다.** → **다음 실험: `readOrder`를 지킨 실행자 vs 안 지킨 실행자의 턴 수.**
 - **지표는 만족했으나 목적은 미달인 부분**: 토큰은 줄었지만 **"규칙이 여전히 지켜지는가"는 검증하지 않았다.** 다음 실행자(코덱스 P0-06)가 압축된 `CLAUDE.md`로도 규칙을 지키는지 **관찰해야 한다.** 줄이다가 안전장치를 깎았으면 그건 절감이 아니라 손실이다.
+
+## 2026-07-12 05:0x — P0-06 PASS + ★ **HS-GATE-P00 독립 재개 시험 FAIL** (게이트가 제 역할을 했다)
+
+### P0-06 검수 (검수자 직접 반증 시험 — 원본 무접촉, `--claims` 사본으로 주입)
+
+| 시험 | 결과 |
+| --- | --- |
+| 정상(claim 전부 released) | `claimConflictCount 0` / `staleClaimCount 0` |
+| **충돌 주입**: 다른 주체(codex)의 **살아있는** active claim + 겹치는 파일 | **exit 1**, `claimConflictCount: 1`, 주체·taskId 지목 |
+| **stale 주입**: 죽은 PID(999999)인데 `active` | **exit 1**, `staleClaimCount: 1`, PID 지목 |
+| 하네스가 `FILE-CLAIMS`를 쓰는가 | ✅ **읽기 전용**(쓰는 자와 검사하는 자 분리) |
+
+코덱스가 `unknownAllowlistClaimCount`도 구현했다 — `allowlistSource: null`인 claim(=allowlist 미상)을 **따로 센다.** 검수자가 요구한 "모르는 것을 안전으로 오판하지 마라"를 코드로 지켰다.
+
+**판정: P0-06 = PASS. Phase 0의 DI 6개가 전부 끝났다.**
+
+### 하네스 전수 실행 (HS-GATE-P00 자료 — 자기보고 아님)
+
+| 하네스 | exit | 수치 |
+| --- | ---: | --- |
+| build / measure / verify-behavior / gate-clean | 0 | 경고0 / violation 0 / behaviorEqual true / dirty 0 |
+| handoff-integrity / context-pack-integrity / doc-integrity | 0 | failure 0 / missing 0 stale 0 / INTACT |
+| hs-scan | 1 | `failureCaseCount 14` — **설계대로**(승격 심사 트리거) |
+
+### ★ 그런데 독립 재개 시험이 FAIL했다
+
+`RESUME-01`: **`docs/context/RUNTIME-INDEX.md`(L0) 하나만 읽고** 상태를 재구성하게 했다. 실행자의 답:
+
+```
+PHASE=P0-04
+DI=LEDGER-04
+STATUS=verifying
+NEXT=부족: 'verifying' 상태에서 무엇을 검증 중인지, 어느 하네스를 실행해야 하는지,
+     완료 기준이 무엇인지 이 파일만으로는 알 수 없다.
+```
+
+**실행자가 정확히 옳은 답을 했다. 지어내지 않고 "부족하다"고 신고했다.**
+
+**드러난 공백 3개 (전부 P0-04의 잔여):**
+
+1. **L0가 거짓말한다.** `phaseId: P0-04`인데 **P0-05·P0-06이 이미 끝났다.** LEDGER-04 실행자가 WORKSTATE를 `verifying`으로 두고 나갔고, 그 뒤 **코덱스가 두 DI를 완료했는데 아무도 WORKSTATE를 갱신하지 않았다. 코덱스는 WORKSTATE에 쓰지 않는다 — 갱신 주체가 없다.**
+2. **L0가 재개에 부족하다.** 계획서 §0.6은 L0에 **blocker와 다음 작업**을 요구하는데 우리 `projection`은 5개 필드만 낸다.
+3. **하네스 8종은 전부 exit 0인데 독립 재개는 실패한다.** **지표는 만족했으나 목적은 미달** — ADR-005가 말한 그것이고, **이번엔 게이트가 그걸 잡았다. 게이트가 제 역할을 했다.**
+
+**`HS-GATE-P00`은 아직 PASS가 아니다.** 위 3개를 닫아야 한다.
+
+### 프록시에 또 속을 뻔했다
+
+PowerShell 콘솔에서 `RUNTIME-INDEX.md`가 깨져 보였다("吏곸젡…"). **`Read`로 확인하니 파일은 멀쩡했다.** PS 5.1 콘솔이 UTF-8을 못 읽는 것뿐이다. **콘솔 출력으로 파일 손상을 단정하지 마라.**
+
+### 그리고 내 실수 (조율자가 잡았다)
+
+SONNET-QUEUE의 LEDGER-02/03이 **아직 "진행"으로 박혀 있었다.** 완료된 지 몇 시간인데 내가 갱신을 안 했다. 조율자가 "표기가 실제와 어긋나 보인다"며 **발사 판단을 보류**했다 — **옳은 처신이다.** 낡은 문서가 또 판단을 막았다. 고쳤다.
