@@ -49,7 +49,7 @@
 *(P0-04 검수 완료로 갱신 — 2026-07-12 00:0x)*
 
 1. **WORKSTATE `changedFiles` 회전** — ⚠️ **P0-04 잔여 결함.** WORKSTATE는 `diId: P0-04`를 선언하는데 `changedFiles`는 **FIX-07의 파일 3건 그대로다**(앞 세션이 diId만 고치고 회전을 안 했다). 하네스는 **남의 DI 파일을 검증하며 green**이다. 해시 검증은 진짜지만 **핸드오프가 현실을 기술하지 않는다** = 목적 미달(ADR-005). FIX-07 항목을 `history`로 내리고 P0-04 산출물(`server/Cli/*`, projection·handoff-integrity 코드)로 교체 후 `projection` 재실행. **코덱스/실행자 몫 — 검수자는 WORKSTATE에 쓰지 않는다(ADR-003).**
-2. **LEDGER-01 발사** — ollama 응답의 `prompt_eval_count`/`eval_count`를 이미 있는 `cost` 필드에 기록. **"토큰을 줄이자"는 프로젝트가 토큰을 안 재고 있다.** 발사는 사람 게이트.
+2. **LEDGER-01 검수** — ✅ **발사됨**(2026-07-11 23:50, 사람 승인, **PID 20896**, SONNET-QUEUE #20 진행). 종료 후 검수: build·verify-behavior·measure·gate-clean·**handoff-integrity(exit 0 유지)** 직접 재실행 + **`cost.inputTokens>0 && cost.outputTokens>0` 항목이 run-log에 실제로 기록됐는가**. **자기보고를 믿지 말고 하네스를 직접 돌려라.** 실측 근거: entries 938건 전부 `cost` 필드 보유, **토큰 채워진 것 0건**, ollama UP.
 3. **P0-05 → P0-06 → P0-07(HS-GATE)**. P0-05는 여전히 **data gate 블록**(코덱스 051: 기계가 읽을 `requiredInputs`/`readOrder` 실데이터가 없어 하네스를 못 만든다). 스키마부터 확정해야 진행된다.
 
 ### HS-GATE-P00 판정 시 사람이 알아야 할 구조적 한계
@@ -59,6 +59,7 @@
 
 ## 5. 절대 하지 말 것 (전부 실제 사고에서 나옴)
 
+- **샌드박스 뷰로 결함을 단정하지 마라(2026-07-12 신규).** 리눅스 샌드박스 마운트가 `run-log.json`을 **절반만(11,379/22,626줄)** 보여줘 "런타임 파일 손상"으로 오판할 뻔했다. 호스트 실측은 **JSON 유효**. 샌드박스 `git status`의 `fatal: unknown index entry format`도 **저장소 손상이 아니라 git 버전 차이**다. **판정은 호스트(PowerShell)에서.**
 - **프록시로 원인을 단정하지 마라.** 커밋 접두사·타임스탬프 상관·에러 문구·정규식 매치는 **증거가 아니다.** 2026-07-11에 이걸로 네 번 틀렸다. **정답은 매번 실체에 있었다 — exit code, 호출부, 실제 전달된 입력, 그리고 주체에게 직접 묻기.**
 - **결재(approve/reject/import)를 대행하지 마라.** 사람 몫이다.
 - **기준 파일(`blueprint.json`·`workflow-definition.json`)을 고쳐 게이트를 통과시키지 마라.** 변경했으면 `BASELINE-CHANGES.md`에 주체·근거·되돌리는 법을 남긴다.
