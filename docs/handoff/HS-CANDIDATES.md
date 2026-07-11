@@ -5,7 +5,7 @@
 > **판정 주체는 코덱스**(파이프라인 1단계). 검수자가 올린 후보는 `코덱스 확정 대기`로 표시하고, 코덱스가 HS-GATE 회차에 확정한다.
 
 <!-- hs-scan 이 읽는 메타. HS-GATE 수행 시 갱신할 것. -->
-- `lastGate: 2026-07-11 20:45`
+- `lastGate: 2026-07-11 21:00`
 - `judgedClasses: unnormalized_gate, self_report_as_truth, config_side_effect, observability, path_escape, executor-orchestration`
 
 ## HS-01 `gate-clean` — 트리 clean을 정규화 내용 해시로 판정 (하네스)
@@ -286,3 +286,14 @@ FAIL-005는 "실행 중인가"를 StartTime으로, FAIL-010은 "깨끗한가"를
 - fixed this cycle: H-1 `path-guard-check`. Score: existing 11/12 `path_escape` immediate-production candidate now implemented. The harness checks root containment as equality or root plus directory separator and rejects sibling-prefix paths such as `data-escape` and `outbox-escape`.
 - post-fix proof: default regression mode exit 0 with 6/6 cases matching expected results; input child path exit 0; input sibling-prefix path exit 1.
 - next candidates remain: H-2 `call-integrity-check`, H-3 `template-sync-check`, H-4 `path-escape-qa` skill.
+
+## 2026-07-11 21:00 codex hs-scan follow-up / H-2 call-integrity-check
+
+- actor: codex
+- command: `dotnet run --project server -c Release -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidate=`executor-orchestration(6)`.
+- data-existence gate: PASS. DI-R-01~04 verification docs and current C# source contain concrete moved symbols and call sites: `CliRouter.TryRun`, `InboxBuilder.BuildInboxItems`, `InboxBuilder.AddProjectInboxItems`, `CycleSummaryBuilder.BuildCycleSummary`, `MeasurementService.RunMeasureCore`.
+- fixed this cycle: H-2 `call-integrity-check`. Score: existing refactor-call-integrity candidate now implemented. The harness checks each moved method has exactly one definition in the expected file, enough qualified call sites, and no stale unqualified call in `server/Program.cs`.
+- post-fix proof: default rule set exit 0 with 5/5 rules PASS; bad definition-file injection for `MeasurementService.RunMeasureCore` exit 1.
+- next candidates remain: H-3 `template-sync-check`, H-4 `path-escape-qa` skill, H-5 inherited harness review.
