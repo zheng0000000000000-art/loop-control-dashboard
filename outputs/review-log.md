@@ -1779,3 +1779,19 @@
 - QUOTA_SIGNAL: 미감지.
 
 <run-summary>SMOKE-01 신호 처리(processed:true) + 코덱스 052 세션의 P0-05 context-pack-integrity 하네스(신규 CLI+HarnessRegistry 등록)를 하네스 6종 독립 재실행으로 검수 후 PASS 판정, server/문서 레인 분리 로컬 커밋 3건(35aff37/c29551a/714003c). SONNET-QUEUE 다음 대기 항목 없어 발사 안 함. push 대기 65건, HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
+## 조율자 04:42 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: lanes dirty(server/Harness/ScopeCheckCli.cs 1건 + docs/qa·docs/handoff/sessions 신규 2건, dashboard/data 런타임 json 8종은 항상 더러운 대상) + outputs/launch/*.exit.json processed:false 신호 없음 → 처리 진행.
+- 안정성 게이트: server/Harness/ScopeCheckCli.cs 해시 5초 간격 2회 비교 → 안정.
+- 대상: P0-06 `scope-check` claim 충돌·stale 검출 확장(코덱스-053 세션 산출물). CODEX-QUEUE.md §P0-06 상세와 세션 문서·QA 문서 대조 확인(범위·정책 일치): allowlist 대조 유지 + `--actor`/`--claims` 옵션 + claimConflicts/staleClaims/unknownAllowlistClaims 필드, 되돌리기·삭제·kill 없음(검출만).
+- 하네스 재실행: build exit0(에러 0) · doc-integrity exit0(checked12, brokenCount0, INTACT) · verify-behavior exit0(behaviorEqual:true) · measure dev-pack exit0(violationCount0, 기준선과 동일 비악화) · handoff-integrity exit0(diId LEDGER-04, failureCount0, warningCount0, PASS) · scope-check 자체 스모크(HOOK01 지시서 대상 실행) 정상 동작 확인(allowlist 밖 outputs/ 잡파일 다수를 정확히 outOfScope로 검출 — 하네스 자체 결함 아님, 지시서 범위 밖 파일이라 당연한 결과) · gate-clean server 스모크는 커밋 전 FAIL(ScopeCheckCli.cs content-dirty, 예상대로)→ 커밋 후 재실행 PASS(contentDirtyCount0) 확인.
+- diId 미등재(CODEX-QUEUE P0-06, SONNET-QUEUE 원장 비경유) → claim-check 생략. 근거는 커밋 메시지에 명시.
+- 커밋(로컬만, push 안 함) 2건, 레인 분리: 80adab0(server 코드: server/Harness/ScopeCheckCli.cs) / fd21c2c(문서: docs/qa/scope-check-claims-p0-06-2026-07-12.md + docs/handoff/sessions/SESSION-2026-07-12-codex-053.md — 코덱스 소유 파일이라 내용 수정 없이 그대로 커밋만 함).
+- 참고: SESSION-2026-07-12-codex-053.md 본문 중 "참조한 스킬"·"지키는 맥락에서..." 절이 기존에 이미 깨진 한글(이중 디코딩)로 저장돼 있었음. 내가 쓴 게 아니고 코덱스 산출물 원본 상태 그대로 커밋함 — 수정하지 않음(그 파일은 코덱스 전용 소유).
+- 커밋 안 함(런타임): dashboard/data/dev-pack·ruined-lab 8종(measurement/patch-proposal/review-report/run-log/workflow-state) — 전부 "커밋 안 함" 레인.
+- HUMAN-INBOX: 신규 등재 없음. BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 이번 회차 변경 없음.
+- 발사(사람 게이트): gate-clean server PASS(exit0), outputs/sonnet-active.pid의 PID 11612는 죽어있음(released claim SMOKE-01-11612와 일치). SONNET-QUEUE 표는 항목21(LEDGER-02)·22(LEDGER-03)이 문자열상 "진행"으로 남아있으나, WORKSTATE.history에 두 diId의 changedFiles·sha256이 이미 기록돼 있고 해당 PID(29060/29292) 둘 다 생존하지 않음 — 표 텍스트 미갱신으로 추정(확정 아님, git diff로 주체 확인한 것은 아님). 표를 그대로 신뢰하면 "진행 항목 존재"이므로 조율자는 발사하지 않음. 항목4(FEAT-01)·15(FIX-04)가 문자상 "대기"이지만 위 불확실성 때문에 "발사 대기" 단정 보류 — 검수자 확인 필요로 남김.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 2건(이번 회차 신규, 직전 베이스 대비) → 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>P0-06 scope-check claim 확장(코덱스-053) 검수: 하네스 5종(build/doc-integrity/verify-behavior/measure/handoff-integrity) 전부 PASS + scope-check 자체 스모크 정상 동작 확인 후 server 코드·문서 2레인 로컬 커밋(80adab0/fd21c2c). SONNET-QUEUE 표의 LEDGER-02/03 "진행" 표기가 실제 완료 여부와 어긋나 보여 발사 판단은 보류(검수자 확인 필요)하고 발사하지 않음. push 대기 2건, HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
