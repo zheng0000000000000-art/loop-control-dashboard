@@ -143,3 +143,44 @@
 
 1. **첫 검사가 진짜 stale을 잡았는데 그게 내 것이었다.** `_header.md` 해시를 뜬 **뒤에** 그 파일을 편집해서 해시가 어긋났다. → 메커니즘이 의도대로 작동한다는 증거였지만, **동시에 "해시는 쓰는 순간 낡는다"는 구조적 사실**이다. 그래서 코덱스에게 **stale 검출이 이 하네스의 존재 이유**라고 명시했다.
 2. **`git checkout -- docs/directives/_header.md`로 장애 주입을 원복하다가, 아직 커밋 안 한 내 Context Pack 절까지 통째로 날렸다.** 되살렸고, 이번엔 **검증 직후 즉시 커밋**했다. 교훈: **미커밋 작업물 위에서 `git checkout`으로 장애 주입 시험을 하지 마라 — 사본에서 해라.** (2차 시험은 `$env:TEMP` 사본으로 했다.)
+
+## 2026-07-12 00:5x — LEDGER-01 검수 (독립 재실행) — **지표 PASS, 목적 1/3**
+
+조율자가 먼저 검수·커밋했다(`9d4aac5` server / `8a982d4` docs / `174be5f` WORKSTATE+projection / `430b307` 큐). **실행자 자기보고도 조율자 보고도 프록시다 — 전부 직접 재실행했다.**
+
+**하네스 독립 재실행 (검수자, 2026-07-12)**
+
+| 하네스 | exit | 수치 |
+| --- | ---: | --- |
+| `build server -c Release` | 0 | **경고 0 / 오류 0** |
+| `measure dev-pack` | 0 | **violationCount 0** (직전 1 → 0. 비악화 아니라 개선) |
+| `verify-behavior` | 0 | `behaviorEqual: true` |
+| `handoff-integrity` | 0 | PASS, failureCount 0, **`diId: LEDGER-01`** ← changedFiles 회전이 실제로 됐다 |
+| `gate-clean server` | 0 | contentDirtyCount 0 |
+
+**실체 증명**: `run-log.json`에 토큰이 진짜 찍혔다 — `review.tier1_completed`, `inputTokens: 1541`, `outputTokens: 144`. `cost` 스키마 키는 그대로(`inputTokens, outputTokens, estimatedUSD, subscriptionCalls, role`), `estimatedUSD`·`subscriptionCalls`는 0 유지. **신규 필드 0개 요구 준수.**
+
+### 그런데 958건 중 토큰이 찍힌 항목은 **1건뿐이다**
+
+| 호출부 | 토큰을 읽는가 | run-log 도달 |
+| --- | --- | --- |
+| `OllamaReviewer.cs` | ✅ | **✅ 유일** |
+| `OllamaExecutor.cs` | ✅ (`totalIn`/`totalOut` → `ExecutorGenerateResult`) | ❌ **0으로 기록** — run-log를 쓰는 곳은 `Program.cs`인데 **allowlist 밖이었다** |
+| `Tier2Approver.cs` | ✅ | ❌ **run-log 항목 자체가 없음** |
+
+실측: `proposal.generated` 항목의 `cost.inputTokens = 0`. **토큰을 가장 많이 쓰는 경로(제안 생성)가 여전히 0이다.**
+
+### 이건 실행자 잘못이 아니라 **내 잘못이다**
+
+ADR-006이 배선부를 "`Engine.cs`"라고 적었고 **내가 그대로 allowlist에 옮겼다.** 실제 배선부는 **`Program.cs`**였다(`RuntimeCost()` 호출 21곳). 실행자는 **allowlist를 지키고 막힌 사실을 정확히 신고했다** — 지표를 green으로 만들려고 범위를 넘지 않았다. **ADR-005 자진신고 절이 두 회 연속 작동했다(P0-04, LEDGER-01). 자리를 주면 쓴다.**
+
+**판정: LEDGER-01 = PASS.** 지표 전부 통과 + 실체 증명 1건. **목적은 1/3** — 잔여는 내 allowlist 오류이며 `LEDGER-02`로 이어받는다.
+
+### LEDGER-02 발행 (사람 승인 대기 — 발사는 사람 게이트)
+
+`docs/handoff/queue/directive-LEDGER02-executor-token-wiring.md`. **신설 Context Pack 형식을 처음으로 적용한 지시서다**(자기 밥그릇 먹기). allowlist에 **`server/Program.cs` 포함**. 못박은 것:
+
+- `Program.cs`의 `RuntimeCost()` 호출 21곳 중 **대부분은 LLM 호출이 아니다**(rule-engine·측정·결재). **거기에 토큰을 억지로 채우지 마라 — 0이 정답이다.** 재지 않은 것을 잰 것처럼 적는 것이 우리가 싸우는 병이다.
+- **Tier2Approver run-log 경로 신설은 범위 밖** — 새 이벤트 타입 = 스키마 변경 = ADR 필요. `LEDGER-03` 후보로 남겼다.
+- **`role` 분화(`executor`/`reviewer`)도 범위 밖** — 스키마 의미 변경이라 사람 결재 사항. LEDGER-01 실행자가 정확히 이 이유로 손대지 않았다.
+- 검수 기준에 **"비-LLM 항목이 여전히 0인가"**를 넣었다 — 토큰을 채우는 게 목표가 되면 **안 쓴 곳에도 숫자를 채우게 된다**(ADR-005: 지표를 목표로 삼지 마라).
