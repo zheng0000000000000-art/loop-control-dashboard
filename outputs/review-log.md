@@ -1262,3 +1262,24 @@
 - **커밋 완료**: 문서 레인 로컬 커밋 eded188(push 안 함). doc-integrity 커밋 전후 exit0 INTACT 재확인.
 - **★ 활성 실행자 발견(커밋 스테이징 이후)**: sonnet-active.pid = **9804**(생존 확인, StartTime 23:26:07) — 직전 스캔(23:22) 당시 32956 사망만 확인했으나, 그 사이 사람이 **P0-04 Projection 생성기**를 새로 발사한 것으로 판단(근거: 신규 미추적 server/ProjectionCli.cs·docs/handoff/queue/directive-P004-projection.md·docs/handoff/HANDOFF.md·docs/context/, 수정 중 server/Cli/CliRouter.cs·docs/handoff/WORKSTATE.json·docs/handoff/SONNET-QUEUE.md). **이 파일들은 이번 회차 스테이징·커밋에 전혀 포함시키지 않음**(git add 시점에 이미 명시적으로 7개 파일만 지정, 교차 오염 없음 확인: git diff --cached --stat 7개 파일만 표시). 활성 실행자 영역이므로 미접촉 유지, 순차 규칙상 신규 발사 없음(애초에 조율자는 발사하지 않음).
 - **push 대기 갱신**: git log origin/main..HEAD --oneline = **1건**(eded188만, 방금 사람이 이전 47건을 이미 push했기 때문). 사람 배치 승인 필요.
+## 조율자 2026-07-11 23:32 (recursion1-result-check)
+
+- **경로 규칙**: 저장소 정본만 참조(SONNET-QUEUE·HUMAN-INBOX·BASELINE-CHANGES·reviewer-log·HS-CANDIDATES). 세션 outputs 사본 미참조.
+- **0단계 안정성**: git status 미커밋 대상 전체 해시 5초 간격 2회(Get-FileHash) 비교 → STABLE.
+- **실행자 상태**: sonnet-active.pid=9804 — Get-Process 결과 생존(StartTime 23:26:07, Responding true), 이번 회차 종료 시점(23:33)까지 계속 생존. **P0-04 Projection 영역은 활성 실행자 작업 중으로 판단해 전면 미접촉.**
+- **관찰(참고, 대행 아님)**: 회차 중 WORKSTATE.json·handoff-integrity 재실행 결과가 두 시점 사이에 달라짐(1차 조회 시 diId=P0-04/status=done, 직후 handoff-integrity 하네스 조회 시 diId=FIX-07/PASS로 되짚힘) — 실행자가 파일을 실시간으로 계속 갱신 중이라는 근거로 판단, 별도 조치 없음(다음 회차에서 재확인).
+- **하네스 판정**:
+  - gate-clean server → exit1 FAIL(contentDirtyCount 4: server/Cli/CliRouter.cs·server/Harness/HarnessRegistry.cs·server/Harness/HandoffIntegrityCli.cs·server/ProjectionCli.cs — 전부 활성 실행자(P0-04)/코덱스(P0-03) 영역, 신규 아님).
+  - doc-integrity → exit0 INTACT(checked 12, brokenCount 0).
+  - claim-check P0-04(docs/verification/p004-projection.md) → exit0 MATCH(claimCount 2/mismatch 0) — 단, 실행자 계속 작업 중이라 커밋 판단에는 미사용(완료 확정 아님).
+- **server 레인 — 미커밋(FAIL 유지)**: 4개 파일 전부 활성 실행자(P0-04, PID 9804)·코덱스(P0-03 measure 회귀, 기존 확인분) 영역. 조율자 미접촉.
+- **문서·큐·정책 레인 — 커밋(로컬 전용)**: docs/handoff/HS-CANDIDATES.md(lastGate 23:30 갱신 + codex hs-scan follow-up 섹션 신설)·docs/qa/context-pack-integrity-data-gate-2026-07-11.md(신규, P0-05 데이터게이트 블록 기록)·docs/handoff/sessions/SESSION-2026-07-11-codex-050.md(신규). actor 전부 codex로 명시, 코드 미혼입 확인(git diff --cached --stat 3파일만), doc-integrity 커밋 전후 exit0 INTACT 재확인. **로컬 커밋 d34f210**(push 안 함).
+- **레인 미정 — 손대지 않음(직전 회차와 동일)**: CLAUDE.md(1줄, docs/plan 포인터) · docs/plan/ · docs/context/(P0-04 산출물 추정). 규칙 공백/활성 실행자 영역, 조율자 재량 밖.
+- **커밋 제외(런타임)**: dashboard/data/dev-pack/{measurement,patch-proposal,review-report,run-log,workflow-state}.json 5종 · outputs/*.log 다수 · outputs/DECISION-BRIEF-2026-07-11-v3.md · outputs/reviewer-log.md(읽기만) · sonnet-active.pid(생존 PID, 미접촉).
+- **기준 파일**: blueprint.json·workflow-definition.json 이번 회차 변경 없음, BASELINE-CHANGES 신규 없음(BC-001 그대로, 읽기만 확인).
+- **HUMAN-INBOX**: 23:28 이후 신규 등재 없음(확인만, 대행 안 함). 기존 결재 대기 항목 그대로.
+- **발사(사람 게이트, 대행 안 함)**: 진행 중 실행자 있음(PID 9804, P0-04). 순차 규칙상 신규 발사 대상 없음(발사 자체를 조율자가 하지 않음).
+- **push(사람 게이트, 대행 안 함)**: git fetch 후 git log origin/main..HEAD --oneline = **3건**(d34f210 포함). push 대기 3건 — 사람 배치 승인 필요.
+- **QUOTA_SIGNAL**: outputs/*.log 검색 결과 미검출.
+
+<run-summary>P0-04 Projection 실행자(PID 9804)가 여전히 생존 중이라 server 레인(CliRouter.cs·HarnessRegistry.cs·HandoffIntegrityCli.cs·ProjectionCli.cs) 전부 미접촉·미커밋 유지(gate-clean FAIL 지속, 신규 아님). codex의 23:30 hs-scan follow-up 문서 3건(HS-CANDIDATES 갱신, P0-05 data-gate 블록 기록, 세션050)을 doc-integrity 재확인 후 로컬 커밋(d34f210)함. 회차 중 WORKSTATE/handoff-integrity 결과가 두 시점 사이 달라진 것을 관찰(실행자 실시간 갱신 중으로 추정, 조치 없음). HUMAN-INBOX·기준 파일 변경 없음, QUOTA_SIGNAL 없음. push 대기 3건, 사람 배치 승인 필요. sonnet 발사·git push 없음.</run-summary>
