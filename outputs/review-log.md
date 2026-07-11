@@ -1830,3 +1830,15 @@
 - QUOTA_SIGNAL: 미감지.
 
 <run-summary>docs/handoff/SONNET-QUEUE.md의 LEDGER-02/03 완료 표기(검수자 갱신분)를 doc-integrity·handoff-integrity 검증 후 문서 레인 로컬 커밋(ae3d08f). RESUME-01 실행자 산출물 검토 — WORKSTATE 정보 부족 보고뿐이라 파일 변경 없음, exit.json processed:true 갱신. FILE-CLAIMS.json은 동시 세션 활동으로 판단해 손대지 않음. 발사 없음(#24 공석), push 대기 7건, HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
+- 0-A 선게이트: lanes dirty(dashboard/data 런타임 8건 + docs/handoff/FILE-CLAIMS.json 1건) → 후자는 런타임 json이 아니므로 처리 진행. exit signal(processed:false) 없음.
+- 안정성 게이트: FILE-CLAIMS.json 해시 5초 간격 2회 비교 → 안정(직전 회차 04:57엔 동시 세션 활동으로 판단해 보류했던 항목). sonnet-active.pid(9804)는 프로세스 생존 확인 결과 이미 종료.
+- 하네스: doc-integrity exit0(intact) · handoff-integrity exit0(failures없음) · gate-clean server exit0(PASS, contentDirtyCount0).
+- 대상: docs/handoff/FILE-CLAIMS.json — RESUME-01-35544 청구 레코드(released, exitCode0) 추가분. diff 텍스트만, 코드 미혼입 확인.
+- 커밋(로컬만, push 안 함) 1건: dbc9118(docs: FILE-CLAIMS RESUME-01 반영).
+- 커밋 안 함(런타임): dashboard/data/dev-pack·ruined-lab 8종, outputs/ 스크래치 파일 다수(주체 미상, 어느 레인에도 해당 없음).
+- HUMAN-INBOX: 신규 등재 없음. BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 변경 없음.
+- 발사(사람 게이트): SONNET-QUEUE #24 공석("추후 검수자가 추가") — 다음 대기 항목 없음. gate-clean PASS이나 발사 안 함.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 9건 → 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>docs/handoff/FILE-CLAIMS.json의 RESUME-01 청구 레코드 반영분을 doc-integrity·handoff-integrity·gate-clean 검증 후 문서 레인 로컬 커밋(dbc9118). 직전 회차(04:57)에서 동시 세션 활동으로 보류됐던 항목이 이번엔 안정 상태로 확인되어 처리됨. 발사 없음(#24 공석), push 대기 9건, HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
