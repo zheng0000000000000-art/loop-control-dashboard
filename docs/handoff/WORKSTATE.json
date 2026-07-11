@@ -1,8 +1,8 @@
 {
   "schemaVersion": "v9-min",
-  "phaseId": "HOOK-01",
-  "wpId": "HOOK-01",
-  "diId": "HOOK-01",
+  "phaseId": "ORCH-01",
+  "wpId": "ORCH-01",
+  "diId": "ORCH-01",
   "status": "done",
   "updatedBy": "claude-sonnet-4-6",
   "updatedAt": "2026-07-11",
@@ -62,46 +62,40 @@
         {"path": "server/Tier2Approver.cs", "note": "FEAT-01 변경 — 검수자 확인 필요(codex-030 FAIL 판정)"},
         {"path": "server/Tier2ApproverTestCli.cs", "note": "FEAT-01 변경 — 검수자 확인 필요"}
       ]
+    },
+    {
+      "diId": "HOOK-01",
+      "changedFiles": [
+        {"path": "server/Harness/HarnessRegistry.cs", "note": "신규. 하네스 이름→핸들러 표, TryRun(string[] args) 진입점."},
+        {"path": "server/Harness/GateCleanCli.cs", "note": "server/GateCleanCli.cs에서 이동."},
+        {"path": "server/Harness/HsScanCli.cs", "note": "server/HsScanCli.cs에서 이동."},
+        {"path": "server/Harness/ClaimCheckCli.cs", "note": "server/ClaimCheckCli.cs에서 이동."},
+        {"path": "server/Harness/DocIntegrityCli.cs", "note": "server/DocIntegrityCli.cs에서 이동."},
+        {"path": "server/Harness/E2EUsageCli.cs", "note": "server/E2EUsageCli.cs에서 이동."},
+        {"path": "server/Cli/CliRouter.cs", "note": "하네스 5개 분기 제거 → HarnessRegistry.TryRun(args) 1줄."}
+      ]
     }
   ],
   "changedFiles": [
     {
-      "path": "server/Harness/HarnessRegistry.cs",
-      "note": "신규. 하네스 이름→핸들러 표, TryRun(string[] args) 진입점."
-    },
-    {
-      "path": "server/Harness/GateCleanCli.cs",
-      "note": "server/GateCleanCli.cs에서 이동(내용 동일). GitTools 포함."
-    },
-    {
-      "path": "server/Harness/HsScanCli.cs",
-      "note": "server/HsScanCli.cs에서 이동(내용 동일)."
-    },
-    {
-      "path": "server/Harness/ClaimCheckCli.cs",
-      "note": "server/ClaimCheckCli.cs에서 이동(내용 동일)."
-    },
-    {
-      "path": "server/Harness/DocIntegrityCli.cs",
-      "note": "server/DocIntegrityCli.cs에서 이동(내용 동일)."
-    },
-    {
-      "path": "server/Harness/E2EUsageCli.cs",
-      "note": "server/E2EUsageCli.cs에서 이동(내용 동일)."
+      "path": "server/OrchestratorObserverCli.cs",
+      "note": "신규. SONNET-QUEUE 파싱·server/ clean 판정·PID 파일 감지·발사 결정 계산. 부작용 0."
     },
     {
       "path": "server/Cli/CliRouter.cs",
-      "note": "하네스 5개 분기 제거 → HarnessRegistry.TryRun(args) 1줄. 이것이 CliRouter의 마지막 하네스 수정."
+      "note": "orch-observe 분기 추가 3줄. 기존 CLI 분기 패턴."
     }
   ],
   "tests": {
     "behaviorEqual": true,
     "buildWarnings": 0,
     "buildErrors": 0,
-    "measureViolationsBefore": 4,
-    "measureViolationsAfter": 4,
-    "cliRouterHarnessNamesRemaining": 0
+    "measureViolationsBefore": 5,
+    "measureViolationsAfter": 5,
+    "orchObserveExit": 0,
+    "orchObserveMode": "observe-only",
+    "orchObserveWouldLaunch": false
   },
-  "nextActions": ["조율자: SONNET-QUEUE #13 HOOK-01 완료 표시", "이후 하네스 추가는 server/Harness/ 신규 파일 + HarnessRegistry.cs 한 줄"],
-  "notes": "Release build는 운영 서버(PID 14252)가 .exe 점유 중이어 apphost 복사 실패 — 컴파일(DLL) 성공은 Debug 0/0으로 확인. measure 4건은 HOOK-01 이전부터 존재(run-log 연속 5회 violationCount:4). 직접 경로 사유: 이전 sonnet r1~r4 범위 이탈·미완료 반복."
+  "nextActions": ["조율자: SONNET-QUEUE #5 ORCH-01 완료 표시", "이후 ORCH-02(관측 리포트 5분 주기) 또는 FEAT-01 결재 대기 확인"],
+  "notes": "measure 5건 위반 모두 사전 위반(allowlist 밖): reference.cs 주석 5건, CSS smallTouchTargets, docs skillDomainViolations, Program.cs 라인수, app.js 라인수. 내 변경 기인 위반 0건. 직접 경로 사유: 지시서 직접 수행(조율자 태스크 ID ORCH-01)."
 }

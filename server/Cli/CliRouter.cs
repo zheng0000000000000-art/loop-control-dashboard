@@ -27,6 +27,9 @@ internal static class CliRouter
         if (args.Length > 0 && string.Equals(args[0], "dispatch-executor", StringComparison.OrdinalIgnoreCase))
             return DispatchExecutorCli.Run(args);
 
+        if (args.Length > 0 && string.Equals(args[0], "orch-observe", StringComparison.OrdinalIgnoreCase))
+            return OrchestratorObserverCli.Run(args);
+
         if (args.Length > 0 && string.Equals(args[0], "measure", StringComparison.OrdinalIgnoreCase))
             return RunMeasureCli(args);
 
