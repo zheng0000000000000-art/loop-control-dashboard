@@ -754,3 +754,99 @@
 - QUOTA_SIGNAL: 미감지.
 
 <run-summary>server/Harness/BuildVerifyCli.cs(H-01 build-verify) 신규 발견·검증 후 로컬 커밋(92e0260, server/Harness/ 3파일). ACTOR-01(Program.cs·GitDataCommitter.cs·OutboxManager.cs·검증문서)은 claim-check MISMATCH 지속으로 미커밋 유지 - 단 원인이 이번 회차 사이 CODEX-QUEUE.md H-6으로 규명됨(claim-check 정규식이 .csproj를 .cs로 오인하는 하네스 버그, ACTOR-01 실체는 12/13 일치이나 하네스 수정 전이라 규칙대로 보류 지속). gate-clean은 서버 실행 중 obj 락으로 in-place 실패했으나 격리빌드로 코드 자체는 정상 확인(I-3, 코드오류 아님). doc-integrity/verify-behavior PASS, measure 기준선(3) 유지. 발사 없음(ACTOR-01 보류로 조건 미충족). push 대기 21건, 사람 배치 승인 필요. QUOTA_SIGNAL 없음.</run-summary>
+
+## 조율자 20:01 (recursion1-result-check)
+
+- 0단계 안정성: git status 변경 다수 파일 5초 간격 2회 해시 비교 → 동일(안정).
+- 하네스 판정(exit code): gate-clean server → FAIL(exit1, contentDirty 3 — server/GitDataCommitter.cs·OutboxManager.cs·Program.cs, ACTOR-01 미커밋 잔존, 기존과 동일). doc-integrity → PASS(exit0, INTACT). claim-check ACTOR-01 → 여전히 MISMATCH(exit1, 13건 중 1건 "server/LocalFirstWorkflowDashboard.Server.cs 존재" 오탐). server/Harness/ClaimCheckCli.cs:112 정규식(`server/[A-Za-z0-9_/\.]+\.cs`)을 직접 확인 — H-6가 지적한 종단 경계 미비가 **아직 코드에 반영되지 않음**(git grep 실측, 추정 아님). 따라서 규칙대로 ACTOR-01 3파일 커밋 보류 유지.
+- 신규 산출물: docs/qa/build-verify-harness-2026-07-11.md(코덱스, H-01 QA 기록) 확인 — 코드 미혼입, docs/qa 순수 문서. **로컬 커밋 72fa208.**
+- 발사(4단계): sonnet-active.pid=32048 생존 확인(StartTime 19:56:45, 현재 프로세스 목록에 존재) → 발사조건②(실행 중 sonnet 없음) 미충족. 추가로 ACTOR-01 미커밋으로 조건③도 미충족. **발사 없음.**
+- push(5단계): git log origin/main..HEAD = 23건(이번 회차 커밋 1건 추가 반영). **사람 배치 승인 필요, push 안 함.**
+- HUMAN-INBOX(6단계): 신규 결정 필요 항목 없음(ACTOR-01 결재·H-6 하네스 수정 대기는 기존 항목으로 충분, 중복 방지).
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>docs/qa/build-verify-harness-2026-07-11.md 검수 후 로컬 커밋(72fa208). ACTOR-01(3개 서버 파일)은 claim-check MISMATCH 지속(H-6 하네스 버그가 아직 코드 미반영 확인)으로 미커밋 유지. gate-clean FAIL 지속(ACTOR-01 잔존). sonnet-active.pid(32048) 생존 중이라 발사 없음. push 대기 23건, 사람 배치 승인 필요. QUOTA_SIGNAL 없음.</run-summary>
+
+## 조율자 20:04 (recursion1-result-check)
+
+- 0단계 안정성: git status 변경 다수 파일(server/*.cs 3건 포함) 5초 간격 2회 해시 비교 → 전부 동일(안정).
+- 하네스 판정(exit code, 직접 재실행): gate-clean server → FAIL(exit1, contentDirtyCount 3: server/GitDataCommitter.cs·OutboxManager.cs·Program.cs — ACTOR-01 미커밋 지속, 20:01 회차와 동일). doc-integrity → PASS(exit0, INTACT 12/12). claim-check ACTOR-01 → 재확인 MISMATCH(exit1, claimCount 13/mismatchCount 1 — "server/LocalFirstWorkflowDashboard.Server.cs 존재" 오탐. 실제로는 .csproj 파일이며 harness 정규식이 경계 없이 매칭하는 H-6 버그로 이전 회차부터 진단됨, 아직 코드 미수정. 나머지 12건은 실체와 일치).
+- 2단계(server 검수→커밋): claim-check exit1 지속 → 규칙대로 **커밋 금지**, ACTOR-01 3파일 미커밋 상태 유지(변화 없음).
+- 3단계(docs/qa·docs/wiki→커밋): 변경 없음(0건) → 커밋 안 함.
+- 발사(4단계): sonnet-active.pid=32048 생존 확인(StartTime 19:56:45, 프로세스 목록 존재) — 어차피 gate-clean FAIL로 발사조건 미충족. **발사 없음.**
+- push(5단계): git log origin/main..HEAD = 23건, 20:01 회차 대비 변화 없음 → 사람 배치 승인 필요, push 안 함.
+- HUMAN-INBOX(6단계): 신규 결정 필요 항목 없음 — ACTOR-01 claim-check MISMATCH·H-6 원인 진단은 19:47 항목에 이미 기록됨(중복 방지 위해 재기재 생략).
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>이번 회차는 20:01 회차와 상태 변화 없음. gate-clean 재실행 결과 FAIL 지속(ACTOR-01 3파일 미커밋), claim-check ACTOR-01도 동일 MISMATCH(H-6 하네스 버그로 추정 진단, 아직 미수정) 재확인 — 규칙대로 커밋 보류 유지. doc-integrity PASS. docs/qa·wiki 변경 없음. sonnet-active.pid(32048) 생존 중이라 발사 없음. push 대기 23건 그대로, 사람 배치 승인 필요. HUMAN-INBOX 신규 항목 없음(기존 기록으로 충분). QUOTA_SIGNAL 없음.</run-summary>
+
+## 조율자 2026-07-11 20:10 (recursion1-result-check, 스케줄 실행)
+
+- **안정성**: git status 미커밋 다수. 5초 간격 해시 2회 동일 → 안정 확인 후 처리.
+- **하네스(전부 exit code로 판정, 저장소 정본 문서 기준)**:
+  - `gate-clean server` → FAIL(exit1). server/GitDataCommitter.cs·OutboxManager.cs·Program.cs 3건 모두 content-dirty(진짜 변경, ACTOR-01 산출물).
+  - `doc-integrity` → INTACT(exit0), 12개 문서 전부 무결.
+  - `claim-check ACTOR-01` → **MISMATCH(exit1)**, claimCount 13/mismatch 1: 검증문서가 "server/LocalFirstWorkflowDashboard.Server.cs 존재"를 주장하나 실제 없음. 나머지 12건은 일치. **19:47 기록과 동일 — 그 사이 변화 없음.**
+  - `dotnet build server -c Release` → exit0(0/0).
+  - `measure dev-pack` → violationCount 3, exit1(위반>0). 기준선(3, "5→3 복귀") 대비 **비악화**.
+  - `verify-behavior` → behaviorEqual:true.
+- **server/ 커밋 판단**: claim-check MISMATCH(exit1) 규칙에 따라 **커밋하지 않음**. HUMAN-INBOX 기존 항목(19:47)과 동일 사유, 재확인만.
+- **★ 신규 발견 — 기준 파일 무단 변경 의심**: `dashboard/data/dev-pack/workflow-definition.json`의 `guardrails.maxLoopIterations`가 **10→100**으로 변경된 채 미커밋 상태. blueprint.json은 무변경. review-log·HUMAN-INBOX 전체 검색했으나 이 변경의 근거 기록 **없음**. 규칙에 따라 **커밋하지 않고 HUMAN-INBOX에 "기준 파일 무단 변경 의심"으로 신규 등재**(정황: 19:25 기록의 loopIteration 11>10 halt와 시점상 관련 가능성이 있으나 주체·의도는 **미상**으로 기재, 단정하지 않음).
+- **docs/qa, docs/wiki**: git status 변경 없음 → 커밋 없음.
+- **발사(사람 게이트, 조율자는 하지 않음)**: `sonnet-active.pid`=32048, 프로세스 목록에서 **생존 확인** → 실행 중으로 판정, 이번 회차 발사 대상 없음(어차피 발사 안 함). 참고로 다음 대기 항목도 전부 막혀 있음: SONNET-QUEUE #4 FEAT-01(HUMAN-INBOX 안전 재검토 보류 지속), #15 FIX-04(ACTOR-01 완료 후 순차 조건인데 ACTOR-01 자체가 claim-check MISMATCH로 미확정).
+- **push(사람 배치 게이트, 조율자는 하지 않음)**: `git log origin/main..HEAD --oneline` = **23건**. push 대기만 기록.
+- **결재 대기(대행 안 함)**: outbox 반입 2건, dev-pack proposal 다건, ACTOR-01 검증문서 오기재 1건, workflow-definition.json guardrail 변경(신규) — 전부 HUMAN-INBOX 참조.
+- **변경 사항 요약(이전 회차 대비)**: 새로 발견된 것은 workflow-definition.json guardrail 무단 변경 1건뿐. 나머지(claim-check MISMATCH, gate-clean FAIL, 발사·push 대기)는 이전 회차와 동일 상태 유지.
+
+## 조율자 20:15 (recursion1-result-check)
+
+- 안정성 게이트: git status 미커밋 38개 파일(수정 18·신규 20) 5초 간격 2회 해시 비교 — 전부 동일(안정).
+- 하네스 판정(exit code, 저장소 정본 기준):
+  - `gate-clean server` → FAIL(exit1, contentDirtyCount 3: server/GitDataCommitter.cs·OutboxManager.cs·Program.cs — ACTOR-01 미커밋 유지, 20:10 기록과 동일).
+  - `doc-integrity` → INTACT(exit0, 12/12 무결).
+  - `claim-check ACTOR-01` → 재확인 MISMATCH(exit1, claimCount 13/mismatchCount 1, "server/LocalFirstWorkflowDashboard.Server.cs 존재" 오탐 지속). CODEX-QUEUE H-6가 이 오탐 원인(claim-check 정규식 종단 경계 누락, `.csproj`→`.cs` 오인)을 규명했으나 **하네스 코드 수정은 아직 미반영**(git grep 재확인, 변화 없음). override 조건(①오탐 실체 입증 ②사람 승인 ③하네스 수정 과제 큐 등재) 중 **②사람 승인이 여전히 없음** — HUMAN-INBOX·review-log 전체 재확인, 승인 기록 매치 0건. 따라서 override 하지 않음.
+- server 커밋 판단: claim-check exit1 지속 → 규칙에 따라 **커밋 금지**. ACTOR-01 3개 서버 파일 미커밋 상태 유지(19:47 이후 상태 불변).
+- docs/qa·docs/wiki: 변경 없음 → 커밋 스킵.
+- 기준 파일 재확인: `dashboard/data/dev-pack/workflow-definition.json`의 `guardrails.maxLoopIterations`(10→100) 변경이 **그대로 유지**되고 있으며 근거 기록은 여전히 review-log·HUMAN-INBOX 어디에도 없음(재검색, 매치 0건). 규칙에 따라 **커밋하지 않음**(기존 20:1x HUMAN-INBOX 항목과 동일 건, 중복 등재 안 함). `blueprint.json`은 변경 없음.
+- 발사(사람 게이트, 조율자는 발사하지 않음): `sonnet-active.pid`=32048 생존 확인(StartTime 19:56:45). 프로세스 커맨드라인 직접 조회 결과 **SONNET-QUEUE #15 FIX-04**(measure 위반 0으로) 발사분으로 확인됨 — task ID FIX-04, 허용파일이 dashboard/style.css·app.js·docs/verification/tuning-advanced.md·fix04-measure-zero.md·docs/directives/FIX04-measure-zero.md·WORKSTATE.json으로 server/와 무관, 프롬프트에 "사람 승인 완료(2026-07-11)"·"server/ 아래는 다른 실행자 두 명이 동시에 쓰고 있으니 건드리지 마라"는 문구가 명시돼 있어 사람이 인지한 병행 발사로 보임(확정 아님, 정황). outputs/sonnet-FIX04.{out,err}.log는 19:56:45 생성 후 0바이트로 아직 산출물 없음(진행 중으로 추정). 이번 회차 신규 발사 없음(진행 항목 존재 규칙상 발사 불요).
+- push: `git log origin/main..HEAD` = 23건, 직전 회차(20:10)와 변화 없음. **push 대기 23건 — 사람 배치 승인 필요.**
+- HUMAN-INBOX: 신규 항목 1건 추가 — dev-pack proposal-1783768353058(revisionOf proposal-1783768334226, "함수 길이 줄이기", createdBy ollama/qwen3:8b, maxFunctionLength 115→[0,80]) 결재 대기. 그 외 기존 미해결 목록(ACTOR-01 claim-check 보류·H-6 미수정, workflow-definition.json 무단 변경 의심, outbox 반입 2건, FEAT-01 안전보류)은 중복 방지 위해 재등재 생략.
+- QUOTA_SIGNAL: 미검출.
+
+<run-summary>ACTOR-01 3개 서버 파일은 claim-check MISMATCH(H-6 하네스 버그로 원인 규명됐으나 하네스 자체는 아직 미수정, 사람 승인도 없어 override 불가) 지속으로 커밋 보류 유지. gate-clean FAIL·doc-integrity PASS 변화 없음. sonnet-active.pid(32048)가 SONNET-QUEUE #15 FIX-04(measure 위반 제로화) 발사분임을 이번에 확인(server/ 무관 허용파일, 사람 승인 문구 포함) — 진행 중으로 산출물 대기, 조율자는 발사하지 않음. workflow-definition.json guardrail 무단 변경 의심은 근거 기록 계속 없어 미커밋 유지. push 대기 23건 변화 없음. HUMAN-INBOX에 신규 dev-pack proposal-1783768353058 결재 대기 1건 추가. QUOTA_SIGNAL 없음.</run-summary>
+
+## 2026-07-11 20:1x — 검수자: FIX-04 검수 결과 (measure 4 → 1)
+
+- 주체(actor): 검수자 세션(Claude) 검수. 실행자: sonnet PID 32048(FIX-04).
+- **사용한 하네스**: build exit 0 / verify-behavior exit 0(behaviorEqual:true) / measure dev-pack exit 1(**violationCount 1**, 직전 4).
+- 해소: smallTouchTargets 1→0(style.css 32px→44px) · skillDomainViolations 2→0(tuning-advanced.md 스킬 목록 정정) · functionsWithoutComment 0 유지 · renderApprovalPanel 159→78줄, appJsLines 2692 유지(상한 준수).
+- **잔존 1건**: maxFunctionLength=115 (server/BalanceTuner.cs:43-157). 이 metric은 **가장 긴 함수 하나만** 보고하므로, 159줄이 해소되자 그 뒤에 가려져 있던 사전 위반이 드러난 것이다(두더지 잡기 구조). 실행자는 server/가 allowlist 밖이므로 **손대지 않고 중단·보고** — 지시서 준수. → FIX-05 지시서 작성·SONNET-QUEUE #16 등재.
+- **범위 대조**: FIX-04 변경 파일 전부 allowlist 내(dashboard/style.css·app.js·docs/verification/tuning-advanced.md·fix04-measure-zero.md·docs/directives/FIX04·WORKSTATE.json).
+- **ACK 미검출(3번째 사례)**: claude -p는 stdout에 최종 메시지만 내보내므로 "맨 첫 줄 ACK"가 요약에 밀려 사라진다. ORCH-01·ACTOR-01·FIX-04 모두 동일. **ACK 규칙은 결함이 확정됐다 — launch-check(H-00)는 이 사실을 반영해야 하며, 반영 없이 쓰면 정상 산출물을 전부 오탐으로 죽인다.**
+- 주의: appJsLines가 상한(2692)에 **정확히 붙어 있다.** 한 줄만 늘어도 위반 — app.js를 만지는 다음 작업은 반드시 줄 수를 확인할 것.
+
+
+## 조율자 20:23 (recursion1-result-check)
+
+- 0단계 안정성: git status 미커밋 파일 5초 간격 2회 해시 비교 → 전부 동일(안정).
+- 하네스 재실측(exit code): claim-check ACTOR-01 재실행 결과 **MATCH로 전환**(claimCount 12/mismatchCount 0) — 원인은 server/Harness/ClaimCheckCli.cs:112 정규식 종단 경계 누락(CODEX-QUEUE H-6)이 실제로 코드에 반영되어 있었기 때문(코덱스가 이미 고쳐둔 상태, 직접 git diff로 확인: `(?![A-Za-z0-9])` negative lookahead 추가). 이전 회차(20:01~20:15)가 지목한 "override 미승인으로 보류" 판단은 이번 회차부터 불필요해짐 — override가 아니라 하네스 코드 자체가 이미 수정되어 있었다.
+- 2단계(server 검수→커밋):
+  - build: `dotnet build server -c Release -o <tmp>` exit 0(경고0/오류0).
+  - verify-behavior: behaviorEqual=true.
+  - measure dev-pack: violationCount=1(기준선 3 대비 비악화, 개선).
+  - claim-check ACTOR-01: MATCH(위 참조).
+  - 불변식 확인: Engine.cs·Storage.cs·Guardrails.cs 무접촉, blueprint.json·workflow-definition.json 이 커밋 범위에 없음, allowlist(GitDataCommitter.cs·OutboxManager.cs·Program.cs·검증문서) 일치, 비밀 미포함.
+  - **커밋 3건 실행(전부 로컬, push 없음)**:
+    - `a941177` fix(harness): claim-check 정규식 H-6 수정 (server/Harness/ClaimCheckCli.cs)
+    - `6929406` feat(server): ACTOR-01 결재 액션 actor 기록 (GitDataCommitter.cs·OutboxManager.cs·Program.cs·docs/verification/actor01-actor-provenance.md)
+    - `a0eb930` docs(handoff): SONNET-QUEUE #12 ACTOR-01 완료로 갱신
+  - WORKSTATE.json은 현재 phaseId=FIX-04로 갱신되어 있어(ACTOR-01과 무관) 이번 커밋 범위에서 제외, 미커밋 유지.
+- 3단계(docs/qa·docs/wiki): `docs/qa/claim-check-h6-fix-2026-07-11.md` 안정 확인 후 커밋(`1e033b2`).
+- 커밋 후 재검증: `gate-clean server` → **PASS(exit0, contentDirtyCount 0)**.
+- 4단계(발사, 조율자는 발사 안 함): `sonnet-active.pid`=32048 **사망 확인**(Get-Process 없음). SONNET-QUEUE #15 FIX-04는 이 PID가 작업한 산출물로 추정되며 `outputs/sonnet-FIX04.out.log`에 완료 요약 있음(PARTIAL: smallTouchTargets·skillDomainViolations 해소, maxFunctionLength 잔여 1건 server/BalanceTuner.cs:43-157 115줄, allowlist 밖이라 실행자가 손 못 댐 → 사람 결재 필요 명시). 그러나 **FIX-04 산출물(dashboard/app.js·style.css·docs/verification/tuning-advanced.md 등)은 미커밋 상태**이며, 이 영역(dashboard/+docs)은 본 지시서의 정의된 커밋 레인(server 또는 docs/qa·docs/wiki)에 해당하지 않아 **이번 회차에서 커밋하지 않음**(레인 부재, 임의 확장 안 함). SONNET-QUEUE #15 표 상태도 여전히 "대기"로 남아있어(진행 표기 갱신 안 됨) 발사 조건 ③(진행 항목 커밋 확인)이 애매 → **발사 대기 기록 보류**(조건 불충족으로 판단, 발사 후보 명시 안 함).
+  - 참고: `docs/handoff/queue/directive-FIX05-balancetuner-split.md` 신규 파일 관측(다른 세션이 BalanceTuner.cs 115줄 분리 지시서를 준비 중으로 추정) — 조율자는 콘텐츠 편집 대행 안 함, 참고만.
+- 5단계(push, 조율자는 push 안 함): `git log origin/main..HEAD --oneline` = **27건**(이번 회차 로컬 커밋 4개 반영). **사람 배치 승인 필요, push 안 함.**
+- 6단계(HUMAN-INBOX): 신규 결정 필요 항목 없음. 기존 미결(workflow-definition.json guardrail 10→100 무단 변경 의심 — 근거 기록 여전히 없음, 미커밋 유지; outbox 반입 2건; dev-pack proposal 결재 대기; FEAT-01 안전 재검토 확인 등)은 기존 기록으로 충분, 중복 방지 위해 신규 추가 생략.
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>claim-check ACTOR-01이 MISMATCH에서 MATCH로 전환(H-6 하네스 정규식 수정이 이미 코드에 반영돼 있었음, override 아닌 정상 재검증 통과). ACTOR-01 3개 서버 파일 + H-6 하네스 수정 + SONNET-QUEUE 상태 갱신 + docs/qa 기록까지 로컬 커밋 4건 완료(a941177·6929406·a0eb930·1e033b2), push 없음. gate-clean server PASS로 전환. FIX-04(dashboard/+docs) 산출물은 완료 로그가 있으나 정의된 커밋 레인 밖이라 미커밋 유지, 발사 판단도 보류. push 대기 27건, 사람 배치 승인 필요.</run-summary>
