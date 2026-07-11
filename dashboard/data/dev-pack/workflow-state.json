@@ -17,6 +17,12 @@
       "detectedAt": "2026-07-10T09:39:27.4424984+09:00",
       "relatedProposalId": "proposal-1783630076578",
       "suspectConfidence": "temporal"
+    },
+    {
+      "metricId": "functionsWithoutComment",
+      "detectedAt": "2026-07-11T19:02:13.7032477+09:00",
+      "relatedProposalId": null,
+      "suspectConfidence": "temporal"
     }
   ],
   "loopIteration": 10,
@@ -53,7 +59,7 @@
       "issues": []
     },
     "deviationCheck": {
-      "summary": "측정 결과에서 3개 괴리가 감지됐다.",
+      "summary": "측정 결과에서 4개 괴리가 감지됐다.",
       "metrics": [
         {
           "label": "domainWordsInEngine",
@@ -61,7 +67,7 @@
         },
         {
           "label": "functionsWithoutComment",
-          "value": "0 / 0"
+          "value": "5 / 0"
         },
         {
           "label": "directiveAcceptanceCriteria",
@@ -109,7 +115,7 @@
         },
         {
           "label": "programCsLines",
-          "value": "2398 / 0~2661"
+          "value": "2296 / 0~2661"
         },
         {
           "label": "appJsLines",
@@ -117,13 +123,14 @@
         },
         {
           "label": "maxFunctionLength",
-          "value": "261 / 0~80"
+          "value": "159 / 0~80"
         }
       ],
       "issues": [
+        "functionsWithoutComment: 측정값 5이 기준 0을 벗어났다. 근거: docs/handoff/queue/OrchestratorObserverCli.reference.cs:161; docs/handoff/queue/OrchestratorObserverCli.reference.cs:186; docs/handoff/queue/OrchestratorObserverCli.reference.cs:204",
         "smallTouchTargets: 측정값 1이 기준 0을 벗어났다. 근거: dashboard/style.css:1133",
         "skillDomainViolations: 측정값 2이 기준 0을 벗어났다. 근거: docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md",
-        "maxFunctionLength: 측정값 261이 기준 0~80을 벗어났다. 근거: server/Program.cs:387-647"
+        "maxFunctionLength: 측정값 159이 기준 0~80을 벗어났다. 근거: dashboard/app.js:852-1010"
       ]
     },
     "changeReview": {
@@ -149,7 +156,7 @@
       ]
     }
   },
-  "lastUpdated": "2026-07-10T22:15:17.2399445+09:00",
+  "lastUpdated": "2026-07-11T19:23:49.6409223+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
@@ -162,6 +169,12 @@
       "type": "loopIteration",
       "loopIteration": 10,
       "acknowledgedAt": "2026-07-10T22:15:17.2399332+09:00"
+    },
+    {
+      "id": "guardrail",
+      "type": "guardrail",
+      "loopIteration": 10,
+      "acknowledgedAt": "2026-07-11T19:23:49.6408921+09:00"
     }
   ],
   "acknowledgedCheckpoints": [
@@ -176,5 +189,11 @@
     "smallTouchTargets=1",
     "skillDomainViolations=2",
     "maxFunctionLength=261"
-  ]
+  ],
+  "pausedAt": "2026-07-11T19:20:24.7819893+09:00",
+  "pausedBy": {
+    "type": "checkpoint",
+    "checkpointId": "loop-milestone"
+  },
+  "checkpointId": "loop-milestone"
 }

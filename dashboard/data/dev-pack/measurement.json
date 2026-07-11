@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-10T22:14:41.4469399+09:00",
+  "measuredAt": "2026-07-11T19:20:01.0662130+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
@@ -11,14 +11,20 @@
     },
     {
       "metricId": "functionsWithoutComment",
-      "value": 0,
-      "evidence": []
+      "value": 5,
+      "evidence": [
+        "docs/handoff/queue/OrchestratorObserverCli.reference.cs:161",
+        "docs/handoff/queue/OrchestratorObserverCli.reference.cs:186",
+        "docs/handoff/queue/OrchestratorObserverCli.reference.cs:204",
+        "docs/handoff/queue/OrchestratorObserverCli.reference.cs:211",
+        "docs/handoff/queue/OrchestratorObserverCli.reference.cs:217"
+      ]
     },
     {
       "metricId": "directiveAcceptanceCriteria",
       "value": 6,
       "evidence": [
-        "docs/directives/R01-cli-extract.md"
+        "docs/directives/ORCH01-observer.md"
       ]
     },
     {
@@ -78,9 +84,9 @@
     },
     {
       "metricId": "programCsLines",
-      "value": 2398,
+      "value": 2296,
       "evidence": [
-        "server/Program.cs:2398 lines"
+        "server/Program.cs:2296 lines"
       ]
     },
     {
@@ -92,9 +98,9 @@
     },
     {
       "metricId": "maxFunctionLength",
-      "value": 261,
+      "value": 159,
       "evidence": [
-        "server/Program.cs:387-647"
+        "dashboard/app.js:852-1010"
       ]
     }
   ]
