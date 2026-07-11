@@ -5,7 +5,7 @@
 > **판정 주체는 코덱스**(파이프라인 1단계). 검수자가 올린 후보는 `코덱스 확정 대기`로 표시하고, 코덱스가 HS-GATE 회차에 확정한다.
 
 <!-- hs-scan 이 읽는 메타. HS-GATE 수행 시 갱신할 것. -->
-- `lastGate: 2026-07-11 23:15`
+- `lastGate: 2026-07-11 23:30`
 - `judgedClasses: unnormalized_gate, self_report_as_truth, config_side_effect, observability, path_escape, executor-orchestration`
 
 ## HS-01 `gate-clean` — 트리 clean을 정규화 내용 해시로 판정 (하네스)
@@ -389,6 +389,18 @@ FAIL-005는 "실행 중인가"를 StartTime으로, FAIL-010은 "깨끗한가"를
 - proof: `dotnet build server -c Release` exit 0 with 0 warnings/0 errors; `build-verify` exit 0; `handoff-integrity` exit 1 on current `FIX-07` because all 3 current `changedFiles` entries lack `sha256/hash`; `doc-integrity` exit 0.
 - gate note: `dotnet run --project server -c Release --no-build -- measure dev-pack` exit 1 with `violationCount=2`, so the current workspace gate is not clean. This appears outside the new harness code path and must be handled by the owner/coordinator.
 - next candidates: P0-05 `context-pack-integrity` (new harness 2/2), then P0-06 `scope-check` extension.
+
+## 2026-07-11 23:30 codex hs-scan follow-up / P0-03 comment fix + P0-05 data gate
+
+- actor: codex
+- command: `dotnet run --project server -c Release --no-build -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidate=`executor-orchestration(6)`.
+- completed this cycle: fixed `functionsWithoutComment` caused by P0-03 by adding Korean function comments to `server/Harness/HandoffIntegrityCli.cs`.
+- proof: `dotnet build server -c Release` exit 0 with 0 warnings/0 errors; `build-verify` exit 0; `handoff-integrity` final re-run exit 1 because `WORKSTATE` moved to `P0-04 done` while `docs/handoff/SONNET-QUEUE.md` still has an open P0-04 row; `doc-integrity` exit 0; `measure dev-pack` remains exit 1 with `violationCount=2`.
+- measure note: `functionsWithoutComment=0`, `smallTouchTargets=0`, `skillDomainViolations=0`; remaining visible evidence is `maxFunctionLength=99` at `server/ProjectionCli.cs:168-266`, outside Codex write scope.
+- P0-05 data-existence gate: BLOCKED. No actual `requiredInputs` entries were found in directives/context packs (`rg requiredInputs` only finds the plan text). Building `context-pack-integrity` now would require inventing or proxy-parsing a contract that does not yet exist.
+- required predecessor: add a minimal Context Pack/directive schema with machine-readable `requiredInputs: [{path, sha256, sectionIds?}]` and `readOrder` to at least one active directive. Then Codex can build P0-05 without guessing.
 
 ## 2026-07-11 23:00 codex hs-scan follow-up / FIX-07 review
 
