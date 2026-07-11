@@ -1,5 +1,5 @@
-// CLI 명령을 분기하고 CLI 전용 헬퍼를 모은 라우터.
-// TryEscalateInsufficientRefeedback는 Program.cs 로컬 함수이므로 위임으로 주입한다.
+// CLI 紐낅졊??遺꾧린?섍퀬 CLI ?꾩슜 ?ы띁瑜?紐⑥? ?쇱슦??
+// TryEscalateInsufficientRefeedback??Program.cs 濡쒖뺄 ?⑥닔?대?濡??꾩엫?쇰줈 二쇱엯?쒕떎.
 using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -10,10 +10,10 @@ internal static class CliRouter
     internal delegate bool TryEscalateDelegate(
         ref Tier1ReviewResult tier1, ref JsonObject runLog, JsonObject state);
 
-    // Program.cs 로컬 함수를 주입받는 위임자.
+    // Program.cs 濡쒖뺄 ?⑥닔瑜?二쇱엯諛쏅뒗 ?꾩엫??
     internal static TryEscalateDelegate EscalateRefeedback = null!;
 
-    // CLI 명령을 분기한다. 해당 명령이 없으면 null을 반환해 웹 서버로 진행한다.
+    // CLI 紐낅졊??遺꾧린?쒕떎. ?대떦 紐낅졊???놁쑝硫?null??諛섑솚?????쒕쾭濡?吏꾪뻾?쒕떎.
     internal static int? TryRun(string[] args)
     {
         var cliCommand = args.Length > 0 ? args[0].TrimStart('-') : "";
@@ -44,11 +44,25 @@ internal static class CliRouter
 
         if (args.Length > 0 && string.Equals(args[0], "e2e-usage", StringComparison.OrdinalIgnoreCase))
             return E2EUsageCli.Run(args);
+        if (args.Length > 0 && string.Equals(args[0], "gate-clean", StringComparison.OrdinalIgnoreCase))
+            return GateCleanCli.Run(args);
+
+        if (args.Length > 0 && string.Equals(args[0], "gate-audit", StringComparison.OrdinalIgnoreCase))
+            return GateAuditCli.Run(args);
+
+        if (args.Length > 0 && string.Equals(args[0], "hs-scan", StringComparison.OrdinalIgnoreCase))
+            return HsScanCli.Run(args);
+
+        if (args.Length > 0 && string.Equals(args[0], "claim-check", StringComparison.OrdinalIgnoreCase))
+            return ClaimCheckCli.Run(args);
+
+        if (args.Length > 0 && string.Equals(args[0], "doc-integrity", StringComparison.OrdinalIgnoreCase))
+            return DocIntegrityCli.Run(args);
 
         return null;
     }
 
-    // 서버를 띄우지 않고 측정을 실행하는 CLI 진입점. 위반 0=0, 위반 존재=1, 실행 오류=2를 반환한다.
+    // ?쒕쾭瑜??꾩슦吏 ?딄퀬 痢≪젙???ㅽ뻾?섎뒗 CLI 吏꾩엯?? ?꾨컲 0=0, ?꾨컲 議댁옱=1, ?ㅽ뻾 ?ㅻ쪟=2瑜?諛섑솚?쒕떎.
     private static int RunMeasureCli(string[] args)
     {
         var cliJsonOptions = new JsonSerializerOptions
@@ -59,7 +73,7 @@ internal static class CliRouter
 
         if (args.Length < 2 || string.IsNullOrWhiteSpace(args[1]))
         {
-            Console.Error.WriteLine(CliError("사용법: measure <projectId>").ToJsonString(cliJsonOptions));
+            Console.Error.WriteLine(CliError("?ъ슜踰? measure <projectId>").ToJsonString(cliJsonOptions));
             return 2;
         }
 
@@ -96,7 +110,7 @@ internal static class CliRouter
         }
     }
 
-    // CLI 측정 결과 요약을 한 줄 JSON으로 만든다.
+    // CLI 痢≪젙 寃곌낵 ?붿빟????以?JSON?쇰줈 留뚮뱺??
     private static JsonObject BuildCliSummary(string projectId, MeasureOutcome outcome)
     {
         var bundle = outcome.Bundle!;
@@ -112,13 +126,13 @@ internal static class CliRouter
         };
     }
 
-    // CLI 오류를 한 줄 JSON으로 만든다.
+    // CLI ?ㅻ쪟瑜???以?JSON?쇰줈 留뚮뱺??
     private static JsonObject CliError(string message)
     {
         return new JsonObject { ["error"] = message };
     }
 
-    // 게임 시뮬레이터를 두 번 실행해 같은 시드가 같은 결과를 내는지 확인하는 CLI. 재현 실패·데이터 없음=2, 정상=0.
+    // 寃뚯엫 ?쒕??덉씠?곕? ??踰??ㅽ뻾??媛숈? ?쒕뱶媛 媛숈? 寃곌낵瑜??대뒗吏 ?뺤씤?섎뒗 CLI. ?ы쁽 ?ㅽ뙣쨌?곗씠???놁쓬=2, ?뺤긽=0.
     private static int RunSimTestCli(string[] args)
     {
         var cliJsonOptions = new JsonSerializerOptions
@@ -173,7 +187,7 @@ internal static class CliRouter
         }
     }
 
-    // 두 SimResult가 완전히 동일한지 비교한다(재현성 게이트).
+    // ??SimResult媛 ?꾩쟾???숈씪?쒖? 鍮꾧탳?쒕떎(?ы쁽??寃뚯씠??.
     private static bool SimResultsEqual(SimResult first, SimResult second)
     {
         return first.CompletionRate.Equals(second.CompletionRate) &&
@@ -185,7 +199,7 @@ internal static class CliRouter
             first.AverageProgressedRooms.Equals(second.AverageProgressedRooms);
     }
 
-    // 레버 범위 안에서 밸런스 탐색을 실행하는 CLI. 측정·제안 파일은 건드리지 않는 순수 실험용이다.
+    // ?덈쾭 踰붿쐞 ?덉뿉??諛몃윴???먯깋???ㅽ뻾?섎뒗 CLI. 痢≪젙쨌?쒖븞 ?뚯씪? 嫄대뱶由ъ? ?딅뒗 ?쒖닔 ?ㅽ뿕?⑹씠??
     private static int RunSimTuneCli(string[] args)
     {
         var cliJsonOptions = new JsonSerializerOptions
@@ -254,7 +268,7 @@ internal static class CliRouter
         }
     }
 
-    // 재지시 정보 부족 가드를 서버 파일 쓰기 없이 검증하는 CLI다.
+    // ?ъ????뺣낫 遺議?媛?쒕? ?쒕쾭 ?뚯씪 ?곌린 ?놁씠 寃利앺븯??CLI??
     private static int RunRefeedbackTestCli()
     {
         var cliJsonOptions = new JsonSerializerOptions
@@ -294,7 +308,7 @@ internal static class CliRouter
         return escalated && tier1.Verdict == "uncertain" ? 0 : 1;
     }
 
-    // 노드에서 정수 값을 읽는다(RunSimTuneCli 전용 복사본, Program.cs 로컬 함수에 접근 불가).
+    // ?몃뱶?먯꽌 ?뺤닔 媛믪쓣 ?쎈뒗??RunSimTuneCli ?꾩슜 蹂듭궗蹂? Program.cs 濡쒖뺄 ?⑥닔???묎렐 遺덇?).
     private static int Number(JsonNode? node, int fallback)
     {
         return node is not null && int.TryParse(node.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? value : fallback;

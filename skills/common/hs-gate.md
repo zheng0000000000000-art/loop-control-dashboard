@@ -1,5 +1,7 @@
 # 스킬: HS-GATE 승격 심사 (하네스·스킬 후보 점수화)
 
+버전: 1 | 도메인: common | 트리거: hs-scan exit 1 | 대상: 반복된 실패·절차를 하네스/스킬로 승격 심사할 때
+
 트리거: `dotnet run --project server -- hs-scan` 이 **exit 1**을 반환했을 때. 재량 아님 — **의무**.
 (하네스가 아직 없으면: `docs/wiki/failures/index.md`에서 같은 failureClass가 2회 이상인지 수동 확인.)
 

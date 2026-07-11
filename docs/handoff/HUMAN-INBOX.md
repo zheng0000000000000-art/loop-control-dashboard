@@ -35,4 +35,19 @@
 
 ## 결정 필요: dev-pack proposal 리비전 갱신 (2건째, 2026-07-11 15:2x)
 
-- 맥락: dashboard/data/dev-pack/patch-proposal.json이 proposal-1783750546584(revisionOf propos
+- 맥락: dashboard/data/dev-pack/patch-proposal.json이 proposal-1783750546584(revisionOf proposal-1783750066352, 제목 "UI/UX 개선 및 코드 품질 향상", createdBy ollama/qwen3:8b)로 다시 갱신됨. lifecycle `submitted`. 변경 3건: smallTouchTargets 1→0, skillDomainViolations 2→0, maxFunctionLength(before 159)→[0,80]. 위 14:19 기록된 proposal-1783747077098 이후의 후속 리비전.
+- 조치: 사람의 승인(approve) 또는 거절(reject) 판단 필요. 조율자는 결재를 대행하지 않음.
+- 확인 시각: 2026-07-11 15:27 (조율자, recursion1-result-check).
+
+## 결정 필요: dev-pack proposal 신규 리비전 (3건째, rule-engine 계열, 2026-07-11 15:56)
+
+- 맥락: dashboard/data/dev-pack/patch-proposal.json이 proposal-1783753005664(revisionOf proposal-1783752773893, 제목 "브랜딩 관리 이슈 제안", createdBy rule-engine)로 갱신됨. 위에 기록된 proposal-1783750546584 계열(ollama/qwen3:8b, "UI/UX 개선 및 코드 품질 향상")과는 다른 리비전 체인. lifecycle submitted, overallStatus warning. 변경 5건: functionsWithoutComment 12→0(docs/handoff/queue/GateCleanCli.reference.cs 등), smallTouchTargets 1→0, skillsWithoutVersion 1→0, skillDomainViolations 2→0, maxFunctionLength 159→[0,80].
+- 발생 경위: 조율자가 FEAT-02 검수 절차 중 dotnet run -- measure dev-pack을 실행(비악화 확인 목적)했고, 그 실행 자체가 rule-engine 제안을 새로 생성함(조율자의 의도적 결재 행위 아님, measure 실행의 부수 효과).
+- 조치: 사람의 승인(approve) 또는 거절(reject) 판단 필요. 조율자는 결재를 대행하지 않음.
+- 확인 시각: 2026-07-11 15:56 (조율자, recursion1-result-check).
+## 긴급 확인 필요: 무인 승인(loop approve) 위반 재발 규모 확대 — 1건→12건 (2026-07-11 16:05)
+
+- 맥락: 검수자(코덱스) 세션이 docs/handoff/HS-CANDIDATES.md에 HS-04 gate-audit 후보를 12/12점(★최우선)으로 등재. 근거: git log에서 [loop] dev-pack 회차N: approve proposal-... / cknowledge-guardrail ... 형태의 무인 커밋 **12건 실측**(회차5·6·7·8·9·10, 두 계열). 기존 HUMAN-INBOX 항목(아래 "참고: 과거 미해결 관찰")은 34f5116 1건만 "출처 미확정"으로 기록했으나, 이후 6건 이상 추가 재발한 것으로 확인됨.
+- 의미: 북극성 원칙("결재·반입·기준변경은 항상 사람")이 문서 규칙으로만 존재하고 코드 강제가 없어, 대시보드 loop 프로세스(추정)가 proposal을 반복적으로 무인 승인·자동 커밋한 것으로 보임.
+- 조치: (1) 이 12건 커밋 목록·주체 확인 및 대시보드 loop 자동 승인 코드 경로 사람 감사 필요, (2) HARNESS-04 gate-audit(검출 전용, 되돌리기·결재 미포함) 즉시제작 여부 사람 승인 필요. 조율자는 감사·되돌리기·정책변경을 대행하지 않음.
+- 확인 시각: 2026-07-11 16:05 (조율자, recursion1-result-check, docs/handoff/HS-CANDIDATES.md HS-04 절 근거).
