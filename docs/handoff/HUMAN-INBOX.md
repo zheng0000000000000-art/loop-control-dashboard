@@ -151,3 +151,10 @@
 - `doc-integrity`는 **파일 끝** 잘림만 잡는다 — **중간 스플라이스는 못 잡는다.**
 - 원인: 결재 큐에 **동시성 제어가 없다.** 여러 주체가 같은 파일을 무잠금 append한다.
 - 제안(사람 판단): ①주체별 파일 분리(`HUMAN-INBOX/조율자.md`, `HUMAN-INBOX/검수자.md`) 후 병합 ②단일 기록자 지정 ③append-only 잠금.
+## r4(HOOK-01 재발사) 분석 결과 — WORKSTATE.json/FEAT-01 상태 불일치, 재발사 여부 사람 판단 필요 (2026-07-11 18:1x, 조율자 관측)
+
+- outputs/sonnet-HOOK01-r4.out.log(18:18): r4는 HOOK-01 지시서(HarnessRegistry, server/Harness/) 구현 대신 상황 분석만 하고 종료. server/Harness/ 없음, HarnessRegistry.cs 없음, FEAT-01 관련 코드 변경(WriteImportAiEvent 등)도 없음을 확인(현재 git 트리와 일치 — server/*.cs 변경 없음, 격리·되돌림 상태 유지 확인됨).
+- WORKSTATE.json은 phaseId=FEAT-01, status="verifying"이며 changedFiles에 server/Tier2Approver.cs·Tier2ApproverTestCli.cs(반입 확인 로직)를 여전히 기록 중이나, 실제 트리에는 해당 변경이 없다. 되돌림(1366f70 등) 이후 갱신되지 않은 상태로 추정 — 기준 파일 실상태 불일치.
+- r4는 "WORKSTATE.json 원상복구 + SONNET-QUEUE #13(HOOK-01) '대기'로 되돌려 재발사"를 조율자에게 물었으나 응답 없이 세션 종료됨. SONNET-QUEUE.md #13은 여전히 "진행"(최초 PID 31528 표기)으로 남아있고 r2·r3·r4 재발사 결과는 큐 표에 반영되지 않음.
+- 이번 조율자 권한 밖: WORKSTATE.json 정정, HOOK-01 재발사 승인 모두 대행하지 않음.
+- **사람 판단 필요**: ①WORKSTATE.json을 FEAT-01 착수 전 상태로 되돌릴지 ②SONNET-QUEUE #13을 '대기'로 되돌려 재발사를 승인할지, 승인한다면 발사 규칙(task ID 에코백 도착확인, 28bc09d 반영분)이 적용된 새 발사 방식으로 진행할지.
