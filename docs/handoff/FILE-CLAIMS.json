@@ -1,6 +1,5 @@
 ﻿{
     "schemaVersion":  2,
-    "note":  "발사 래퍼(outputs/launch/run-executor.ps1)가 자동 기록한다. 하네스는 읽기만 한다 - 쓰는 자와 검사하는 자를 분리한다. allowlistSource가 null이면 'allowlist 미상'이며 빈 목록과 다르다.",
     "claims":  [
                    {
                        "claimId":  "LEDGER-04-34288",
@@ -37,6 +36,90 @@
                        "status":  "released",
                        "exitCode":  0,
                        "note":  "지시서 없는 스모크 테스트. allowlistSource=null 은 allowlist 미상을 뜻한다(빈 목록과 다르다)."
+                   },
+                   {
+                       "claimId":  "PROBE-00-488",
+                       "actor":  "sonnet",
+                       "taskId":  "PROBE-00",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  488,
+                       "claimedAt":  "2026-07-12T04:45:24.7890690+09:00",
+                       "expiresAt":  "2026-07-12T06:45:24.7890690+09:00",
+                       "status":  "released",
+                       "exitCode":  0
+                   },
+                   {
+                       "claimId":  "PROBE-00-13232",
+                       "actor":  "sonnet",
+                       "taskId":  "PROBE-00",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  13232,
+                       "claimedAt":  "2026-07-12T04:45:36.2906299+09:00",
+                       "expiresAt":  "2026-07-12T06:45:36.2906299+09:00",
+                       "status":  "released",
+                       "exitCode":  0
+                   },
+                   {
+                       "claimId":  "PROBE-00-31560",
+                       "actor":  "sonnet",
+                       "taskId":  "PROBE-00",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  31560,
+                       "claimedAt":  "2026-07-12T04:45:50.6428658+09:00",
+                       "expiresAt":  "2026-07-12T06:45:50.6428658+09:00",
+                       "status":  "released",
+                       "exitCode":  0
+                   },
+                   {
+                       "claimId":  "PROBE-00-19876",
+                       "actor":  "sonnet",
+                       "taskId":  "PROBE-00",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  19876,
+                       "claimedAt":  "2026-07-12T04:47:29.9686219+09:00",
+                       "expiresAt":  "2026-07-12T06:47:29.9686219+09:00",
+                       "status":  "released",
+                       "exitCode":  0
+                   },
+                   {
+                       "claimId":  "PROBE-00-6160",
+                       "actor":  "sonnet",
+                       "taskId":  "PROBE-00",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  6160,
+                       "claimedAt":  "2026-07-12T04:47:43.8966421+09:00",
+                       "expiresAt":  "2026-07-12T06:47:43.8966421+09:00",
+                       "status":  "released",
+                       "exitCode":  0
+                   },
+                   {
+                       "claimId":  "PROBE-00-26188",
+                       "actor":  "sonnet",
+                       "taskId":  "PROBE-00",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  26188,
+                       "claimedAt":  "2026-07-12T04:47:57.4499345+09:00",
+                       "expiresAt":  "2026-07-12T06:47:57.4499345+09:00",
+                       "status":  "released",
+                       "exitCode":  0
                    }
                ]
 }
