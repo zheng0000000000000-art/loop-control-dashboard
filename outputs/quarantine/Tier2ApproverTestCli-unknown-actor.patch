@@ -1,0 +1,12 @@
+﻿diff --git a/server/Tier2ApproverTestCli.cs b/server/Tier2ApproverTestCli.cs
+index 612ae0a..065de85 100644
+--- a/server/Tier2ApproverTestCli.cs
++++ b/server/Tier2ApproverTestCli.cs
+@@ -169,6 +169,7 @@ public static class Tier2ApproverTestCli
+             ["deletedFiles"] = new JsonArray(),
+             ["gateViolationsBefore"] = before,
+             ["gateViolationsAfter"] = after,
++            ["hasVerification"] = true,
+         };
+         WriteJson(Path.Combine(taskDirectory, "meta.json"), meta);
+ 

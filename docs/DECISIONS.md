@@ -44,6 +44,19 @@
   재생성은 막지 않아, 이미 승인된 화면에 새 제안이 뜨고 버튼만 비활성화된 채로 남았던 것.
   같은 조건으로 제안 재생성·회귀 판정도 함께 건너뛰도록 확장했다. 상세:
   `docs/verification/apply-stage-reapproval-bug.md`.
+- 2026-07-11: **FEAT-01 — 한정 이양 완성: 게이트 클린 반입 AI 승인(Tier2Approver 확장).**
+  Tier2Approver에 3가지를 추가했다. ①**검증 문서 동반 조건** — `changedFiles`에 `docs/verification/` 파일이
+  있거나 `meta.hasVerification == true`여야 AI 승인 후보가 된다. 이로써 게이트 클린 조건은
+  기존 3개(위반 비증가·코어 무수정·기준파일 무수정)에 stale 방지(기존)와 검증 문서 동반을 더해 5개가 됐다.
+  ②**`import.ai` run-log 이벤트** — 승인·이상 시 프로젝트 run-log에 `import.ai` 이벤트를 기록한다
+  (taskId·게이트 결과·리뷰어 모델·계층·일일 카운터 포함). 대시보드 run-log 탭에서 감사 가능.
+  ③**이상 감지 롤백 요청** — 반입 후 재측정에서 위반 증가 감지 시 `rollback-request.json`을 task
+  디렉터리에 생성해 되돌려야 할 파일 목록을 남긴다. 기존 `halt` + 감사 로그에 더해 사람이 실행할
+  복구 근거를 직접 제공한다.
+  **고정점**: `conditionalDelegation.enabled`(코드에서 `Tier2Approver.Enabled`)는 `false`가 기본이며
+  코드가 자동으로 켜는 경로는 없다 — 켜는 결정은 사람만 한다(appsettings.json 직접 수정).
+  **되돌림 조건**: 반입 후 위반 증가가 감지되면 자동 halt → 사람이 `docs/audit/tier2-import-approvals-state.json`의
+  `halted`를 false로 직접 수정 → rollback-request.json의 `changedFiles`를 참고해 수동 복구.
 - 2026-07-10: ruined-lab 스크린샷 재신고("내보내기 진행 중"인데 상세엔 "아직 완료 안 됨")를
   조사해 별개의 실제 데이터 버그를 찾았다 — 적용/내보내기 단계는 배지(`stages.X`)만
   갱신되고 그 설명 텍스트(`stageDetails.X`)는 채우는 코드가 아예 없어 아주 예전에 한 번
