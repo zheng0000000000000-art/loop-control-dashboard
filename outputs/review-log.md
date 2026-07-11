@@ -973,3 +973,23 @@
 - QUOTA_SIGNAL: 미검출.
 
 <run-summary>H-2(call-integrity-check) 하네스를 QA문서 자기보고 4개 명령(build/call-integrity-check/verify-behavior/measure) 전부 재실행 대조 후 로컬 커밋(fba53b9), 문서 레인 커밋(be28fa3, HS-CANDIDATES·세션기록·QA문서). dev-pack proposal-1783771617329(함수 길이 단축) 신규 리비전을 HUMAN-INBOX에 등재(21335c6) — 첫 시도에서 상대경로 AppendAllText 결함으로 기록이 반영 안 되는 것을 발견해 절대경로로 정정 후 커밋. gate-clean 최종 PASS. 발사 없음(sonnet-active.pid 사망 확인, 다음 대기 FIX-07은 사람 승인 후 발사만 기록). push 대기 15건, 사람 배치 승인 필요. QUOTA_SIGNAL 없음.</run-summary>
+## 2026-07-11 21:2x — 조율자 회차 (H-3 template-sync-check 검수)
+
+- 안정성 게이트: 미커밋 대상 파일 해시 5초 간격 2회 동일 확인(변경 없음) → 처리 진행.
+- **server 코드 레인**: server/Harness/HarnessRegistry.cs(1줄 등록)·server/Harness/TemplateSyncCheckCli.cs(신규) — 코덱스 세션보고(SESSION-2026-07-11-codex-041) 자기보고를 신뢰하지 않고 4개 명령 전부 직접 재실행 대조:
+  - dotnet build server -c Release exit0(경고0/오류0) — 일치.
+  - 	emplate-sync-check(기본) exit0/verdict PASS — 일치.
+  - 	emplate-sync-check --inject-missing-template exit1/verdict FAIL(주입 결함 검출) — 일치.
+  - erify-behavior exit0, behaviorEqual:true — 일치.
+  - measure dev-pack exit1, violationCount1(FIX-05 이후 기준선 1과 동일, 비악화) — 일치.
+  - diId 미등록(하네스 자체 제작, H-1/H-2/H-6/H-7 선례와 동일) → claim-check 대상 아님, 직접 재실행 대조로 검증 완료. 주장=실체 확인 → **로컬 커밋 81155e0**.
+  - 커밋 후 재검증: gate-clean server → PASS(exit0, contentDirtyCount 0).
+- **문서 레인 커밋**: docs/handoff/HS-CANDIDATES.md(갱신)·docs/handoff/sessions/SESSION-2026-07-11-codex-041.md(신규)·docs/qa/template-sync-check-harness-2026-07-11.md(신규) → doc-integrity exit0(INTACT) 확인, 코드 미혼입 확인 후 **로컬 커밋 3f251c1**.
+- dev-pack 런타임 파일(measurement.json·patch-proposal.json·review-report.json·run-log.json·workflow-state.json): 규칙대로 **커밋 제외**(내용 미검토 — 런타임 산출물이라 레인 자체가 없음).
+- 기준 파일: dashboard/data/dev-pack/blueprint.json·workflow-definition.json 이번 회차 변경 없음(git status 미표기) — 추가 조치 불필요.
+- outputs/ 잡파일: outputs/DECISION-BRIEF-2026-07-11-v3.md·outputs/reviewer-log.md(검수자 전용, 읽기만 — 새 항목 확인함, 소실 복원 3건은 이미 BASELINE-CHANGES/H-6/프롬프트에 반영된 상태로 재확인)는 커밋 레인 부재/소유권 규칙에 따라 미접촉. outputs/*.log·sonnet-active.pid는 런타임 제외 대상.
+- 발사(4단계, 조율자는 발사하지 않음): sonnet-active.pid=30956 사망 재확인(Get-Process 없음). SONNET-QUEUE.md 표는 #17 FIX-06을 여전히 "대기"로 표기하나 커밋 이력(3df722f)상 이미 완료·병합된 상태 — 직전 회차 관측과 동일한 표 미갱신 상태 지속 확인, 표 편집은 대행하지 않음. 실질 다음 대기 항목은 #18 FIX-07(dashboard/app.js 장문 함수 3건 분할, 사람 승인 완료). **발사 대기: FIX-07 — 사람 승인 후 발사**만 기록, 발사하지 않음.
+- push(5단계, 조율자는 push하지 않음): git log origin/main..HEAD --oneline = **18건**(이번 회차 로컬 커밋 2건 포함). **push 대기 18건 — 사람 배치 승인 필요.**
+- QUOTA_SIGNAL: 미검출.
+
+<run-summary>H-3(template-sync-check) 하네스를 코덱스 세션보고와 별개로 4개 명령(build/template-sync-check 정상+주입결함/verify-behavior/measure) 전부 직접 재실행해 주장=실체 일치 확인 후 로컬 커밋(server 레인 81155e0, 문서 레인 3f251c1). dev-pack 런타임 파일·기준 파일은 변경 없거나 레인 제외로 미접촉. 발사 없음(sonnet-active.pid 사망 확인, SONNET-QUEUE #17 FIX-06 표기 미갱신 지속 관측·편집 미대행, 다음 대기는 #18 FIX-07로 사람 승인 후 발사만 기록). push 대기 18건, 사람 배치 승인 필요. QUOTA_SIGNAL 없음.</run-summary>
