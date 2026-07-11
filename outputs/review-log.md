@@ -925,3 +925,27 @@
 - QUOTA_SIGNAL: 미감지.
 
 <run-summary>이번 회차 로컬 커밋 3건: dashboard FIX-04 반영(63d51e5), server FIX-06 4개 장문함수 분할(3df722f, claim-check MATCH), 문서·정책 기록(68cd4c4, BASELINE-CHANGES.md 신설 포함). 초반 build가 sonnet 편집 중 과도 상태로 일시 실패했으나 락이 아닌 진짜 컴파일 에러였고, 안정화 후 재확인해 정상 통과. codex의 H-1 path-guard-check(HarnessRegistry.cs·PathGuardCheckCli.cs)는 자체 보고상 미완이라 미접촉. sonnet PID 30956은 회차 중 종료(FIX-06 완료 추정), 다음 대기 항목 FIX-07은 사람 승인 완료 상태이나 발사는 사람 게이트. push 대기 9건으로 증가, 사람 배치 승인 필요.</run-summary>
+
+## 조율자 2026-07-11 21:1x (recursion1-result-check)
+
+- 0단계 안정성: git status 미커밋 파일(수정 5·신규 12) 5초 간격 2회 해시 비교 → server/Harness/HarnessRegistry.cs·PathGuardCheckCli.cs 포함 전부 동일(안정). sonnet-active.pid=30956 프로세스 조회 결과 **사망 확인**(Get-Process 없음, 지난 회차 FIX-06 완료 후 종료로 추정과 일치).
+- 하네스 판정(초기, exit code): `gate-clean server` → FAIL(exit1, contentDirtyCount 2: server/Harness/HarnessRegistry.cs(M)·PathGuardCheckCli.cs(??)). `doc-integrity` → PASS(exit0, INTACT 12/12).
+- **H-1(path-guard-check) 검수·커밋**: `docs/qa/path-guard-check-harness-2026-07-11.md`(이미 68cd4c4로 커밋됨) 전문을 재확인한 결과, 헤더의 "금지 중: CliRouter.cs 미수정·git commit/push 미실시"는 **작업 범위 제약 서술**(codex의 allowlist 진술)이었고, 문서 하단 판정란에 **"H-1 완료: PASS"**가 명시돼 있었음 — 직전 회차(21:0x)가 헤더만 읽고 "미완"으로 오판했던 부분을 이번 회차에서 문서 전체 재확인으로 정정.
+  - diId 미등록(하네스 자체 개선, H-6/H-7 선례와 동일) → claim-check 대상 아님. QA문서에 기재된 커맨드를 전부 직접 재실행해 대조:
+    - `dotnet build server -c Release` exit0(경고0/오류0) — 문서 claim과 일치.
+    - `path-guard-check`(무인자 자체회귀) exit0, caseCount6/failureCount0/verdict PASS — 문서 claim과 일치(6개 케이스 전부 match).
+    - `verify-behavior` exit0, behaviorEqual:true — 문서 claim과 일치.
+    - `measure dev-pack` exit1, violationCount=1(기준선 1과 동일, 비악화) — 문서 claim과 일치.
+  - 주장=실체 확인됨 → **로컬 커밋 447af2f**(server/Harness/HarnessRegistry.cs·PathGuardCheckCli.cs, push 없음).
+  - 커밋 후 재검증: `gate-clean server` → contentDirtyCount 1(server/Harness/CallIntegrityCheckCli.cs만 잔존, H-1 정상 반영 확인).
+- **신규 미커밋 파일 관측(손대지 않음)**: `server/Harness/CallIntegrityCheckCli.cs`(??) — 이번 회차 중 새로 나타남(직전 회차엔 없었음). 대응 검증문서(docs/qa) 없음, 안정성 재확인 전이라 **커밋하지 않음**(다음 회차에 안정 확인 후 재판정). 코덱스의 다음 H-series 하네스 작업으로 추정되나 확정 아님(주체 미상 원칙 준수).
+- dev-pack 런타임 파일(measurement.json·patch-proposal.json·review-report.json·run-log.json·workflow-state.json): 규칙대로 **커밋 제외**. `measure dev-pack` 실행 자체의 부수효과로 proposal-1783771307962(createdBy ollama/qwen3:8b) 신규 생성 관측 — 기존 HUMAN-INBOX "dev-pack proposal 결재 대기" 계열과 동일 성격이라 중복 등재 생략.
+- 기준 파일: `dashboard/data/dev-pack/blueprint.json`·`workflow-definition.json` 이번 회차 변경 없음(git status 미표기) — BC-001 상태 그대로 유지, 추가 조치 불필요.
+- outputs/ 잡파일: `outputs/DECISION-BRIEF-2026-07-11-v3.md`·`outputs/reviewer-log.md`는 정의된 5개 커밋 레인(server 코드/dashboard 코드/문서·큐·정책/상태/기준 파일) 중 어디에도 해당하지 않아 **레인 부재로 미커밋**(검수자 소유 문서로 추정, 임의로 새 레인을 만들지 않음 — 결정 사안 아니므로 HUMAN-INBOX 등재는 생략, 참고 기록만). `outputs/*.log`·`sonnet-active.pid`는 정의된 런타임 제외 대상이라 스킵.
+- docs/qa·docs/wiki: 이번 회차 변경 없음(신규·수정 파일 없음) → 커밋 스킵.
+- 발사(4단계, 조율자는 발사하지 않음): sonnet-active.pid=30956 사망 확인, 실행 중 sonnet 없음. **SONNET-QUEUE.md 콘텐츠 불일치 관측**: 저장소 정본 표는 #17 FIX-06을 여전히 "대기"로 표기하나, WORKSTATE.json(phaseId FIX-06, status done)·review-log 21:0x 기록(3df722f 커밋)·이번 회차 gate-clean 결과 모두 FIX-06이 **이미 완료·커밋됨**을 뒷받침함 — 표 갱신 누락으로 추정. 조율자는 큐 콘텐츠 편집을 대행하지 않으므로 정정하지 않고 관측만 기록. 실질적 다음 대기 항목은 #18 FIX-07(dashboard/app.js 장문 함수 3건 분할, 사람 승인 완료 2026-07-11) — **발사 대기: FIX-07 — 사람 승인 후 발사**만 기록, 발사하지 않음.
+- push(5단계, 조율자는 push하지 않음): `git log origin/main..HEAD --oneline` = **11건**(이번 회차 로컬 커밋 1건 H-1 포함). **push 대기 11건 — 사람 배치 승인 필요.**
+- HUMAN-INBOX(6단계): 신규 결정 필요 항목 없음. 기존 미결(outbox 반입 2건·dev-pack proposal 결재 대기·FEAT-01 안전 재검토·서버 OFF+토큰으로 결재 경로 폐쇄 등, outputs/DECISION-BRIEF-2026-07-11-v3.md에 정본 정리됨)은 기존 기록으로 충분, 중복 등재 생략.
+- QUOTA_SIGNAL: 미검출.
+
+<run-summary>H-1(path-guard-check) 하네스를 재검증(build/path-guard-check자체회귀/verify-behavior/measure 4개 커맨드 전부 QA문서 claim과 일치 확인) 후 로컬 커밋 1건(447af2f), push 없음. 직전 회차가 QA문서 헤더만 보고 "미완"으로 오판했던 부분을 문서 전문 재확인으로 정정("H-1 완료: PASS" 명시 확인). 신규 파일 server/Harness/CallIntegrityCheckCli.cs가 관측됐으나 이번 회차엔 안정성 미확보로 미접촉. dev-pack 런타임·기준 파일 변경 없음. outputs/DECISION-BRIEF·reviewer-log.md는 커밋 레인 부재로 계속 미커밋(참고만). SONNET-QUEUE 표가 FIX-06을 "대기"로 잘못 표기 중인 콘텐츠 불일치를 관측(정정은 대행 안 함), 실질 다음 대기 항목 FIX-07은 발사 대기 기록만 하고 발사하지 않음. sonnet-active.pid 사망 확인, 신규 발사 없음. push 대기 11건, 사람 배치 승인 필요. QUOTA_SIGNAL 없음.</run-summary>
