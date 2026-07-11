@@ -627,3 +627,26 @@
 - QUOTA_SIGNAL: 미관측(로그 비어있어 확인 불가, 다음 회차에 재확인).
 
 <run-summary>19:00 검수자 세션이 사람 승인으로 발사한 ORCH-01 sonnet(PID 11060)이 아직 실행 중(로그 0바이트, ACK 미확인) - 이번 회차는 판정 보류, 커밋 없음. gate-clean은 진행 중인 변경으로 예상대로 FAIL(exit1), doc-integrity는 PASS(exit0). push 대기 4건 변동 없음, HUMAN-INBOX 신규 항목 없음, QUOTA_SIGNAL 미관측.</run-summary>
+
+
+## 조율자 2026-07-11 19:10
+
+- 경로 규칙 준수: 저장소 정본만 열람(세션 outputs 사본 미사용).
+- 안정성 게이트: git status --short 5초 간격 2회 해시 비교 - server/*.cs·docs/* 콘텐츠 파일 전부 안정. outputs/sonnet-ORCH01.*.log만 0→내용 존재로 변동(실행 중이던 로그 기록 완료, 커밋 제외 대상이라 판단에 무관).
+- 배경: 19:00 검수자 세션이 사람 승인 하에 발사한 ORCH-01(PID 11060) sonnet이 이번 회차 확인 시점에는 완료 상태(WORKSTATE.json status:"done", docs/verification/orch01-observer.md 존재).
+- 하네스 판정(전부 exit code 기준, 조율자가 직접 재실행):
+  - build server -c Release: exit 0(경고 0/오류 0).
+  - gate-clean server: exit 1(contentDirtyCount 2 - server/Cli/CliRouter.cs 진짜변경 + server/OrchestratorObserverCli.cs 신규, ORCH-01 산출물과 일치 - 예상된 결과).
+  - doc-integrity: exit 0(12/12 intact).
+  - claim-check ORCH-01: exit 0(claimCount 3, mismatchCount 0, MATCH - docs/verification/orch01-observer.md 자기보고와 실체 일치).
+  - verify-behavior: exit 0(behaviorEqual true).
+  - measure dev-pack: exit 1(violationCount 4 - 기준선 5건 대비 비악화, ORCH-01 기인 위반 0건).
+- server/ 검수: 전 하네스 PASS/비악화 → 로컬 커밋 ee21611(server/OrchestratorObserverCli.cs 신규, CliRouter.cs orch-observe 분기, docs/verification/orch01-observer.md, docs/directives/ORCH01-observer.md, docs/handoff/WORKSTATE.json). dashboard/data/dev-pack/*.json 5건은 커밋 제외 대상 유지(미포함, measure 실행의 부수효과로 재변동 중). docs/handoff/CODEX-HEARTBEAT-PROMPT.md·sessions/codex-032·033.md·queue/OrchestratorObserverCli.reference.cs·outputs/sonnet-*.log·sonnet-active.pid는 ORCH-01 지시서 allowlist 밖이며 gate-clean 대조상 실제 변경분(2건)에 포함되지 않음 - 별도 주체(사전 준비물·codex 세션 로그)로 판단해 미커밋(범위 위반 아님, 별도 미추적 자료).
+- 큐 갱신: SONNET-QUEUE.md #5 ORCH-01 상태 "대기"→"완료(ee21611)"로 갱신, 로컬 커밋 14f1e31.
+- docs/qa·docs/wiki: 변경 없음 → 스킵.
+- 발사(사람 게이트, 조율자는 발사 안 함): sonnet-active.pid=11060 재확인 결과 해당 PID 프로세스 없음(사망, claude.exe 19건 목록 미포함) → 실행 중 sonnet 없음. server clean(커밋 후 gate-clean 재확인 PASS) + 이전 진행항목(ORCH-01) 커밋 확인됨 + 큐상 다음 "대기"는 #4 FEAT-01. FEAT-01은 HUMAN-INBOX 기존 안전보류(과거 무단구현 사고 이력 - Tier2Approver.cs 격리·되돌림, 무인 결재 이양 위험) 유지 중 → 발사 후보에서 제외. **발사 보류: FEAT-01 — 사람 안전 재검토 미해결(신규 판단 아님, 기존 보류 유지).**
+- push: git rev-list --count origin/main..HEAD = 7건(이번 회차 신규 2건 ee21611·14f1e31 추가). **push 대기: 7건 — 사람 배치 승인 필요.**
+- HUMAN-INBOX: 신규 판단 사안 없음. 기존 미해결 다수 유지 확인(FEAT-01 안전재검토, ACTOR-01 결재대기, outbox 반입 2건, dev-pack proposal 결재 대기, reviewer-session/미상 identity 커밋 재발 관측 등) - 재기재 생략(중복 방지).
+- QUOTA_SIGNAL: 미관측.
+
+<run-summary>19:00 검수자 세션이 발사한 ORCH-01(PID 11060, 오케스트레이터 관측 스캐폴드 orch-observe)이 완료 확인됨 - gate-clean/doc-integrity/claim-check/verify-behavior 전부 PASS, measure 비악화(4≤5) → 로컬 커밋 ee21611 + 큐 갱신 커밋 14f1e31. sonnet 미실행(PID 11060 사망), 다음 대기 FEAT-01은 기존 안전보류 유지로 발사 안 함. push 대기 7건, HUMAN-INBOX 신규 항목 없음, QUOTA_SIGNAL 없음.</run-summary>
