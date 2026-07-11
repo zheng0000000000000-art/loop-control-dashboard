@@ -1,7 +1,7 @@
 # REVIEWER-HANDOFF — 검수자 세션 인수인계 (상시 최신)
 
 > **쓰기 주체: 검수자만**(ADR-003 단일 기록자). 이 문서는 **판단할 때마다 갱신한다** — 세션 종료 시점이 아니다. 세션은 예고 없이 죽는다(한도·컨텍스트 한계).
-> 갱신: 2026-07-11 23:4x
+> 갱신: 2026-07-12 00:0x
 
 ## 0. 새 검수자 세션이 읽는 순서 (이것만 읽으면 이어받는다)
 
@@ -20,8 +20,8 @@
 | --- | --- |
 | P0-01 ALIGNMENT + ADR-001 | ✅ |
 | P0-02 ADR 기반(ADR-001~006) + 배선 | ✅ |
-| P0-03 `handoff-integrity` 하네스 | ✅ 코덱스 제작. **주석 5건 누락으로 measure 위반 1 — 코덱스가 수정 중** |
-| P0-04 Projection 생성기 + WORKSTATE 해시 | 🔄 **진행 중**(sonnet). 성공 기준: `handoff-integrity` exit 1 → **exit 0** |
+| P0-03 `handoff-integrity` 하네스 | ✅ 주석 5건 보완 후 **커밋 완료(`a7068ad`)**. `server/` clean |
+| P0-04 Projection 생성기 + WORKSTATE 해시 | ✅ **PASS**(2026-07-12 00:0x 재판정). `handoff-integrity` **exit 0** / `projection` 멱등 / **반증 시험 통과: 파일 1줄 변조 → exit 1, 원복 → exit 0**(게이트 공허하지 않음). 실행자 PID 9804 종료, 산출물 커밋됨 |
 | P0-05 Context Pack + `context-pack-integrity` | ⬜ 코덱스 큐 |
 | P0-06 파일 소유권 claim(`FILE-CLAIMS.json`) | ⬜ 코덱스 큐(사양 확정) |
 | P0-07 `HS-GATE-P00` + 독립 재개 시험 | ⬜ **사람이 PASS 판정** |
@@ -46,9 +46,16 @@
 
 ## 4. 다음 세 수
 
-1. **P0-04 검수** — `handoff-integrity` exit 0 확인. ACK는 없을 것이다(ADR-004: `claude -p`는 첫 줄 ACK를 못 낸다. 5/5 실패했다. **폐기 사유 아니다**).
-2. **LEDGER-01 발사** — ollama 응답의 `prompt_eval_count`/`eval_count`를 이미 있는 `cost` 필드에 기록. **"토큰을 줄이자"는 프로젝트가 토큰을 안 재고 있다.**
-3. **P0-05 → P0-06 → P0-07(HS-GATE)**.
+*(P0-04 검수 완료로 갱신 — 2026-07-12 00:0x)*
+
+1. **WORKSTATE `changedFiles` 회전** — ⚠️ **P0-04 잔여 결함.** WORKSTATE는 `diId: P0-04`를 선언하는데 `changedFiles`는 **FIX-07의 파일 3건 그대로다**(앞 세션이 diId만 고치고 회전을 안 했다). 하네스는 **남의 DI 파일을 검증하며 green**이다. 해시 검증은 진짜지만 **핸드오프가 현실을 기술하지 않는다** = 목적 미달(ADR-005). FIX-07 항목을 `history`로 내리고 P0-04 산출물(`server/Cli/*`, projection·handoff-integrity 코드)로 교체 후 `projection` 재실행. **코덱스/실행자 몫 — 검수자는 WORKSTATE에 쓰지 않는다(ADR-003).**
+2. **LEDGER-01 발사** — ollama 응답의 `prompt_eval_count`/`eval_count`를 이미 있는 `cost` 필드에 기록. **"토큰을 줄이자"는 프로젝트가 토큰을 안 재고 있다.** 발사는 사람 게이트.
+3. **P0-05 → P0-06 → P0-07(HS-GATE)**. P0-05는 여전히 **data gate 블록**(코덱스 051: 기계가 읽을 `requiredInputs`/`readOrder` 실데이터가 없어 하네스를 못 만든다). 스키마부터 확정해야 진행된다.
+
+### HS-GATE-P00 판정 시 사람이 알아야 할 구조적 한계
+
+- **스탬핑 주체 = 검증 주체.** `projection`이 sha256을 쓰고 `handoff-integrity`가 그걸 검증한다. 파일 변조는 잡지만, **`projection` 재실행으로 언제든 green을 제조할 수 있다.** 현재 게이트의 목적은 "핸드오프 이후 드리프트 탐지"이며 그 범위에서는 유효하다. 폐기 사유는 아니지만 **게이트를 신뢰의 근거로 삼을 때 이 한계를 알고 있어야 한다.**
+- ACK는 없을 것이다(ADR-004: `claude -p`는 첫 줄 ACK를 못 낸다. 5/5 실패). **폐기 사유 아니다.**
 
 ## 5. 절대 하지 말 것 (전부 실제 사고에서 나옴)
 

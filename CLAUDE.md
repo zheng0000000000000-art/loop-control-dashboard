@@ -2,8 +2,16 @@
 
 먼저 [AGENT-GUIDE.md](AGENT-GUIDE.md)를 읽는다 — API·작업 수명주기·금지선·기여 방법이 거기 있다.
 
+## ★ 새 검수자 세션은 이 순서로 읽는다 (이사 규약 — ADR-007)
+
+1. **`docs/handoff/REVIEWER-HANDOFF.md`** — 지금 어디까지 왔고 다음에 뭘 하는가. **검수자의 유일한 인수인계 원본이다.**
+2. **`docs/context/RUNTIME-INDEX.md`** — 기계가 WORKSTATE에서 생성한 L0 상태(11줄). **손으로 쓴 문서보다 이걸 믿어라.**
+3. **`outputs/review-log.md`**(조율자) + **`docs/handoff/sessions/`**(코덱스 최신) — 독립 관찰자 기록. **안 읽고 추측하면 틀린다.**
+4. `docs/plan/INTENT-DIGEST.md` · `docs/handoff/decisions/ADR-*.md` — 왜 이렇게 하기로 했는가.
+
 ## ★ 이 프로젝트의 계획서 (2026-07-11 반입)
 
+- **의도 요약(새 세션은 이것부터)**: `docs/plan/INTENT-DIGEST.md` — 이 프로젝트가 무엇을 하려는가. 핵심 철학은 **"LLM은 적게 기억하고 적게 생성한다. 프로그램이 많이 기억하고 조립하고 검증한다."** 판단이 갈리면 이 문장이 심판이다 — **프롬프트로 시키지 말고 코드로 강제하라.**
 - **정본 계획서**: `docs/plan/AI-RUNTIME-REFACTOR-MICRO-DIRECTIVES-v9.md` (Phase 0~13, DI 체계, HS-GATE, 인수인계·컨텍스트 규약)
 - **정렬 문서**: `docs/plan/ALIGNMENT-v9.md` — 계획서가 요구하는 것 ↔ 저장소의 실재 ↔ 진짜 공백. **동등물 선언이 여기 있다(`server/Harness/`=`harnesses/`, `skills/common/`=`skills/`, allowlist+scope-check=`FILE-CLAIMS`). 이름이 다르다고 새로 만들지 마라 — 재발명 금지.**
 - **결정 기록**: `docs/handoff/decisions/ADR-*.md`. 대안 중 하나를 골랐으면 ADR을 남긴다(계획서 §0.5).
