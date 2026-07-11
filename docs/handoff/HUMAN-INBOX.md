@@ -215,3 +215,9 @@
 - 20:1x 항목("기준 파일 무단 변경 의심")의 근거를 `docs/handoff/BASELINE-CHANGES.md` BC-001에서 확인. 사람(choi) 명시 승인(19:5x), 근거·되돌리는 법 기재됨. blueprint.json 무수정 확인.
 - 조치: workflow-definition.json 커밋 진행(별도 커밋, BC-001 인용).
 - 확인 시각: 2026-07-11 20:42 (조율자, recursion1-result-check).
+
+## 결정 필요: dev-pack proposal 신규 리비전 (2026-07-11 21:1x, 조율자)
+
+- 맥락: dashboard/data/dev-pack/patch-proposal.json이 proposal-1783771617329(revisionOf proposal-1783771319530, 제목 "함수 길이 단축", createdBy ollama/qwen3:8b)로 갱신됨. lifecycle submitted. 변경 1건: maxFunctionLength 99→[0,80].
+- 조치: 사람의 승인(approve) 또는 거절(reject) 판단 필요. 조율자는 결재를 대행하지 않음.
+- 확인 시각: 2026-07-11 21:1x (조율자, recursion1-result-check).
