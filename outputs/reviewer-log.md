@@ -300,3 +300,38 @@ proposal: functionsWithoutComment @ server/OllamaExecutor.cs:569
 ### LEDGER-02는 여전히 미검증이다 — 잊지 마라
 
 `proposal.generated`에 토큰이 찍히는 배선(LEDGER-02)은 **아직 한 번도 실행되지 않았다.** ollama 제안 경로가 폴백으로 죽어 있었기 때문이다. **위 결정으로 ollama 경로가 되살아나면, 그때 `proposal.generated`의 `cost.inputTokens > 0`을 확인해야 LEDGER-02가 비로소 검증된다.** 두 작업은 이 지점에서 만난다.
+
+## 2026-07-12 04:0x — 재개. 그리고 ★ **내가 쓴 문서가 조율자를 껐다**
+
+사람이 휴식 후 재개. 재개 절차대로 하네스를 직접 돌렸고 **두 가지 사고를 잡았다.**
+
+### 사고 1 — `handoff-integrity`가 exit 1이었는데 조율자는 "전부 PASS"로 커밋했다
+
+| | |
+| --- | --- |
+| 실측 | `handoff-integrity` **exit 1 (FAIL)** — `changedFiles item lacks sha256/hash` ×2 |
+| 원인 | LEDGER-03 실행자가 문서 2건(`ledger03-*.md`)을 `changedFiles`에 넣고 **`projection`을 다시 돌리지 않았다** → `sha256: null` |
+| **왜 못 잡았나** | **조율자의 하네스 목록에 `handoff-integrity`가 아예 없었다**(build/verify-behavior/measure/claim-check/doc-integrity만). **P0-03이 만든 게이트를 조율자가 안 돌리고 있었다.** |
+| 복구 | `projection` 재실행 → `stamped: 4` → **exit 0 PASS**, 멱등성 확인 |
+| 재발 방지 | 조율자 프롬프트에 `handoff-integrity` 추가 + LEDGER-04 지시서에 **"파일 다 쓴 뒤 마지막에 projection, 그 다음 handoff-integrity로 자기 확인"** 명시 |
+
+**독립 재실행이 아니었으면 못 잡았다.** 자기보고(실행자)도 조율자 보고도 통과였다.
+
+### 사고 2 — **낡은 상태 문서가 조율자를 스스로 끄게 만들었다**
+
+01:5x에 자동화를 멈추며 `REVIEWER-HANDOFF.md`에 **"⛔ 전부 멈춰 있다"**고 적었다. 04:0x에 재개하며 **스케줄러만 다시 켰고 문서는 그대로 뒀다.**
+
+**조율자가 03:58 회차에 그 문서를 읽고, "저장소는 정지라는데 스케줄러가 켜져 있다"며 스스로 `enabled: false`로 껐다**(커밋 `cfbfce4`).
+
+- **조율자는 옳게 행동했다.** 정본 문서를 믿고 불일치를 해소한 것이다. **거짓말한 것은 내 문서다.**
+- 순서를 반대로 해야 했다: **문서를 먼저 고치고, 그 다음 스위치를 만진다.** 그렇게 다시 했다.
+- **이것이 P0-04(Projection 생성기)의 존재 이유를 정확히 재현한다.** 손으로 쓴 상태 문서는 낡고, **낡은 문서는 잘못된 행동을 낳는다.** `docs/STATUS.md`가 삭제된 파일을 가리켜 발사 직전에 사람이 손으로 잡았던 그 사건과 **같은 병, 다른 피해자**다.
+- **§2 「지금 돌고 있는 것」 표는 아직 손으로 쓴다** — Projection 대상이 아니다. 표 위에 **"이 표를 낡은 채로 두지 마라 — 조율자가 이걸 읽고 자기를 끈다"** 경고를 박았다. **다음 후보: 이 표도 기계가 생성하게 만든다.**
+
+### 이번 회차에 만든 것
+
+1. **발사 래퍼** `outputs/launch/run-executor.ps1` — ①**프롬프트를 파일로 전달**(인자 경계 잘림 = FAIL-2026-013을 **구조적으로 제거**) ②실행자 종료를 기다려 **완료 신호** `outputs/launch/<TaskId>.exit.json` 기록(`exitCode`·`argLength`·`processed: false`).
+   - 함정 2개를 밟았다: **PS 5.1이 BOM 없는 UTF-8을 ANSI로 읽어** 한글 주석이 깨지며 구문 오류 → BOM 추가로 해결. **MCP 세션이 자식 프로세스를 함께 죽여서** 래퍼가 즉사 → `Win32_Process.Create`로 완전 분리 발사.
+2. **조율자를 시간 기반 → 사건 기반으로 전환.** 프롬프트 맨 앞에 **선(先) 게이트**: 커밋 레인이 깨끗하고 미처리 sentinel도 없으면 **즉시 종료, 리포트도 쓰지 마라.** 실행자가 20분 도는 동안 **할 일 없이 태우던 세션 4개가 0개**가 된다. **코덱스가 할당량으로 죽은 것과 같은 구조였다.**
+3. **코덱스 프롬프트** `outputs/launch/CODEX-P0-05.prompt.txt` — P0-05 `context-pack-integrity`. 첫머리에 **"네가 옳았다"**를 넣었다(두 번의 거부는 `hs-gate` 2항을 지킨 것이었고, 막힌 쪽은 검수자였다).
+4. **LEDGER-04 발사**(PID 34288) — 사람 결정 "정규화 + 계속 기록". **최종 목표는 LEDGER-02 배선의 첫 검증.**
