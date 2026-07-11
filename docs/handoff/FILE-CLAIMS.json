@@ -120,6 +120,20 @@
                        "expiresAt":  "2026-07-12T06:47:57.4499345+09:00",
                        "status":  "released",
                        "exitCode":  0
+                   },
+                   {
+                       "claimId":  "RESUME-01-35544",
+                       "actor":  "sonnet",
+                       "taskId":  "RESUME-01",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  35544,
+                       "claimedAt":  "2026-07-12T04:55:36.9994878+09:00",
+                       "expiresAt":  "2026-07-12T06:55:36.9994878+09:00",
+                       "status":  "released",
+                       "exitCode":  0
                    }
                ]
 }
