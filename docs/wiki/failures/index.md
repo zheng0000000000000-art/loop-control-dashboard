@@ -14,5 +14,5 @@
 | [FAIL-2026-010](cases/FAIL-2026-010-crlf-gate-deadlock.md) | 줄바꿈 표현 차이가 발사 게이트를 영구 잠금 | 해결됨 | unnormalized_gate, config_side_effect, design_learning | executor-orchestration, gate-evaluation |
 | FAIL-2026-011 | 문서 잘림/비원자적 쓰기 계열 | 확인됨 | document_integrity, design_learning | handoff-docs |
 | [FAIL-2026-012](cases/FAIL-2026-012-proxy-actor-misjudgment.md) | 커밋 메시지 접두사를 행위 주체로 오판해 위반 22건을 날조 | 해결됨 | unnormalized_gate, design_learning | gate-evaluation, executor-orchestration |
-| [FAIL-2026-013](cases/FAIL-2026-013-launch-session-resume.md) | 발사가 격리되지 않아 `claude -p`가 기존 세션을 이어받고 엉뚱한 작업을 계속함 | 해결됨 | unnormalized_gate, observability, design_learning | executor-orchestration |
+| [FAIL-2026-013](cases/FAIL-2026-013-launch-prompt-truncation.md) | 발사 프롬프트가 잘려 실행자가 지시서를 받은 적이 없었음 | 해결됨 | unnormalized_gate, observability, design_learning | executor-orchestration |
 | [FAIL-2026-014](cases/FAIL-2026-014-tier2test-verification-cli-crashes.md) | Tier2Approver 검증 CLI 일부 시나리오가 예외로 종료되고 검증 문서 주장과 실측이 불일치 | 확인됨 | verification_gap, harness_runtime_error, design_learning | tier2-approver, verification-harness |
