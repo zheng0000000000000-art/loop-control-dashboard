@@ -1,4 +1,4 @@
-# SONNET-QUEUE — 구현 작업 큐 (조율자가 자동 발사)
+﻿# SONNET-QUEUE — 구현 작업 큐 (조율자가 자동 발사)
 
 > 검수자/오케스트레이터가 지시서를 미리 만들어 순서대로 쌓는다. 조율자(5분 태스크)가 "server clean + 이전 항목 커밋됨 + 다음 대기"일 때 다음 지시서를 sonnet에 자동 발사한다. 이렇게 구현 루프가 사람 개입 없이 큐 소진까지 돈다.
 
@@ -24,7 +24,7 @@
 | 17 | **FIX-06 server/ 장문 함수 4건 분할** | queue/directive-FIX06-server-long-functions.md | server/ | **완료(3df722f)** — 사람 승인(2026-07-11) 후 반영. Tier2Approver·OutboxManager·Program·Engine 장문 함수 분할 |
 | 18 | **FIX-07 app.js 장문 함수 3건 분할 → measure 0 달성** | queue/directive-FIX07-appjs-long-functions.md | dashboard/ | **완료(ebb0312)** — 조율자 23:03 검수: build/verify-behavior/measure/claim-check/scope-check 전부 PASS. app.js 줄수 상한(2692) 유지 확인 |
 | 19 | **P0-04 Projection 생성기** (`dotnet run -- projection`) — WORKSTATE에서 STATUS·HANDOFF·RUNTIME-INDEX를 **생성**. 손편집 금지 | queue/directive-P004-projection.md  | server/ + docs | **완료(a7068ad server + 88d0ab5 docs)** — 조율자 23:44 검수: build 0/0, verify-behavior true, measure violationCount1(기준선과 동일), claim-check P0-04 MATCH(exit0). 자진신고(ADR-005): WORKSTATE diId가 여전히 FIX-07(P0-04로 projection 재실행 갱신은 조율자 권한 밖 — 하네스 아닌 쓰기 액션이라 보류, 사람/검수자 판단 필요) |
-| 20 | **LEDGER-01 ollama 토큰 계측** (`prompt_eval_count`/`eval_count` → 기존 `cost` 필드) | queue/directive-LEDGER01-token-ledger.md | server/ | **진행(PID 20896, 2026-07-11 23:50 발사)** — 사람 승인(ADR-006). **조율자: 이중 발사 금지.** 근거 실측(검수자): run-log `entries` 938건 전부 `cost` 필드 보유, **토큰 값 채워진 것 0건**. ollama 가동 확인(`/api/tags` 200). 검수 핵심: 코드 설명이 아니라 **`cost.inputTokens>0 && cost.outputTokens>0` 항목이 실제로 기록되는가** |
+| 20 | **LEDGER-01 ollama 토큰 계측** (`prompt_eval_count`/`eval_count` → 기존 `cost` 필드) | queue/directive-LEDGER01-token-ledger.md | server/ | **완료(9d4aac5 server + 8a982d4 docs + 174be5f state)** — 조율자 2026-07-12 00:22 검수: build exit0(0/0), verify-behavior true, measure dev-pack violationCount0(기준선0 비악화), claim-check LEDGER-01 MATCH(claimCount14/mismatch0), doc-integrity INTACT(exit0). 실체 증명: run-log cost.inputTokens:1541/outputTokens:144 기록 확인. 자진신고(실행자): OllamaExecutor 일부 경로(Program.cs 경유)·Tier2Approver는 여전히 0 — 후속 과제 필요. |
 | 21 | (추후 검수자가 추가) | — | — | — |
 
 ## 자동 발사 규칙 (조율자용)
