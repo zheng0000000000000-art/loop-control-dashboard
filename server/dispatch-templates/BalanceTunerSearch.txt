@@ -12,10 +12,11 @@ public static TuningResult Search(JsonObject gameData, JsonObject blueprint, Jso
     var baselineScore = ScoreCandidate(blueprint, baselineResult);
     var currentScore = baselineScore;
     var candidatesUsed = 1;
+    var restartAttempts = 0;
     var touchedLevers = new HashSet<string>(StringComparer.Ordinal);
     onProgress?.Invoke(ScoreLine("[tuning] baseline", currentScore, candidatesUsed));
 
-    RunSearchLoop(blueprint, levers, seed, dryRunSamples, maxLeversPerProposal, maxCandidates, touchedLevers, onProgress, ref current, ref currentResult, ref currentScore, ref candidatesUsed);
+    RunSearchLoop(blueprint, levers, seed, dryRunSamples, maxLeversPerProposal, maxCandidates, touchedLevers, onProgress, ref current, ref currentResult, ref currentScore, ref candidatesUsed, ref restartAttempts);
     var changedLevers = CollectChangedLevers(levers, baseline, current);
     var prediction = BuildPrediction(blueprint, baselineResult, currentResult);
 
@@ -29,11 +30,12 @@ public static TuningResult Search(JsonObject gameData, JsonObject blueprint, Jso
         baselineScore.PrimaryDistance,
         currentScore.PrimaryDistance,
         baselineScore.AverageProgressedRooms,
-        currentScore.AverageProgressedRooms);
+        currentScore.AverageProgressedRooms,
+        restartAttempts);
 }
 
 // 후보 탐색 루프를 실행한다.
-private static void RunSearchLoop(JsonObject blueprint, List<TunableLever> levers, int seed, int dryRunSamples, int maxLeversPerProposal, int maxCandidates, HashSet<string> touchedLevers, Action<string>? onProgress, ref JsonObject current, ref SimResult currentResult, ref TuningScore currentScore, ref int candidatesUsed)
+private static void RunSearchLoop(JsonObject blueprint, List<TunableLever> levers, int seed, int dryRunSamples, int maxLeversPerProposal, int maxCandidates, HashSet<string> touchedLevers, Action<string>? onProgress, ref JsonObject current, ref SimResult currentResult, ref TuningScore currentScore, ref int candidatesUsed, ref int restartAttempts)
 {
     while (currentScore.PrimaryDistance > ScoreEpsilon && candidatesUsed < maxCandidates)
     {

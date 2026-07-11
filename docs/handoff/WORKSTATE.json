@@ -1,11 +1,11 @@
 {
   "schemaVersion": "v9-min",
-  "phaseId": "WP-REFACTOR-PROGRAM",
-  "wpId": "WP-REFACTOR-PROGRAM",
-  "diId": "DI-R-04",
-  "status": "verifying",
+  "phaseId": "FAIL-2026-008",
+  "wpId": "FAIL-2026-008",
+  "diId": "FAIL-2026-008",
+  "status": "done",
   "updatedBy": "claude-sonnet-4-6",
-  "updatedAt": "2026-07-10",
+  "updatedAt": "2026-07-11",
   "history": [
     {
       "diId": "DI-R-01",
@@ -27,38 +27,31 @@
         {"path": "server/Program.cs", "linesBefore": 2398, "linesAfter": 2321},
         {"path": "server/CycleSummaryBuilder.cs", "linesBefore": 0, "linesAfter": 92}
       ]
+    },
+    {
+      "diId": "DI-R-04",
+      "changedFiles": [
+        {"path": "server/Program.cs", "linesBefore": 2321, "linesAfter": 2296},
+        {"path": "server/MeasurementService.cs", "linesBefore": 0, "linesAfter": 65},
+        {"path": "server/Cli/CliRouter.cs", "linesBefore": 299, "linesAfter": 297}
+      ]
     }
   ],
   "changedFiles": [
     {
-      "path": "server/Program.cs",
-      "sha256": "29ef8ae2f129356086d9368442357cdcbd245d4f",
-      "linesBefore": 2321,
-      "linesAfter": 2296,
-      "note": "RunMeasureCore·ResolveMeasurementTargetRoot 제거, MeasurementService 위임 설치, ApplyMeasurementResult → 5개 서브함수로 분리(maxFunctionLength 해소)"
+      "path": "server/dispatch-templates/BalanceTunerSearch.txt",
+      "note": "restartAttempts 추가 — TuningResult 11번째 인자·RunSearchLoop ref 매개변수·초기화"
     },
     {
-      "path": "server/MeasurementService.cs",
-      "sha256": "e81e7b2c04def33d1db2227be1eb447892bd68a3",
-      "linesBefore": 0,
-      "linesAfter": 65,
-      "note": "신규 생성 — RunMeasureCore + ResolveMeasurementTargetRoot + 위임자 2개(ApplyResult, PersistBundle)"
-    },
-    {
-      "path": "server/Cli/CliRouter.cs",
-      "sha256": "0aa79a18a26da10f16aff27c0a29d6487107e4fe",
-      "linesBefore": 299,
-      "linesAfter": 297,
-      "note": "MeasureCore 위임자 제거, RunMeasureCli → MeasurementService.RunMeasureCore 직접 호출"
+      "path": "server/dispatch-templates/ApplyMeasurementResult.txt",
+      "note": "DI-R-04 분할 구조로 전체 교체 — MeasurementApplyContext context-object 방식 제거"
     }
   ],
   "tests": {
-    "behaviorEqual": true,
-    "buildWarnings": 0,
-    "buildErrors": 0,
-    "measureViolationsBefore": 3,
-    "measureViolationsAfter": 3
+    "baselineBuild": "경고 0·오류 0",
+    "templateApply": "exit 0, self-refactor templates applied",
+    "postApplyBuild": "경고 0·오류 0"
   },
-  "nextActions": ["WP-REFACTOR-PROGRAM 완료"],
-  "notes": "maxFunctionLength 위반(server/Program.cs:310-570, 261줄) 해소 — ApplyMeasurementResult를 5개 서브함수(RegressionCase·TuningCase·RunTuningRegenerationLoop·DevPackCase·CompliantCase)로 분리. measure 후 위반은 outbox 사본 파일에서 검출(server/Program.cs는 해소됨). CliRouter.MeasureCore 위임자 제거."
+  "nextActions": ["FAIL-2026-008 완료 — 다음 작업 대기"],
+  "notes": "self-refactor dispatch 템플릿 stale 수정. BalanceTunerSearch.txt는 random restart 없는 RunSearchLoop/FindBestCandidate 구조 유지(빌드 가능, 알고리즘 단순화). ApplyMeasurementResult.txt는 현행 DI-R-04 프레임 함수로 교체."
 }
