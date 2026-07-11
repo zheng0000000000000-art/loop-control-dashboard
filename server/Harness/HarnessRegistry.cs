@@ -11,6 +11,7 @@ internal static class HarnessRegistry
         ["doc-integrity"] = DocIntegrityCli.Run,
         ["launch-check"] = LaunchCheckCli.Run,
         ["scope-check"] = ScopeCheckCli.Run,
+        ["build-verify"] = BuildVerifyCli.Run,
     };
 
     // 이름이 표에 있으면 해당 하네스를 실행하고 exit code를 반환한다. 없으면 null을 반환한다.

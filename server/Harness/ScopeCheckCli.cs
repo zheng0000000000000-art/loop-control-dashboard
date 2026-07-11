@@ -153,6 +153,7 @@ internal static class ScopeCheckCli
         return Regex.IsMatch(f, regex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
+    // Normalizes directive ids and filenames for loose id lookup.
     private static string Normalize(string value)
         => Regex.Replace(value, "[^A-Za-z0-9]", "").ToLowerInvariant();
 }
