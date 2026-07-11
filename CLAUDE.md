@@ -2,6 +2,13 @@
 
 먼저 [AGENT-GUIDE.md](AGENT-GUIDE.md)를 읽는다 — API·작업 수명주기·금지선·기여 방법이 거기 있다.
 
+## ★ 이 프로젝트의 계획서 (2026-07-11 반입)
+
+- **정본 계획서**: `docs/plan/AI-RUNTIME-REFACTOR-MICRO-DIRECTIVES-v9.md` (Phase 0~13, DI 체계, HS-GATE, 인수인계·컨텍스트 규약)
+- **정렬 문서**: `docs/plan/ALIGNMENT-v9.md` — 계획서가 요구하는 것 ↔ 저장소의 실재 ↔ 진짜 공백. **동등물 선언이 여기 있다(`server/Harness/`=`harnesses/`, `skills/common/`=`skills/`, allowlist+scope-check=`FILE-CLAIMS`). 이름이 다르다고 새로 만들지 마라 — 재발명 금지.**
+- **결정 기록**: `docs/handoff/decisions/ADR-*.md`. 대안 중 하나를 골랐으면 ADR을 남긴다(계획서 §0.5).
+- **현재 운영 등급**: `Required Before Multi-model Parallel Work` (ADR-001, 사람 승인). 실행자 4명이 병렬로 돌고 자동 스케줄러가 켜져 있다 — **그 등급의 안전장치(Phase 0)를 세우는 중이다. `HS-GATE-P00` PASS 전까지 기능 개발(Phase 1)로 넘어가지 않는다.**
+
 ## 품질 게이트 (필수)
 - 코드·데이터 수정 후 커밋 전에 반드시 측정을 실행한다:
   `dotnet run --project server -- measure dev-pack` (아래 CLI, 서버 기동 불필요)

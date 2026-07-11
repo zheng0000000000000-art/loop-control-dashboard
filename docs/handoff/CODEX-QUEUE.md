@@ -60,3 +60,15 @@
 - **요청**: `skills/common/root-cause-diagnosis.md`에 **감별 0순위** 절을 넣어라 — *"주체가 안 움직이면, 버그를 의심하기 전에 **한도(quota)·인증·프로세스 생존**부터 배제하라. 그 셋은 실체로 즉시 확인된다(로그의 limit 문구, exit code, 프로세스 목록). 배제하지 않고 원인을 지목하면 그것이 프록시다."*
 - 가능하면 기계 검출도: 실행 로그에서 한도 문구(`hit your limit`·`rate limit`·`QUOTA_SIGNAL`)를 찾아 **"작업 실패"와 "한도 소진"을 분해**하는 검사를 `launch-check`에 얹어라(별도 하네스 불필요).
 - 영역: `skills/` + `server/Harness/`. 우선순위: H-6 다음.
+
+## ★ Phase 0 (P0) — 계획서 흡수 (2026-07-11, ADR-001 사람 승인)
+
+> 정본: `docs/plan/AI-RUNTIME-REFACTOR-MICRO-DIRECTIVES-v9.md` · 정렬: `docs/plan/ALIGNMENT-v9.md` · 결정: `docs/handoff/decisions/`
+> **예산: 이 Phase의 신규 하네스는 2개뿐이다**(P0-03, P0-05). 나머지는 기존 확장. 하루에 6개 만든 오늘 같은 과잉 금지.
+
+| 순번 | 작업 | 근거 | 영역 | 상태 |
+| --- | --- | --- | --- | --- |
+| **P0-03** | **`handoff-integrity` 하네스 (신규 1/2) ★최우선** — `WORKSTATE.json`이 실체와 일치하는지 검사: ①schema ②`changedFiles`의 실제 존재·hash ③`status`와 큐 표의 일치 ④blocker가 있는데 다음 항목이 진행 중인지 ⑤완료 주장 산출물의 실재. exit 0/1. | **가장 큰 구멍**: WORKSTATE가 `phaseId=FEAT-01, status=verifying`으로 며칠간 거짓말했는데 아무도 못 잡았다. 계획서 DI-00-05가 요구하는 항목. | `server/Harness/` | **대기** |
+| **P0-05** | **`context-pack-integrity` 하네스 (신규 2/2)** — 지시서(=우리의 Context Pack)의 `requiredInputs` 경로가 **실재하고 hash가 일치하는지** 검사. 없으면 exit 1. | ORCH-01 지시서가 **삭제된 참조 스캐폴드**를 가리키고 있었다(커밋 797e7bc가 지움). 검수자가 손으로 발견했다 — 기계가 잡아야 한다. | `server/Harness/` | 대기(P0-03 후) |
+| **P0-06** | **`scope-check` 확장(기존 확장, 신규 아님)** — 발사 시 지시서 allowlist를 **claim으로 등록**하고, 실행 중 다른 주체가 같은 파일을 만지면 검출. 사후 검출 → **사전 경고**. | 계획서 §0-A.4 `FILE-CLAIMS`. 고아 코드 109줄 사건(주체 규명 불가)의 재발 방지. | `server/Harness/` | 대기(P0-05 후) |
+| **H-00 수정** | **`launch-check`를 파일 기반 ACK로 바꿔라 (ADR-004)** | **실측: ORCH-01·ACTOR-01·FIX-04·FIX-05·FIX-06 5건 모두 stdout에 ACK를 출력하지 않았다.** `claude -p`는 최종 메시지만 내보내므로 "첫 줄 ACK"는 구조적으로 불가능하다. 그런데 5건 다 지시서를 정확히 지켰다 — **지시는 도착했다.** 현행 stdout 기반 launch-check를 그대로 쓰면 **정상 산출물을 전부 오탐으로 죽인다.** 대신 실행자가 시작 시 `outputs/ack-<taskId>.txt`를 쓰게 하고 그 **파일 존재**로 판정하라. | `server/Harness/` | **긴급** |

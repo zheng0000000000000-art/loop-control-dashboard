@@ -1,6 +1,6 @@
 # ADR-001 — 운영 등급을 `Required Before Multi-model Parallel Work`로 승격한다
 
-- 상태: **사람 승인 대기**
+- 상태: **승인됨** (사람: choi, 2026-07-11) — 선택지 (A) 승격 + Phase 0 구축, 예산(신규 하네스 2개) 준수
 - 일시: 2026-07-11
 - 제안: 검수자 세션(Claude)
 - 근거 문서: `docs/plan/AI-RUNTIME-REFACTOR-MICRO-DIRECTIVES-v9.md` §0-A.6 · `docs/plan/ALIGNMENT-v9.md`
