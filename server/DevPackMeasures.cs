@@ -874,7 +874,8 @@ public static class DevPackMeasures
             normalized.Contains("/obj/", StringComparison.OrdinalIgnoreCase) ||
             normalized.Contains("/.git/", StringComparison.OrdinalIgnoreCase) ||
             normalized.Contains("/.vs/", StringComparison.OrdinalIgnoreCase) ||
-            normalized.Contains("/history/", StringComparison.OrdinalIgnoreCase);
+            normalized.Contains("/history/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains("/outbox/", StringComparison.OrdinalIgnoreCase);
     }
 
     // 측정 대상 데이터 JSON인지 확인한다.
