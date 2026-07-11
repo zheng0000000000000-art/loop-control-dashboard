@@ -232,3 +232,9 @@
 - 맥락: dashboard/data/dev-pack/patch-proposal.json이 proposal-1783773115880(revisionOf proposal-1783772505789, 제목 "함수 길이 단축", createdBy ollama/qwen3:8b)로 갱신됨. lifecycle submitted. 변경 1건: maxFunctionLength 99→[0,80].
 - 조치: 사람의 승인(approve) 또는 거절(reject) 판단 필요. 조율자는 결재를 대행하지 않음.
 - 확인 시각: 2026-07-11 21:35 (조율자, recursion1-result-check).
+
+## 결정 필요: dev-pack proposal 신규 리비전 (2026-07-11 21:46, 조율자)
+
+- 맥락: dashboard/data/dev-pack/patch-proposal.json이 proposal-1783773957235(revisionOf proposal-1783773115880, 제목 "함수 길이 단축", createdBy ollama/qwen3:8b)로 갱신됨. lifecycle submitted. 변경 1건: maxFunctionLength 99→[0,80].
+- 조치: 사람의 승인(approve) 또는 거절(reject) 판단 필요. 조율자는 결재를 대행하지 않음.
+- 확인 시각: 2026-07-11 21:46 (조율자, recursion1-result-check).
