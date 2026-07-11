@@ -1,6 +1,6 @@
 # FAIL-2026-007 — outbox 조회가 encoded backslash로 sibling 디렉터리를 읽음
 
-- 상태: 확인됨
+- 상태: 해결됨
 - 최초 발생일: 2026-07-10
 - 최근 발생일: 2026-07-10
 - 관련 DI: S-02 경로 escape 재현 라운드
@@ -67,4 +67,3 @@ outbox task 조회는 outbox root 내부 task만 읽어야 한다. sibling prefi
 - 2026-07-10: 버그헌트 라운드 1에서 S-02 의심 등록.
 - 2026-07-10: 후속 재현 라운드에서 GET 기반 sibling outbox read 재현.
 - 2026-07-10: `FAIL-2026-007`로 실패 위키 등록.
-
