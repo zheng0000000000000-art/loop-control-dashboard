@@ -909,3 +909,19 @@
 - QUOTA_SIGNAL: 미검출.
 
 <run-summary>H-7(quota 신호 감지) 하네스+스킬 재검증 후 로컬 커밋 2건(e5ad484·62ca7f2), docs/handoff 일괄 커밋(e3677b0), BC-001 근거 확인으로 workflow-definition.json 커밋(401f108)+HUMAN-INBOX 해소기록(140050b) - 총 5건 로컬 커밋. 회차 중 새로 나타난 server/Tier2Approver.cs·HarnessRegistry.cs·PathGuardCheckCli.cs는 실행 중인 작업으로 보고 손대지 않음(gate-clean FAIL 정상). origin/main이 eb935a1로 전진해 사람이 이미 배치 push 완료한 것으로 확인, 현재 push 대기 5건. FIX-04 산출물은 종전대로 커밋 레인 밖 보류. 발사·push 없음. QUOTA_SIGNAL 없음.</run-summary>
+
+## 조율자 2026-07-11 21:0x (recursion1-result-check)
+
+- 0단계 안정성: git status 미커밋 파일 5초 간격 2회 해시 비교, 안정 확인 후 처리.
+- 초회 gate-clean/doc-integrity 시도 시 build가 CS0103(ApplyStageStatuses/ApplyBlockInfo 미정의)로 즉시 실패 — sonnet(PID 30956)이 Engine.cs를 편집 중인 과도 상태였음(락 아님, 진짜 컴파일 에러). 재시도 없이 대기 후 재확인.
+- 재확인 시점: 파일 해시 전량 안정, dotnet build server -c Release -o <tmp> exit0(경고0/오류0)으로 코드 자체 성패 확인 — 이 시점부터 검수 진행.
+- **FIX-04(dashboard) 커밋**: dashboard/app.js·style.css. 게이트: measure dev-pack violationCount=1(기준1, 비악화) / doc-integrity exit0(INTACT). 이전 회차들에서 "레인 부재"로 방치되던 산출물 — 2026-07-11 신설된 dashboard 코드 레인으로 반영. 로컬 커밋 63d51e5.
+- **FIX-06(server) 커밋**: server/Tier2Approver.cs·OutboxManager.cs·Program.cs·Engine.cs + docs/handoff/WORKSTATE.json(동반). 게이트: build exit0 / verify-behavior true(behaviorEqual) / measure violationCount=1(기준1, 비악화) / claim-check FIX-06 MATCH(claimCount8/mismatch0). actor=sonnet(claude-sonnet-4-6), 4개 장문 함수(101·99·93·92줄) 전부 80줄 이하로 분할. 잔여 위반 dashboard/app.js:751-849(99줄) → FIX-07 대상. 로컬 커밋 3df722f.
+- **문서·정책 커밋**: CLAUDE.md(기준 파일 정의 명확화, 게이트 완화 아님) + docs/directives/FIX04·FIX06 + docs/handoff/BASELINE-CHANGES.md(신설) + docs/handoff/queue/directive-FIX04 + docs/handoff/sessions/SESSION-2026-07-11-codex-039.md + docs/qa/path-guard-check-harness-2026-07-11.md + docs/verification/fix04·fix06 + docs/verification/tuning-advanced.md + docs/handoff/HS-CANDIDATES.md. 게이트: doc-integrity exit0(INTACT), 코드 미혼입 확인. 로컬 커밋 68cd4c4.
+- **커밋하지 않음(범위 밖·미완)**: server/Harness/HarnessRegistry.cs(M)·server/Harness/PathGuardCheckCli.cs(??) — docs/qa/path-guard-check-harness-2026-07-11.md 자체가 "actor: codex, 금지 중: CliRouter.cs 미수정, git commit/push 미실시"로 미완 명시. FIX-06 scope 밖이라 이번 회차 미접촉.
+- **발사(4단계, 조율자는 발사하지 않음)**: sonnet-active.pid=30956이 회차 시작 시 생존이었으나 종료 시점 사망 확인(FIX-06 완료 후 종료로 추정). SONNET-QUEUE 다음 대기 항목: #17 FIX-07(dashboard/app.js 장문 함수 3건 분할, 사람 승인 완료 2026-07-11). 발사는 사람 게이트 — 기록만.
+- **push(5단계, 조율자는 push하지 않음)**: git log origin/main..HEAD --oneline = **9건**(이번 회차 로컬 커밋 3건 포함). push 대기 9건 — 사람 배치 승인 필요.
+- **HUMAN-INBOX(6단계)**: 신규 결정 필요 항목 없음(기존 미결 — dev-pack proposal-1783768353058 결재 대기, workflow-definition.json guardrail 변경 근거 확인 완료 — 기존 기록과 동일 건으로 중복 등재 생략).
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>이번 회차 로컬 커밋 3건: dashboard FIX-04 반영(63d51e5), server FIX-06 4개 장문함수 분할(3df722f, claim-check MATCH), 문서·정책 기록(68cd4c4, BASELINE-CHANGES.md 신설 포함). 초반 build가 sonnet 편집 중 과도 상태로 일시 실패했으나 락이 아닌 진짜 컴파일 에러였고, 안정화 후 재확인해 정상 통과. codex의 H-1 path-guard-check(HarnessRegistry.cs·PathGuardCheckCli.cs)는 자체 보고상 미완이라 미접촉. sonnet PID 30956은 회차 중 종료(FIX-06 완료 추정), 다음 대기 항목 FIX-07은 사람 승인 완료 상태이나 발사는 사람 게이트. push 대기 9건으로 증가, 사람 배치 승인 필요.</run-summary>
