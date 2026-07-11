@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "proposal-1783765207587",
   "title": "코드 및 UI 개선",
-  "lifecycle": "submitted",
+  "lifecycle": "decided",
   "createdBy": {
     "provider": "ollama",
     "model": "qwen3:8b"

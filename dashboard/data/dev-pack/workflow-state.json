@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
-  "currentStage": "changeReview",
+  "currentStage": "apply",
   "overallStatus": "warning",
-  "loopState": "running",
+  "loopState": "halted",
   "mode": "normal",
   "suspendedTracks": [
     {
@@ -25,19 +25,15 @@
       "suspectConfidence": "temporal"
     }
   ],
-  "loopIteration": 10,
+  "loopIteration": 11,
   "stages": {
     "goals": "passed",
     "measure": "passed",
     "deviationCheck": "warning",
-    "changeReview": "pending_review",
-    "apply": "blocked"
+    "changeReview": "approved",
+    "apply": "in_progress"
   },
-  "blockInfo": {
-    "apply": {
-      "kind": "waiting"
-    }
-  },
+  "blockInfo": {},
   "stageDetails": {
     "goals": {
       "summary": "개발 팩은 저장소의 핵심 규칙을 측정하고 블루프린트 기준과 비교한다.",
@@ -144,19 +140,17 @@
       "issues": []
     },
     "apply": {
-      "summary": "변경 승인이 완료될 때까지 차단된다.",
+      "summary": "승인된 변경을 반영하는 중이다 — 실제로 반영한 뒤 재측정하면 다음 단계로 넘어간다.",
       "metrics": [
         {
           "label": "적용 상태",
-          "value": "차단됨"
+          "value": "진행 중"
         }
       ],
-      "issues": [
-        "이전 단계가 아직 완료되지 않았다."
-      ]
+      "issues": []
     }
   },
-  "lastUpdated": "2026-07-11T19:24:23.3134989+09:00",
+  "lastUpdated": "2026-07-11T19:24:28.0447537+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
@@ -185,15 +179,20 @@
     }
   ],
   "applyBaselineViolations": [
-    "functionsWithoutComment=1",
+    "functionsWithoutComment=5",
     "smallTouchTargets=1",
     "skillDomainViolations=2",
-    "maxFunctionLength=261"
+    "maxFunctionLength=159"
   ],
-  "pausedAt": "2026-07-11T19:20:24.7819893+09:00",
-  "pausedBy": {
-    "type": "checkpoint",
-    "checkpointId": "loop-milestone"
-  },
-  "checkpointId": "loop-milestone"
+  "haltedAt": "2026-07-11T19:24:28.0446568+09:00",
+  "haltedBy": {
+    "type": "guardrail",
+    "breaches": [
+      {
+        "type": "loopIteration",
+        "actual": 11,
+        "limit": 10
+      }
+    ]
+  }
 }

@@ -13835,6 +13835,20 @@
       ],
       "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
       "createdAt": "2026-07-11T19:20:24.7760629+09:00"
+    },
+    {
+      "id": "review-1783765468036",
+      "proposalId": "proposal-1783765207587",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "human",
+        "provider": "human",
+        "model": null
+      },
+      "riskAssessed": "high",
+      "findings": [],
+      "reason": "사람 검토로 승인됐다.",
+      "createdAt": "2026-07-11T19:24:28.0369065+09:00"
     }
   ]
 }
