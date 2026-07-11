@@ -51,3 +51,16 @@
 - 의미: 북극성 원칙("결재·반입·기준변경은 항상 사람")이 문서 규칙으로만 존재하고 코드 강제가 없어, 대시보드 loop 프로세스(추정)가 proposal을 반복적으로 무인 승인·자동 커밋한 것으로 보임.
 - 조치: (1) 이 12건 커밋 목록·주체 확인 및 대시보드 loop 자동 승인 코드 경로 사람 감사 필요, (2) HARNESS-04 gate-audit(검출 전용, 되돌리기·결재 미포함) 즉시제작 여부 사람 승인 필요. 조율자는 감사·되돌리기·정책변경을 대행하지 않음.
 - 확인 시각: 2026-07-11 16:05 (조율자, recursion1-result-check, docs/handoff/HS-CANDIDATES.md HS-04 절 근거).
+
+## 추가 확인: gate-audit 실측 위반 22건 (위 "12건" 기록의 갱신치, 2026-07-11 16:12)
+
+- 맥락: HARNESS-04 gate-audit이 실제 구현·실행됨(커밋 d45c5cb). 실행 결과 고정점 위반이 예상 12건이 아니라 **22건**(ruined-lab 4건 포함, 오탐 0건으로 보고됨). 위 "긴급 확인 필요" 항목의 후속 실측치.
+- 조치: 22건 목록·주체 감사는 사람 몫(조율자 대행 안 함). gate-audit CLI 실행 결과를 근거로 사람이 직접 확인 권장.
+- 확인 시각: 2026-07-11 16:12경 (조율자, recursion1-result-check, 커밋 d45c5cb 검토 중 발견).
+
+## 긴급 확인 필요: 정체불명 커밋 작성자 "review-session <review@local>" — 조율자 아닌 주체의 git 직접 커밋 (2026-07-11 16:12)
+
+- 맥락: 이번 조율자 주기 진행 중(server 빌드/verify-behavior/measure 검증까지 마치고 `git add`만 실행한 시점) 조율자가 커밋을 실행하지 않았음에도 HEAD에 새 커밋 `d45c5cb`이 이미 존재함을 발견. 커밋 author가 이 저장소의 git config(`user.name=JaeHyuk`)가 아닌 **`review-session <review@local>`**로 되어 있음 — 조율자(본 세션) 소행이 아니며, 사람 설정 계정도 아님.
+- 내용: 커밋 메시지·내용은 이번 조율자가 검증하려던 것과 거의 동일(하네스 5종 구현, build 0/0, verify-behavior true, measure 5→3)이지만, **범위 규칙 위반**: server/*.cs 6건 외에 docs/handoff/HARNESSES.md·HS-CANDIDATES.md·HUMAN-INBOX.md·SONNET-QUEUE.md·session 파일 10건(codex-011~021 중 일부)·skills/common/hs-gate.md·docs/verification/feat02-e2e-harness.md까지 한 커밋(23개 파일)에 혼입됨. 지시서 규칙(server 커밋은 server/*.cs·WORKSTATE.json·docs/verification/refactor·fix*·docs/directives/*·.gitignore로 한정, docs/handoff류는 별도)을 벗어남 — 15:46·16:08 기록된 동일 패턴("동시 작업 중인 실행자가 git add를 미리 수행")의 재발이나, 이번엔 커밋 자체가 알 수 없는 identity로 실행됨.
+- 조치: ① `review-session <review@local>` 주체가 무엇인지(다른 조율자 인스턴스 중복 실행? 별도 자동화 스크립트? 오케스트레이터 골격 코드?) 사람 확인 필요. ② 이 identity의 git 직접 커밋 권한이 의도된 것인지 점검 필요(조율자 지시서상 git 커밋은 "조율자"만 하도록 설계됨). ③ 필요 시 되돌리기(reset)는 조율자 재량 밖 — 사람 판단.
+- 확인 시각: 2026-07-11 16:12경 (조율자, recursion1-result-check).
