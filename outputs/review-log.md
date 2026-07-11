@@ -1117,3 +1117,18 @@
 - QUOTA_SIGNAL: 미검출.
 
 <run-summary>이번 회차 server/dashboard 코드 변경 없음(커밋 0건). dev-pack proposal-1783774940638(함수 길이 단축, maxFunctionLength 99→[0,80])이 신규 갱신되어 HUMAN-INBOX에 등재 후 문서 커밋(d77428a). gate-clean PASS, doc-integrity INTACT. 발사 없음(sonnet-active.pid 30956 사망 확인, 다음 대기 FIX-07은 사람 승인 후 발사만 기록). push 대기 30건, 사람 배치 승인 필요. QUOTA_SIGNAL 없음.</run-summary>
+
+## 조율자 22:45 기록
+
+- 안정성 게이트: 미커밋 파일 해시 5초 간격 2회 비교, 대상 파일 전원 안정(불변). outputs/server-run.*.log·outputs/sonnet-FIX07.*.log 4건은 잠김(활성 프로세스 기록 중, 커밋 레인 밖이라 무관).
+- 실행자 상태: sonnet-active.pid=32956, claude 프로세스 생존 확인(시작 22:41:37) — FIX-07로 추정(outputs/sonnet-FIX07.*.log 갱신 중, 잠김). 발사 안 함(이미 실행 중, 원칙상 재발사 금지).
+- 하네스: gate-clean server → PASS(exit0, contentDirtyCount 0). doc-integrity → 전원 intact(exit0), 잘림 없음.
+- server/*.cs 미커밋 변경 없음 — 이번 회차 server 레인 대상 없음.
+- dashboard/*.js·css·html 미커밋 변경 없음 — dashboard 코드 레인 대상 없음.
+- 문서·큐·정책 레인 커밋 1건: 9e91c11 (docs/handoff/HS-CANDIDATES.md, docs/handoff/sessions/SESSION-2026-07-11-codex-044~046.md, docs/qa/e2e-http-edge-2026-07-11-2230.md, docs/qa/e2e-usage-cli-2026-07-11-2215.md, docs/qa/review-3df722f-fix06.md, docs/wiki/failures/cases/FAIL-2026-009-missing-project-api-returns-500.md). doc-integrity exit0, 코드 미혼입 확인. push 안 함.
+- 커밋 제외(런타임, 레인 없음): dashboard/data/dev-pack/{measurement,patch-proposal,review-report,run-log,workflow-state}.json, outputs/*.log, sonnet-active.pid. outputs/DECISION-BRIEF-2026-07-11-v3.md·outputs/reviewer-log.md도 정의된 레인이 없어 미커밋(임의 판단 안 함).
+- 기준 파일(blueprint.json/workflow-definition.json): 이번 회차 미변경.
+- HUMAN-INBOX: dev-pack proposal-1783777328782(revisionOf -1783774940638, "함수 길이 제한 강화", maxFunctionLength 99→[0,80]) 신규 등재(22:45). 결재는 사람 몫.
+- 참고(편집 안 함, 기록만): SONNET-QUEUE.md 표상 #17 FIX-06이 "대기"로 남아있으나 git log에 3df722f(FIX-06 완료 커밋)가 이미 존재 — 표 갱신은 조율자 권한이나 이번 회차는 관측만 남기고 편집 보류(활성 실행자와의 충돌 우려, FIX-07 진행 중 안정화 후 처리 권장).
+- push 대기: 32건 — 사람 배치 승인 필요.
+- 발사: 없음(활성 실행자 존재, 순차 규칙).
