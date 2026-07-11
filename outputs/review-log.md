@@ -487,3 +487,11 @@
 - outputs/last-reviewed-commit.txt: 7a9352a6d9b97edfb388fc7f001d367c16e19454 유지 (마지막 실제 산출물 커밋).
 - 미반영 제외: dev-pack 런타임 json 5건, server/EXECUTOR_REPORT.md.
 - 결재·반입·proposal 대행 없음.
+
+## 2026-07-11 15:47 — 검수자 세션: FEAT-02 사람 승인 발사
+
+- 발사 대상: SONNET-QUEUE #3 FEAT-02 (queue/directive-FEAT02-e2e-harness.md). 사람의 명시 승인으로 발사(발사는 사람 게이트).
+- 방식(FAIL-005 준수): 프롬프트 인자 직접 전달 + RedirectStandardOutput(outputs/sonnet-FEAT02.out.log) + PID 파일(sonnet-active.pid=30036). 실행 확인: 프로세스 생존·CPU 누적 확인.
+- I-1 완화: 프롬프트에 "SONNET-QUEUE 등 다른 큐/지시서 파일을 절대 읽지 말고 이 지시서 하나만 수행" 명시 + task ID(FEAT-02) 결속. 과거 지시서 이탈 사고 재발 방지.
+- 발사 전 게이트 실측: server/ clean(정규화 기준, FAIL-010 수정 후) ✅ / sonnet 미실행 ✅ / 진행 항목 0 ✅ / 다음 대기 존재 ✅.
+- 주의: 이 발사는 `--dangerously-skip-permissions`로 헤드리스 실행됐다. "무인 자동 permission-bypass spawn 금지" 규칙은 **무인 자동**에 대한 것이며, 본 건은 사람이 배치한 발사다. 지시서 자체가 commit/push/결재를 금지한다.

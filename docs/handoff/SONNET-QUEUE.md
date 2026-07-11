@@ -8,11 +8,12 @@
 | --- | --- | --- | --- | --- |
 | 1 | FIX-01 경로검증 separator-bounded | directive-FIX01-path-validation.md | server/ | 완료(13f833a) — 조율자 15:03 재검증: server/Storage.cs·OutboxManager.cs에 IsWithinRoot 코드 실재 확인(git grep), 이전 회차들의 "문서 완료주장·코드 미반영" 불일치 해소됨 |
 | 2 | FIX-02 measure outbox 스캔 제외 | directive-FIX02-measure-scope.md | server/ | 완료(9a43f54/49b00d6) |
-| 3 | FEAT-02 E2E 실사용 하네스 내재화 (dotnet -- e2e-usage) | directive-FEAT02-e2e-harness.md | server/ | 대기 |
+| 3 | FEAT-02 E2E 실사용 하네스 내재화 (dotnet -- e2e-usage) | queue/directive-FEAT02-e2e-harness.md | server/ | **진행** — 2026-07-11 15:47 사람 승인 발사(PID 30036, 격리 발사: 큐 파일 미열람 지시). 로그 outputs/sonnet-FEAT02.out.log |
 | 4 | FEAT-01 한정 이양(게이트 클린 반입 AI 승인) | directive-FEAT01-conditional-delegation.md | server/ | 대기 |
 | 5 | ORCH-01 오케스트레이터 관측 스캐폴드 (dotnet -- orch-observe) | queue/directive-ORCH01-observer.md (+참조 queue/OrchestratorObserverCli.reference.cs) | server/ | 대기 — 관측 전용(발사·커밋·결재 없음), 비전문서 1단계 코드화 |
 | 6 | HARNESS-01 gate-clean (트리 clean을 정규화 내용 해시로 판정) | queue/directive-HARNESS01-gate-clean.md (+참조 queue/GateCleanCli.reference.cs) | server/ | 대기 — HS-GATE 12/12 즉시제작. FAIL-010 회귀 하네스 |
-| 7 | (추후 검수자가 추가) | — | — | — |
+| 7 | HARNESS-02 hs-scan (승격 심사 트리거 기계 탐지) | queue/directive-HARNESS02-hs-scan.md (+참조 queue/HsScanCli.reference.cs) | server/ | 대기 — 승격 파이프라인이 재량이라 한 번도 안 돌던 문제 해소 |
+| 8 | (추후 검수자가 추가) | — | — | — |
 
 ## 자동 발사 규칙 (조율자용)
 
