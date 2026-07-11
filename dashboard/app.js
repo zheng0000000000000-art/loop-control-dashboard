@@ -848,6 +848,87 @@ function renderStageDetail() {
   elements.stageDetail.append(issueSection);
 }
 
+// 대기 중인 제안이 없을 때 패널 내용을 채운다.
+function renderNoPendingProposalPanel(context) {
+  const otherCount = getInboxItems().filter((item) => item.projectId !== activeProject?.id).length;
+  const emptyTitle = createElement("div", { className: "button-row" });
+  emptyTitle.append(
+    createElement("h3", { className: "proposal-title", text: t("approval.noPendingTitle") }),
+    createStatusBadge(context.status),
+  );
+  const otherLink = otherCount > 0
+    ? createElement("button", {
+        className: "button button-secondary",
+        text: t("approval.otherProjectPending", { count: otherCount }),
+        attributes: { type: "button" },
+      })
+    : null;
+  if (otherLink) {
+    otherLink.addEventListener("click", () => {
+      elements.inboxMenu.hidden = false;
+      elements.inboxDropdown.hidden = false;
+    });
+  }
+  elements.approvalPanel.append(
+    emptyTitle,
+    createElement("p", { className: "empty-state empty-state-large", text: t("approval.noPendingBody") }),
+    ...(otherLink ? [otherLink] : []),
+    renderClosedProposalHistory(),
+  );
+}
+// 제안 메타 정보 목록 요소를 만들어 반환한다.
+function renderApprovalMeta(proposal, risk) {
+  const meta = createElement("div", { className: "proposal-meta" });
+  meta.append(
+    createMetaItem(t("approval.proposal"), proposal.id ?? t("approval.none")),
+    createMetaItem(t("approval.revisionOf"), proposal.revisionOf ?? t("approval.none")),
+    createMetaItem(t("approval.lifecycle"), formatLifecycle(proposal.lifecycle ?? "draft")),
+    createMetaItem(t("approval.waiting"), formatWaitingSince(getCurrentProposalWaitingSince())),
+    createMetaItem(t("approval.latestVerdict"), formatLatestVerdict(proposal.id)),
+    createMetaItem(t("risk.assessedRisk"), formatRisk(risk.risk)),
+    createMetaItem(t("risk.providedRisk"), risk.providedRisk ? formatRisk(risk.providedRisk) : t("approval.none")),
+    createMetaItem(t("risk.changeCount"), String(risk.metrics.changeCount)),
+    createMetaItem(t("risk.maxDelta"), `${formatNumber(risk.metrics.maxValueDeltaPercent)}%`),
+    createMetaItem(t("approval.provider"), proposal.createdBy?.provider ?? t("approval.unknown")),
+  );
+  return meta;
+}
+// 섹션 레이블과 항목 배열로 목록 섹션 요소를 만들어 반환한다.
+function renderLabeledList(labelKey, items, renderItem, emptyKey) {
+  const section = createElement("section");
+  section.append(createElement("p", { className: "section-label", text: t(labelKey) }));
+  const list = createElement("ul", { className: "change-list" });
+  list.append(...(items.length > 0 ? items.map(renderItem) : [createElement("li", { text: t(emptyKey) })]));
+  section.append(list);
+  return section;
+}
+// 승인·거부 버튼 행을 만들어 반환한다.
+function renderApprovalActions(context, autoApproveTarget) {
+  const approveButton = createElement("button", {
+    className: "button button-approve",
+    text: t("buttons.approve"),
+    attributes: { type: "button" },
+  });
+  const rejectButton = createElement("button", {
+    className: "button button-reject",
+    text: t("buttons.reject"),
+    attributes: { type: "button" },
+  });
+  approveButton.disabled = rejectButton.disabled = !context.canReview || reviewActionRunning;
+  if (reviewActionRunning) {
+    approveButton.textContent = t("buttons.processing");
+    rejectButton.textContent = t("buttons.processing");
+  }
+  approveButton.addEventListener("click", approveProposal);
+  rejectButton.addEventListener("click", rejectProposal);
+  const actions = createElement("div", { className: "button-row" });
+  actions.append(
+    approveButton,
+    ...(autoApproveTarget ? [createElement("span", { className: "tag tag-ai", text: t("risk.autoApproveTarget") })] : []),
+    rejectButton,
+  );
+  return actions;
+}
 // 변경 제안과 검토 패널을 렌더링한다.
 function renderApprovalPanel() {
   const context = getReviewContext();
@@ -866,31 +947,7 @@ function renderApprovalPanel() {
   }
 
   if (!context.hasPendingProposal) {
-    const otherCount = getInboxItems().filter((item) => item.projectId !== activeProject?.id).length;
-    const emptyTitle = createElement("div", { className: "button-row" });
-    emptyTitle.append(
-      createElement("h3", { className: "proposal-title", text: t("approval.noPendingTitle") }),
-      createStatusBadge(context.status),
-    );
-    const otherLink = otherCount > 0
-      ? createElement("button", {
-          className: "button button-secondary",
-          text: t("approval.otherProjectPending", { count: otherCount }),
-          attributes: { type: "button" },
-        })
-      : null;
-    if (otherLink) {
-      otherLink.addEventListener("click", () => {
-        elements.inboxMenu.hidden = false;
-        elements.inboxDropdown.hidden = false;
-      });
-    }
-    elements.approvalPanel.append(
-      emptyTitle,
-      createElement("p", { className: "empty-state empty-state-large", text: t("approval.noPendingBody") }),
-      ...(otherLink ? [otherLink] : []),
-      renderClosedProposalHistory(),
-    );
+    renderNoPendingProposalPanel(context);
     return;
   }
 
@@ -913,20 +970,7 @@ function renderApprovalPanel() {
     titleRow.append(createStatusBadge("tuning", t("approval.tuningBadge")));
   }
 
-  const meta = createElement("div", { className: "proposal-meta" });
-  meta.append(
-    createMetaItem(t("approval.proposal"), proposal.id ?? t("approval.none")),
-    createMetaItem(t("approval.revisionOf"), proposal.revisionOf ?? t("approval.none")),
-    createMetaItem(t("approval.lifecycle"), formatLifecycle(proposal.lifecycle ?? "draft")),
-    createMetaItem(t("approval.waiting"), formatWaitingSince(getCurrentProposalWaitingSince())),
-    createMetaItem(t("approval.latestVerdict"), formatLatestVerdict(proposal.id)),
-    createMetaItem(t("risk.assessedRisk"), formatRisk(risk.risk)),
-    createMetaItem(t("risk.providedRisk"), risk.providedRisk ? formatRisk(risk.providedRisk) : t("approval.none")),
-    createMetaItem(t("risk.changeCount"), String(risk.metrics.changeCount)),
-    createMetaItem(t("risk.maxDelta"), `${formatNumber(risk.metrics.maxValueDeltaPercent)}%`),
-    createMetaItem(t("approval.provider"), proposal.createdBy?.provider ?? t("approval.unknown")),
-  );
-
+  const meta = renderApprovalMeta(proposal, risk);
   const riskMismatch = risk.mismatch
     ? createElement("p", {
         className: "risk-warning",
@@ -938,59 +982,15 @@ function renderApprovalPanel() {
     : null;
   const assumptions = renderProposalAssumptions(proposal.assumptions);
 
-  const changes = createElement("section");
-  changes.append(createElement("p", { className: "section-label", text: t("approval.changes") }));
-  const changeList = createElement("ul", { className: "change-list" });
-  const proposalChanges = Array.isArray(proposal.changes) ? proposal.changes : [];
-  changeList.append(
-    ...(proposalChanges.length > 0
-      ? proposalChanges.map((change, index) => renderProposalChange(change, index, context.canReview))
-      : [createElement("li", { text: t("approval.noChanges") })]),
-  );
-  changes.append(changeList);
-
-  const impact = createElement("section");
-  impact.append(createElement("p", { className: "section-label", text: t("approval.impact") }));
-  const impactList = createElement("ul", { className: "change-list" });
-  const proposalImpact = Array.isArray(proposal.impact) ? proposal.impact : [];
-  impactList.append(
-    ...(proposalImpact.length > 0
-      ? proposalImpact.map((item) => createElement("li", { text: `${item.label}: ${item.value}` }))
-      : [createElement("li", { text: t("approval.noImpact") })]),
-  );
-  impact.append(impactList);
+  const changes = renderLabeledList("approval.changes", Array.isArray(proposal.changes) ? proposal.changes : [], (change, index) => renderProposalChange(change, index, context.canReview), "approval.noChanges");
+  const impact = renderLabeledList("approval.impact", Array.isArray(proposal.impact) ? proposal.impact : [], (item) => createElement("li", { text: `${item.label}: ${item.value}` }), "approval.noImpact");
 
   const predictedMetrics = Array.isArray(proposal.predictedMetrics) ? proposal.predictedMetrics : [];
   const predicted = predictedMetrics.length > 0 ? renderPredictedMetrics(predictedMetrics) : null;
 
   const reviewHistory = renderReviewHistory(proposal.id);
 
-  const approveButton = createElement("button", {
-    className: "button button-approve",
-    text: t("buttons.approve"),
-    attributes: { type: "button" },
-  });
-  const rejectButton = createElement("button", {
-    className: "button button-reject",
-    text: t("buttons.reject"),
-    attributes: { type: "button" },
-  });
-
-  approveButton.disabled = !context.canReview || reviewActionRunning;
-  rejectButton.disabled = !context.canReview || reviewActionRunning;
-  if (reviewActionRunning) {
-    approveButton.textContent = t("buttons.processing");
-    rejectButton.textContent = t("buttons.processing");
-  }
-  approveButton.addEventListener("click", approveProposal);
-  rejectButton.addEventListener("click", rejectProposal);
-
-  const actions = createElement("div", { className: "button-row" });
-  actions.append(
-    approveButton,
-    ...(autoApproveTarget ? [createElement("span", { className: "tag tag-ai", text: t("risk.autoApproveTarget") })] : []),
-    rejectButton,
-  );
+  const actions = renderApprovalActions(context, autoApproveTarget);
 
   elements.approvalPanel.append(
     titleRow,
