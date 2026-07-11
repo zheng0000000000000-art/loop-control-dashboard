@@ -1795,3 +1795,22 @@
 - QUOTA_SIGNAL: 미감지.
 
 <run-summary>P0-06 scope-check claim 확장(코덱스-053) 검수: 하네스 5종(build/doc-integrity/verify-behavior/measure/handoff-integrity) 전부 PASS + scope-check 자체 스모크 정상 동작 확인 후 server 코드·문서 2레인 로컬 커밋(80adab0/fd21c2c). SONNET-QUEUE 표의 LEDGER-02/03 "진행" 표기가 실제 완료 여부와 어긋나 보여 발사 판단은 보류(검수자 확인 필요)하고 발사하지 않음. push 대기 2건, HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
+
+## 조율자 04:52 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: lanes dirty(docs/handoff/FILE-CLAIMS.json 1건 수정) + outputs/launch/PROBE-00.exit.json processed:false 신호 1건 → 처리 진행. (초기 스냅샷엔 docs/handoff/RULES-RATIONALE.md도 미추적으로 잡혔으나, 동시 세션(PID 35160 추정, 커밋 0e7b6d4 DIET-01)이 04:48~04:49에 이미 커밋해 재확인 시점엔 clean — 조율자는 손대지 않음.)
+- 인코딩 확인: RULES-RATIONALE.md가 Get-Content 기본 인코딩으로는 깨져 보였으나, UTF-8 바이트 직접 디코딩으로 정상 한글 확인 — 실제 파일 손상 아님(오탐).
+- 안정성 게이트: docs/handoff/FILE-CLAIMS.json 해시 5초 간격 2회 비교 → 안정.
+- 하네스: doc-integrity exit0 · handoff-integrity exit0(diId LEDGER-04, failureCount0) · gate-clean server exit0(server/ 변경 없음, PASS).
+- 대상: docs/handoff/FILE-CLAIMS.json — PROBE-00(검수자의 CLAUDE.md 다이어트 실험용 고정 탐침) claim 6건(pid 488/13232/31560/19876/6160/26188, 전부 released·exitCode0·paths 없음) 자동 반영분. 코드 미혼입 확인.
+- 관찰(주의, 재발 패턴): 이번 재기록에서도 최상위 "note" 필드가 유실돼 있었다(과거 1279c7d에서 동일 증상 1회 복원 전례). doc-integrity가 이번엔 실패로 잡지 않아 커밋은 진행했으나, "쓰는 자(발사 래퍼)·검사하는 자(조율자) 분리" 원칙상 note는 복원하지 않았다. 발사 래퍼 재기록 로직 결함 가능성 — 검수자 확인 필요.
+- exit.json: outputs/launch/PROBE-00.exit.json processed:false → true로 갱신(레인 표상 커밋 대상 아님, 로컬 파일만 수정).
+- 커밋(로컬만, push 안 함) 1건: 24c96d4(문서: docs/handoff/FILE-CLAIMS.json).
+- 커밋 안 함(런타임): dashboard/data/dev-pack·ruined-lab 8종, outputs/ 잡파일·로그 다수(probe 실험 스크래치 산출물로 추정, 주체 미상), sonnet-active.pid(루트·outputs 둘 다) — 전부 "커밋 안 함" 레인.
+- HUMAN-INBOX: 신규 등재 없음(note 유실은 결재 대상 범주 아니라 위 관찰로 갈음). BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 변경 없음.
+- 발사(사람 게이트): SONNET-QUEUE #24 공석("추후 검수자가 추가") — 다음 대기 항목 없음. #21/22(LEDGER-02/03) "진행" 표기 여전히 불확실(이전 회차부터 이어지는 미해결, 검수자 확인 필요) — 조율자는 발사하지 않음.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 5건 → 사람 배치 승인 필요.
+- 동시성 참고: 확인 중 별도 claude 프로세스(PID 35160, 04:48:43 시작)가 활성 상태로 관측됨 — 검수자의 병행 세션으로 추정(확정 아님). sonnet-active.pid 파일값(26188)은 이미 종료된 PROBE-00 실행의 잔존값으로 보임(exit.json exitedAt 04:48:09 일치).
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>PROBE-00 탐침(검수자 CLAUDE.md 다이어트 실험) claim 6건 반영된 FILE-CLAIMS.json을 doc-integrity·handoff-integrity·gate-clean 검증 후 문서 레인 로컬 커밋(24c96d4), exit.json processed:true 갱신. RULES-RATIONALE.md는 동시 세션이 이미 커밋해 손대지 않음(인코딩 오탐 확인, 실제 손상 아님). FILE-CLAIMS의 최상위 note 필드 유실 재발(과거 1279c7d 전례) 관찰만 기록, 복원은 하지 않음 — 검수자 확인 필요. 발사 없음(#24 공석, #21/22 불확실 지속), push 대기 5건, HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
