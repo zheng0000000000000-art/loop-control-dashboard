@@ -16,6 +16,12 @@
 | `measure <projectId>` | 품질 게이트(위반 수) | 위반 0 | 위반 존재 | (기존) |
 | `verify-behavior` | 동작 스냅샷 동일성 | behaviorEqual | 차이 | (기존) |
 
+## 필독 스킬 (하네스를 만들거나 원인을 지목하기 전에)
+
+- **`skills/common/root-cause-diagnosis.md`** — 프록시로 원인을 단정하지 마라. **검수자가 2026-07-11 하루에 세 번 틀렸다**(커밋 접두사 → 시각 상관 → CLI 에러 메시지). 하네스는 원인 위에 세우므로, **원인이 틀리면 하네스가 오보 증폭기가 된다**(`gate-audit` 철회).
+- **`skills/common/executor-launch.md`** — 발사 = 지시 도착 확인 + 실행 확인 + 범위 대조.
+- **`skills/common/hs-gate.md`** — 승격 심사. 2항의 **데이터 존재 관문**이 핵심.
+
 ## 누가 만들고 누가 검사하는가 (2026-07-11 개정)
 
 - **제작**: **코덱스** (`server/Harness/`, `skills/`). 검수자(Claude)는 **지시서만** 쓰고 만들지 않는다.

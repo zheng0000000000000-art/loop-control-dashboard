@@ -18,10 +18,18 @@
 >
 > **제작 전 필수 관문** (`skills/common/hs-gate.md` 2항): **"이 하네스가 볼 데이터가 실제로 존재하는가?"** 없으면 만들지 말고 "그 데이터를 만드는 선행 과제"를 올린다. `gate-audit`이 이걸 안 물어서 철회됐다.
 >
-> **작업 보고 의무**: ①주체(actor) ②사용한 하네스와 결과 ③참조 스킬 — 없으면 조율자가 반려한다.
+> **작업 보고 의무**: ①주체(actor) ②사용한 하네스와 결과 ③참조 스킬 — 없으면 조율자가 반려한다. 템플릿 `docs/verification/_template.md`.
+>
+> **필독 스킬 (2026-07-11 신설, 하네스 만들기 전에 반드시)**:
+> - `skills/common/root-cause-diagnosis.md` — **프록시로 원인을 단정하지 마라.** 검수자가 하루에 세 번 틀렸다. 하네스는 원인 위에 세우는 것이라, 원인이 틀리면 하네스가 오보 증폭기가 된다(gate-audit 철회 사례).
+> - `skills/common/hs-gate.md` 2항 — **"이 하네스가 볼 데이터가 실제로 존재하는가?"** 없으면 만들지 말고 선행 과제를 올려라.
+> - `skills/common/executor-launch.md` — 발사·검증 규약.
+>
+> **지시 주체**: 당분간 **검수자(Claude 세션)가 이 큐를 직접 채운다.** 조율자는 전달하지 않는다 — 너(코덱스)가 15분 루틴 §2에서 스스로 픽업한다.
 
 | 순번 | 작업 | 근거 | 영역 | 상태 |
 | --- | --- | --- | --- | --- |
+| **H-00** | **`launch-check` 하네스 ★최우선** — 발사 로그에서 **ACK-\<taskId\> 에코백**을 확인. 없으면 exit 1(=지시 미도착, 산출물 폐기 대상). 입력: taskId + 로그 경로. | **FAIL-2026-013**. 프롬프트가 인자 경계에서 잘려 실행자가 지시서를 **받은 적이 없었다.** 지시 없이 저장소만 읽고 **안전 보류 항목(FEAT-01)까지 구현**했다. `scope-check`가 사후 검출이라면 이건 **사전 검출**이다 | `server/Harness/` | 대기(HOOK-01 후) |
 | **H-0** | **`scope-check` 하네스 ★최우선** — 지시서의 `## 허용 파일 (allowlist)` glob을 파싱해 `git status` 변경파일과 대조. 허용 밖이면 exit 1 + 목록 출력. **되돌리지 말고 검출·보고만.** | HS-CANDIDATES **HS-06 (12/12)**. I-1 지시서 이탈 반복 + 오늘 2건(Tier2Approver.cs, Tier2ApproverTestCli.cs). 격리·화이트리스트 **프롬프트가 둘 다 실패**했다 — 말이 아니라 사후 검출로 강제해야 한다 | `server/Harness/` | 대기(HOOK-01 후) |
 | H-1 | **`path-guard-check` 하네스** — 경로 경계가 separator-bounded인지(sibling-prefix escape 회귀) | FAIL-2026-006/007. `hs-scan`이 S1로 자동 검출한 후보(path_escape 2회). 코덱스 자체 HS-GATE도 11점 즉시제작 판정 | `server/Harness/` | 대기(HOOK-01 후) |
 | H-2 | **`call-integrity-check` 하네스** — 이동한 함수의 호출부 누락·시그니처 불일치 | 리팩토링 R당 반복된 수작업 QA | `server/Harness/` | 대기 |
