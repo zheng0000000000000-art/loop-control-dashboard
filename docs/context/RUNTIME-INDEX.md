@@ -5,7 +5,7 @@
 | 항목 | 값 |
 | --- | --- |
 | phaseId | P0-04 |
-| wpId | LEDGER-03 |
-| diId | LEDGER-03 |
+| wpId | LEDGER-04 |
+| diId | LEDGER-04 |
 | status | verifying |
 | updatedAt | 2026-07-12 |

@@ -3,16 +3,17 @@
 # HANDOFF — 인수인계 문서
 
 ## 현재 위치
-- **diId**: LEDGER-03  **phaseId**: P0-04  **status**: verifying
+- **diId**: LEDGER-04  **phaseId**: P0-04  **status**: verifying
 - **갱신자**: claude-sonnet-4-6  **갱신일**: 2026-07-12
 
 ## 변경 파일 (4개)
-- `server/OllamaExecutor.cs` [3d0fefc518f30962…] — ParseNoteResponse 반환 타입 확장(reason+actualMetricId). TryGenerateNote/TryGenerateTuningNote 거부 사유 전파. Unavailable에 fallbackReason/expectedMetricId/actualMetricId 추가. ExecutorGenerateResult 레코드에 선택 필드 3개 추가.
-- `server/Program.cs` [9011d7ec781d81ba…] — FallbackLogEntry 헬퍼 추가. GenerateProposalWithFallback·GenerateTuningProposalWithFallback 폴백 경로에 FallbackEntry 생성. ProposalGeneration 레코드에 FallbackEntry 추가. 4개 콜러에서 FallbackEntry 조건부 append.
-- `docs/verification/ledger03-fallback-observability.md` [eba0cad65a60f313…] — LEDGER-03 작업 검증 문서 신규.
-- `docs/directives/LEDGER03-fallback-observability.md` [3bfdb3a31e7e7154…] — 지시서 보관본.
+- `server/OllamaExecutor.cs` [4eb15cee5726081c…] — ParseNoteResponse에 2차 대소문자 무시 대조(OrdinalIgnoreCase) 추가. TryGenerateNote/TryGenerateTuningNote에 NormalizedActualMetricId 반환. Generate/GenerateForTuning에 normalizedMetricIds 수집. ExecutorGenerateResult에 NormalizedMetricIds 추가.
+- `server/Program.cs` [7e29ecd56a5a6107…] — MetricIdNormalizedLogEntry 헬퍼 추가. ProposalGeneration에 NormalizationEntries 추가. GenerateProposalWithFallback/GenerateTuningProposalWithFallback 성공 경로에 normEntries 구성. 5개 콜러에서 NormalizationEntries 조건부 append.
+- `docs/verification/ledger04-metricid-normalization.md` [129c601ea657909d…] — LEDGER-04 작업 검증 문서 신규.
+- `docs/directives/LEDGER04-metricid-normalization.md` [e19a3389d600d03e…] — 지시서 보관본.
 
 ## 완료 이력
+- **LEDGER-03**: 4개 파일
 - **LEDGER-02**: 3개 파일
 - **FIX-06**: 6개 파일
 - **DI-R-01**: 2개 파일
@@ -41,4 +42,4 @@ dotnet run --project server -c Release -- verify-behavior
 ```
 
 ## 노트
-LEDGER-03: ParseNoteResponse 거부 사유 전파 + run-log proposal.fallback 이벤트 기록. 실체 증명: functionsWithoutComment 위반 주입 → qwen3:8b가 functionsWithOutComment(대문자 O) 반환 → parse-rejected-metricid → run-log에 proposal.fallback warn 항목 확인. 직접 경로 사유: allowlist 포함 파일만 수정.
+LEDGER-04: ParseNoteResponse에 대소문자 무시 2차 대조 추가. qwen3:8b가 functionsWithOutComment(대문자 O) 반환 시 정규화 수용 + warn 이벤트 기록. LEDGER-02 토큰 배선(040d017) 첫 실행 확인: proposal.generated provider=ollama, inputTokens=351, outputTokens=95.
