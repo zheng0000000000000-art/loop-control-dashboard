@@ -1207,3 +1207,52 @@
 - QUOTA_SIGNAL: 미검출.
 
 <run-summary>회차 중간에 새로 안정화된 ADR-005 관련 문서 3건(승인됨 상태 확인)을 doc-integrity 재확인 후 로컬 커밋(8cb76ff)함. 이번 회차 총 로컬 커밋 2건(SONNET-QUEUE 정정 70d03f3 + ADR-005 반영 8cb76ff), push·sonnet 발사 없음. push 대기 46건, 사람 배치 승인 필요.</run-summary>
+
+## 조율자 2026-07-11 23:12 기록 (변경 없음)
+
+- 0단계 안정성: git status --short 미커밋 대상 25건(dashboard/data/dev-pack/*.json 5개 M + docs/plan/·outputs/*.log·outputs/reviewer-log.md·outputs/DECISION-BRIEF-2026-07-11-v3.md·sonnet-active.pid 등 미추적 20개) 5초 간격 해시 비교 전부 동일(안정).
+- 하네스: gate-clean server exit0(PASS, contentDirtyCount 0) · doc-integrity exit0(INTACT, 12/12 무결).
+- 실행자 상태: sonnet-active.pid=32956 — Get-Process 결과 없음(사망 확인, 직전 회차 23:03/23:0x/23:1x 기록과 동일 — 이미 FIX-07로 완료·커밋됨). 이번 회차 신규 실행자 없음.
+- 커밋 대상 없음: server/*.cs·dashboard/*.js·docs/handoff 등 커밋 레인 해당 경로에 마지막 커밋(8cb76ff, 23:1x) 이후 신규 변경 없음. 미스테이징 25건은 전부 런타임(dev-pack 5종) 또는 레인/소유권 없는 파일(outputs/*, sonnet-active.pid, docs/plan/)로 커밋 제외 대상 — 미접촉.
+- HUMAN-INBOX: 22:57 ADR-001(운영 등급 승격 A/B안) 이후 신규 등재 없음. 기존 결재 대기 항목(dev-pack proposal 리비전 체인, outbox 반입 2건, ADR-001) 그대로 유지, 대행 안 함.
+- 기준 파일(blueprint.json·workflow-definition.json): 이번 회차 변경 없음. BASELINE-CHANGES.md 신규 항목 없음(BC-001 이후 없음).
+- 발사(조율자는 발사하지 않음): 큐 상 진행 중 항목 없음. 다음 대기 후보 — P0-04(row19, 전제조건 P0-03 handoff-integrity 완료 미확인으로 발사 대상 아님), FEAT-01(row4, 장기 보류 — HUMAN-INBOX 다수 안전 우려 기록, 사람 판단 대기). **현재 발사 가능한 항목 없음.**
+- push(조율자는 push하지 않음): git log origin/main..HEAD --oneline = **46건**(직전 회차와 동일, 이번 회차 신규 커밋 없음). 사람 배치 승인 필요.
+- QUOTA_SIGNAL: outputs/*.log 전체 검색 결과 미검출(0건).
+
+<run-summary>마지막 커밋(8cb76ff, 23:1x) 이후 약 10분 경과를 재확인. gate-clean·doc-integrity 모두 PASS이나 서버/대시보드/문서 커밋 레인에 신규 변경이 없어 로컬 커밋 없음("변경 없음"). FIX-07 sonnet(PID 32956)은 이미 사망·완료 확인된 상태 그대로이며 신규 실행자도 없다. HUMAN-INBOX·기준 파일 변경 없음, QUOTA_SIGNAL 미검출. push 대기 46건으로 변동 없음(사람 배치 승인 필요), git push·sonnet 발사 없음.</run-summary>
+
+## 조율자 2026-07-11 23:22 (recursion1-result-check)
+
+- **경로 규칙**: 저장소 정본만 읽음(docs/handoff/SONNET-QUEUE.md·VERIFY-PROTOCOL·HARNESSES.md·HUMAN-INBOX.md·BASELINE-CHANGES.md). 세션 outputs 사본 미참조.
+- **안정성**: git status 미커밋 파일 해시 5초 간격 2회(Get-FileHash) 비교 → STABLE.
+- **하네스 판정**: `gate-clean server` exit1(dirty — 실변경: server/Harness/HarnessRegistry.cs·HandoffIntegrityCli.cs). `doc-integrity` exit0 INTACT(CLAUDE.md 포함 전 문서 무결).
+- **server 레인 — FAIL, 커밋 안 함**: 대상 server/Harness/HarnessRegistry.cs(+1줄, 신규 하네스 등록)·server/Harness/HandoffIntegrityCli.cs(신규, handoff-integrity 하네스 — 코덱스 산출물로 추정, P0-03 관련). 게이트 결과: build(`dotnet build server -c Release -o <임시경로>`, 락 우회) exit0(경고0/오류0) PASS · verify-behavior exit0(behaviorEqual:true) PASS · **measure dev-pack exit1, violationCount 0(FIX-07 이후 기준선)→2로 악화, FAIL**. measurement.json 실측 근거: `functionsWithoutComment` 0→5, evidence 5건 전부 `server/Harness/HandoffIntegrityCli.cs:240/246/249/252/260`(주석 없는 함수) — 신규 파일이 직접 유발한 것으로 실체 확인(프록시 아님). `maxFunctionLength`=80은 blueprint band[0,80] 이내로 위반 아님. claim-check는 이 산출물이 SONNET-QUEUE의 DI 항목이 아니라 코덱스 하네스 제작물로 판단해 미실행(H-0/H-6/H-7 선례와 동일 처리) — 어차피 measure 악화로 커밋 규칙상 금지. **미커밋 상태로 보류.**
+- **문서·정책 레인 — 커밋**: docs/handoff/decisions/ADR-006-resource-ledger-p0.md(신규, 검수자 제안 "리소스 원장(토큰 계측) P0 승격", 상태:사람 승인 대기). doc-integrity exit0 확인 + 코드 미혼입(markdown 단일 파일) 확인 후 **로컬 커밋 532b0d7**(push 안 함). 문서 등재이지 내용 승인 아님 — HUMAN-INBOX에 결재 항목 추가(중복 아님, 신규).
+- **레인 미정 — 커밋 보류(조율자 재량 밖)**: CLAUDE.md(수정 1줄, docs/plan/INTENT-DIGEST.md 포인터 추가) · docs/plan/(신규 디렉터리, AI-RUNTIME-REFACTOR-MICRO-DIRECTIVES-v9.md·ALIGNMENT-v9.md·INTENT-DIGEST.md 3파일). 현재 커밋 레인 표(server/dashboard/docs-handoff·qa·wiki·skills·상태·기준파일)에 CLAUDE.md·docs/plan/을 포괄하는 항목이 없음. doc-integrity는 CLAUDE.md는 무결 확인, docs/plan/은 신규 미추적이라 스캔 대상 포함 여부 불명. 내용 자체에 무단변경 의심 정황은 없음(ADR-006이 명시적으로 인용하는 정본 계획 문서들이며 CLAUDE.md 변경은 그 포인터 추가뿐)이나, **레인 부재는 결정 사안이 아니라 규칙 공백**이라 HUMAN-INBOX에 올리지 않고 여기 참고 기록만 남김 — 검수자/사람이 레인 규칙에 CLAUDE.md·docs/plan을 추가할지 판단 요망.
+- **커밋 제외(런타임, 규칙대로)**: dashboard/data/dev-pack/{measurement,patch-proposal,review-report,run-log,workflow-state}.json 5종, sonnet-active.pid(PID 32956, Get-Process 확인 결과 사망).
+- **발사(사람 게이트, 대행 안 함)**: 진행 중 sonnet 프로세스 없음(sonnet-active.pid=32956 사망 확인). SONNET-QUEUE.md 정본상 #4 FEAT-01은 안전보류로 자동발사 대상 제외, #15 FIX-04는 표기상 "대기"이나 review-log 과거 기록(FIX-04 로컬 커밋 63d51e5 완료 언급)과 상충 — **큐 표와 실제 상태 불일치 의심**, 조율자 콘텐츠 편집 권한 밖이라 참고 기록만. 발사 가능 항목 특정 못 함 → 발사 판단 보류.
+- **push(사람 게이트, 대행 안 함)**: `git log origin/main..HEAD --oneline` 47건(ADR-006 커밋 532b0d7 반영 후 수치, 직전 46건에서 +1). push 대기 47건 — 사람 배치 승인 필요.
+- **HUMAN-INBOX 추가**: ADR-006 승인 대기 1건(신규, 중복 아님).
+
+
+## 조율자 2026-07-11 23:28 (recursion1-result-check)
+
+- **경로 규칙**: 저장소 정본만 읽음(SONNET-QUEUE·CODEX-QUEUE·HS-CANDIDATES·HUMAN-INBOX·BASELINE-CHANGES·reviewer-log). 세션 outputs 사본 미참조.
+- **0단계 안정성**: git status 미커밋 대상 전체(server/dashboard 코드 2건 + 문서 4건 + 미추적 다수) 해시 5초 간격 2회(Get-FileHash) 동일 → STABLE.
+- **실행자 상태**: sonnet-active.pid=32956 — Get-Process -Id 32956 결과 없음(사망 확인, FIX-07 완료 후 그대로). 신규 실행자 없음. (참고: claude.exe 다수 프로세스는 StartTime 기준 무시 — 이 지침이 Cowork 앱 프로세스와의 혼동을 명시적으로 경고함.)
+- **하네스 판정**:
+  - gate-clean server → exit1 FAIL(contentDirtyCount 2: server/Harness/HarnessRegistry.cs·HandoffIntegrityCli.cs).
+  - doc-integrity → exit0 INTACT(checked 12, brokenCount 0).
+  - measure dev-pack → exit1(violationCount 1, 실체: functionsWithoutComment 5건 전부 server/Harness/HandoffIntegrityCli.cs:240/246/249/252/260 — 직전 FIX-07 기준선 0 대비 악화).
+- **server 레인 — 미커밋 유지(FAIL)**: server/Harness/HandoffIntegrityCli.cs(신규, P0-03 handoff-integrity 하네스, actor=codex)·HarnessRegistry.cs(+1줄 등록). CODEX-QUEUE.md에 codex 자신이 이미 원인 기록("함수 5개에 한국어 기능 주석 없음, 네 영역이니 네가 고쳐라, 커밋은 조율자가 한다") — 코덱스 수정 대기, 조율자는 커밋하지 않음. dev-pack 루프가 이 정확한 문제를 겨냥한 자동 제안(proposal-1783780003286, "함수 주석 추가", 5→0)을 이미 생성함 — 참고만, 적용은 사람/코덱스 몫.
+- **문서·정책 레인 — 커밋(로컬 전용)**: docs/directives/_header.md(ADR-005 절 확장 + 공통 검수기준 체크리스트 신설)·docs/handoff/CODEX-QUEUE.md(P0-03 measure 회귀 기록 추가)·docs/handoff/HS-CANDIDATES.md(lastGate 23:15 갱신 + codex P0-03 관측 추가)·docs/handoff/HUMAN-INBOX.md(ADR-006 결재 항목 + 신규 dev-pack 리비전 1건 등재)·docs/handoff/sessions/SESSION-2026-07-11-codex-049.md(신규)·docs/qa/handoff-integrity-harness-2026-07-11.md(신규)·outputs/review-log.md(본 기록). 코드 미혼입 확인(git diff --stat), doc-integrity 커밋 전후 exit0 INTACT 재확인.
+- **레인 미정 — 손대지 않음(직전 회차와 동일 관찰 유지)**: CLAUDE.md(1줄, docs/plan 포인터)·docs/plan/(v9 계획 3파일). 레인 규칙 공백, 조율자 재량 밖.
+- **커밋 제외(런타임)**: dashboard/data/dev-pack/{measurement,patch-proposal,review-report,run-log,workflow-state}.json(이번 회차 measure 실행으로 갱신, 정책상 제외) · outputs/*.log(서버런·sonnet 이력 다수, 레인 없음) · sonnet-active.pid(사망 PID) · outputs/DECISION-BRIEF-2026-07-11-v3.md·outputs/reviewer-log.md(레인/소유권 없음, 읽기만).
+- **기준 파일**: blueprint.json·workflow-definition.json 이번 회차 변경 없음, BASELINE-CHANGES 신규 없음(BC-001 그대로).
+- **★ 중요 발견 — push 게이트 이미 사람이 집행함**: git fetch origin 후 git log origin/main..HEAD = **0건**. git reflog show origin/main에 532b0d7 update by push 확인 — **직전 회차(23:22)가 기록한 push 대기 47건은 이번 회차 확인 시점에 이미 사람이 배치 승인·push 완료한 상태**(조율자는 push를 실행하지 않았고 실행 흔적도 없음, 사람의 로컬 git 조작으로 판단). 조율자 브랜치는 현재 origin/main과 동일(532b0d7), 이번 회차 로컬 커밋(문서 레인) 이후 재차 push 대기 발생 예정.
+- **발사(사람 게이트, 대행 안 함)**: 진행 중 실행자 없음. 큐상 후보: #4 FEAT-01(안전보류 지속, 제외) / #19 P0-04(전제조건 P0-03 미완료 — 하네스는 구현됐으나 measure 회귀로 미커밋 상태이자 handoff-integrity 자체도 exit1로 의도된 실패 중, 완료 아님). **발사 가능 항목 없음.**
+- **push(사람 게이트, 대행 안 함)**: 이번 회차 로컬 커밋(문서 레인) 반영 후 git log origin/main..HEAD --oneline 재확인 필요 — 신규 커밋 수만큼 push 대기 발생. 조율자는 push하지 않음.
+- **QUOTA_SIGNAL**: 미검출.
+
+<run-summary>gate-clean FAIL(server/Harness 2파일 미커밋 유지, measure 회귀로 커밋 보류 — codex 원인 인지·수정 예정), doc-integrity INTACT. 문서 레인 6개 파일 로컬 커밋(ADR-005 확장, CODEX-QUEUE P0-03 회귀 기록, HS-CANDIDATES 갱신, HUMAN-INBOX 2건 신규(ADR-006 결재+dev-pack 리비전), codex 세션049, QA리포트). **중요 발견**: 직전 회차가 남긴 push 대기 47건이 이번 확인 시점엔 이미 사람이 push 완료(origin/main=532b0d7, reflog 확인)한 상태였다 — 조율자 push 아님. sonnet 실행자 없음(32956 사망), 발사 가능 항목 없음(P0-03 미완료로 P0-04 보류, FEAT-01 안전보류). QUOTA_SIGNAL 없음.</run-summary>

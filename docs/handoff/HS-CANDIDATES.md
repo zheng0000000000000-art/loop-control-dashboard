@@ -5,7 +5,7 @@
 > **판정 주체는 코덱스**(파이프라인 1단계). 검수자가 올린 후보는 `코덱스 확정 대기`로 표시하고, 코덱스가 HS-GATE 회차에 확정한다.
 
 <!-- hs-scan 이 읽는 메타. HS-GATE 수행 시 갱신할 것. -->
-- `lastGate: 2026-07-11 23:00`
+- `lastGate: 2026-07-11 23:15`
 - `judgedClasses: unnormalized_gate, self_report_as_truth, config_side_effect, observability, path_escape, executor-orchestration`
 
 ## HS-01 `gate-clean` — 트리 clean을 정규화 내용 해시로 판정 (하네스)
@@ -376,6 +376,19 @@ FAIL-005는 "실행 중인가"를 StartTime으로, FAIL-010은 "깨끗한가"를
 - score: 11/12 existing-extension/immediate. Repetition=2 (initial FAIL plus 22:30 repro), decidability=2, injection=2 (missing projectId), isolation=2 (GET only), observability=2, maintenance value=1 (API edge regression, not every loop gate).
 - proof: `dotnet build server -c Release` exit 0; `dotnet run --project server -c Release --no-build -- project-api-edge-check http://127.0.0.1:5173` exit 1 with `failureCount=4` on the current bug; `build-verify` exit 0.
 - next candidates: sonnet fix request for `FAIL-2026-009`; after fix, `project-api-edge-check` should exit 0.
+
+## 2026-07-11 23:15 codex hs-scan follow-up / P0-03 handoff-integrity
+
+- actor: codex
+- command: `dotnet run --project server -c Release --no-build -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidate=`executor-orchestration(6)`.
+- data-existence gate: PASS for P0-03. `handoff-integrity` consumes concrete repository data: `docs/handoff/WORKSTATE.json`, `changedFiles[].path` file existence, optional `changedFiles[].sha256/hash`, `docs/verification/` completion artifacts, and `CODEX-QUEUE`/`SONNET-QUEUE` status rows.
+- built this cycle: P0-03 `handoff-integrity` in `server/Harness/HandoffIntegrityCli.cs`, registered through `server/Harness/HarnessRegistry.cs` only.
+- score: P0 mandatory harness, new harness 1/2 for Phase 0. Repetition=2, decidability=2, injection=2, isolation=2, observability=2, maintenance value=2, total=12/12. This records WORKSTATE truth as machine-verifiable data instead of relying on self-report.
+- proof: `dotnet build server -c Release` exit 0 with 0 warnings/0 errors; `build-verify` exit 0; `handoff-integrity` exit 1 on current `FIX-07` because all 3 current `changedFiles` entries lack `sha256/hash`; `doc-integrity` exit 0.
+- gate note: `dotnet run --project server -c Release --no-build -- measure dev-pack` exit 1 with `violationCount=2`, so the current workspace gate is not clean. This appears outside the new harness code path and must be handled by the owner/coordinator.
+- next candidates: P0-05 `context-pack-integrity` (new harness 2/2), then P0-06 `scope-check` extension.
 
 ## 2026-07-11 23:00 codex hs-scan follow-up / FIX-07 review
 

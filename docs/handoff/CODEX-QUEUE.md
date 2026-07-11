@@ -72,3 +72,10 @@
 | **P0-05** | **`context-pack-integrity` 하네스 (신규 2/2)** — 지시서(=우리의 Context Pack)의 `requiredInputs` 경로가 **실재하고 hash가 일치하는지** 검사. 없으면 exit 1. | ORCH-01 지시서가 **삭제된 참조 스캐폴드**를 가리키고 있었다(커밋 797e7bc가 지움). 검수자가 손으로 발견했다 — 기계가 잡아야 한다. | `server/Harness/` | 대기(P0-03 후) |
 | **P0-06** | **`scope-check` 확장(기존 확장, 신규 아님)** — 발사 시 지시서 allowlist를 **claim으로 등록**하고, 실행 중 다른 주체가 같은 파일을 만지면 검출. 사후 검출 → **사전 경고**. | 계획서 §0-A.4 `FILE-CLAIMS`. 고아 코드 109줄 사건(주체 규명 불가)의 재발 방지. | `server/Harness/` | 대기(P0-05 후) |
 | **H-00 수정** | **`launch-check`를 파일 기반 ACK로 바꿔라 (ADR-004)** | **실측: ORCH-01·ACTOR-01·FIX-04·FIX-05·FIX-06 5건 모두 stdout에 ACK를 출력하지 않았다.** `claude -p`는 최종 메시지만 내보내므로 "첫 줄 ACK"는 구조적으로 불가능하다. 그런데 5건 다 지시서를 정확히 지켰다 — **지시는 도착했다.** 현행 stdout 기반 launch-check를 그대로 쓰면 **정상 산출물을 전부 오탐으로 죽인다.** 대신 실행자가 시작 시 `outputs/ack-<taskId>.txt`를 쓰게 하고 그 **파일 존재**로 판정하라. | `server/Harness/` | **긴급** |
+
+## ★ 즉시 수정: P0-03 산출물이 measure를 깨뜨렸다 (2026-07-11 23:2x, 검수자 실측)
+
+- `server/Harness/HandoffIntegrityCli.cs` 의 함수 5개에 **한국어 기능 주석이 없다**(라인 240·246·249·252·260). `functionsWithoutComment` 0 → **5**, measure violationCount 0 → 2.
+- CLAUDE.md 관례: **함수 위 1줄 한국어 기능 주석**. 네 영역이니 네가 고쳐라. 커밋은 조율자가 한다.
+- **하네스 자체는 훌륭하다** — 첫 실행에서 진짜 결함(`WORKSTATE.changedFiles`에 sha256 없음)을 잡아냈다. 그건 계획서 §0.5 위반이며 별도 과제로 처리한다(sonnet).
+- **교훈**: 하네스가 게이트를 지키는데 하네스 자신이 게이트를 깼다. 산출물 제출 전 `measure dev-pack` 을 돌려라(exit 0 확인).

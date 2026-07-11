@@ -262,3 +262,17 @@
 - 맥락: docs/handoff/decisions/ADR-001-operating-grade.md 신규 등재(검수자 세션 제안). 운영 등급을 Required Before Multi-model Parallel Work로 승격하자는 제안(상태: 사람 승인 대기). 근거: docs/plan/AI-RUNTIME-REFACTOR-MICRO-DIRECTIVES-v9.md §0-A.6 · docs/plan/ALIGNMENT-v9.md. 승격 조건 8개 중 7개 충족 주장.
 - 조치: 사람의 승인(A안: 등급 승격 + Phase 0 착수) 또는 대안(B: 등급 하향/병렬·자동화 중단) 판단 필요. 조율자는 결재를 대행하지 않음.
 - 확인 시각: 2026-07-11 22:57 (조율자, recursion1-result-check).
+
+
+## 결정 필요: ADR-006 리소스 원장(토큰 계측) P0 승격 제안 (2026-07-11 23:22, 조율자)
+
+- 맥락: docs/handoff/decisions/ADR-006-resource-ledger-p0.md 신규 등재(검수자 세션 제안, 사람 choi의 "토큰을 안 쟀었다, 이제 잴 만한 것 같다" 문제제기 기반). ollama 응답의 prompt_eval_count·eval_count·total_duration을 기존 run-log.json cost 필드에 기록하는 안(옵션 A) 권고. 상태: 사람 승인 대기.
+- 조치: 사람의 승인(승인 시 SONNET-QUEUE에 LEDGER-01 지시서 발행 예정) 또는 보류/거절 판단 필요. 조율자는 결재를 대행하지 않음. 문서 자체는 doc-integrity exit0(INTACT) 확인 후 로컬 커밋(532b0d7, push 안 함)했다 — 이는 문서 등재일 뿐 내용 승인이 아니다.
+- 확인 시각: 2026-07-11 23:22 (조율자, recursion1-result-check).
+
+
+## 결정 필요: dev-pack 리비전 신규 (proposal-1783780003286, 2026-07-11 23:28, 조율자)
+
+- 맥락: dashboard/data/dev-pack/patch-proposal.json이 proposal-1783780003286(revisionOf proposal-1783779990797, "함수 주석 추가", createdBy ollama/qwen3:8b)로 갱신됨. 대상: server/Harness/HandoffIntegrityCli.cs의 functionsWithoutComment 5→0. 이 파일은 P0-03 handoff-integrity 하네스(코덱스 산출물)로, CODEX-QUEUE에 "네 영역이니 네가 고쳐라"로 이미 등재되어 코덱스가 처리 예정이다.
+- 조치: 사람의 승인/거절 판단 필요(대시보드 dev-pack 루프 표준 절차). 조율자는 결재를 대행하지 않음.
+- 확인 시각: 2026-07-11 23:28 (조율자, recursion1-result-check).
