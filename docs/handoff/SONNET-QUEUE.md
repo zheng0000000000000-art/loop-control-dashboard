@@ -1,4 +1,4 @@
-# SONNET-QUEUE — 구현 작업 큐 (조율자가 자동 발사)
+﻿# SONNET-QUEUE — 구현 작업 큐 (조율자가 자동 발사)
 
 > 검수자/오케스트레이터가 지시서를 미리 만들어 순서대로 쌓는다. 조율자(5분 태스크)가 "server clean + 이전 항목 커밋됨 + 다음 대기"일 때 다음 지시서를 sonnet에 자동 발사한다. 이렇게 구현 루프가 사람 개입 없이 큐 소진까지 돈다.
 
@@ -7,7 +7,7 @@
 | 순번 | DI | 지시서 경로(outputs) | 영역 | 상태 |
 | --- | --- | --- | --- | --- |
 | 1 | FIX-01 경로검증 separator-bounded | directive-FIX01-path-validation.md | server/ | 대기(rec10 무산 — 발사가 FAIL-008로 어긋나 Storage.cs 미수정, 재발사 필요) |
-| 2 | FIX-02 measure outbox 스캔 제외 | directive-FIX02-measure-scope.md | server/ | 대기 |
+| 2 | FIX-02 measure outbox 스캔 제외 | directive-FIX02-measure-scope.md | server/ | 완료(9a43f54/49b00d6) |
 | 3 | FEAT-02 E2E 실사용 하네스 내재화 (dotnet -- e2e-usage) | directive-FEAT02-e2e-harness.md | server/ | 대기 |
 | 4 | FEAT-01 한정 이양(게이트 클린 반입 AI 승인) | directive-FEAT01-conditional-delegation.md | server/ | 대기 |
 | 5 | (추후 검수자가 추가) | — | — | — |
