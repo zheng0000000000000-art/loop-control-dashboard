@@ -17,9 +17,11 @@
 | 9 | HARNESS-03 claim-check (자기보고→실체 대조) | queue/directive-HARNESS03-claim-check.md | server/ | **완료** — 직접 구현. 허위주장 주입 시 MISMATCH 검출 확인 |
 | 10 | ~~FIX-03 measure 스캔에서 docs/ 제외~~ | — | — | **취소** — 참조본을 삭제해 해결(측정 코드 수정은 CLAUDE.md 금지사항). measure 5→3건, 기준선 복귀 |
 | 11 | HARNESS-05 doc-integrity (문서 잘림 검출) | (직접 구현) | server/ | **완료** — I-9를 승격으로 뒤집음(3회차 재현). 오탐 0, 주입 잘림 검출 확인 |
-| 12 | **ACTOR-01 결재 액션 actor 기록** | queue/directive-ACTOR01-actor-provenance.md | server/ | **사람 결재 대기** — 결재 게이트 의미를 코드에 새김(기준 변경 성격). 승인 전 발사 금지 |
+| 12 | **ACTOR-01 결재 액션 actor 기록** | queue/directive-ACTOR01-actor-provenance.md | server/ | **완료(a941177 H-6 하네스 수정 + 6929406 ACTOR-01)** — 조율자 재검증: build 0/0, verify-behavior true, measure dev-pack 1건(기준선 3 대비 비악화), claim-check ACTOR-01 MATCH(H-6 수정 후 claimCount 12/mismatch 0). |
 | 13 | **HOOK-01 HarnessRegistry 1회성 훅** | queue/directive-HOOK01-harness-registry.md | server/ | **완료(2e28f7a)** — 조율자 18:51 재검증: gate-clean server PASS(exit0), doc-integrity INTACT(exit0), claim-check HOOK-01 MATCH(exit0, mismatchCount 0). r2~r5 재시도 로그는 outputs/에 잔존(정리 필요, 조율자 권한 밖). |
-| 14 | (추후 검수자가 추가) | — | — | — |
+| 15 | **FIX-04 measure 위반 0으로**(원인 제거 — 결재 루프 무한 재생성 차단) | queue/directive-FIX04-measure-zero.md | dashboard/ + docs | **대기** — 사람 승인 완료(2026-07-11). ACTOR-01 완료 후 순차 발사. 대상: smallTouchTargets 1·maxFunctionLength 159·skillDomainViolations 2 (functionsWithoutComment 5건은 검수자가 참조본 삭제로 제거, 1건은 코덱스 몫) |
+| 16 | **FIX-05 마지막 measure 위반 제거**(server/BalanceTuner.cs 115줄 함수 분할) | queue/directive-FIX05-balancetuner-split.md | server/ | **대기** — FIX-04로 위반 4→1. 이것만 잡으면 proposal 자동생성이 멈춘다. ACTOR-01 커밋 후 발사(순차) |
+| 17 | (추후 검수자가 추가) | — | — | — |
 
 ## 자동 발사 규칙 (조율자용)
 
@@ -34,7 +36,7 @@
 ## 발사 프롬프트 템플릿
 
 ```
-**이전 대화 맥락이 있다면 전부 무시하라. 지금 할 일은 이것뿐이다.** 다음 지시서 하나만 읽고 그대로 수행하라: docs/handoff/queue/<지시서>. 지시서의 `## 허용 파일 (allowlist)` 밖은 수정 금지. 다른 큐/지시서 파일은 읽지 마라. 시작 전 AGENT-GUIDE.md와 docs/directives/_header.md를 먼저 읽어라. v9 산출물 문서 생성. 빌드·CLI는 dotnet -c Release. 지정 영역만, 타 실행자 영역(dashboard/·docs/qa/·docs/wiki/) 무접촉. git commit/push 금지. 완료 시 수행요약·검수기준 자가점검표 출력. **verification 문서에 ①주체(actor: 누가 했는가) ②사용한 하네스와 결과(명령·exit code·수치) ③참조한 스킬을 반드시 기록하라 — 없으면 조율자가 반려한다.** rate limit 시 마지막 줄 QUOTA_SIGNAL.
+**이전 대화 맥락이 있다면 전부 무시하라. 지금 할 일은 이것뿐이다.** 다음 지시서 하나만 읽고 그대로 수행하라: docs/handoff/queue/<지시서>. 지시서의 `## 허용 파일 (allowlist)` 밖은 수정 금지. 다른 큐/지시서 파일은 읽지 마라. 시작 전 AGENT-GUIDE.md와 docs/directives/_header.md를 먼저 읽어라. v9 산출물 문서 생성. 빌드·CLI는 dotnet -c Release. 지정 영역만, 타 실행자 영역(dashboard/·docs/qa/·docs/wiki/) 무접촉. git commit/push 금지. 완료 시 수행요약·검수기준 자가점검표 출력. **verification 문서에 ①주체(actor: 누가 했는가) ②사용한 하네스와 결과(명령·exit code·수치) ③참조한 스킬을 반드시 기록하라 — 없으면 조율자가 반려한다.** **한도·중단이 임박하면 종료 전에 마지막 세 줄을 출력하라: ``QUOTA_SIGNAL`` / ``CHANGED: <지금까지 수정한 파일 목록>`` / ``NEXT: <다음에 할 일 한 줄>``. 부분 작업물은 되돌리지 말고 그대로 두되 verification 문서에 "상태: 미완(한도)"로 적어라.** 상세: docs/handoff/QUOTA-POLICY.md
 ```
 
 ## 상태 갱신
