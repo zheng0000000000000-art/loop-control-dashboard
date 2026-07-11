@@ -335,3 +335,66 @@ proposal: functionsWithoutComment @ server/OllamaExecutor.cs:569
 2. **조율자를 시간 기반 → 사건 기반으로 전환.** 프롬프트 맨 앞에 **선(先) 게이트**: 커밋 레인이 깨끗하고 미처리 sentinel도 없으면 **즉시 종료, 리포트도 쓰지 마라.** 실행자가 20분 도는 동안 **할 일 없이 태우던 세션 4개가 0개**가 된다. **코덱스가 할당량으로 죽은 것과 같은 구조였다.**
 3. **코덱스 프롬프트** `outputs/launch/CODEX-P0-05.prompt.txt` — P0-05 `context-pack-integrity`. 첫머리에 **"네가 옳았다"**를 넣었다(두 번의 거부는 `hs-gate` 2항을 지킨 것이었고, 막힌 쪽은 검수자였다).
 4. **LEDGER-04 발사**(PID 34288) — 사람 결정 "정규화 + 계속 기록". **최종 목표는 LEDGER-02 배선의 첫 검증.**
+
+## 2026-07-12 04:1x — ★ **LEDGER-02 배선이 마침내 검증됐다** (LEDGER-04 PASS) + P0-05 PASS
+
+### ★ 세 지시서가 여기서 만났다
+
+```
+04:06:30  proposal.generated   provider=ollama  model=qwen3:8b   in=351  out=95
+```
+
+**ollama가 제안을 만들었고, 그 토큰이 처음으로 run-log에 기록됐다.**
+
+- **LEDGER-02**(`Program.cs` 토큰 배선)는 커밋된 뒤 **한 번도 실행된 적이 없었다.** ollama 제안 경로가 폴백으로 죽어 있었기 때문이다. **이제 검증됐다.**
+- **LEDGER-03**(폴백 관측)이 그 죽음을 보이게 만들었고,
+- **LEDGER-04**(정규화)가 되살렸다.
+
+**계측 → 관측 → 복구 → 검증.** 이 순서가 우연이 아니다. **토큰을 재지 않았으면 첫 단추부터 없었다**(ADR-006).
+
+### LEDGER-04 검수 (검수자 독립 재실행)
+
+| 판정선 | 결과 |
+| --- | --- |
+| `proposal.metricid_normalized` | ✅ 1건. **`level: warn`** 유지(info로 안 낮춤), `expected=functionsWithoutComment` / `actual=functionsWithOutComment` |
+| **★ `proposal.generated`에 ollama + 토큰** | ✅ **in=351 out=95** — **LEDGER-02 배선의 첫 검증** |
+| 비-LLM 항목 토큰 날조 | ✅ **0건** — rule-engine 항목 전부 0 유지 |
+| 파서 1차 엄격 유지 | ✅ `OllamaExecutor.cs:423` — `if (metricId == expectedMetricId)` 먼저, 2차만 대소문자 무시 |
+| 위반 주입 제거 | ✅ `git grep` 0건 |
+
+**판정: LEDGER-04 = PASS. ADR-008이 의도대로 작동한다 — 살렸지만 눈을 감지 않았다.**
+
+### P0-05 검수 — **코덱스가 하네스를 완성했고, 첫 실행에서 진짜 stale을 잡았다. 그건 내 것이었다.**
+
+코덱스가 `context-pack-integrity`를 만들었다(세션 052). **내가 직접 재실행해 대조했다:**
+
+| 검사 | 결과 |
+| --- | --- |
+| 큐 전체 | **exit 0 PASS** — ok 18 / missing 0 / stale 0 / **skipped 17**(블록 없는 과거 지시서 — 게이트 안 잠김) |
+| **반증 시험(검수자 직접)** | 참조를 유령 경로로 주입(사본) → **exit 1**, `missingCount: 1`, 정확히 그 항목만 지목 |
+| **스탬핑 기능 금지** | ✅ **읽기 전용.** 쓰기 흔적 0 — **고치는 자와 검사하는 자가 분리됐다** |
+| `CliRouter.cs` 무접촉 | ✅ (HOOK-01 레지스트리 원칙 준수) |
+
+**그런데 코덱스의 첫 실행은 exit 1이었고, `stale` 2건을 잡았다 — 그리고 그건 내가 만든 것이다.**
+
+내가 FEAT-01·LEDGER-02 지시서에 `QUOTA-POLICY.md`의 해시를 박은 **뒤에**, 그 파일에 "할당량 다 되면 멈춘다" 절을 append했다. → 해시 변경 → **stale.**
+
+- **코덱스는 고치지 않고 보고했다.** 스탬핑 금지 + 쓰기 영역(`server/Harness/`) 제약을 지킨 것이다. **설계대로 작동했다.**
+- **고치는 것은 지시서 소유자(검수자)의 몫이다.** 재스탬핑 후 exit 0 복귀 확인.
+- **이것이 이 하네스의 존재 이유를 스스로 증명했다.** "네가 읽으라고 한 문서가 그 사이 바뀌었다"를 **기계가 발사 전에 말해준다.** ORCH-01 유령 참조는 사람이 손으로 잡았다.
+
+**판정: P0-05 = PASS. Phase 0의 신규 하네스 2/2 완성**(`handoff-integrity` + `context-pack-integrity`). 예산 준수.
+
+### 내 래퍼의 버그 (첫 실전에서 드러남)
+
+sentinel의 `exitCode`가 **`null`**로 찍혔다. `Start-Process -PassThru`로 얻은 프로세스는 **핸들을 미리 캐시하지 않으면 종료 후 `ExitCode`가 null**이 된다(.NET 동작).
+
+**조율자가 `exitCode != 0`으로 커밋 여부를 판단하는데 null이면 오판한다.** 고쳤다: `$null = $proc.Handle`로 핸들 캐시 + **그래도 null이면 `-1`로 적는다. 모르는 것을 0(성공)으로 적지 않는다.**
+
+`argLength: 2765` — 프롬프트는 온전히 도착했다. **파일 전달 방식이 작동한다.**
+
+### 동시 작업이 실제로 일어났다 (P0-06 근거 3건째)
+
+LEDGER-04 실행자(`OllamaExecutor.cs`·`Program.cs`)와 코덱스(`server/Harness/`)가 **같은 시각에 `server/` 안에서 작업했다.** 영역이 겹치지 않아 무사했다.
+
+**주체 판정은 타이밍이 아니라 실체로 했다**: 세션 문서(`SESSION-2026-07-12-codex-052`) + 영역 소유권(ADR-002). "새 파일이 생겼다 = LEDGER-04가 allowlist를 어겼다"고 단정하지 않았다. **오늘 우리를 네 번 틀리게 한 그 사고방식이다.**

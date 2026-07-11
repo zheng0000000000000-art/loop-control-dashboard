@@ -27,17 +27,24 @@ $proc = Start-Process claude.exe -ArgumentList $argline `
           -RedirectStandardOutput $outLog -RedirectStandardError $errLog `
           -PassThru -WorkingDirectory $root
 
+# 핸들을 미리 캐시한다 — 이걸 안 하면 종료 후 ExitCode가 null이 된다(.NET 동작).
+# 조율자가 exitCode로 커밋 여부를 판단하므로 null이면 오판한다. 실제로 LEDGER-04에서 null이 나왔다.
+$null = $proc.Handle
+
 # PID를 즉시 남긴다 — 대기 중 세션이 죽어도 사람이 추적할 수 있게.
 $proc.Id | Out-File (Join-Path $root 'outputs\sonnet-active.pid') -Encoding ascii
 
 $proc.WaitForExit()
+$exitCode = $proc.ExitCode
+# 그래도 null이면 -1로 적는다. 모르는 것을 0(성공)으로 적지 않는다.
+if ($null -eq $exitCode) { $exitCode = -1 }
 
 # 완료 신호. 조율자는 이 파일이 생겼을 때만 검수한다.
 $payload = [ordered]@{
   schemaVersion = 1
   taskId        = $TaskId
   pid           = $proc.Id
-  exitCode      = $proc.ExitCode
+  exitCode      = $exitCode
   startedAt     = $started
   exitedAt      = (Get-Date).ToString('o')
   outLog        = $outLog
