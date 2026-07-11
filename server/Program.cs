@@ -1085,7 +1085,7 @@ static ProposalGeneration GenerateTuningProposalWithFallback(JsonObject definiti
     if (!generated.Unavailable)
     {
         var proposal = BuildTuningProposal(tuning, generated.Provider, generated.Model, generated.Title, generated.Summary, generated.Notes, generated.Assumptions, revisionOf);
-        return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null, generated.SelfReviewed, generated.SelfReviewPassed));
+        return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null, generated.SelfReviewed, generated.SelfReviewPassed, generated.InputTokens, generated.OutputTokens));
     }
 
     var fallbackProposal = BuildTuningProposal(tuning, "rule-engine", null, FallbackTuningTitle(tuning), FallbackTuningSummary(tuning), new Dictionary<string, string>(), [], revisionOf);
@@ -1208,7 +1208,7 @@ static ProposalGeneration GenerateProposalWithFallback(JsonObject definition, Js
             },
         };
 
-        return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null, generated.SelfReviewed, generated.SelfReviewPassed));
+        return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null, generated.SelfReviewed, generated.SelfReviewPassed, generated.InputTokens, generated.OutputTokens));
     }
 
     var fallbackProposal = CreateMeasurementProposal(currentProposal, violations);
@@ -1234,8 +1234,8 @@ static JsonArray BuildExecutorChanges(List<MetricCheck> violations, Dictionary<s
     return changes;
 }
 
-// 제안 생성 로그 항목을 만든다.
-static JsonObject GeneratedLogEntry(string provider, string? model, long durationMs, bool fallback, string? error, bool selfReviewed, bool selfReviewPassed)
+// 제안 생성 로그 항목을 만든다. ollama 경로는 inputTokens·outputTokens를 넘겨 실제 토큰을 기록한다.
+static JsonObject GeneratedLogEntry(string provider, string? model, long durationMs, bool fallback, string? error, bool selfReviewed, bool selfReviewPassed, int inputTokens = 0, int outputTokens = 0)
 {
     return new JsonObject
     {
@@ -1254,7 +1254,7 @@ static JsonObject GeneratedLogEntry(string provider, string? model, long duratio
         },
         ["level"] = fallback ? "warning" : "info",
         ["producedBy"] = new JsonObject { ["provider"] = provider, ["model"] = model },
-        ["cost"] = RuntimeCost(),
+        ["cost"] = RuntimeCost(inputTokens, outputTokens),
     };
 }
 
@@ -2252,13 +2252,13 @@ static ActorInfo ExtractActor(JsonObject body)
         actor?["actorPath"]?.GetValue<string>() ?? "unknown");
 }
 
-// 런타임 비용 0 객체를 만든다.
-static JsonObject RuntimeCost()
+// 런타임 비용 객체를 만든다. LLM 호출이 없는 지점은 인수 없이 호출해 0을 유지한다.
+static JsonObject RuntimeCost(int inputTokens = 0, int outputTokens = 0)
 {
     return new JsonObject
     {
-        ["inputTokens"] = 0,
-        ["outputTokens"] = 0,
+        ["inputTokens"] = inputTokens,
+        ["outputTokens"] = outputTokens,
         ["estimatedUSD"] = 0,
         ["subscriptionCalls"] = 0,
         ["role"] = "runtime",
