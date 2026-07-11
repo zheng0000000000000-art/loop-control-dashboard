@@ -18,7 +18,8 @@
 | 10 | ~~FIX-03 measure 스캔에서 docs/ 제외~~ | — | — | **취소** — 참조본을 삭제해 해결(측정 코드 수정은 CLAUDE.md 금지사항). measure 5→3건, 기준선 복귀 |
 | 11 | HARNESS-05 doc-integrity (문서 잘림 검출) | (직접 구현) | server/ | **완료** — I-9를 승격으로 뒤집음(3회차 재현). 오탐 0, 주입 잘림 검출 확인 |
 | 12 | **ACTOR-01 결재 액션 actor 기록** | queue/directive-ACTOR01-actor-provenance.md | server/ | **사람 결재 대기** — 결재 게이트 의미를 코드에 새김(기준 변경 성격). 승인 전 발사 금지 |
-| 13 | (추후 검수자가 추가) | — | — | — |
+| 13 | **HOOK-01 HarnessRegistry 1회성 훅** | queue/directive-HOOK01-harness-registry.md | server/ | **대기 — 우선** 코덱스 하네스 위임의 선행조건(영역 충돌 회피) |
+| 14 | (추후 검수자가 추가) | — | — | — |
 
 ## 자동 발사 규칙 (조율자용)
 
@@ -31,7 +32,7 @@
 ## 발사 프롬프트 템플릿
 
 ```
-다음 지시서 하나만 읽고 그대로 수행하라: docs/handoff/queue/<지시서>. 다른 큐/지시서 파일은 읽지 마라(I-1 지시서 이탈 방지). 시작 전 AGENT-GUIDE.md와 docs/directives/_header.md를 먼저 읽어라. v9 산출물 문서 생성. 빌드·CLI는 dotnet -c Release. 지정 영역만, 타 실행자 영역(dashboard/·docs/qa/·docs/wiki/) 무접촉. git commit/push 금지. 완료 시 수행요약·검수기준 자가점검표 출력. rate limit 시 마지막 줄 QUOTA_SIGNAL.
+다음 지시서 하나만 읽고 그대로 수행하라: docs/handoff/queue/<지시서>. 다른 큐/지시서 파일은 읽지 마라(I-1 지시서 이탈 방지). 시작 전 AGENT-GUIDE.md와 docs/directives/_header.md를 먼저 읽어라. v9 산출물 문서 생성. 빌드·CLI는 dotnet -c Release. 지정 영역만, 타 실행자 영역(dashboard/·docs/qa/·docs/wiki/) 무접촉. git commit/push 금지. 완료 시 수행요약·검수기준 자가점검표 출력. **verification 문서에 ①주체(actor: 누가 했는가) ②사용한 하네스와 결과(명령·exit code·수치) ③참조한 스킬을 반드시 기록하라 — 없으면 조율자가 반려한다.** rate limit 시 마지막 줄 QUOTA_SIGNAL.
 ```
 
 ## 상태 갱신
