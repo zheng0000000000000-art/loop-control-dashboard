@@ -36,7 +36,7 @@
     "targetPath": "../.."
   },
   "guardrails": {
-    "maxLoopIterations": 10,
+    "maxLoopIterations": 100,
     "maxEstimatedCost": 5.0,
     "maxSubscriptionCalls": 5
   },
