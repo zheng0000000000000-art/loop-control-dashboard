@@ -5,7 +5,7 @@
 > **판정 주체는 코덱스**(파이프라인 1단계). 검수자가 올린 후보는 `코덱스 확정 대기`로 표시하고, 코덱스가 HS-GATE 회차에 확정한다.
 
 <!-- hs-scan 이 읽는 메타. HS-GATE 수행 시 갱신할 것. -->
-- `lastGate: 2026-07-11 21:30`
+- `lastGate: 2026-07-11 21:45`
 - `judgedClasses: unnormalized_gate, self_report_as_truth, config_side_effect, observability, path_escape, executor-orchestration`
 
 ## HS-01 `gate-clean` — 트리 clean을 정규화 내용 해시로 판정 (하네스)
@@ -319,3 +319,14 @@ FAIL-005는 "실행 중인가"를 StartTime으로, FAIL-010은 "깨끗한가"를
 - fixed this cycle: H-4 `path-escape-qa` skill. Score: existing `path_escape` skill candidate now implemented as `skills/domains/dev/path-escape-qa.md`.
 - post-fix proof: skill file created with trigger metadata, static checks, required cases, `path-guard-check` commands, dynamic PoC safety rules, and reporting format.
 - next candidates remain: H-5 inherited harness review, 검수 위임 시범, 신규 sonnet 커밋 QA.
+
+## 2026-07-11 21:45 codex hs-scan follow-up / H-5 inherited harness review
+
+- actor: codex
+- command: `dotnet run --project server -c Release -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidate=`executor-orchestration(6)`.
+- data-existence gate: PASS. The inherited harnesses consume concrete data: git normalized content (`gate-clean`), failure wiki index plus HS-CANDIDATES metadata (`hs-scan`), verification docs plus git/code reality (`claim-check`), and parsed JSON/markdown completeness (`doc-integrity`).
+- completed this cycle: H-5 inherited harness review. No code change. Smoke results: `gate-clean server/Harness` exit 0, `hs-scan` exit 1 by design with current S4 candidate, `claim-check ACTOR-01` exit 0, `doc-integrity` exit 0.
+- residual risk: `hs-scan` continues to trigger on broad `executor-orchestration`; future work should either split that component into narrower classes or add a judged component metadata mechanism.
+- next candidates: 검수 위임 시범, 신규 sonnet 커밋 QA, broader E2E usage QA.
