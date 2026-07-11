@@ -549,3 +549,20 @@
 - QUOTA_SIGNAL 미감지.
 
 <run-summary>전회(17:5x) 작성됐던 server/Tier2Approver.cs(+109/-1) 커밋보류·HUMAN-INBOX 등재 판단을 재확인하고 review-log·HUMAN-INBOX를 로컬 커밋으로 확정. 이 파일은 FEAT-01 인접 영역(반입 승인 로직)이고 검증 문서가 없어 여전히 커밋하지 않음 — Codex QA가 5주기 연속 이 충돌로 차단 중. HOOK-01 sonnet(PID 31528)은 한도초과로 이미 죽어 실행 중 아님이나 server dirty라 발사 대기 보고는 하지 않음. push 대기 10건(사람 배치 승인 필요), HUMAN-INBOX 신규 항목 없음(기존 전부 재확인·중복 방지), QUOTA_SIGNAL 없음.</run-summary>
+## 조율자 2026-07-11 18:51
+
+- 경로 규칙 준수: 저장소 정본만 열람(세션 outputs 사본 미사용).
+- 안정성 게이트: git status --short 확인 — server/*.cs 변경 없음, docs/qa·docs/wiki 변경 없음. dashboard/data/dev-pack/*.json 5건(커밋 제외 대상)·outputs/probe*·outputs/sonnet-HOOK01-r2~r5*·sonnet-active.pid만 미커밋(전부 커밋 대상 아님, 정리는 조율자 권한 밖).
+- 하네스 재검증(빌드 락 우회): 실행 중 서버(PID 14252)가 Release exe 잠금(MSB3027) → dotnet build server -c Release -o <tmp>로 우회, 빌드 자체는 0경고/0오류(exit 0) 확인 — "락 실패"와 "코드 오류"를 구분함(I-3).
+  - gate-clean server: exit 0, contentDirtyCount 0, PASS
+  - doc-integrity: exit 0, 12/12 intact
+  - claim-check HOOK-01: exit 0, claimCount 2, mismatchCount 0, MATCH
+- server/: 신규 미커밋 변경 없음. HOOK-01은 이미 커밋 2e28f7a로 반영되어 있었고, 위 3개 하네스로 실체(주장=코드)를 재확인함. 이번 회차 신규 커밋 없음(server/*.cs 대상).
+- docs/qa·docs/wiki: 변경 없음 → 스킵.
+- 큐 상태 갱신: SONNET-QUEUE.md #13 HOOK-01을 "진행"(구 표기, PID 31528)→"완료(2e28f7a)"로 갱신, 재검증 근거(위 3개 하네스 결과) 명기. doc-integrity로 잘림 없음 확인 후 review-log와 함께 로컬 커밋.
+- 발사(사람 게이트, 조율자는 발사 안 함): sonnet-active.pid=25676 확인 결과 프로세스 없음(사망) → 실행 중 sonnet 없음. server clean(gate-clean PASS) + 이전 진행항목(HOOK-01) 커밋 확인됨 + 큐상 다음 "대기"는 #4 FEAT-01이나, 기존 HUMAN-INBOX 기록상 "무인 결재 이양" 안전보류 항목으로 계속 보류 중(신규 판단 아님, 재확인만). **발사 대기: FEAT-01 — 사람 승인 후 발사(안전보류). 대안으로 #5 ORCH-01(관측 전용·저위험)도 대기 중.**
+- push: git log origin/main..HEAD --oneline 2건. **push 대기: 2건 — 사람 배치 승인 필요.**
+- HUMAN-INBOX: 신규 판단 사안 없음(결재·반입·proposal 미대행). 기존 항목 변동 없음.
+- QUOTA_SIGNAL: 미관측.
+
+<run-summary>HOOK-01은 이미 커밋(2e28f7a)돼 있었고 gate-clean/doc-integrity/claim-check 3개 하네스로 실체를 재검증(전부 PASS/MATCH) — 큐 표를 "진행"→"완료"로 갱신해 로컬 커밋. 신규 server/docs 변경 없음. sonnet 미실행, 다음 대기 항목(FEAT-01)은 기존 안전보류 유지, push 대기 2건은 사람 배치 승인 필요.</run-summary>

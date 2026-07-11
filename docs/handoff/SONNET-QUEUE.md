@@ -1,4 +1,4 @@
-﻿# SONNET-QUEUE — 구현 작업 큐 (조율자가 자동 발사)
+# SONNET-QUEUE — 구현 작업 큐 (조율자가 자동 발사)
 
 > 검수자/오케스트레이터가 지시서를 미리 만들어 순서대로 쌓는다. 조율자(5분 태스크)가 "server clean + 이전 항목 커밋됨 + 다음 대기"일 때 다음 지시서를 sonnet에 자동 발사한다. 이렇게 구현 루프가 사람 개입 없이 큐 소진까지 돈다.
 
@@ -18,7 +18,7 @@
 | 10 | ~~FIX-03 measure 스캔에서 docs/ 제외~~ | — | — | **취소** — 참조본을 삭제해 해결(측정 코드 수정은 CLAUDE.md 금지사항). measure 5→3건, 기준선 복귀 |
 | 11 | HARNESS-05 doc-integrity (문서 잘림 검출) | (직접 구현) | server/ | **완료** — I-9를 승격으로 뒤집음(3회차 재현). 오탐 0, 주입 잘림 검출 확인 |
 | 12 | **ACTOR-01 결재 액션 actor 기록** | queue/directive-ACTOR01-actor-provenance.md | server/ | **사람 결재 대기** — 결재 게이트 의미를 코드에 새김(기준 변경 성격). 승인 전 발사 금지 |
-| 13 | **HOOK-01 HarnessRegistry 1회성 훅** | queue/directive-HOOK01-harness-registry.md | server/ | **진행** — 2026-07-11 17:0x 사람 승인 발사(PID 31528, 격리 발사). 로그 outputs/sonnet-HOOK01.out.log |
+| 13 | **HOOK-01 HarnessRegistry 1회성 훅** | queue/directive-HOOK01-harness-registry.md | server/ | **완료(2e28f7a)** — 조율자 18:51 재검증: gate-clean server PASS(exit0), doc-integrity INTACT(exit0), claim-check HOOK-01 MATCH(exit0, mismatchCount 0). r2~r5 재시도 로그는 outputs/에 잔존(정리 필요, 조율자 권한 밖). |
 | 14 | (추후 검수자가 추가) | — | — | — |
 
 ## 자동 발사 규칙 (조율자용)
