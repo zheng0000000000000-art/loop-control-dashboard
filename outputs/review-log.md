@@ -461,3 +461,11 @@
 - outputs/last-reviewed-commit.txt: 기존 e17bba8과 HEAD 일치 확인, 값 유지.
 - 미반영 제외: dev-pack 런타임 json 5건, server/EXECUTOR_REPORT.md.
 - 결재·반입·proposal 대행 없음.
+
+## 조율자 2026-07-11 12:59
+- server/: server/*.cs 미커밋 없음 → 검수/커밋 대상 없음. server/dispatch-templates/*.txt(ApplyMeasurementResult.txt, BalanceTunerSearch.txt) 변경은 커밋 목록(.cs만) 외라 제외.
+- docs/qa·docs/wiki: 신규 변경 없음 → 커밋 없음.
+- outputs/last-reviewed-commit.txt: e17bba8b72b1608d7beb5f232e462b4c4859a43f 값 유지 (마지막 실제 산출물 커밋 기준, 이후 조율자 로그 전용 커밋 2건은 산출물 없음).
+- 미반영 제외: dev-pack 런타임 json 5건, server/EXECUTOR_REPORT.md.
+- 결재·반입·proposal 대행 없음.
+- rec 로그 QUOTA_SIGNAL 없음 (rec6b/7/8/9/10).
