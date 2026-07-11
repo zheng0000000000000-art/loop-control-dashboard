@@ -1,6 +1,6 @@
 # FAIL-2026-008 — self-refactor dispatch 템플릿이 현행 코드와 어긋나 빌드 실패
 
-- 상태: 확인됨
+- 상태: 해결됨
 - 최초 발생일: 2026-07-11
 - 최근 발생일: 2026-07-11
 - 관련 DI: CODEX-QUEUE 2, R-01~04 호출부 정합성 헌트
@@ -46,7 +46,8 @@ server/BalanceTuner.cs(64,16): error CS7036: 'TuningResult.TuningResult(..., int
 
 ## 선택한 해결 방법
 
-이번 QA 작업에서는 코드를 수정하지 않았다. 구현 실행자에게 템플릿 동기화와 적용 후 빌드 게이트 추가를 이관한다.
+- `server/dispatch-templates/BalanceTunerSearch.txt`: `var restartAttempts = 0;` 추가, `RunSearchLoop` 호출에 `ref restartAttempts` 추가, `TuningResult` 생성자 11번째 인자로 `restartAttempts` 추가, `RunSearchLoop` 시그니처에 `ref int restartAttempts` 추가.
+- `server/dispatch-templates/ApplyMeasurementResult.txt`: DI-R-04 분할 구조(5개 서브함수 호출 프레임)로 전체 교체. 기존 `MeasurementApplyContext` context-object 방식 제거.
 
 ## 판단 기준
 
@@ -54,13 +55,21 @@ server/BalanceTuner.cs(64,16): error CS7036: 'TuningResult.TuningResult(..., int
 
 ## 검증 결과
 
+QA 재현 (2026-07-11, 수정 전):
+
 | 단계 | 명령 | 결과 |
 | --- | --- | --- |
 | 기준 빌드 | `dotnet build server -c Release` | 경고 0, 오류 0 |
 | 템플릿 적용 | `dotnet run --project server -c Release --no-build -- dispatch-executor claude-code "Program.cs Orchestrator.cs ProposalFlow.cs"` | exit 0, `self-refactor templates applied` |
 | 적용 후 빌드 | `dotnet build server -c Release` | 실패, 경고 4, 오류 1 |
 
-원본 작업트리는 수정하지 않고 `C:\Users\1\AppData\Local\Temp\lfwd-qa-dispatch-template` 임시 worktree에서만 재현했다.
+수정 후 검증 (2026-07-11, `C:\Users\1\AppData\Local\Temp\lfwd-template-fix-verify`):
+
+| 단계 | 명령 | 결과 |
+| --- | --- | --- |
+| 기준 빌드 | `dotnet build server -c Release` | 경고 0, 오류 0 |
+| 템플릿 적용 | `dotnet run --project server -c Release --no-build -- dispatch-executor claude-code "Program.cs Orchestrator.cs ProposalFlow.cs"` | exit 0, `self-refactor templates applied` |
+| 적용 후 빌드 | `dotnet build server -c Release` | 경고 0, 오류 0 |
 
 ## 재발 방지
 
@@ -70,13 +79,14 @@ server/BalanceTuner.cs(64,16): error CS7036: 'TuningResult.TuningResult(..., int
 
 ## 후속 작업과 잔여 위험
 
-- `BalanceTunerSearch.txt`와 `ApplyMeasurementResult.txt`가 현행 코드와 동기화돼야 한다.
+- `BalanceTunerSearch.txt`와 `ApplyMeasurementResult.txt` 동기화: 완료.
 - 다른 템플릿(`EngineApplyStatePatch.txt`, dashboard 함수 변환 템플릿)도 같은 stale 위험이 있으므로 함께 빌드/동작 검증이 필요하다.
-- self-refactor dispatch가 실제로 다시 사용되면 실패 outbox 또는 빌드 불가 산출물을 만들 수 있다.
+- `BalanceTunerSearch.txt`의 검색 알고리즘은 현행 코드(random restart 포함)보다 단순한 구조(RunSearchLoop/FindBestCandidate 분리, random restart 없음)로 유지됐다. self-refactor 적용 시 검색 품질이 소폭 저하될 수 있다.
 
 ## 발생 이력
 
 - 2026-07-11: CODEX-QUEUE 2 호출부 정합성 헌트 중 `DispatchExecutorCli` 템플릿 경로 발견.
 - 2026-07-11: 임시 worktree에서 self-refactor 템플릿 적용 후 빌드 실패 재현.
 - 2026-07-11: `FAIL-2026-008`로 실패 위키 등록.
+- 2026-07-11: `BalanceTunerSearch.txt` + `ApplyMeasurementResult.txt` 수정 완료. 임시 worktree 재검증: 기준 빌드 → 템플릿 적용 → 빌드 모두 경고 0·오류 0.
 
