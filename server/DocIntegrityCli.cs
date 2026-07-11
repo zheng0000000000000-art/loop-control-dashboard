@@ -26,6 +26,12 @@ internal static class DocIntegrityCli
         "docs/handoff/HUMAN-INBOX.md",
         "docs/handoff/HS-CANDIDATES.md",
         "docs/wiki/failures/index.md",
+        "docs/handoff/HARNESSES.md",
+        "skills/common/hs-gate.md",
+        "skills/common/verification.md",
+        "skills/common/directive-writing.md",
+        "AGENT-GUIDE.md",
+        "CLAUDE.md",
     };
 
     // doc-integrity 진입점. exit 0=무결, 1=손상 검출, 2=오류.
