@@ -48,12 +48,13 @@ public static class OllamaExecutor
         var maxRetries = Math.Max(1, Number(policy["maxRetries"], 1));
         var feedback = BuildFeedbackByMetric(previousReviewReport);
         var notes = new Dictionary<string, string>();
+        var normalizedMetricIds = new List<(string Expected, string Actual)>();
         var totalIn = 0;
         var totalOut = 0;
 
         foreach (var violation in violations)
         {
-            var (note, noteError, rejectReason, actualMetricId, noteIn, noteOut) = TryGenerateNote(policy, model, violation, feedback.GetValueOrDefault(violation.MetricId), maxRetries);
+            var (note, noteError, rejectReason, actualMetricId, noteIn, noteOut, normalizedActual) = TryGenerateNote(policy, model, violation, feedback.GetValueOrDefault(violation.MetricId), maxRetries);
             totalIn += noteIn;
             totalOut += noteOut;
 
@@ -62,6 +63,9 @@ public static class OllamaExecutor
                 return Unavailable(timer, $"{violation.MetricId}: {noteError ?? "note 생성 실패"}", provider, model,
                     fallbackReason: rejectReason, expectedMetricId: violation.MetricId, actualMetricId: actualMetricId);
             }
+
+            if (normalizedActual is not null)
+                normalizedMetricIds.Add((violation.MetricId, normalizedActual));
 
             notes[violation.MetricId] = note;
         }
@@ -85,7 +89,7 @@ public static class OllamaExecutor
         }
 
         timer.Stop();
-        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, summary.Value.Assumptions, timer.ElapsedMilliseconds, null, selfReview.Enabled, selfReview.Enabled, totalIn, totalOut);
+        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, summary.Value.Assumptions, timer.ElapsedMilliseconds, null, selfReview.Enabled, selfReview.Enabled, totalIn, totalOut, NormalizedMetricIds: normalizedMetricIds.Count > 0 ? normalizedMetricIds : null);
     }
 
     // 이미 결정된 레버 변경들을 서술하는 note·title·summary를 생성하고 토큰 합계를 반환한다.
@@ -104,12 +108,13 @@ public static class OllamaExecutor
         var maxRetries = Math.Max(1, Number(policy["maxRetries"], 1));
         var feedback = BuildFeedbackByMetric(previousReviewReport);
         var notes = new Dictionary<string, string>();
+        var normalizedMetricIds = new List<(string Expected, string Actual)>();
         var totalIn = 0;
         var totalOut = 0;
 
         foreach (var change in tuning.ChangedLevers)
         {
-            var (note, noteError, rejectReason, actualMetricId, noteIn, noteOut) = TryGenerateTuningNote(policy, model, change, tuning.PredictedMetrics, feedback.GetValueOrDefault(change.Path), maxRetries);
+            var (note, noteError, rejectReason, actualMetricId, noteIn, noteOut, normalizedActual) = TryGenerateTuningNote(policy, model, change, tuning.PredictedMetrics, feedback.GetValueOrDefault(change.Path), maxRetries);
             totalIn += noteIn;
             totalOut += noteOut;
 
@@ -118,6 +123,9 @@ public static class OllamaExecutor
                 return Unavailable(timer, $"{change.Path}: {noteError ?? "note 생성 실패"}", provider, model,
                     fallbackReason: rejectReason, expectedMetricId: change.Path, actualMetricId: actualMetricId);
             }
+
+            if (normalizedActual is not null)
+                normalizedMetricIds.Add((change.Path, normalizedActual));
 
             notes[change.Path] = note;
         }
@@ -141,7 +149,7 @@ public static class OllamaExecutor
         }
 
         timer.Stop();
-        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, summary.Value.Assumptions, timer.ElapsedMilliseconds, null, selfReview.Enabled, selfReview.Enabled, totalIn, totalOut);
+        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, summary.Value.Assumptions, timer.ElapsedMilliseconds, null, selfReview.Enabled, selfReview.Enabled, totalIn, totalOut, NormalizedMetricIds: normalizedMetricIds.Count > 0 ? normalizedMetricIds : null);
     }
 
     // definition의 selfReview가 켜져 있으면 생성 결과를 모델로 한 번 자체 점검하고 토큰 수를 반환한다.
@@ -196,7 +204,8 @@ public static class OllamaExecutor
     }
 
     // 레버 변경 하나에 대한 note를 생성하고 누적 토큰 수와 거부 사유를 함께 반환한다.
-    private static (string? Note, string? Error, string? RejectReason, string? ActualMetricId, int InputTokens, int OutputTokens) TryGenerateTuningNote(JsonObject policy, string model, LeverChange change, List<PredictedMetricChange> predicted, string? feedback, int maxRetries)
+    // NormalizedActualMetricId가 non-null이면 대소문자 정규화로 통과 — 호출자가 warn 이벤트를 남긴다.
+    private static (string? Note, string? Error, string? RejectReason, string? ActualMetricId, int InputTokens, int OutputTokens, string? NormalizedActualMetricId) TryGenerateTuningNote(JsonObject policy, string model, LeverChange change, List<PredictedMetricChange> predicted, string? feedback, int maxRetries)
     {
         string? lastError = null;
         string? lastRejectReason = null;
@@ -215,7 +224,8 @@ public static class OllamaExecutor
 
                 if (parsed is not null)
                 {
-                    return (parsed, null, null, null, totalIn, totalOut);
+                    var normalizedActual = reason == "metricid-normalized" ? actualMetricId : null;
+                    return (parsed, null, null, null, totalIn, totalOut, normalizedActual);
                 }
 
                 lastError = "응답 JSON 스키마 불일치 또는 빈/손상된 note";
@@ -224,7 +234,7 @@ public static class OllamaExecutor
             }
             catch (ReviewerUnavailableException error)
             {
-                return (null, error.Message, "ollama-unreachable", null, totalIn, totalOut);
+                return (null, error.Message, "ollama-unreachable", null, totalIn, totalOut, null);
             }
             catch (Exception error)
             {
@@ -233,7 +243,7 @@ public static class OllamaExecutor
             }
         }
 
-        return (null, lastError, lastRejectReason, lastActualMetricId, totalIn, totalOut);
+        return (null, lastError, lastRejectReason, lastActualMetricId, totalIn, totalOut, null);
     }
 
     // 레버 변경 note 생성 프롬프트를 만든다.
@@ -339,7 +349,8 @@ public static class OllamaExecutor
     }
 
     // 위반 항목 하나에 대한 note를 생성하고 누적 토큰 수와 거부 사유를 함께 반환한다.
-    private static (string? Note, string? Error, string? RejectReason, string? ActualMetricId, int InputTokens, int OutputTokens) TryGenerateNote(JsonObject policy, string model, MetricCheck violation, string? feedback, int maxRetries)
+    // NormalizedActualMetricId가 non-null이면 대소문자 정규화로 통과 — 호출자가 warn 이벤트를 남긴다.
+    private static (string? Note, string? Error, string? RejectReason, string? ActualMetricId, int InputTokens, int OutputTokens, string? NormalizedActualMetricId) TryGenerateNote(JsonObject policy, string model, MetricCheck violation, string? feedback, int maxRetries)
     {
         string? lastError = null;
         string? lastRejectReason = null;
@@ -358,7 +369,8 @@ public static class OllamaExecutor
 
                 if (parsed is not null)
                 {
-                    return (parsed, null, null, null, totalIn, totalOut);
+                    var normalizedActual = reason == "metricid-normalized" ? actualMetricId : null;
+                    return (parsed, null, null, null, totalIn, totalOut, normalizedActual);
                 }
 
                 lastError = "응답 JSON 스키마 불일치 또는 빈/손상된 note";
@@ -367,7 +379,7 @@ public static class OllamaExecutor
             }
             catch (ReviewerUnavailableException error)
             {
-                return (null, error.Message, "ollama-unreachable", null, totalIn, totalOut);
+                return (null, error.Message, "ollama-unreachable", null, totalIn, totalOut, null);
             }
             catch (Exception error)
             {
@@ -376,7 +388,7 @@ public static class OllamaExecutor
             }
         }
 
-        return (null, lastError, lastRejectReason, lastActualMetricId, totalIn, totalOut);
+        return (null, lastError, lastRejectReason, lastActualMetricId, totalIn, totalOut, null);
     }
 
     // note 생성 프롬프트를 만든다.
@@ -399,16 +411,31 @@ public static class OllamaExecutor
     }
 
     // note 응답 JSON을 파싱한다. 거부 시 reason 코드와 실제 metricId를 함께 반환한다.
+    // "metricid-normalized" reason은 대소문자 무시 대조로 통과한 경우 — 호출자가 warn 이벤트를 남긴다.
     private static (string? Note, string Reason, string? ActualMetricId) ParseNoteResponse(string raw, string expectedMetricId)
     {
         var json = ExtractJsonObject(StripThinkBlock(raw));
         if (json is null) return (null, "parse-rejected-json", null);
         var metricId = json["metricId"]?.GetValue<string>();
         var note = json["note"]?.GetValue<string>()?.Trim();
-        if (metricId != expectedMetricId) return (null, "parse-rejected-metricid", metricId);
-        if (string.IsNullOrWhiteSpace(note) || HasReplacementChar(note) || HasProhibitedNoteTerm(note))
-            return (null, "parse-rejected-note", metricId);
-        return (note, "ok", metricId);
+
+        // 1차: 엄격 대조 — 정상 경로, 이벤트 없음
+        if (metricId == expectedMetricId)
+        {
+            if (string.IsNullOrWhiteSpace(note) || HasReplacementChar(note) || HasProhibitedNoteTerm(note))
+                return (null, "parse-rejected-note", metricId);
+            return (note, "ok", metricId);
+        }
+
+        // 2차: 대소문자 무시 대조만 — 통과 시 수용하되 호출자가 warn 이벤트를 남긴다
+        if (string.Equals(metricId, expectedMetricId, StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(note) || HasReplacementChar(note) || HasProhibitedNoteTerm(note))
+                return (null, "parse-rejected-note", metricId);
+            return (note, "metricid-normalized", metricId);
+        }
+
+        return (null, "parse-rejected-metricid", metricId);
     }
 
     // note에 판정어와 예측/사실 혼동어가 섞였는지 확인한다.
@@ -583,4 +610,4 @@ public static class OllamaExecutor
 
 public sealed record SelfReviewResult(bool Enabled, bool Passed, string? Error, int InputTokens = 0, int OutputTokens = 0);
 
-public sealed record ExecutorGenerateResult(bool Unavailable, string Provider, string? Model, Dictionary<string, string> Notes, string Title, string Summary, List<string> Assumptions, long DurationMs, string? Error, bool SelfReviewed, bool SelfReviewPassed, int InputTokens = 0, int OutputTokens = 0, string? FallbackReason = null, string? ExpectedMetricId = null, string? ActualMetricId = null);
+public sealed record ExecutorGenerateResult(bool Unavailable, string Provider, string? Model, Dictionary<string, string> Notes, string Title, string Summary, List<string> Assumptions, long DurationMs, string? Error, bool SelfReviewed, bool SelfReviewPassed, int InputTokens = 0, int OutputTokens = 0, string? FallbackReason = null, string? ExpectedMetricId = null, string? ActualMetricId = null, List<(string Expected, string Actual)>? NormalizedMetricIds = null);

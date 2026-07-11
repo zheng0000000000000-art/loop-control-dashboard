@@ -433,6 +433,9 @@ static (JsonObject state, JsonObject runLog) ApplyMeasurementTuningCase(ProjectB
         : null;
     var tuningGeneration = GenerateTuningProposalWithFallback(bundle.Definition, bundle.Proposal, tuning, previousReviewReport: null);
     bundle.Proposal = tuningGeneration.Proposal;
+    if (tuningGeneration.NormalizationEntries is not null)
+        foreach (var normEntry in tuningGeneration.NormalizationEntries)
+            runLog = Engine.AppendLog(runLog, normEntry, Engine.GetLoopIteration(state));
     if (tuningGeneration.FallbackEntry is not null)
         runLog = Engine.AppendLog(runLog, tuningGeneration.FallbackEntry, Engine.GetLoopIteration(state));
     runLog = Engine.AppendLog(runLog, tuningGeneration.LogEntry, Engine.GetLoopIteration(state));
@@ -485,6 +488,9 @@ static (Tier1ReviewResult tuningTier1, JsonObject runLog) RunTuningRegenerationL
 
         var tuningGeneration = GenerateTuningProposalWithFallback(bundle.Definition, bundle.Proposal, tuning, previousReviewReport: tuningTier1.Report);
         bundle.Proposal = tuningGeneration.Proposal;
+        if (tuningGeneration.NormalizationEntries is not null)
+            foreach (var normEntry in tuningGeneration.NormalizationEntries)
+                runLog = Engine.AppendLog(runLog, normEntry, Engine.GetLoopIteration(state));
         if (tuningGeneration.FallbackEntry is not null)
             runLog = Engine.AppendLog(runLog, tuningGeneration.FallbackEntry, Engine.GetLoopIteration(state));
         runLog = Engine.AppendLog(runLog, tuningGeneration.LogEntry, Engine.GetLoopIteration(state));
@@ -505,6 +511,9 @@ static JsonObject ApplyMeasurementDevPackCase(ProjectBundle bundle, MeasurementS
 {
     var generation = GenerateProposalWithFallback(bundle.Definition, bundle.Proposal, violations, previousReviewReport: null);
     bundle.Proposal = generation.Proposal;
+    if (generation.NormalizationEntries is not null)
+        foreach (var normEntry in generation.NormalizationEntries)
+            runLog = Engine.AppendLog(runLog, normEntry, Engine.GetLoopIteration(state));
     if (generation.FallbackEntry is not null)
         runLog = Engine.AppendLog(runLog, generation.FallbackEntry, Engine.GetLoopIteration(state));
     runLog = Engine.AppendLog(runLog, generation.LogEntry, Engine.GetLoopIteration(state));
@@ -537,6 +546,9 @@ static JsonObject ApplyMeasurementDevPackCase(ProjectBundle bundle, MeasurementS
 
         generation = GenerateProposalWithFallback(bundle.Definition, bundle.Proposal, violations, previousReviewReport: tier1.Report);
         bundle.Proposal = generation.Proposal;
+        if (generation.NormalizationEntries is not null)
+            foreach (var normEntry in generation.NormalizationEntries)
+                runLog = Engine.AppendLog(runLog, normEntry, Engine.GetLoopIteration(state));
         if (generation.FallbackEntry is not null)
             runLog = Engine.AppendLog(runLog, generation.FallbackEntry, Engine.GetLoopIteration(state));
         runLog = Engine.AppendLog(runLog, generation.LogEntry, Engine.GetLoopIteration(state));
@@ -1093,7 +1105,10 @@ static ProposalGeneration GenerateTuningProposalWithFallback(JsonObject definiti
     if (!generated.Unavailable)
     {
         var proposal = BuildTuningProposal(tuning, generated.Provider, generated.Model, generated.Title, generated.Summary, generated.Notes, generated.Assumptions, revisionOf);
-        return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null, generated.SelfReviewed, generated.SelfReviewPassed, generated.InputTokens, generated.OutputTokens));
+        var normEntries = generated.NormalizedMetricIds?
+            .Select(n => MetricIdNormalizedLogEntry(n.Expected, n.Actual, generated.Provider, generated.Model))
+            .ToList();
+        return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null, generated.SelfReviewed, generated.SelfReviewPassed, generated.InputTokens, generated.OutputTokens), NormalizationEntries: normEntries);
     }
 
     var fallbackProposal = BuildTuningProposal(tuning, "rule-engine", null, FallbackTuningTitle(tuning), FallbackTuningSummary(tuning), new Dictionary<string, string>(), [], revisionOf);
@@ -1219,7 +1234,10 @@ static ProposalGeneration GenerateProposalWithFallback(JsonObject definition, Js
             },
         };
 
-        return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null, generated.SelfReviewed, generated.SelfReviewPassed, generated.InputTokens, generated.OutputTokens));
+        var normEntries = generated.NormalizedMetricIds?
+            .Select(n => MetricIdNormalizedLogEntry(n.Expected, n.Actual, generated.Provider, generated.Model))
+            .ToList();
+        return new ProposalGeneration(proposal, GeneratedLogEntry(generated.Provider, generated.Model, generated.DurationMs, false, null, generated.SelfReviewed, generated.SelfReviewPassed, generated.InputTokens, generated.OutputTokens), NormalizationEntries: normEntries);
     }
 
     var fallbackProposal = CreateMeasurementProposal(currentProposal, violations);
@@ -1287,6 +1305,25 @@ static JsonObject FallbackLogEntry(string reason, string? expectedMetricId, stri
     {
         ["event"] = "proposal.fallback",
         ["params"] = p,
+        ["level"] = "warn",
+        ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = (JsonNode?)null },
+        ["cost"] = RuntimeCost(),
+    };
+}
+
+// metricId 대소문자 정규화로 수용된 사실을 warn으로 남긴다.
+static JsonObject MetricIdNormalizedLogEntry(string expectedMetricId, string actualMetricId, string provider, string? model)
+{
+    return new JsonObject
+    {
+        ["event"] = "proposal.metricid_normalized",
+        ["params"] = new JsonObject
+        {
+            ["expectedMetricId"] = expectedMetricId,
+            ["actualMetricId"] = actualMetricId,
+            ["provider"] = provider,
+            ["model"] = model,
+        },
         ["level"] = "warn",
         ["producedBy"] = new JsonObject { ["provider"] = "rule-engine", ["model"] = (JsonNode?)null },
         ["cost"] = RuntimeCost(),
@@ -2347,7 +2384,7 @@ public sealed record MetricCheck(string MetricId, JsonNode? Value, JsonNode? Goa
 
 public sealed record MetricRegression(string MetricId, JsonNode? PreviousValue, JsonNode? CurrentValue, JsonNode? Goal, string Expected, List<string> Evidence);
 
-public sealed record ProposalGeneration(JsonObject Proposal, JsonObject LogEntry, JsonObject? FallbackEntry = null);
+public sealed record ProposalGeneration(JsonObject Proposal, JsonObject LogEntry, JsonObject? FallbackEntry = null, List<JsonObject>? NormalizationEntries = null);
 
 // 결재·반입 액션의 주체(actor) 정보 — actorType(human|agent|unknown), actorId, actorPath(ui|api|cli|unknown).
 public sealed record ActorInfo(string ActorType, string ActorId, string ActorPath)
