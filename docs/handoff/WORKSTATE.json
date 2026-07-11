@@ -1,9 +1,9 @@
 {
   "schemaVersion": "v9-min",
-  "phaseId": "FAIL-2026-008",
-  "wpId": "FAIL-2026-008",
-  "diId": "FAIL-2026-008",
-  "status": "done",
+  "phaseId": "FIX-02",
+  "wpId": "FIX-02",
+  "diId": "FIX-02",
+  "status": "verifying",
   "updatedBy": "claude-sonnet-4-6",
   "updatedAt": "2026-07-11",
   "history": [
@@ -35,23 +35,36 @@
         {"path": "server/MeasurementService.cs", "linesBefore": 0, "linesAfter": 65},
         {"path": "server/Cli/CliRouter.cs", "linesBefore": 299, "linesAfter": 297}
       ]
+    },
+    {
+      "diId": "FIX-01",
+      "changedFiles": [
+        {
+          "path": "server/Storage.cs",
+          "note": "ProjectFilePath·ProjectPath 경계 검사 → IsWithinRoot(separator-bounded) 헬퍼로 교체. FAIL-2026-006 해소."
+        },
+        {
+          "path": "server/OutboxManager.cs",
+          "note": "ResolveTaskDirectory·SafeWorkspacePath 경계 검사 → IsWithinRoot 헬퍼로 교체. FAIL-2026-007 해소."
+        }
+      ]
     }
   ],
   "changedFiles": [
     {
-      "path": "server/dispatch-templates/BalanceTunerSearch.txt",
-      "note": "restartAttempts 추가 — TuningResult 11번째 인자·RunSearchLoop ref 매개변수·초기화"
-    },
-    {
-      "path": "server/dispatch-templates/ApplyMeasurementResult.txt",
-      "note": "DI-R-04 분할 구조로 전체 교체 — MeasurementApplyContext context-object 방식 제거"
+      "path": "server/DevPackMeasures.cs",
+      "note": "IsGeneratedOrRuntimePath에 /outbox/ 제외 조건 추가. outbox 사본 파일이 measure 스캔에서 제외됨. maxFunctionLength evidence가 현행 소스(dashboard/app.js) 기준으로 정확해짐."
     }
   ],
   "tests": {
-    "baselineBuild": "경고 0·오류 0",
-    "templateApply": "exit 0, self-refactor templates applied",
-    "postApplyBuild": "경고 0·오류 0"
+    "behaviorEqual": true,
+    "buildWarnings": 0,
+    "buildErrors": 0,
+    "measureViolationsBefore": 3,
+    "measureViolationsAfter": 3,
+    "maxFunctionLengthEvidenceBefore": "outbox/task-20260710070612000/files/server/Program.cs:790-1035 (246줄)",
+    "maxFunctionLengthEvidenceAfter": "dashboard/app.js:852-1010 (159줄)"
   },
-  "nextActions": ["FAIL-2026-008 완료 — 다음 작업 대기"],
-  "notes": "self-refactor dispatch 템플릿 stale 수정. BalanceTunerSearch.txt는 random restart 없는 RunSearchLoop/FindBestCandidate 구조 유지(빌드 가능, 알고리즘 단순화). ApplyMeasurementResult.txt는 현행 DI-R-04 프레임 함수로 교체."
+  "nextActions": ["검수자 확인 후 커밋", "SONNET-QUEUE FIX-02 완료 표시", "FEAT-02 착수"],
+  "notes": "violationCount는 수정 전후 동일(3). 단, 수정 전 maxFunctionLength는 stale outbox 사본 기준이었고 수정 후는 현행 소스 기준으로 정확해짐. 잔존 위반 3개(smallTouchTargets·skillDomainViolations×2)는 pre-existing 실제 위반으로 FIX-02 범위 밖."
 }
