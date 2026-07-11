@@ -24,3 +24,9 @@
 - 맥락: dashboard/data/dev-pack/patch-proposal.json — `proposal-1783744473208`("UI/UX 개선 및 코드 품질 향상", createdBy ollama/qwen3:8b, revisionOf proposal-1783742578303), lifecycle `submitted`. 변경 대상: smallTouchTargets, skillDomainViolations, maxFunctionLength.
 - 조치: 사람의 proposal 승인/거절 판단 필요. 조율자/오케스트레이터는 대행하지 않음.
 - 확인 시각: 2026-07-11 14:09 (조율자, recursion1-result-check).
+
+## 결정 필요: dev-pack proposal 리비전 갱신 (1건)
+
+- 맥락: 기존 기록된 proposal-1783744473208의 리비전 체인이 이어져, 현재 dashboard/data/dev-pack/patch-proposal.json에 proposal-1783747077098(revisionOf proposal-1783746981687)이 lifecycle:submitted 상태로 대기 중. 제목 "UI/UX 개선 및 코드 품질 향상"(createdBy ollama/qwen3:8b). 변경 3건: smallTouchTargets 1→0, skillDomainViolations 2→0, maxFunctionLength 159→[0,80].
+- 조치: 사람의 승인(approve) 또는 거절(reject) 판단 필요. 조율자는 결재를 대행하지 않음.
+- 확인 시각: 2026-07-11 14:19 (조율자, recursion1-result-check).
