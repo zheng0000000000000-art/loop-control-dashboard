@@ -9,15 +9,19 @@ param(
 $root      = 'C:\Users\1\Documents\Local-First Workflow Dashboard'
 $launchDir = Join-Path $root 'outputs\launch'
 $promptFile= Join-Path $launchDir "$TaskId.prompt.txt"
-$outLog    = Join-Path $root "outputs\sonnet-$TaskId.out.log"
+$outJson   = Join-Path $root "outputs\sonnet-$TaskId.out.json"   # claude -p --output-format json 원문
+$outLog    = Join-Path $root "outputs\sonnet-$TaskId.out.log"    # 사람이 읽는 보고문(원문에서 .result만 추출)
 $errLog    = Join-Path $root "outputs\sonnet-$TaskId.err.log"
 $sentinel  = Join-Path $launchDir "$TaskId.exit.json"
+$usageLog  = Join-Path $launchDir 'usage-ledger.jsonl'           # 상위 모델 토큰 원장(append만)
 
 if (-not (Test-Path $promptFile)) { throw "프롬프트 파일이 없다: $promptFile" }
 
 # 프롬프트를 파일에서 읽어 한 줄 인자로 만든다(줄바꿈은 공백으로 접는다).
 $prompt  = (Get-Content $promptFile -Raw -Encoding UTF8) -replace "`r?`n", ' '
-$argline = '-p "' + $prompt.Replace('"', '\"') + '" --dangerously-skip-permissions'
+# --output-format json: 상위 모델의 usage(토큰·캐시·비용)를 받기 위함(LEDGER-05).
+# 재지 않으면 "로컬로 내릴 수 있는가"를 영원히 감으로 답하게 된다.
+$argline = '-p "' + $prompt.Replace('"', '\"') + '" --output-format json --dangerously-skip-permissions'
 
 # 이전 회차의 신호가 남아 있으면 지운다(낡은 신호로 조율자가 오판하는 것을 막는다).
 if (Test-Path $sentinel) { Remove-Item $sentinel -Force }
@@ -69,7 +73,7 @@ $allow     = Get-Allowlist $dPath
 
 $started = (Get-Date).ToString('o')
 $proc = Start-Process claude.exe -ArgumentList $argline `
-          -RedirectStandardOutput $outLog -RedirectStandardError $errLog `
+          -RedirectStandardOutput $outJson -RedirectStandardError $errLog `
           -PassThru -WorkingDirectory $root
 
 # 핸들을 미리 캐시한다 — 이걸 안 하면 종료 후 ExitCode가 null이 된다(.NET 동작).
@@ -90,16 +94,52 @@ if ($null -eq $exitCode) { $exitCode = -1 }
 # claim 해제. 지우지 않고 released로 남긴다 — 누가 언제 무엇을 잡았는지가 이력이다(고아 코드 109줄 사건).
 Set-Claim -status 'released' -pid_ $proc.Id -paths $allow -exitCode "$exitCode"
 
+# 상위 모델 usage를 뽑는다(LEDGER-05). 파싱 실패는 조용히 넘기지 않고 null로 남긴다 — 모르는 것을 0으로 적지 않는다.
+$usage = $null; $report = $null
+if (Test-Path $outJson) {
+  try {
+    $j = Get-Content $outJson -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report = $j.result
+    $usage = [ordered]@{
+      inputTokens         = $j.usage.input_tokens
+      outputTokens        = $j.usage.output_tokens
+      cacheCreationTokens = $j.usage.cache_creation_input_tokens   # 진짜 비용은 여기 있다
+      cacheReadTokens     = $j.usage.cache_read_input_tokens
+      totalCostUsd        = $j.total_cost_usd
+      numTurns            = $j.num_turns
+      durationMs          = $j.duration_ms
+      isError             = $j.is_error
+      stopReason          = $j.stop_reason
+      sessionId           = $j.session_id
+    }
+  } catch {
+    $usage = [ordered]@{ parseError = $_.Exception.Message }      # 실패를 감추지 않는다
+  }
+}
+
+# 사람이 읽는 보고문을 따로 남긴다 — 기존 소비자(조율자·검수자)가 그대로 읽게.
+if ($report) { $report | Set-Content $outLog -Encoding UTF8 }
+
+# 상위 모델 토큰 원장에 append. 통째로 다시 쓰지 않는다(CLAUDE.md 기록 파일 규칙).
+$ledgerLine = [ordered]@{
+  taskId = $TaskId; actor = 'sonnet'; pid = $proc.Id
+  startedAt = $started; exitedAt = (Get-Date).ToString('o')
+  exitCode = $exitCode; usage = $usage
+} | ConvertTo-Json -Depth 6 -Compress
+Add-Content -Path $usageLog -Value $ledgerLine -Encoding UTF8
+
 # 완료 신호. 조율자는 이 파일이 생겼을 때만 검수한다.
 $payload = [ordered]@{
-  schemaVersion = 1
+  schemaVersion = 2
   taskId        = $TaskId
   pid           = $proc.Id
   exitCode      = $exitCode
   startedAt     = $started
   exitedAt      = (Get-Date).ToString('o')
   outLog        = $outLog
+  outJson       = $outJson
   processed     = $false          # 조율자가 검수 후 true로 바꾼다
   argLength     = $argline.Length # 프롬프트가 잘리지 않고 도착했는지 확인용
+  usage         = $usage          # 상위 모델 토큰·비용(LEDGER-05)
 }
-$payload | ConvertTo-Json | Set-Content $sentinel -Encoding UTF8
+$payload | ConvertTo-Json -Depth 6 | Set-Content $sentinel -Encoding UTF8

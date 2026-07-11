@@ -1,0 +1,4 @@
+너는 SMOKE-01 실행자다. 저장소 루트는 C:\Users\1\Documents\Local-First Workflow Dashboard 다. 이것은 발사 래퍼의 계측 배선을 검증하는 최소 작업이다. 코드를 고치지 마라.
+할 일은 딱 하나다: dotnet run --project server -c Release --no-build -- measure dev-pack 을 실행하고 그 exit code와 violationCount 를 stdout에 한 줄로 보고하라.
+그 외에는 아무 파일도 만들지 말고 고치지 마라. git commit, git push, 결재, 반입, 다른 프로세스 발사는 전부 금지다. 저장소를 탐색하지 마라 - 위 명령 하나만 실행하고 끝내라.
+보고 형식: MEASURE exit=<코드> violations=<개수>
