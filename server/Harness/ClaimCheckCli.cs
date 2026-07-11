@@ -109,7 +109,7 @@ internal static class ClaimCheckCli
 
     // 문서가 신설·수정했다고 주장하는 server/ 파일 경로를 뽑는다.
     private static IEnumerable<string> ExtractClaimedFiles(string text)
-        => Regex.Matches(text, @"`?(server/[A-Za-z0-9_/\.]+\.cs)`?")
+        => Regex.Matches(text, @"`?(server/[A-Za-z0-9_/\.]+\.cs)(?![A-Za-z0-9])`?")
             .Select(m => m.Groups[1].Value)
             .Distinct();
 
