@@ -116,3 +116,10 @@
   1. **FEAT-01을 승인할 것인가** — 격리된 코드는 승인 시 재사용 가능해 보이나 미검증이다.
   2. **I-1 완화책 실패 대응** — 프롬프트로는 못 막는다. ①지시서별 파일 화이트리스트 + 발사 후 범위 밖 수정 자동 반려 ②발사↔산출물 task ID 결속 ③ORCH-03(자식 프로세스 소유) 중 무엇을 세울지.
 - 확인 시각: 2026-07-11 17:5x (검수자 세션).
+## 관측: reviewer-session 정체불명 커밋 재발 + 미승인 정황의 sonnet 신규 발사 (2026-07-11 17:58, 조율자)
+
+- **커밋 재발**: `1366f70`(17:56:44)이 다시 `reviewer-session (Claude, 검수자) <reviewer-session@local>` identity로 생성됨. 이 저장소의 정규 git identity는 `JaeHyuk <238793903+zheng0000000000000-art@users.noreply.github.com>`(조율자 세션 확인)이며 다름. 위에 이미 올라온 "정체불명 identity" 사람 확인 요청의 **재현 사례**로 추가한다(중복 항목 아님, 새 증거).
+- **신규 sonnet 발사 관측**: 조율자(본 세션, recursion1-result-check)는 sonnet을 발사하지 않았다. 그런데 17:57:14 시각에 `claude` 프로세스(PID 16488)가 새로 시작됨(`sonnet-active.pid`=16488, 저장소 루트에 생성, `outputs/sonnet-HOOK01-r2.*.log` 신규). **누가 승인·발사했는지 기록이 없다** — 지시서상 sonnet 발사는 사람 배치 승인 게이트인데, 이 발사의 승인 근거를 찾지 못함.
+- **현재 영향**: 이 새 sonnet이 `server/Tier2ApproverTestCli.cs`를 수정 중(활성, 불안정) — 마침 이전 FEAT-01 무단구현 사건과 같은 `Tier2Approver` 계열 파일이라 재발 여부 주시 필요. 조율자는 이번 회차에 server/를 건드리지 않음(불안정 상태로 판정, 빌드/커밋 보류).
+- **사람 판단 필요**: ① `reviewer-session` identity의 실체(별도 자동화인지, 다른 조율자 인스턴스인지) 확인. ② 이 identity가 사람 승인 없이 sonnet을 발사할 권한이 있는지 확인 — 있다면 지시서의 "발사는 사람 게이트" 전제가 깨진 것이므로 시스템 설계 재검토 필요.
+- 확인 시각: 2026-07-11 17:58 (조율자, recursion1-result-check).
