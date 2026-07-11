@@ -73,6 +73,20 @@ Invoke-WebRequest -Uri 'http://localhost:5173/api/projects/__missing__/context' 
 | 엣지 조회 | `GET /api/projects/__missing__/context` | 500 |
 | 비교 조회 | `GET /api/outbox/__missing__` | 404 |
 
+2026-07-11 22:30 KST 재현:
+
+| 요청 | 실제 상태 | 응답 요약 |
+| --- | ---: | --- |
+| `GET /data/projects.json` | 200 | 정상 |
+| `GET /api/projects/dev-pack/state` | 200 | 정상 |
+| `GET /api/projects/__missing__/state` | 500 | `reasonCode=system.read_failed`, `Project is not registered: __missing__` |
+| `GET /api/projects/__missing__/context` | 500 | missing project 오류 |
+| `GET /api/projects/__missing__/measurement` | 500 | missing project 오류 |
+| `GET /api/projects/__missing__/cycle-summary` | 500 | missing project 오류 |
+| `GET /api/outbox/__missing__` | 404 | `reasonCode=dispatch.not_found` |
+
+재현 환경: 기존 실행 중 서버 `LocalFirstWorkflowDashboard.Server` PID `30040` (`C:\Users\1\wf-server-run\LocalFirstWorkflowDashboard.Server.exe`). 코덱스가 띄운 임시 서버 시도는 포트 점유로 시작 실패했고, 기존 리스너를 대상으로 GET 요청만 수행했다.
+
 ## 재발 방지
 
 - FEAT-02 `e2e-usage` 하네스에 없는 projectId 조회 시나리오를 포함한다.

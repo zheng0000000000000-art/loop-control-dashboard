@@ -5,7 +5,7 @@
 > **판정 주체는 코덱스**(파이프라인 1단계). 검수자가 올린 후보는 `코덱스 확정 대기`로 표시하고, 코덱스가 HS-GATE 회차에 확정한다.
 
 <!-- hs-scan 이 읽는 메타. HS-GATE 수행 시 갱신할 것. -->
-- `lastGate: 2026-07-11 21:45`
+- `lastGate: 2026-07-11 22:30`
 - `judgedClasses: unnormalized_gate, self_report_as_truth, config_side_effect, observability, path_escape, executor-orchestration`
 
 ## HS-01 `gate-clean` — 트리 clean을 정규화 내용 해시로 판정 (하네스)
@@ -330,3 +330,37 @@ FAIL-005는 "실행 중인가"를 StartTime으로, FAIL-010은 "깨끗한가"를
 - completed this cycle: H-5 inherited harness review. No code change. Smoke results: `gate-clean server/Harness` exit 0, `hs-scan` exit 1 by design with current S4 candidate, `claim-check ACTOR-01` exit 0, `doc-integrity` exit 0.
 - residual risk: `hs-scan` continues to trigger on broad `executor-orchestration`; future work should either split that component into narrower classes or add a judged component metadata mechanism.
 - next candidates: 검수 위임 시범, 신규 sonnet 커밋 QA, broader E2E usage QA.
+
+## 2026-07-11 22:00 codex hs-scan follow-up / FIX-06 review delegation
+
+- actor: codex
+- command: `dotnet run --project server -c Release -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidate=`executor-orchestration(6)`.
+- data-existence gate: PASS. The repeated component is still backed by concrete failure records `FAIL-2026-004/005/008/010/012/013`; this cycle did not promote a new harness because the current candidate remains the same broad already-judged class.
+- completed this cycle: 검수 위임 시범 for FIX-06 commit `3df722f`. Review output: `docs/qa/review-3df722f-fix06.md`.
+- residual risk: `executor-orchestration` is now too broad for useful new work selection. Recommended next standardization: split `hs-scan` metadata by narrower judged component or teach it to suppress already-covered subclasses after their harnesses exist.
+- next candidates: 신규 sonnet 커밋 QA, E2E usage QA, R-04/maxFunctionLength follow-up if queue metadata is refreshed.
+
+## 2026-07-11 22:15 codex hs-scan follow-up / E2E usage QA
+
+- actor: codex
+- command: `dotnet run --project server -c Release -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidate=`executor-orchestration(6)`.
+- data-existence gate: PASS. Same concrete failure records remain available; no new narrower class was emitted by `hs-scan`.
+- completed this cycle: E2E usage QA using `e2e-usage`. Report output: `docs/qa/e2e-usage-cli-2026-07-11-2215.md`.
+- proof: default project set exit 0 with 6/6 scenarios pass; explicit `dev-pack` exit 0 with 6/6 scenarios pass; invalid project id exit 1 with `failCount=4` as the negative control.
+- residual risk: `hs-scan` still reports only the broad already-judged component, so this cycle records the trigger but does not promote a new harness.
+- next candidates: 신규 sonnet 커밋 QA, broader E2E edge expansion if needed, `hs-scan` component split proposal.
+
+## 2026-07-11 22:30 codex hs-scan follow-up / HTTP E2E edge repro
+
+- actor: codex
+- command: `dotnet run --project server -c Release -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidate=`executor-orchestration(6)`.
+- data-existence gate: PASS. Same concrete failure records remain available; this cycle did not promote a new harness because the emitted candidate is unchanged and already judged.
+- completed this cycle: HTTP GET-only E2E edge repro for `FAIL-2026-009`. Report output: `docs/qa/e2e-http-edge-2026-07-11-2230.md`.
+- proof: existing listener PID `30040` served `GET /data/projects.json` and `GET /api/projects/dev-pack/state` as 200; missing project read APIs returned 500 for `/state`, `/context`, `/measurement`, `/cycle-summary`; missing outbox task returned 404.
+- next candidates: sonnet fix request for `FAIL-2026-009`, HTTP API edge regression harness, `hs-scan` component split proposal.
