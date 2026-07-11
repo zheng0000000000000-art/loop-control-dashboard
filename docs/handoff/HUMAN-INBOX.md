@@ -284,3 +284,15 @@
 - 참고: OllamaExecutor.cs는 현재 LEDGER-02 실행자(PID 29060)가 작업 중인 allowlist 파일이다. 이 위반은 진행 중인 편집에서 발생했을 가능성이 있다(확정 아님 — 주체 미상, 추정만 기록).
 - 조치: 사람의 승인(approve) 또는 거절(reject) 판단 필요. 조율자는 결재를 대행하지 않음.
 - 확인 시각: 2026-07-12 00:44 (조율자, recursion1-result-check).
+
+
+## 결정 필요: OllamaExecutor metricId 대소문자 불일치 처리 정책 (2026-07-12 01:56, 조율자)
+
+- 맥락: LEDGER-03 검수(f0f874a, 검수자)에서 확인됨. `qwen3:8b`가 `functionsWithoutComment`를 `functionsWithOutComment`(대문자 O)로 일관되게 반환 → `OllamaExecutor.cs:408`의 엄격 일치 검사가 거부 → rule-engine으로 조용히 폴백하던 문제. LEDGER-03이 `proposal.fallback`(reason=parse-rejected-metricid) 관측 이벤트를 추가해 이제는 발생 시점이 기록된다(침묵 해소).
+- 남은 결정: 관측은 켜졌으나 폴백 자체는 여전히 발생 중이다. 검수자 제시 선택지 3안(REVIEWER-HANDOFF.md 참조):
+  1. 파서를 대소문자 무시로 완화 (위험: 모델 오류를 코드가 흡수)
+  2. 정규화 + warn 이벤트로 계속 기록 (검수자 권고 — ollama 복구 + 관측 유지)
+  3. 프롬프트 수정으로 모델이 정확히 뱉게 함 (근본적이나 모델 의존적)
+- 참고: 이 결정이 나야 LEDGER-02(실행자 토큰 배선)도 검증 가능해진다 — ollama 제안 경로가 살아나야 `proposal.generated`의 `cost.inputTokens > 0`을 확인할 수 있음(현재 미검증).
+- 조치: 사람의 선택(1/2/3) 필요. 조율자는 결재를 대행하지 않음.
+- 확인 시각: 2026-07-12 01:56 (조율자, recursion1-result-check).
