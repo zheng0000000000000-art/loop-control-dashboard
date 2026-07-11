@@ -5,7 +5,7 @@
 > **판정 주체는 코덱스**(파이프라인 1단계). 검수자가 올린 후보는 `코덱스 확정 대기`로 표시하고, 코덱스가 HS-GATE 회차에 확정한다.
 
 <!-- hs-scan 이 읽는 메타. HS-GATE 수행 시 갱신할 것. -->
-- `lastGate: 2026-07-11 22:45`
+- `lastGate: 2026-07-11 23:00`
 - `judgedClasses: unnormalized_gate, self_report_as_truth, config_side_effect, observability, path_escape, executor-orchestration`
 
 ## HS-01 `gate-clean` — 트리 clean을 정규화 내용 해시로 판정 (하네스)
@@ -376,3 +376,15 @@ FAIL-005는 "실행 중인가"를 StartTime으로, FAIL-010은 "깨끗한가"를
 - score: 11/12 existing-extension/immediate. Repetition=2 (initial FAIL plus 22:30 repro), decidability=2, injection=2 (missing projectId), isolation=2 (GET only), observability=2, maintenance value=1 (API edge regression, not every loop gate).
 - proof: `dotnet build server -c Release` exit 0; `dotnet run --project server -c Release --no-build -- project-api-edge-check http://127.0.0.1:5173` exit 1 with `failureCount=4` on the current bug; `build-verify` exit 0.
 - next candidates: sonnet fix request for `FAIL-2026-009`; after fix, `project-api-edge-check` should exit 0.
+
+## 2026-07-11 23:00 codex hs-scan follow-up / FIX-07 review
+
+- actor: codex
+- command: `dotnet run --project server -c Release --no-build -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidate=`executor-orchestration(6)`.
+- data-existence gate: PASS. The emitted candidate is the same already-judged broad executor-orchestration class, so no new promotion was made this cycle.
+- completed this cycle: FIX-07 first-pass review. Report output: `docs/qa/review-fix07-appjs-long-functions.md`.
+- proof: `dotnet build server -c Release` exit 0; `verify-behavior` exit 0 with `behaviorEqual=true`; `measure dev-pack` exit 0 with `violationCount=0`; `build-verify` exit 0 with `verdict=PASS`.
+- note: `claim-check FIX-07` exit 0 but `claimCount=0`, so dashboard function-length claims were verified through `measure` evidence rather than claim parsing.
+- next candidates: project-api-edge-check after `FAIL-2026-009` fix, 신규 sonnet 커밋 QA, `hs-scan` component split proposal.
