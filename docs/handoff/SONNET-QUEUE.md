@@ -8,8 +8,9 @@
 | --- | --- | --- | --- | --- |
 | 1 | FIX-01 경로검증 separator-bounded | directive-FIX01-path-validation.md | server/ | 진행(rec10) |
 | 2 | FIX-02 measure outbox 스캔 제외 | directive-FIX02-measure-scope.md | server/ | 대기 |
-| 3 | FEAT-01 한정 이양(게이트 클린 반입 AI 승인) | directive-FEAT01-conditional-delegation.md | server/ | 대기 |
-| 4 | (추후 검수자가 추가) | — | — | — |
+| 3 | FEAT-02 E2E 실사용 하네스 내재화 (dotnet -- e2e-usage) | directive-FEAT02-e2e-harness.md | server/ | 대기 |
+| 4 | FEAT-01 한정 이양(게이트 클린 반입 AI 승인) | directive-FEAT01-conditional-delegation.md | server/ | 대기 |
+| 5 | (추후 검수자가 추가) | — | — | — |
 
 ## 자동 발사 규칙 (조율자용)
 
