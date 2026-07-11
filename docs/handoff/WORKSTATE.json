@@ -1,12 +1,23 @@
 {
   "schemaVersion": "v9-min",
-  "phaseId": "FIX-06",
-  "wpId": "FIX-06",
-  "diId": "FIX-06",
+  "phaseId": "FIX-07",
+  "wpId": "FIX-07",
+  "diId": "FIX-07",
   "status": "done",
   "updatedBy": "claude-sonnet-4-6",
   "updatedAt": "2026-07-11",
   "history": [
+    {
+      "diId": "FIX-06",
+      "changedFiles": [
+        {"path": "server/Tier2Approver.cs"},
+        {"path": "server/OutboxManager.cs"},
+        {"path": "server/Program.cs"},
+        {"path": "server/Engine.cs"},
+        {"path": "docs/verification/fix06-server-long-functions.md"},
+        {"path": "docs/directives/FIX06-server-long-functions.md"}
+      ]
+    },
     {
       "diId": "DI-R-01",
       "changedFiles": [
@@ -77,24 +88,19 @@
     }
   ],
   "changedFiles": [
-    {"path": "server/Tier2Approver.cs", "note": "MaybeAutoApprove 클러스터(101줄→71줄). ApplyImportAndRecord 헬퍼 추출."},
-    {"path": "server/OutboxManager.cs", "note": "DispatchAsync(99줄→73줄). AttachExecutionMeta·WriteDispatchFiles 헬퍼 추출."},
-    {"path": "server/Program.cs", "note": "Approve(93줄→72줄). ComputeNextStagePatch 헬퍼 추출."},
-    {"path": "server/Engine.cs", "note": "ApplyStatePatch(92줄→65줄). ApplyStageStatuses·ApplyBlockInfo 헬퍼 추출."},
-    {"path": "docs/verification/fix06-server-long-functions.md", "note": "FIX-06 검증 문서 신규."},
-    {"path": "docs/directives/FIX06-server-long-functions.md", "note": "지시서 보관."}
+    {"path": "dashboard/app.js", "note": "renderImportPendingItem(81→80줄), renderProposalChange(86→80줄), renderStageDetail(99→80줄). appendStageMetricsSection 헬퍼 추출. 총 2692→2688줄."},
+    {"path": "docs/verification/fix07-appjs-long-functions.md", "note": "FIX-07 검증 문서 신규."},
+    {"path": "docs/directives/FIX07-appjs-long-functions.md", "note": "지시서 보관."}
   ],
   "tests": {
     "behaviorEqual": true,
     "buildVerifyVerdict": "PASS",
     "buildVerifyExit": 0,
     "measureViolationsBefore": 1,
-    "measureViolationsAfter": 1,
-    "measureNote": "server/ 4건 해소. 잔여 위반: dashboard/app.js:751-849(99줄) — FIX-07 담당",
+    "measureViolationsAfter": 0,
+    "measureNote": "maxFunctionLength=80, appJsLines=2688, functionsWithoutComment=0. violationCount=0 달성.",
     "verifyBehaviorExit": 0
   },
-  "nextActions": [
-    "FIX-07: dashboard/app.js 장문 함수 3건 분할 (maxFunctionLength=99, app.js:751-849)"
-  ],
-  "notes": "FIX-06 완료: server/ 4건(101·99·93·92줄) 모두 80줄 이하로 분할. verify-behavior exit 0, build-verify PASS. functionsWithoutComment=0 유지. 잔여: app.js:751-849(99줄)=FIX-07. 직접 경로 사유: docs/verification/* allowlist 포함."
+  "nextActions": [],
+  "notes": "FIX-07 완료: dashboard/app.js 장문 함수 3건 모두 80줄 이하 달성. appendStageMetricsSection 헬퍼 추출, 빈 줄 최소화로 2692 상한 내 유지(2688줄). measure violationCount=0. 직접 경로 사유: allowlist 포함 파일(docs/verification/*, docs/directives/*, docs/handoff/WORKSTATE.json)."
 }

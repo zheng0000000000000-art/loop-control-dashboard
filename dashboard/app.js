@@ -534,7 +534,6 @@ function renderInboxItem(item) {
 // 반입 대기 항목을 diff·승인·거절 버튼과 함께 렌더링한다.
 function renderImportPendingItem(item) {
   const container = createElement("div", { className: "inbox-item inbox-import-item" });
-
   const info = createElement("div", { className: "inbox-import-info" });
   info.append(
     createElement("strong", { text: item.projectName ?? item.projectId }),
@@ -747,6 +746,28 @@ function renderGateList(stage) {
   return list;
 }
 
+// 단계 메트릭 섹션을 생성해 상세 패널에 추가한다.
+function appendStageMetricsSection(metrics) {
+  if (metrics.length === 0) {
+    return;
+  }
+  const metricSection = createElement("section");
+  metricSection.append(createElement("p", { className: "section-label", text: t("detail.metrics") }));
+  const metricList = createElement("ul", { className: "metric-list" });
+  metricList.append(
+    ...metrics.map((metric) => {
+      const item = createElement("li", { className: "metric-item" });
+      item.append(
+        createElement("p", { className: "metric-value", text: metric.value }),
+        createElement("p", { className: "metric-label", text: metric.label }),
+      );
+      return item;
+    }),
+  );
+  metricSection.append(metricList);
+  elements.stageDetail.append(metricSection);
+}
+
 // 선택된 단계 상세 패널을 렌더링한다.
 function renderStageDetail() {
   const stage = getStage(definition, selectedStageId) ?? getStage(definition, workflowState.currentStage);
@@ -814,29 +835,10 @@ function renderStageDetail() {
     }),
   );
 
-  const metrics = details.metrics ?? [];
-  if (metrics.length > 0) {
-    const metricSection = createElement("section");
-    metricSection.append(createElement("p", { className: "section-label", text: t("detail.metrics") }));
-    const metricList = createElement("ul", { className: "metric-list" });
-    metricList.append(
-      ...metrics.map((metric) => {
-        const item = createElement("li", { className: "metric-item" });
-        item.append(
-          createElement("p", { className: "metric-value", text: metric.value }),
-          createElement("p", { className: "metric-label", text: metric.label }),
-        );
-        return item;
-      }),
-    );
-    metricSection.append(metricList);
-    elements.stageDetail.append(metricSection);
-  }
-
+  appendStageMetricsSection(details.metrics ?? []);
   const issues = details.issues ?? [];
   const issueSection = createElement("section");
   issueSection.append(createElement("p", { className: "section-label", text: t("detail.issues") }));
-
   if (issues.length === 0) {
     issueSection.append(createElement("p", { className: "empty-state", text: t("detail.noActiveIssues") }));
   } else {
@@ -1071,7 +1073,6 @@ function renderPredictedMetrics(predictedMetrics) {
 function renderProposalChange(rawChange, index, canEditProposal) {
   const change = normalizeChange(rawChange, index);
   const item = createElement("li", { className: "change-item change-diff" });
-
   if (editingChangeIndex === index) {
     const path = createElement("p", { className: "change-path", text: change.path });
     const before = createElement("p", {
@@ -1094,7 +1095,6 @@ function renderProposalChange(rawChange, index, canEditProposal) {
     });
     afterInput.value = formatEditableValue(change.after);
     noteInput.value = change.note ?? "";
-
     const saveButton = createElement("button", {
       className: "button button-compact",
       text: t("buttons.save"),
@@ -1114,25 +1114,21 @@ function renderProposalChange(rawChange, index, canEditProposal) {
       editingChangeIndex = null;
       render();
     });
-
     actions.append(saveButton, cancelButton);
     item.append(path, before, afterInput, noteInput, actions);
     return item;
   }
-
   const header = createElement("div", { className: "change-diff-header" });
   header.append(
     createElement("span", { className: "change-path", text: change.path }),
     createElement("span", { className: "change-delta", text: formatDelta(change.before, change.after) }),
   );
-
   const values = createElement("div", { className: "diff-values" });
   values.append(
     createElement("span", { className: "diff-before", text: formatValue(change.before) }),
     createElement("span", { className: "diff-arrow", text: "->" }),
     createElement("span", { className: "diff-after", text: formatValue(change.after) }),
   );
-
   item.append(
     header,
     values,
