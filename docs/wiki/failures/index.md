@@ -11,3 +11,4 @@
 | [FAIL-2026-007](cases/FAIL-2026-007-outbox-read-prefix-escape.md) | outbox 조회가 encoded backslash로 sibling 디렉터리를 읽음 | 해결됨 | path_escape, design_learning | outbox-read |
 | [FAIL-2026-008](cases/FAIL-2026-008-dispatch-self-refactor-template-stale.md) | self-refactor dispatch 템플릿이 현행 코드와 어긋나 빌드 실패 | 확인됨 | stale_template, design_learning | dispatch-executor, executor-orchestration |
 | [FAIL-2026-009](cases/FAIL-2026-009-missing-project-api-returns-500.md) | 없는 projectId 조회가 4xx 대신 500을 반환 | 확인됨 | error_handling, design_learning | project-api-read |
+| [FAIL-2026-010](cases/FAIL-2026-010-crlf-gate-deadlock.md) | 줄바꿈 표현 차이가 발사 게이트를 영구 잠금(큐 정지) | 해결됨 | unnormalized_gate, config_side_effect, design_learning | executor-orchestration, gate-evaluation |

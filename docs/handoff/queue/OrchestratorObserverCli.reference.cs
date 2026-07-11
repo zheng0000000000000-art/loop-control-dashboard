@@ -10,8 +10,12 @@
 //  - 발사↔완료를 task ID로 결속: 진행 항목의 커밋이 로그에 존재하는지 검증.
 //  - 상태 정합: 큐 상태 ↔ git ↔ WORKSTATE diId ↔ outbox pending 교차 확인.
 //  - 부작용 0: Process.Start(실행자) 금지, git commit 금지, approve 금지.
+//  - clean 판정은 raw git status가 아니라 정규화 내용 해시로 한다(FAIL-2026-010).
+//    HARNESS-01(gate-clean)이 서면 이 인라인 폴백을 그 CLI 호출로 교체한다.
 
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -33,7 +37,8 @@ internal static class OrchestratorObserverCli
             var repoRoot = FindRepoRoot();
 
             var queue = ParseSonnetQueue(Path.Combine(repoRoot, "docs", "handoff", "SONNET-QUEUE.md"));
-            var serverClean = IsServerTreeClean(repoRoot);
+            var clean = EvaluateTreeClean(repoRoot, "server");   // 정규화 내용 해시 판정(FAIL-010)
+            var serverClean = clean.ContentDirty == 0;
             var executorRunning = IsExecutorRunning(repoRoot);
             var pendingImports = CountImportPending(Path.Combine(repoRoot, "outbox"));
             var currentDiId = ReadWorkstateDiId(Path.Combine(repoRoot, "docs", "handoff", "WORKSTATE.json"));
@@ -43,7 +48,7 @@ internal static class OrchestratorObserverCli
             var nextWaiting = queue.FirstOrDefault(q => q.Status == "대기");
 
             var blockers = new JsonArray();
-            if (!serverClean) blockers.Add("server/ 작업트리 dirty");
+            if (!serverClean) blockers.Add($"server/ 실내용 변경 {clean.ContentDirty}건");
             if (executorRunning) blockers.Add("실행 중 executor(PID 파일 존재)");
             if (inProgress is not null) blockers.Add($"진행 항목 미완결: {inProgress.Di}");
             if (nextWaiting is null) blockers.Add("대기 항목 없음(큐 소진 또는 없음)");
@@ -62,6 +67,10 @@ internal static class OrchestratorObserverCli
                 ["observedAt"] = DateTimeOffset.Now.ToString("o"),
                 ["mode"] = "observe-only",   // 이 빌드는 절대 발사/커밋/결재하지 않음
                 ["serverTreeClean"] = serverClean,
+                ["representationOnlyCount"] = clean.RepresentationOnly,   // 표현차(CRLF/BOM) — 게이트를 막지 않음
+                ["hygieneWarning"] = clean.RepresentationOnly > 0
+                    ? "표현만 다른 파일 존재 — 어떤 도구가 파일을 되쓰고 있다(FAIL-2026-010)."
+                    : null,
                 ["executorRunning"] = executorRunning,
                 ["importPendingCount"] = pendingImports,
                 ["workstateDiId"] = currentDiId,
@@ -111,8 +120,64 @@ internal static class OrchestratorObserverCli
         return items;
     }
 
-    private static bool IsServerTreeClean(string repoRoot)
-        => RunGit(repoRoot, "status --porcelain -- server")?.Trim().Length == 0;
+    // 트리 clean 판정. raw git status는 줄바꿈 같은 '표현 차이'만으로도 dirty가 되어
+    // 게이트를 영구 잠근다(FAIL-2026-010). 그래서 gate-clean 하네스에 위임한다.
+    // HARNESS-01이 서기 전까지는 아래 폴백이 같은 정규화를 인라인으로 수행한다.
+    private static CleanVerdict EvaluateTreeClean(string repoRoot, string path)
+    {
+        var porcelain = RunGit(repoRoot, $"status --porcelain -- {path}") ?? "";
+        int contentDirty = 0, representationOnly = 0;
+
+        foreach (var line in porcelain.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var status = line.Length >= 2 ? line[..2] : "??";
+            var file = line.Length > 3 ? line[3..].Trim().Trim('"') : "";
+            if (file.Length == 0) continue;
+
+            // 미추적·삭제는 표현차가 아니라 실변경으로 본다.
+            if (status.Contains('?') || status.Contains('D')) { contentDirty++; continue; }
+
+            var head = RunGitBytes(repoRoot, $"show HEAD:{file}");
+            var full = Path.Combine(repoRoot, file);
+            if (head is null || !File.Exists(full)) { contentDirty++; continue; }
+
+            if (NormalizedHash(head) == NormalizedHash(File.ReadAllBytes(full)))
+                representationOnly++;   // 내용 동일, 바이트만 다름 → 게이트 통과
+            else
+                contentDirty++;
+        }
+        return new CleanVerdict(contentDirty, representationOnly);
+    }
+
+    // 표현 정규화: BOM 제거 → CRLF/CR을 LF로 → 줄 후행공백 제거 → 끝 개행 통일.
+    private static string NormalizedHash(byte[] raw)
+    {
+        var b = raw.Length >= 3 && raw[0] == 0xEF && raw[1] == 0xBB && raw[2] == 0xBF ? raw[3..] : raw;
+        var text = new UTF8Encoding(false).GetString(b).Replace("\r\n", "\n").Replace('\r', '\n');
+        var norm = string.Join("\n", text.Split('\n').Select(l => l.TrimEnd(' ', '\t'))).TrimEnd('\n') + "\n";
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(norm)));
+    }
+
+    private static byte[]? RunGitBytes(string repoRoot, string arguments)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("git", arguments)
+            {
+                WorkingDirectory = repoRoot, RedirectStandardOutput = true,
+                RedirectStandardError = true, UseShellExecute = false,
+            };
+            using var p = Process.Start(psi);
+            if (p is null) return null;
+            using var ms = new MemoryStream();
+            p.StandardOutput.BaseStream.CopyTo(ms);
+            p.WaitForExit(10000);
+            return p.ExitCode == 0 ? ms.ToArray() : null;
+        }
+        catch { return null; }
+    }
+
+    private sealed record CleanVerdict(int ContentDirty, int RepresentationOnly);
 
     // 실행 감지: PID 파일 존재로 판정(잠정). StartTime 기반 감지는 금지(I-1 교훈).
     private static bool IsExecutorRunning(string repoRoot)

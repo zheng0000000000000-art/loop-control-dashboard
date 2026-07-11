@@ -8,3 +8,4 @@
 | [FAIL-2026-006](../cases/FAIL-2026-006-storage-project-path-prefix-escape.md) | Storage 프로젝트 경로가 sibling prefix 디렉터리를 통과시킴 | 해결됨 | storage-project-path |
 | [FAIL-2026-007](../cases/FAIL-2026-007-outbox-read-prefix-escape.md) | outbox 조회가 encoded backslash로 sibling 디렉터리를 읽음 | 해결됨 | outbox-read |
 | [FAIL-2026-008](../cases/FAIL-2026-008-dispatch-self-refactor-template-stale.md) | self-refactor dispatch 템플릿이 현행 코드와 어긋나 빌드 실패 | 확인됨 | dispatch-executor, executor-orchestration |
+| [FAIL-2026-010](../cases/FAIL-2026-010-crlf-gate-deadlock.md) | 줄바꿈 표현 차이가 발사 게이트를 영구 잠금 | 해결됨 | executor-orchestration, gate-evaluation |

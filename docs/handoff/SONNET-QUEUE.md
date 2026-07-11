@@ -11,11 +11,12 @@
 | 3 | FEAT-02 E2E 실사용 하네스 내재화 (dotnet -- e2e-usage) | directive-FEAT02-e2e-harness.md | server/ | 대기 |
 | 4 | FEAT-01 한정 이양(게이트 클린 반입 AI 승인) | directive-FEAT01-conditional-delegation.md | server/ | 대기 |
 | 5 | ORCH-01 오케스트레이터 관측 스캐폴드 (dotnet -- orch-observe) | queue/directive-ORCH01-observer.md (+참조 queue/OrchestratorObserverCli.reference.cs) | server/ | 대기 — 관측 전용(발사·커밋·결재 없음), 비전문서 1단계 코드화 |
-| 6 | (추후 검수자가 추가) | — | — | — |
+| 6 | HARNESS-01 gate-clean (트리 clean을 정규화 내용 해시로 판정) | queue/directive-HARNESS01-gate-clean.md (+참조 queue/GateCleanCli.reference.cs) | server/ | 대기 — HS-GATE 12/12 즉시제작. FAIL-010 회귀 하네스 |
+| 7 | (추후 검수자가 추가) | — | — | — |
 
 ## 자동 발사 규칙 (조율자용)
 
-1. **발사 조건 전부 충족 시에만**: ①`git status` server/ clean(진행 중 sonnet 없음) ②실행 중 sonnet 프로세스 없음(newest claude가 5분 이상 전 or 로그 완료) ③현재 `진행` 항목의 커밋이 로그에 존재(완료 확인) ④다음 `대기` 항목 존재.
+1. **발사 조건 전부 충족 시에만**: ①server/ clean — **raw `git status`로 판정하지 말 것**(줄바꿈 같은 표현 차이만으로 dirty가 되어 게이트가 영구 잠긴다: FAIL-2026-010). HARNESS-01(`dotnet run -- gate-clean server`) exit 0으로 판정한다. 그 하네스가 서기 전까지는 `git diff --ignore-all-space`가 비었는지로 대신 확인한다. ②실행 중 sonnet 프로세스 없음(newest claude가 5분 이상 전 or 로그 완료) ③현재 `진행` 항목의 커밋이 로그에 존재(완료 확인) ④다음 `대기` 항목 존재.
 2. 발사: 해당 지시서 경로로 sonnet 헤드리스 실행(FAIL-005 방식: 프롬프트 인자 직접 전달 + RedirectStandardOutput + PID 확인). 발사 후 그 항목 상태를 `진행`으로 기록(review-log).
 3. **순차 엄수**: 이미 `진행` 항목이 있으면 새로 발사하지 않는다(동시 발사 = FAIL-004 재발).
 4. 큐가 모두 `완료`면 "구현 큐 소진 — 대기" 기록. 검토 루프(코덱스·조율자)는 계속.
