@@ -5,7 +5,7 @@
 > **판정 주체는 코덱스**(파이프라인 1단계). 검수자가 올린 후보는 `코덱스 확정 대기`로 표시하고, 코덱스가 HS-GATE 회차에 확정한다.
 
 <!-- hs-scan 이 읽는 메타. HS-GATE 수행 시 갱신할 것. -->
-- `lastGate: 2026-07-11 21:15`
+- `lastGate: 2026-07-11 21:30`
 - `judgedClasses: unnormalized_gate, self_report_as_truth, config_side_effect, observability, path_escape, executor-orchestration`
 
 ## HS-01 `gate-clean` — 트리 clean을 정규화 내용 해시로 판정 (하네스)
@@ -308,3 +308,14 @@ FAIL-005는 "실행 중인가"를 StartTime으로, FAIL-010은 "깨끗한가"를
 - fixed this cycle: H-3 `template-sync-check`. Score: existing template-sync candidate now implemented. The harness copies the needed workspace subset to temp, runs `dispatch-executor claude-code "Program.cs Orchestrator.cs ProposalFlow.cs"`, then builds the temp server with Release and uses exit code as the source of truth.
 - post-fix proof: default mode exit 0 with `dispatchExitCode=0`, `buildExitCode=0`; missing-template injection exit 1 with `dispatchExitCode=1`.
 - next candidates remain: H-4 `path-escape-qa` skill, H-5 inherited harness review.
+
+## 2026-07-11 21:30 codex hs-scan follow-up / H-4 path-escape-qa skill
+
+- actor: codex
+- command: `dotnet run --project server -c Release -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidate=`executor-orchestration(6)`.
+- data-existence gate: PASS. `FAIL-2026-006`, `FAIL-2026-007`, and `docs/qa/path-escape-repro-2026-07-10.md` contain concrete sibling-prefix and encoded-backslash evidence.
+- fixed this cycle: H-4 `path-escape-qa` skill. Score: existing `path_escape` skill candidate now implemented as `skills/domains/dev/path-escape-qa.md`.
+- post-fix proof: skill file created with trigger metadata, static checks, required cases, `path-guard-check` commands, dynamic PoC safety rules, and reporting format.
+- next candidates remain: H-5 inherited harness review, 검수 위임 시범, 신규 sonnet 커밋 QA.
