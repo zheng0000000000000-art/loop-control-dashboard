@@ -566,3 +566,64 @@
 - QUOTA_SIGNAL: 미관측.
 
 <run-summary>HOOK-01은 이미 커밋(2e28f7a)돼 있었고 gate-clean/doc-integrity/claim-check 3개 하네스로 실체를 재검증(전부 PASS/MATCH) — 큐 표를 "진행"→"완료"로 갱신해 로컬 커밋. 신규 server/docs 변경 없음. sonnet 미실행, 다음 대기 항목(FEAT-01)은 기존 안전보류 유지, push 대기 2건은 사람 배치 승인 필요.</run-summary>
+
+## 조율자 2026-07-11 18:55
+
+- 경로 규칙 준수: 저장소 정본만 열람(세션 outputs 사본 미사용).
+- 안정성 게이트: git status --short — 18:51 회차와 동일 상태(dashboard/data/dev-pack 5건(커밋 제외)·outputs/probe·log류·sonnet-active.pid·신규 docs/handoff/sessions/SESSION-2026-07-11-codex-032.md(코덱스 산출물, 조율자 커밋 범위 밖) 미커밋). 해시 안정 확인(직전 회차와 동일 파일셋, 4분 경과).
+- 하네스 재확인: gate-clean server exit 0(contentDirtyCount 0, PASS) / doc-integrity exit 0(12/12 intact). server/*.cs, docs/qa, docs/wiki 신규 변경 없음 → 커밋 대상 없음.
+- 이번 회차: **변경 없음** — server/docs/qa/docs/wiki 전부 18:51 회차와 동일. 빈 커밋 금지 원칙에 따라 커밋 생략.
+- 발사(사람 게이트, 조율자는 발사 안 함): sonnet-active.pid=25676, 프로세스 없음(사망, 재확인). server clean + 다음 대기 항목(#4 FEAT-01) 존재하나 기존 HUMAN-INBOX 안전보류(무인 결재 이양 성격) 유지 — 신규 판단 아님. **발사 대기: FEAT-01(안전보류) / 대안 #5 ORCH-01(저위험, 대기) — 사람 승인 후 발사.**
+- push: git log origin/main..HEAD --oneline 3건. **push 대기: 3건 — 사람 배치 승인 필요.**
+- HUMAN-INBOX: 신규 판단 사안 없음(기존 항목 — WORKSTATE.json/FEAT-01 불일치, HUMAN-INBOX 동시쓰기 손상, ACTOR-01 결재대기 등 — 변동 없어 재기재 생략, 중복 방지).
+- QUOTA_SIGNAL: 미관측.
+
+<run-summary>18:51 회차 이후 4분간 저장소 상태 무변화 확인(gate-clean PASS, doc-integrity 12/12 intact, server/docs/qa/wiki 신규 커밋 대상 없음) — 이번 회차 커밋 없음(빈 커밋 금지). sonnet 미실행(PID 25676 사망), 다음 대기 FEAT-01은 기존 안전보류 유지, push 대기 3건은 사람 배치 승인 필요, HUMAN-INBOX 신규 항목 없음, QUOTA_SIGNAL 없음.</run-summary>
+
+## 조율자 2026-07-11 18:58
+
+- 경로 규칙 준수: 저장소 정본만 열람(세션 outputs 사본 미사용).
+- 안정성 게이트: git status --short 5초 간격 2회 비교 → 동일(dashboard/data/dev-pack/*.json 5건(커밋 제외 대상)·outputs/probe*·sonnet-HOOK01-r2~r5*·sonnet-active.pid만 미커밋, 전부 커밋 대상 아님). 신규 docs/handoff/sessions/SESSION-2026-07-11-codex-032.md는 18:55 회차와 동일 파일(코덱스 산출물, 조율자 커밋 범위 밖).
+- 하네스 판정(exit code 기준):
+  - build(server, Release): exit 0, 경고 0/오류 0.
+  - gate-clean server: exit 0, contentDirtyCount 0, PASS.
+  - doc-integrity: exit 0, 12/12 intact.
+  - claim-check HOOK-01: exit 0, claimCount 2, mismatchCount 0, MATCH.
+  - measure dev-pack: exit 1(warning, violationCount 4) — dev-pack 데이터 갱신용 산출물이며 dashboard/data는 커밋 제외 대상이라 이번 회차 커밋 판단에 영향 없음.
+- server/: 미커밋 *.cs 없음 → 검수·커밋 대상 없음.
+- docs/qa·docs/wiki: 변경 없음 → 스킵.
+- 이번 회차: **변경 없음** — server/docs/qa/wiki 전부 18:55 회차와 동일. 빈 커밋 금지 원칙에 따라 커밋 생략(review-log만 갱신, 다음 실변경 회차에 동반 커밋).
+- 발사(사람 게이트, 조율자는 발사 안 함): sonnet-active.pid=25676 재확인 결과 프로세스 없음(사망) → 실행 중 sonnet 없음. server clean(gate-clean PASS) + 이전 진행항목(HOOK-01) 커밋 확인됨 + 큐상 다음 "대기"는 #4 FEAT-01. 기존 HUMAN-INBOX 안전보류(무인 결재 이양 성격) 유지 — 신규 판단 아님. **발사 대기: FEAT-01(안전보류) / 대안 #5 ORCH-01(저위험, 대기) — 사람 승인 후 발사.**
+- push: git log origin/main..HEAD --oneline 4건(최신 f5615a4 — 검수자 세션이 인수인계 커밋을 새로 추가함, 조율자 조치 아님). **push 대기: 4건 — 사람 배치 승인 필요.**
+- HUMAN-INBOX: 신규 판단 사안 없음(기존 항목 변동 없음, 재기재 생략 — 중복 방지).
+- QUOTA_SIGNAL: 미관측.
+
+<run-summary>18:55 회차 이후 server/docs/qa/wiki 신규 변경 없음(gate-clean PASS, doc-integrity 12/12 intact, claim-check HOOK-01 MATCH, build exit 0) — 이번 회차 커밋 없음(빈 커밋 금지). 검수자 세션이 인수인계 커밋(f5615a4)을 추가해 push 대기가 3건→4건으로 늘었으나 이는 조율자 조치가 아님. sonnet 미실행(PID 25676 사망), 다음 대기 FEAT-01은 기존 안전보류 유지, HUMAN-INBOX 신규 항목 없음, QUOTA_SIGNAL 없음.</run-summary>
+
+## 2026-07-11 19:00 — 검수자 세션: ORCH-01 발사 (사람 승인)
+
+- 주체(actor): 검수자 세션(Claude, 대화 중). 실행자: sonnet 헤드리스 PID 11060, 로그 outputs/sonnet-ORCH01.*.log.
+- 발사 전 게이트(전부 하네스 실측): build exit 0 / gate-clean server exit 0(contentDirty 0, PASS) / doc-integrity exit 0 / server clean / 실행 중 sonnet 없음(stale pid 25676 사망) / 다음 대기 = #5 ORCH-01.
+- **발사 전 수리**: 지시서가 참조하는 스캐폴드 docs/handoff/queue/OrchestratorObserverCli.reference.cs 가 **저장소에 없었다**. 커밋 797e7bc(docs/qa 검수기록)가 삭제했고, STATUS.md는 "참조 .cs 준비됨"으로 낡아 있었다. 797e7bc^ 에서 복구(11854B) 후 발사. 없는 입력으로 발사하면 실행자가 알아서 딴 일을 한다(FAIL-2026-013 동형).
+- 발사 방식(executor-launch 스킬 준수): 단일 인용 argline(-p "...") + 프롬프트 한 줄 + ACK-ORCH-01 에코백 지시 + RedirectStandardOutput + PID 파일. claude -p 는 완료 시 stdout 일괄 출력이라 ACK는 종료 후 검증한다 — **ACK 없으면 산출물 폐기.**
+- 발사 후 관측: PID 생존·CPU 누적, server/OrchestratorObserverCli.cs 신규 + server/Cli/CliRouter.cs 수정 — 지시서 allowlist 범위 안(범위 대조는 완료 후 재실행).
+- 미해결(사람 결재 대기, 대행 안 함): push 4건 / outbox 반입 3건 / ACTOR-01 / FEAT-01 / outputs/quarantine 처리. 문서 정정 대기: measure 위반 = 4(여러 문서가 3으로 표기).
+
+
+## 조율자 2026-07-11 19:05
+
+- 경로 규칙 준수: 저장소 정본만 열람(세션 outputs 사본 미사용).
+- 안정성 게이트: git status --short 5초 간격 2회 해시 비교 - dashboard/data/dev-pack/*.json 5건(커밋 제외 대상)만 변동, server/Cli/CliRouter.cs·server/OrchestratorObserverCli.cs는 두 시점 사이 해시 동일(안정) - 단, ORCH-01 sonnet(PID 11060)이 아직 살아있어 이후 더 바뀔 수 있음.
+- 배경: 19:00 검수자 세션이 사람 승인 하에 ORCH-01(오케스트레이터 관측 스캐폴드, dotnet -- orch-observe)을 발사(PID 11060, outputs/sonnet-ORCH01.*.log). 이번 회차는 그 진행 상태만 관측.
+- sonnet 실행 상태: PID 11060 생존 확인(시작 18:59:51, CPU 누적 3.5s+, 약 5분 경과). outputs/sonnet-ORCH01.out.log·err.log 둘 다 아직 0바이트(claude -p는 완료 시 일괄 출력이므로 정상 - 미완료로 판단, ACK-ORCH-01 미확인).
+- 하네스 판정(exit code 기준):
+  - gate-clean server: exit 1, contentDirtyCount 2(server/Cli/CliRouter.cs 진짜 변경, server/OrchestratorObserverCli.cs 미추적 신규) - FAIL. ORCH-01 작업 중이므로 예상된 결과.
+  - doc-integrity: exit 0, 전 문서 intact - PASS.
+- server/: 커밋 안 함. 사유 - 실행 중인 sonnet(PID 11060)의 미완료 산출물이며 ACK-ORCH-01 종료 후 검증(발사 프로토콜 4원칙 ③④) 전이므로 이번 회차는 판정 보류. gate-clean도 FAIL(예상됨)이라 어차피 커밋 조건 미충족.
+- docs/qa·docs/wiki: 변경 없음 -> 스킵.
+- 발사(사람 게이트, 조율자는 발사 안 함): 이미 ORCH-01 실행 중이므로 신규 발사 대상 없음(순차 엄수 원칙 - 진행 항목 있으면 새로 발사 금지).
+- push: git log origin/main..HEAD --oneline 4건. **push 대기: 4건 - 사람 배치 승인 필요.**
+- HUMAN-INBOX: 신규 판단 사안 없음(ORCH-01 발사는 19:00 검수자 세션이 이미 등재·기록함, 중복 미기재).
+- QUOTA_SIGNAL: 미관측(로그 비어있어 확인 불가, 다음 회차에 재확인).
+
+<run-summary>19:00 검수자 세션이 사람 승인으로 발사한 ORCH-01 sonnet(PID 11060)이 아직 실행 중(로그 0바이트, ACK 미확인) - 이번 회차는 판정 보류, 커밋 없음. gate-clean은 진행 중인 변경으로 예상대로 FAIL(exit1), doc-integrity는 PASS(exit0). push 대기 4건 변동 없음, HUMAN-INBOX 신규 항목 없음, QUOTA_SIGNAL 미관측.</run-summary>
