@@ -1301,3 +1301,40 @@
 - **QUOTA_SIGNAL**: outputs/sonnet-HOOK01.out.log에서 과거 잔존 신호 1건 발견("You've hit your limit - resets 5:40pm") - 그러나 HOOK-01은 이미 완료.커밋됨(2e28f7a, 재시도 후 성공)이 SONNET-QUEUE에 기록되어 있어 과거 재시도 잔여 로그로 판단, 현재 진행 중인 신규 신호 아님. 이번 회차 활성 실행자(LEDGER-01, PID 20896) 로그는 아직 빈 상태라 QUOTA_SIGNAL 여부 판단 불가(다음 회차 재확인 필요).
 
 <run-summary>이번 회차엔 server/ 코드 변경이 없어(gate-clean PASS 0건) server 레인 커밋은 없음. 문서 레인에서 ADR-007(주체별 세션 수명 정책, 이미 사람 승인됨) 반입 + REVIEWER-HANDOFF/CLAUDE.md 갱신을 커밋(6ec9093), 그리고 회차 중 새로 등장한 LEDGER-01 지시서를 doc-integrity 통과 후 커밋했다(0ab7021) - 단 이 지시서가 근거로 인용한 ADR-006은 아직 "사람 승인 대기" 상태라 서두 문구와 불일치함을 발견해 그대로 기록만 했다(판단 대행 안 함). 가장 중요한 관측: 회차 도중 조율자가 발사하지 않은 LEDGER-01 sonnet 실행자(PID 20896, claude.exe)가 새로 생존 상태로 나타났다 - 외부 주체(추정, 미확정) 발사로 보이며 조율자는 관여하지 않았다. dev-pack 런타임 json 5종.docs/plan/.DECISION-BRIEF.reviewer-log는 레인/소유권 규칙에 따라 미커밋 유지. 기준 파일.HUMAN-INBOX 변경 없음. push 대기 11건(사람 배치 승인 필요), git push.sonnet 발사 이번 회차에도 하지 않음.</run-summary>
+## 조율자 2026-07-12 00:01
+
+- **0단계 안정성**: 미스테이징 파일 5초 간격 2회(Get-FileHash) 비교 → 전부 STABLE. 단, 안정성 확인 **이후** `server/Tier2Approver.cs`가 새로 dirty로 전환됨(활성 실행자의 실시간 수정 — 아래 참조). 그 외 파일은 회차 내내 안정.
+- **하네스 판정**:
+  - `doc-integrity` exit0 — 핵심 문서 전부 INTACT.
+  - `gate-clean server` exit1 — **contentDirtyCount=3**: `server/OllamaExecutor.cs`·`server/OllamaReviewer.cs`·`server/Tier2Approver.cs`. 전부 `docs/handoff/queue/directive-LEDGER01-token-ledger.md`의 `## 허용 파일 (allowlist)` 안(Tier2Approver.cs 포함 확인됨). `git diff`로 Tier2Approver.cs 변경 내용 직접 확인: `ReviewOutcome`에 `InputTokens`/`OutputTokens` 필드 추가 + ollama 응답의 `prompt_eval_count`/`eval_count` 파싱 — LEDGER-01 목적과 정확히 일치, FEAT-01류 무단 기능 아님(주석·필드명 실체 대조 완료).
+  - **실행자 생존**: `outputs/sonnet-active.pid`=20896, `Get-Process -Id 20896` → ALIVE(claude, StartTime 23:50:24). SONNET-QUEUE #20 LEDGER-01 = 진행 중. **미완료 판단 → server 레인 커밋하지 않음**(build/verify-behavior/measure/claim-check 실행 보류 — 작업 중인 파일에 대한 검수는 무의미).
+- **문서 커밋(로컬 전용, 레인: 문서·큐·정책)**:
+  - `a617854` — `docs/handoff/SONNET-QUEUE.md`(#20 LEDGER-01 진행 상태 + PID 기록, #21 신규 빈 행), `docs/handoff/REVIEWER-HANDOFF.md`(LEDGER-01 발사 반영·자기보고 불신 원칙 명시), `docs/handoff/decisions/ADR-006-resource-ledger-p0.md`(상태: 승인 대기 → **승인됨**, 실측 정정 664→938건). doc-integrity exit0 확인 후 커밋, 코드 미혼입 확인(diff 직접 열람).
+  - **이전 회차 관측 해소**: 0ab7021 커밋 당시 "지시서는 ADR-006 승인됨이라 하나 ADR-006 문서는 대기 상태"라던 불일치 — 이번 diff로 확인 결과 검수자가 이미 ADR-006 상태를 승인됨으로 갱신했음(같은 커밋 묶음). **해소됨.**
+- **커밋 제외(레인 없음/런타임, 이전 회차와 동일 판단 유지)**: `dashboard/data/dev-pack/*.json` 5종(런타임) · `docs/plan/`(레인 미정의, 임의 판단 보류) · `outputs/DECISION-BRIEF-2026-07-11-v3.md`·`outputs/reviewer-log.md`(검수자 전용, 읽기만) · `outputs/*.log` 전부 · `sonnet-active.pid`/`outputs/sonnet-active.pid`(런타임 PID).
+- **기준 파일**(blueprint.json·workflow-definition.json): 이번 회차 변경 없음.
+- **HUMAN-INBOX**: 신규 등재 없음 — Tier2Approver.cs 변경은 실체 대조 결과 allowlist 내 정상 작업으로 판정(무단 변경 아님).
+- **발사**: 조율자는 이번 회차도 발사하지 않음. LEDGER-01(PID 20896)이 여전히 살아있어 순차 규칙상 어차피 신규 발사 불가.
+- **push(사람 배치 게이트)**: `git log origin/main..HEAD --oneline` = **13건**(이번 회차 로컬 커밋 1건 포함). 사람 배치 승인 필요.
+- **QUOTA_SIGNAL**: `outputs/sonnet-LEDGER01.{out,err}.log` 여전히 0바이트(리다이렉션 미작동 또는 미기록) — 판단 불가, 다음 회차 재확인.
+
+<run-summary>server/ 3개 파일(OllamaExecutor.cs·OllamaReviewer.cs·Tier2Approver.cs)이 gate-clean에서 dirty로 잡혔으나 LEDGER-01 실행자(PID 20896, 생존 확인)가 여전히 작업 중이라 커밋하지 않았다. diff를 직접 대조해 Tier2Approver.cs 변경이 무단 FEAT-01 재발이 아니라 LEDGER-01 allowlist 안의 정상 토큰 계측 작업임을 확인했다. 문서 레인에서 SONNET-QUEUE #20 진행 상태·REVIEWER-HANDOFF·ADR-006 승인 상태 갱신을 커밋했다(a617854) — 이전 회차가 남긴 "ADR-006 승인 불일치" 관측이 이번 diff로 해소됨을 확인. 발사 없음, push 대기 13건.</run-summary>
+
+## 조율자 2026-07-12 00:07 (recursion1-result-check)
+
+- **경로 규칙**: 저장소 정본만 참조. 세션 outputs 사본 미접촉.
+- **0단계 안정성**: 미스테이징 파일 전체 5초 간격 2회(Get-FileHash: server/OllamaExecutor.cs·OllamaReviewer.cs·Tier2Approver.cs) 비교 → STABLE(직전 회차 이후 추가 변경 없음).
+- **하네스 판정**:
+  - `gate-clean server` exit1 FAIL — contentDirtyCount=3(server/OllamaExecutor.cs·OllamaReviewer.cs·Tier2Approver.cs), 직전 회차(00:01)와 동일 파일·동일 사유.
+  - `doc-integrity` exit0 INTACT(핵심 문서 전부 무결).
+- **실행자 생존**: `outputs/sonnet-active.pid`=20896, `Get-Process -Id 20896` → ALIVE(claude.exe, StartTime 23:50:24, 경과 CPU 7.5s, WorkingSet 494MB). SONNET-QUEUE #20 LEDGER-01 여전히 `진행`. `docs/verification/ledger01-token-ledger.md` 미존재(작업 미완료 확인). 루트 `sonnet-active.pid`=9804는 여전히 사망 상태(구 P0-04 잔재, 정리는 조율자 권한 밖).
+- **주체 판정(프록시 아닌 실체로)**: 타이밍 상관이 아니라 `git diff` 원문을 직접 대조함 — server/OllamaReviewer.cs·OllamaExecutor.cs에 `InputTokens`/`OutputTokens` 필드 및 ollama 응답 파싱 추가, Tier2Approver.cs는 관련 시그니처 8줄 변경. 전부 LEDGER-01 목적(prompt_eval_count/eval_count 계측)과 정확히 일치, allowlist 이탈 없음. **미완료 판단 유지 → server 레인 커밋하지 않음**(build/verify-behavior/measure/claim-check 실행 보류 — 작업 중인 파일 대상 검수는 무의미).
+- **문서·큐·정책 레인**: 직전 회차(a617854, 00:01) 이후 `git status`상 docs/handoff·docs/verification·docs/qa·docs/wiki·skills/ 신규 변경 없음. 단 HEAD가 `7971d4a`(기록 파일 append-only 규칙 신설 + reviewer-log 버전관리 편입 + ADR-006 승인상태 반영)로 한 커밋 더 진전되어 있음 — 이는 이번 회차 조율자 작업이 아니라 검수자(다음 세션)가 직접 커밋한 것으로 판단(작성자 동일 JaeHyuk이나 커밋 메시지·diff 내용이 검수자 성격 — reviewer-log.md 버전관리 편입은 문서 소유권상 조율자 권한 밖). 이번 회차 조율자가 새로 커밋할 문서 변경 없음.
+- **커밋 제외(레인 없음/런타임, 직전 회차와 동일 판단 유지)**: `dashboard/data/dev-pack/*.json` 5종·`dashboard/data/ruined-lab/*.json` 4종(런타임) · `docs/plan/`(레인 미정의) · `outputs/DECISION-BRIEF-2026-07-11-v3.md` · `outputs/reviewer-log.md`(검수자 전용, 읽기만) · `outputs/*.log` 전부(sonnet-ACTOR01/FIX04~07/HOOK01/LEDGER01/ORCH01/P004, server-run) · `sonnet-active.pid`/`outputs/sonnet-active.pid`(런타임 PID).
+- **기준 파일**(blueprint.json·workflow-definition.json): 이번 회차 변경 없음(git status 미표시). BASELINE-CHANGES.md 신규 항목 없음(읽기만 확인).
+- **HUMAN-INBOX**: 신규 등재 없음(확인만) — 기존 대기 항목(dev-pack proposal 2건, ADR-001 등급 승격) 그대로.
+- **발사(사람 게이트, 대행 안 함)**: LEDGER-01(PID 20896) 생존 중이라 순차 규칙상 신규 발사 대상 없음. 조율자는 이번 회차도 발사하지 않음.
+- **push(사람 배치 게이트, 대행 안 함)**: `git log origin/main..HEAD --oneline` = **14건**(직전 회차 13건 대비 검수자 커밋 7971d4a 1건 증가). 사람 배치 승인 필요.
+- **QUOTA_SIGNAL**: `outputs/sonnet-LEDGER01.{out,err}.log` 여전히 0바이트(경과 약 17분) — 리다이렉션 미작동인지 정상 침묵인지 판단 불가, 다음 회차도 재확인 필요.
+
+<run-summary>직전 회차(00:01) 이후 실질적 변화 없음: LEDGER-01 실행자(PID 20896)가 여전히 생존 중이며 server/ 3개 파일(OllamaExecutor.cs·OllamaReviewer.cs·Tier2Approver.cs)은 diff 실체 대조로 LEDGER-01 목적과 일치함을 재확인했으나 작업 미완료(검증 문서 없음)라 커밋하지 않았다. 문서 레인은 이번 회차 조율자 커밋 없음 — HEAD가 검수자 커밋(7971d4a)으로 한 건 더 진전되어 push 대기가 13→14건으로 늘었다. HUMAN-INBOX·기준 파일 변경 없음, QUOTA_SIGNAL 로그 여전히 빈 파일이라 판단 불가. sonnet 발사·git push 이번 회차에도 하지 않음.</run-summary>
