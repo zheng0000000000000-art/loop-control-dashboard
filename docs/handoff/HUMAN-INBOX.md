@@ -1,5 +1,9 @@
 # HUMAN-INBOX — 사람 결정 필요 항목
 
+> **★ 정본 결재 목록은 `outputs/DECISION-BRIEF-2026-07-11-v3.md` 다** (2026-07-11 19:2x, 검수자 실측).
+> 이 파일은 동시 쓰기로 3회 손상됐고 중복·해소 항목이 섞여 있다. **결재는 v3 브리핑을 보고 하라.** 아래는 이력이다.
+> v3 최우선 2건: ①**결재 경로가 닫혀 있다** — 서버 OFF + X-Action-Token(값 `1`) 필요라 승인·거절이 물리적으로 불가 ②**FEAT-01은 문서상 보류인데 코드에는 켜져 있다** — appsettings `Tier2Approver.Enabled=true`, OutboxManager.cs:128이 AI 자동 반입을 실행한다. 서버를 켜기 전에 결정할 것.
+
 > 오케스트레이터/조율자가 재량으로 처리하지 않는 항목(반입 승인·거절, proposal 승인·거절, 기준 파일 변경, 이양 전환, 방향 전환)을 여기 쌓는다. 중복 방지: 항목 추가 전 기존 목록 확인.
 
 ## 결정 필요: outbox 반입 승인 대기 (2건)
@@ -158,3 +162,56 @@
 - r4는 "WORKSTATE.json 원상복구 + SONNET-QUEUE #13(HOOK-01) '대기'로 되돌려 재발사"를 조율자에게 물었으나 응답 없이 세션 종료됨. SONNET-QUEUE.md #13은 여전히 "진행"(최초 PID 31528 표기)으로 남아있고 r2·r3·r4 재발사 결과는 큐 표에 반영되지 않음.
 - 이번 조율자 권한 밖: WORKSTATE.json 정정, HOOK-01 재발사 승인 모두 대행하지 않음.
 - **사람 판단 필요**: ①WORKSTATE.json을 FEAT-01 착수 전 상태로 되돌릴지 ②SONNET-QUEUE #13을 '대기'로 되돌려 재발사를 승인할지, 승인한다면 발사 규칙(task ID 에코백 도착확인, 28bc09d 반영분)이 적용된 새 발사 방식으로 진행할지.
+
+## 결정 필요: dev-pack proposal 신규 리비전 (2026-07-11 19:14, 조율자)
+
+- 맥락: dashboard/data/dev-pack/patch-proposal.json이 proposal-1783764537625(revisionOf proposal-1783764235245, 제목 "코드 및 UI 개선 사항", createdBy ollama/qwen3:8b)로 갱신됨. lifecycle submitted. 변경 4건: functionsWithoutComment 5->0, smallTouchTargets 1->0, skillDomainViolations 2->0, maxFunctionLength 159->[0,80].
+- 조치: 사람의 승인(approve) 또는 거절(reject) 판단 필요. 조율자는 결재를 대행하지 않음.
+- 확인 시각: 2026-07-11 19:14 (조율자, recursion1-result-check).
+
+## 관측: dev-pack 루프가 새 proposal을 자체 승인 기록 — 실제 사람 승인 여부 확인 필요 (2026-07-11 19:25, 조율자)
+
+- 신규 커밋 4건 관측: aef54a1·7dcbf0d·9813ab3·ecfbecf (19:23:49~19:24:28, git identity는 이 저장소 정규 identity인 JaeHyuk). "[loop] dev-pack 회차10/11"이 proposal-1783765207587에 acknowledge-guardrail 3회 후 approve 1회 처리.
+- review-report.json 자기기록(확정 사실): `reviewer.type="human"`, `reason="사람 검토로 승인됐다"`, `createdAt: 2026-07-11T19:24:28`.
+- 조율자가 판단할 수 없는 부분(추정 아님, 확인 불가로 남김): 이 기록이 실제 사람의 조작 결과인지, 시스템이 리뷰어 타입을 기본값 "human"으로 채워 넣은 것인지 조율자에게는 구분할 근거가 없다. **주체 확정 안 함.**
+- workflow-state.json(확정 사실): `loopIteration: 11`이 한도(10)를 넘겨 guardrail 위반으로 `loopState: "halted"`. 이 승인은 halted 되기 직전 시점(같은 타임스탬프)에 반영됐고, proposal-1783765207587은 `lifecycle: "decided"`로 확정된 상태.
+- dashboard/data/dev-pack/*는 조율자 커밋 제외 대상(지시서 고정 규칙)이라 조율자는 이 변경에 관여하지 않았고 커밋도 하지 않음(이미 별도 주체가 직접 커밋 완료).
+- **사람 판단 필요**:
+  1. 이 승인(proposal-1783765207587)이 실제 사람이 수행한 것인지 확인.
+  2. 아니라면 dev-pack 루프가 reviewer.type="human"을 자동 기입하는 결함이 있는지 점검(승인 절차의 신뢰성 문제).
+  3. 기존 미결 상태였던 proposal-1783764537625(19:14 항목)가 이번 -7587로 대체·해소된 것인지, 아니면 별도로 여전히 결재 대기인지 확인.
+- 확인 시각: 2026-07-11 19:25 (조율자, recursion1-result-check).
+
+
+## 관측: ACTOR-01이 이미 발사·완료됐으나 검증문서 claim-check MISMATCH — 커밋 보류 중 (2026-07-11 19:47, 조율자)
+
+- SONNET-QUEUE.md #12는 ACTOR-01을 "사람 결재 대기 — 승인 전 발사 금지"로 표기하고 있으나, `outputs/sonnet-ACTOR01.out.log`(수행 요약·자가점검표 포함)와 `sonnet-active.pid`(값 22844, 현재 프로세스 목록에 없음=사망) 증거로 **이미 발사되어 작업까지 완료됐음**을 확인했다.
+- 변경 파일(server/Program.cs·GitDataCommitter.cs·OutboxManager.cs, docs/verification/actor01-actor-provenance.md 신규)은 지시서 allowlist 안이며 범위 위반은 없다.
+- `claim-check ACTOR-01` 실행 결과 **MISMATCH**(exit1): 검증문서(`docs/verification/actor01-actor-provenance.md`)가 "server/LocalFirstWorkflowDashboard.Server.cs 존재"를 주장하나 실제로 그 파일은 없다(13건 중 12건은 실체와 일치, 1건만 불일치). build 0/0, verify-behavior true, measure 비악화(4건, 사전 위반)는 모두 정상.
+- 조율자 조치: 하네스 규칙(claim-check exit1 → 커밋 금지)에 따라 이 3개 서버 파일을 **커밋하지 않고 미커밋 상태로 보류**했다.
+- **사람 판단 필요**:
+  1. ACTOR-01 발사가 언제·누구의 승인으로 이뤄졌는지 확인(조율자는 승인 경위를 알 수 없음).
+  2. 검증문서의 오기재 1건(존재하지 않는 파일 주장)을 어떻게 처리할지 — 문서만 정정하면 재검수 가능해 보이나, 정정·재검수는 조율자 권한 밖.
+  3. SONNET-QUEUE.md #12 상태 표기("사람 결재 대기")를 실제 상태(발사·완료, 검수 보류)로 갱신할지.
+- 확인 시각: 2026-07-11 19:47 (조율자, recursion1-result-check).
+
+## 긴급: 기준 파일 무단 변경 의심 — workflow-definition.json guardrails.maxLoopIterations 10→100 (2026-07-11 20:1x, 조율자)
+
+- 발견: `dashboard/data/dev-pack/workflow-definition.json`이 미커밋 상태로 수정되어 있음(git diff 1건, 1줄). `guardrails.maxLoopIterations`가 **10 → 100**으로 변경됨. blueprint.json은 변경 없음.
+- 근거 확인: `outputs/review-log.md`·`docs/handoff/HUMAN-INBOX.md` 양쪽에 이 변경을 설명하는 기록을 검색했으나 **없음**(조율자가 직접 검색, 매치 0건).
+- 정황(확정 아님, 참고용): 19:25 HUMAN-INBOX 기록에 따르면 dev-pack workflow-state.json이 `loopIteration: 11`로 기존 한도(10)를 넘겨 `loopState: "halted"`가 되었음. 이번 한도 변경(10→100)은 그 halt를 우회하는 효과를 갖는다. 다만 **누가·왜 변경했는지는 주체 미상**이며, 이 정황만으로 원인을 단정하지 않는다(root-cause-diagnosis 원칙).
+- 조치: 규칙에 따라 **커밋하지 않음**(근거 기록 없는 기준 파일 변경은 조율자 재량 밖). 사람 판단 전까지 미커밋 상태로 보류.
+- **사람 판단 필요**: ①이 guardrail 완화(10→100)를 승인할지 ②승인한다면 그 근거를 여기 남길지 ③미승인이라면 `git checkout -- dashboard/data/dev-pack/workflow-definition.json`으로 되돌릴지.
+- 확인 시각: 2026-07-11 20:1x (조율자, recursion1-result-check).
+
+## 결정 필요: dev-pack proposal 신규 리비전 (2026-07-11 20:15, 조율자)
+
+- 맥락: dashboard/data/dev-pack/patch-proposal.json이 proposal-1783768353058(revisionOf proposal-1783768334226, 제목 "함수 길이 줄이기", createdBy ollama/qwen3:8b)로 갱신됨. lifecycle submitted. 변경 1건: maxFunctionLength 115→[0,80].
+- 조치: 사람의 승인(approve) 또는 거절(reject) 판단 필요. 조율자는 결재를 대행하지 않음.
+- 확인 시각: 2026-07-11 20:15 (조율자, recursion1-result-check).
+
+## 해소: workflow-definition.json guardrail 변경 근거 확인됨 (2026-07-11 20:42, 조율자)
+
+- 20:1x 항목("기준 파일 무단 변경 의심")의 근거를 `docs/handoff/BASELINE-CHANGES.md` BC-001에서 확인. 사람(choi) 명시 승인(19:5x), 근거·되돌리는 법 기재됨. blueprint.json 무수정 확인.
+- 조치: workflow-definition.json 커밋 진행(별도 커밋, BC-001 인용).
+- 확인 시각: 2026-07-11 20:42 (조율자, recursion1-result-check).
