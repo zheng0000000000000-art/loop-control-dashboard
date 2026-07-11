@@ -6,7 +6,7 @@
 
 | 순번 | DI | 지시서 경로(outputs) | 영역 | 상태 |
 | --- | --- | --- | --- | --- |
-| 1 | FIX-01 경로검증 separator-bounded | directive-FIX01-path-validation.md | server/ | 대기(rec10 무산 — 발사가 FAIL-008로 어긋나 Storage.cs 미수정, 재발사 필요) |
+| 1 | FIX-01 경로검증 separator-bounded | directive-FIX01-path-validation.md | server/ | 완료(13f833a) — 조율자 15:03 재검증: server/Storage.cs·OutboxManager.cs에 IsWithinRoot 코드 실재 확인(git grep), 이전 회차들의 "문서 완료주장·코드 미반영" 불일치 해소됨 |
 | 2 | FIX-02 measure outbox 스캔 제외 | directive-FIX02-measure-scope.md | server/ | 완료(9a43f54/49b00d6) |
 | 3 | FEAT-02 E2E 실사용 하네스 내재화 (dotnet -- e2e-usage) | directive-FEAT02-e2e-harness.md | server/ | 대기 |
 | 4 | FEAT-01 한정 이양(게이트 클린 반입 AI 승인) | directive-FEAT01-conditional-delegation.md | server/ | 대기 |
