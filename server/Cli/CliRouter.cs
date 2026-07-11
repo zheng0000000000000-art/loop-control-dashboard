@@ -42,19 +42,8 @@ internal static class CliRouter
         if (args.Length > 0 && string.Equals(args[0], "tier2test", StringComparison.OrdinalIgnoreCase))
             return Tier2ApproverTestCli.Run(args);
 
-        if (args.Length > 0 && string.Equals(args[0], "e2e-usage", StringComparison.OrdinalIgnoreCase))
-            return E2EUsageCli.Run(args);
-        if (args.Length > 0 && string.Equals(args[0], "gate-clean", StringComparison.OrdinalIgnoreCase))
-            return GateCleanCli.Run(args);
-
-        if (args.Length > 0 && string.Equals(args[0], "hs-scan", StringComparison.OrdinalIgnoreCase))
-            return HsScanCli.Run(args);
-
-        if (args.Length > 0 && string.Equals(args[0], "claim-check", StringComparison.OrdinalIgnoreCase))
-            return ClaimCheckCli.Run(args);
-
-        if (args.Length > 0 && string.Equals(args[0], "doc-integrity", StringComparison.OrdinalIgnoreCase))
-            return DocIntegrityCli.Run(args);
+        var harness = HarnessRegistry.TryRun(args);
+        if (harness is not null) return harness;
 
         return null;
     }
