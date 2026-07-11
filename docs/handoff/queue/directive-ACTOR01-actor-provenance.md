@@ -33,5 +33,15 @@
 - actor가 기록되면 그때 **`gate-audit` 재승격 심사**(현재는 근거 데이터가 없어 철회됨, FAIL-012).
 - actor **위조 방지**(인증·서명)는 별도 과제이자 기준 변경 — 사람 결재.
 
+## 허용 파일 (allowlist)
+
+- server/Program.cs
+- server/GitDataCommitter.cs
+- server/OutboxManager.cs
+- docs/verification/actor01-actor-provenance.md
+- docs/handoff/WORKSTATE.json
+
+> 이 목록 밖의 파일을 수정하면 산출물 전체가 반려된다. 필요하면 고치지 말고 중단하고 보고하라.
+
 ## 경계 / 보고
 사람 승인 전 착수 금지. 승인 시 server/ + 위 문서만. git commit/push 금지. 결재 액션 호출 금지.

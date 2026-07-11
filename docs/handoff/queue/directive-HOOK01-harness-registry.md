@@ -29,5 +29,19 @@
 ## 작업 보고 (CLAUDE.md 신규 관례 — 반드시)
 verification 문서에 ①**주체(actor)** ②**사용한 하네스와 결과**(명령·exit code·수치) ③참조한 스킬을 기록한다.
 
+## 허용 파일 (allowlist)
+
+- server/Harness/**
+- server/GateCleanCli.cs
+- server/HsScanCli.cs
+- server/ClaimCheckCli.cs
+- server/DocIntegrityCli.cs
+- server/E2EUsageCli.cs
+- server/Cli/CliRouter.cs
+- docs/verification/hook01-harness-registry.md
+- docs/handoff/WORKSTATE.json
+
+> 이 목록 밖의 파일을 수정하면 산출물 전체가 반려된다. 필요하면 고치지 말고 중단하고 보고하라.
+
 ## 경계
 `server/` + `docs/verification/`만. git commit/push 금지.

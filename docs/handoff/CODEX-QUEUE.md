@@ -22,6 +22,7 @@
 
 | 순번 | 작업 | 근거 | 영역 | 상태 |
 | --- | --- | --- | --- | --- |
+| **H-0** | **`scope-check` 하네스 ★최우선** — 지시서의 `## 허용 파일 (allowlist)` glob을 파싱해 `git status` 변경파일과 대조. 허용 밖이면 exit 1 + 목록 출력. **되돌리지 말고 검출·보고만.** | HS-CANDIDATES **HS-06 (12/12)**. I-1 지시서 이탈 반복 + 오늘 2건(Tier2Approver.cs, Tier2ApproverTestCli.cs). 격리·화이트리스트 **프롬프트가 둘 다 실패**했다 — 말이 아니라 사후 검출로 강제해야 한다 | `server/Harness/` | 대기(HOOK-01 후) |
 | H-1 | **`path-guard-check` 하네스** — 경로 경계가 separator-bounded인지(sibling-prefix escape 회귀) | FAIL-2026-006/007. `hs-scan`이 S1로 자동 검출한 후보(path_escape 2회). 코덱스 자체 HS-GATE도 11점 즉시제작 판정 | `server/Harness/` | 대기(HOOK-01 후) |
 | H-2 | **`call-integrity-check` 하네스** — 이동한 함수의 호출부 누락·시그니처 불일치 | 리팩토링 R당 반복된 수작업 QA | `server/Harness/` | 대기 |
 | H-3 | **`template-sync-check` 하네스** — dispatch-templates가 현행 코드와 동기화됐는지 | FAIL-2026-008 | `server/Harness/` | 대기 |
