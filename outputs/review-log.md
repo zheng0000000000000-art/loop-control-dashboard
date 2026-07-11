@@ -1361,3 +1361,27 @@
 - QUOTA_SIGNAL: `outputs/sonnet-LEDGER01.{out,err}.log` 여전히 0바이트(경과 약 23분). 리다이렉션 미작동인지 정상 침묵인지 다음 회차도 재확인 필요.
 
 <run-summary>LEDGER-01 실행자(PID 20896)가 여전히 생존 중이다. server/ 3파일 + WORKSTATE.json + HANDOFF.md + RUNTIME-INDEX.md가 새로 수정됐고 전부 LEDGER-01 allowlist 내로 확인했으나, 검증 문서(ledger01-token-ledger.md)가 아직 없어 claim-check가 exit2(대상 없음)를 반환했다 — build/verify-behavior/measure는 전부 PASS했지만 claim-check 미완성으로 이번 회차도 커밋하지 않았다. dashboard/data/ruined-lab 4종은 외부 [loop] 승인 커밋(8ca7f6f)으로 이미 반영되어 git status에서 사라졌다. push 대기는 14→16건으로 늘었다. sonnet 발사·git push 이번 회차에도 하지 않음.</run-summary>
+
+
+## 조율자 2026-07-12 00:25
+- 경로 규칙 준수: 저장소 정본만 열람(SONNET-QUEUE.md·HARNESSES.md·directive-LEDGER01). 세션 outputs 사본 미열람.
+- 안정성 게이트: git status --short 대상 파일 해시 5초 간격 2회 일치(전부 안정) 확인.
+- sonnet 생존 확인: sonnet-active.pid(루트 9804)·outputs/sonnet-active.pid(20896) 둘 다 Get-Process 조회 실패 → 프로세스 죽음. LEDGER-01 out.log에 "완료" 자가보고·QUOTA_SIGNAL 부재·err.log 공백 → 정상 종료로 판단(한도사망 아님).
+- LEDGER-01 검수(하네스 판정, exit code 기준):
+  - build(dotnet build server -c Release): exit0, 경고0·오류0
+  - gate-clean server(커밋 전): exit1(FAIL) — server/OllamaExecutor.cs·OllamaReviewer.cs·Tier2Approver.cs 3건 content-dirty(allowlist 내, 예상됨)
+  - doc-integrity: exit0 INTACT(12/12)
+  - claim-check LEDGER-01: exit0 MATCH(claimCount14/mismatch0)
+  - verify-behavior: exit0 behaviorEqual:true
+  - measure dev-pack: exit0 violationCount0(기준선0, 비악화)
+- 커밋(로컬만, push 안 함) — 레인 분리 3건 + 큐 갱신 1건:
+  - 9d4aac5 server: OllamaExecutor·OllamaReviewer·Tier2Approver.cs(LEDGER-01 코드)
+  - 8a982d4 docs: directives/LEDGER01-token-ledger.md + verification/ledger01-token-ledger.md
+  - 174be5f state: WORKSTATE.json + HANDOFF.md + RUNTIME-INDEX.md(P0-04 projection 산출물, 손편집 아님으로 판단)
+  - 430b307 docs: SONNET-QUEUE.md #20 상태 진행→완료 갱신
+  - 커밋 후 gate-clean server 재실행: exit0 PASS(contentDirtyCount 0) 확인.
+- 커밋 제외(런타임/범위 외, 그대로 둠): dashboard/data/dev-pack/*.json 5건(런타임), outputs/*.log·sonnet-active.pid류(런타임), docs/plan/ 3건 및 outputs/DECISION-BRIEF-2026-07-11-v3.md(파일 수정시각이 LEDGER-01 발사 이전인 2026-07-10~11 — 이번 실행자 산출물 아님, 범위 외 판단이라 조율자가 임의 처리하지 않음).
+- HUMAN-INBOX: 이번 회차 신규 등재 없음(기준 파일 무단 변경·범위 이탈 없음).
+- 발사 대기(사람 승인 후 발사, 조율자 미발사): SONNET-QUEUE #15 FIX-04(사람 승인 완료 2026-07-11, ACTOR-01 이후 순차 발사 대상, 아직 미발사) / #4 FEAT-01(대기).
+- push 대기: 21건(origin/main..HEAD) — 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 없음.
