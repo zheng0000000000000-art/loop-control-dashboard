@@ -648,7 +648,7 @@ public sealed class OutboxManager
     {
         var fullPath = Path.GetFullPath(Path.Combine(outboxRoot, taskId));
 
-        if (!fullPath.StartsWith(outboxRoot, StringComparison.OrdinalIgnoreCase) || !Directory.Exists(fullPath))
+        if (!IsWithinRoot(fullPath, outboxRoot) || !Directory.Exists(fullPath))
         {
             throw new DispatchHttpException(404, "dispatch.not_found", "outbox task not found");
         }
@@ -661,7 +661,7 @@ public sealed class OutboxManager
     {
         var fullPath = Path.GetFullPath(Path.Combine(workspaceRoot, relative.Replace('/', Path.DirectorySeparatorChar)));
 
-        if (!fullPath.StartsWith(workspaceRoot, StringComparison.OrdinalIgnoreCase))
+        if (!IsWithinRoot(fullPath, workspaceRoot))
         {
             throw new DispatchHttpException(400, "path.invalid", "path is outside workspace");
         }
@@ -723,6 +723,16 @@ public sealed class OutboxManager
     private static string ToSlash(string path)
     {
         return path.Replace('\\', '/');
+    }
+
+    // 경로가 root 경계 안에 있는지 separator-bounded로 검사한다(형제 접두 디렉터리 우회 방지).
+    private static bool IsWithinRoot(string fullPath, string root)
+    {
+        var normRoot = Path.GetFullPath(root)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var normPath = Path.GetFullPath(fullPath);
+        return string.Equals(normPath, normRoot, StringComparison.OrdinalIgnoreCase)
+            || normPath.StartsWith(normRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 }
 

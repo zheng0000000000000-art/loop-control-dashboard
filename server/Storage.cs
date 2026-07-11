@@ -146,7 +146,7 @@ public sealed class Storage
         var projectPath = ProjectPath(projectId);
         var fullPath = Path.GetFullPath(Path.Combine(projectPath, fileName));
 
-        if (!fullPath.StartsWith(projectPath, StringComparison.OrdinalIgnoreCase))
+        if (!IsWithinRoot(fullPath, projectPath))
         {
             throw new InvalidOperationException("Project file path is outside the project folder.");
         }
@@ -187,7 +187,7 @@ public sealed class Storage
 
         var fullPath = Path.GetFullPath(Path.Combine(DataRoot, relativePath));
 
-        if (!fullPath.StartsWith(DataRoot, StringComparison.OrdinalIgnoreCase))
+        if (!IsWithinRoot(fullPath, DataRoot))
         {
             throw new InvalidOperationException("Project path is outside the data folder.");
         }
@@ -232,6 +232,16 @@ public sealed class Storage
     {
         return File.Exists(ProjectFilePath(projectId, MeasurementFile)) ||
             (measurement["metrics"]?.AsArray().Count ?? 0) > 0;
+    }
+
+    // 경로가 root 경계 안에 있는지 separator-bounded로 검사한다(형제 접두 디렉터리 우회 방지).
+    private static bool IsWithinRoot(string fullPath, string root)
+    {
+        var normRoot = Path.GetFullPath(root)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var normPath = Path.GetFullPath(fullPath);
+        return string.Equals(normPath, normRoot, StringComparison.OrdinalIgnoreCase)
+            || normPath.StartsWith(normRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 
     // JSON 파일을 읽고 파싱한다.
