@@ -1,12 +1,30 @@
 {
   "schemaVersion": "v9-min",
   "phaseId": "P0-04",
-  "wpId": "LEDGER-02",
-  "diId": "LEDGER-02",
+  "wpId": "LEDGER-03",
+  "diId": "LEDGER-03",
   "status": "verifying",
   "updatedBy": "claude-sonnet-4-6",
   "updatedAt": "2026-07-12",
   "history": [
+    {
+      "diId": "LEDGER-02",
+      "changedFiles": [
+        {
+          "path": "server/Program.cs",
+          "note": "RuntimeCost()에 int inputTokens=0, int outputTokens=0 추가. GeneratedLogEntry()에 토큰 파라미터 추가. ollama 성공 경로 2곳(GenerateProposalWithFallback, GenerateTuningProposalWithFallback)에서 generated.InputTokens·generated.OutputTokens 전달.",
+          "sha256": "252f7f6e8c4190272ca03d96614359c1519548f13e9b9687b8c479e93ef06db9"
+        },
+        {
+          "path": "docs/verification/ledger02-executor-token-wiring.md",
+          "sha256": "24f834c3a9f105b14c43af0fd94c03cef286b0740e7cea5f2986071839686ae3"
+        },
+        {
+          "path": "docs/directives/LEDGER02-executor-token-wiring.md",
+          "sha256": "d4d55b839c532443c5dee0a56920e7d0bb2a8bc8f1ddbc52dd5ddceeccc728c7"
+        }
+      ]
+    },
     {
       "diId": "FIX-06",
       "changedFiles": [
@@ -224,19 +242,26 @@
   ],
   "changedFiles": [
     {
+      "path": "server/OllamaExecutor.cs",
+      "note": "ParseNoteResponse 반환 타입 확장(reason+actualMetricId). TryGenerateNote/TryGenerateTuningNote 거부 사유 전파. Unavailable에 fallbackReason/expectedMetricId/actualMetricId 추가. ExecutorGenerateResult 레코드에 선택 필드 3개 추가.",
+      "sha256": "3d0fefc518f309628056ad1497ff6e43e660b9c90fff03b14e65e6c8c981935a"
+    },
+    {
       "path": "server/Program.cs",
-      "note": "RuntimeCost()에 int inputTokens=0, int outputTokens=0 추가. GeneratedLogEntry()에 토큰 파라미터 추가. ollama 성공 경로 2곳(GenerateProposalWithFallback, GenerateTuningProposalWithFallback)에서 generated.InputTokens·generated.OutputTokens 전달.",
-      "sha256": "252f7f6e8c4190272ca03d96614359c1519548f13e9b9687b8c479e93ef06db9"
+      "note": "FallbackLogEntry 헬퍼 추가. GenerateProposalWithFallback·GenerateTuningProposalWithFallback 폴백 경로에 FallbackEntry 생성. ProposalGeneration 레코드에 FallbackEntry 추가. 4개 콜러에서 FallbackEntry 조건부 append.",
+      "sha256": "9011d7ec781d81baab625d1fe60dceeb79c6bd37a419ed7b8dc50f42298112ba"
     },
     {
-      "path": "docs/verification/ledger02-executor-token-wiring.md",
-      "note": "LEDGER-02 작업 검증 문서 신규.",
-      "sha256": "24f834c3a9f105b14c43af0fd94c03cef286b0740e7cea5f2986071839686ae3"
+      "path": "docs/verification/ledger03-fallback-observability.md",
+      "note": "LEDGER-03 작업 검증 문서 신규.",
+      "sha256": null,
+      "missing": true
     },
     {
-      "path": "docs/directives/LEDGER02-executor-token-wiring.md",
+      "path": "docs/directives/LEDGER03-fallback-observability.md",
       "note": "지시서 보관본.",
-      "sha256": "d4d55b839c532443c5dee0a56920e7d0bb2a8bc8f1ddbc52dd5ddceeccc728c7"
+      "sha256": null,
+      "missing": true
     }
   ],
   "tests": {
@@ -245,9 +270,9 @@
     "buildVerifyExit": 0,
     "measureViolationsBefore": 0,
     "measureViolationsAfter": 0,
-    "measureNote": "violations=0 유지. Program.cs 라인 수 2333 불변(기존 줄 in-place 수정).",
+    "measureNote": "위반 주입(OllamaExecutor.__FallbackProbe) 창 동안 violations=1, 제거 후 0 복귀 확인.",
     "verifyBehaviorExit": 0
   },
   "nextActions": [],
-  "notes": "LEDGER-02: Program.cs의 RuntimeCost()·GeneratedLogEntry()에 토큰 파라미터 추가, ollama 성공 경로 2곳에서 실제 토큰 전달. 직접 경로 사유: allowlist 포함 파일만 수정. 증명 제한: qwen3:8b가 functionsWithoutComment metricId를 일관되게 대소문자 오류(functionsWithOutComment)로 반환해 ParseNoteResponse가 거부 — ollama 성공 경로 end-to-end 증명 불가. 자진 신고 확인: 지표는 만족, 목적(실체 증명) 미달."
+  "notes": "LEDGER-03: ParseNoteResponse 거부 사유 전파 + run-log proposal.fallback 이벤트 기록. 실체 증명: functionsWithoutComment 위반 주입 → qwen3:8b가 functionsWithOutComment(대문자 O) 반환 → parse-rejected-metricid → run-log에 proposal.fallback warn 항목 확인. 직접 경로 사유: allowlist 포함 파일만 수정."
 }

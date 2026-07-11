@@ -3,15 +3,17 @@
 # HANDOFF — 인수인계 문서
 
 ## 현재 위치
-- **diId**: LEDGER-02  **phaseId**: P0-04  **status**: verifying
+- **diId**: LEDGER-03  **phaseId**: P0-04  **status**: verifying
 - **갱신자**: claude-sonnet-4-6  **갱신일**: 2026-07-12
 
-## 변경 파일 (3개)
-- `server/Program.cs` [252f7f6e8c419027…] — RuntimeCost()에 int inputTokens=0, int outputTokens=0 추가. GeneratedLogEntry()에 토큰 파라미터 추가. ollama 성공 경로 2곳(GenerateProposalWithFallback, GenerateTuningProposalWithFallback)에서 generated.InputTokens·generated.OutputTokens 전달.
-- `docs/verification/ledger02-executor-token-wiring.md` [24f834c3a9f105b1…] — LEDGER-02 작업 검증 문서 신규.
-- `docs/directives/LEDGER02-executor-token-wiring.md` [d4d55b839c532443…] — 지시서 보관본.
+## 변경 파일 (4개)
+- `server/OllamaExecutor.cs` [3d0fefc518f30962…] — ParseNoteResponse 반환 타입 확장(reason+actualMetricId). TryGenerateNote/TryGenerateTuningNote 거부 사유 전파. Unavailable에 fallbackReason/expectedMetricId/actualMetricId 추가. ExecutorGenerateResult 레코드에 선택 필드 3개 추가.
+- `server/Program.cs` [9011d7ec781d81ba…] — FallbackLogEntry 헬퍼 추가. GenerateProposalWithFallback·GenerateTuningProposalWithFallback 폴백 경로에 FallbackEntry 생성. ProposalGeneration 레코드에 FallbackEntry 추가. 4개 콜러에서 FallbackEntry 조건부 append.
+- `docs/verification/ledger03-fallback-observability.md` [MISSING] — LEDGER-03 작업 검증 문서 신규.
+- `docs/directives/LEDGER03-fallback-observability.md` [MISSING] — 지시서 보관본.
 
 ## 완료 이력
+- **LEDGER-02**: 3개 파일
 - **FIX-06**: 6개 파일
 - **DI-R-01**: 2개 파일
 - **DI-R-02**: 2개 파일
@@ -39,4 +41,4 @@ dotnet run --project server -c Release -- verify-behavior
 ```
 
 ## 노트
-LEDGER-02: Program.cs의 RuntimeCost()·GeneratedLogEntry()에 토큰 파라미터 추가, ollama 성공 경로 2곳에서 실제 토큰 전달. 직접 경로 사유: allowlist 포함 파일만 수정. 증명 제한: qwen3:8b가 functionsWithoutComment metricId를 일관되게 대소문자 오류(functionsWithOutComment)로 반환해 ParseNoteResponse가 거부 — ollama 성공 경로 end-to-end 증명 불가. 자진 신고 확인: 지표는 만족, 목적(실체 증명) 미달.
+LEDGER-03: ParseNoteResponse 거부 사유 전파 + run-log proposal.fallback 이벤트 기록. 실체 증명: functionsWithoutComment 위반 주입 → qwen3:8b가 functionsWithOutComment(대문자 O) 반환 → parse-rejected-metricid → run-log에 proposal.fallback warn 항목 확인. 직접 경로 사유: allowlist 포함 파일만 수정.
