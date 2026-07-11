@@ -495,3 +495,32 @@
 - I-1 완화: 프롬프트에 "SONNET-QUEUE 등 다른 큐/지시서 파일을 절대 읽지 말고 이 지시서 하나만 수행" 명시 + task ID(FEAT-02) 결속. 과거 지시서 이탈 사고 재발 방지.
 - 발사 전 게이트 실측: server/ clean(정규화 기준, FAIL-010 수정 후) ✅ / sonnet 미실행 ✅ / 진행 항목 0 ✅ / 다음 대기 존재 ✅.
 - 주의: 이 발사는 `--dangerously-skip-permissions`로 헤드리스 실행됐다. "무인 자동 permission-bypass spawn 금지" 규칙은 **무인 자동**에 대한 것이며, 본 건은 사람이 배치한 발사다. 지시서 자체가 commit/push/결재를 금지한다.
+
+## 2026-07-11 17:0x — 검수자 세션: HOOK-01 사람 승인 발사
+
+- 주체(actor): 검수자 세션(Claude, `reviewer-session <reviewer-session@local>`)이 발사. 실행자는 sonnet 헤드리스 PID 31528.
+- 발사 대상: SONNET-QUEUE #13 HOOK-01 (queue/directive-HOOK01-harness-registry.md). 사람의 명시 승인.
+- 사용한 하네스(발사 전 게이트 실측):
+  | 하네스 | 명령 | exit | 결과 |
+  | --- | --- | --- | --- |
+  | gate-clean | `-- gate-clean server` | 0 | PASS, contentDirty=0, 표현차=0 |
+  | doc-integrity | `-- doc-integrity` | 0 | INTACT 0/12 |
+- 발사 조건 4개: ①gate-clean PASS ✅ ②sonnet 미실행 ✅ ③진행 항목 0 ✅ ④HOOK-01 대기 ✅
+- 큐 순서 예외: #4 FEAT-01이 앞서지만 사람이 HOOK-01을 지정 발사. FEAT-01은 "무인 결재 이양"이라 안전 보류 중(HUMAN-INBOX).
+- I-1 완화: 큐 파일 열람 금지 + task ID(HOOK-01) 결속을 프롬프트에 명시.
+- 신규 관례 적용: 프롬프트에 "작업보고에 주체·사용 하네스·참조 스킬 3종 기록" 의무를 실었다. 조율자는 sonnet이 적은 하네스를 **직접 재실행해 대조**할 것(자기보고 신뢰 금지, VERIFY-PROTOCOL 신설 절).
+- 발사 방식: `--dangerously-skip-permissions` 헤드리스. 사람이 배치한 발사이며 지시서가 commit/push/결재를 금지한다.
+
+## 조율자 2026-07-11 16:40
+
+- 안정성 게이트: 미커밋 파일 해시 2회 비교(5초 간격, Get-FileHash) — dashboard/data/dev-pack/*.json 5건(커밋 제외 대상), outputs/sonnet-HOOK01.*.log·sonnet-active.pid(작업 파일) 안정 확인.
+- server/: server/*.cs 미변경 → 커밋 없음.
+- docs/qa·docs/wiki: 신규 변경 없음 → 커밋 없음.
+- 발사: sonnet-active.pid PID 31528 생존 확인(HOOK-01 실행 중으로 추정, outputs/sonnet-HOOK01.*.log 존재) → 발사 조건 중 "실행 중 sonnet 없음" 미충족, 발사 안 함.
+- push 대기: git log origin/main..HEAD 9건(최신 489bf4c, 7a9352a 이후 미push) — 사람 배치 승인 필요.
+- HUMAN-INBOX: 기존 대기 3건(정체불명 커밋 identity 확인, FEAT-01 발사 여부, HS-GATE 반영요청) 변경 없음 — 신규 추가 없음.
+- QUOTA_SIGNAL: 미관측.
+
+## 조율자 2026-07-11 16:40 (추가)
+
+- docs/handoff/SONNET-QUEUE.md #13 HOOK-01 상태가 "대기"→"진행"(PID 31528, 로그 outputs/sonnet-HOOK01.out.log)으로 갱신됨을 확인. 해시 안정성 확인(5초 간격 2회 동일) 후 review-log.md와 함께 로컬 커밋(조율자 로그, push 없음).

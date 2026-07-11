@@ -18,7 +18,7 @@
 | 10 | ~~FIX-03 measure 스캔에서 docs/ 제외~~ | — | — | **취소** — 참조본을 삭제해 해결(측정 코드 수정은 CLAUDE.md 금지사항). measure 5→3건, 기준선 복귀 |
 | 11 | HARNESS-05 doc-integrity (문서 잘림 검출) | (직접 구현) | server/ | **완료** — I-9를 승격으로 뒤집음(3회차 재현). 오탐 0, 주입 잘림 검출 확인 |
 | 12 | **ACTOR-01 결재 액션 actor 기록** | queue/directive-ACTOR01-actor-provenance.md | server/ | **사람 결재 대기** — 결재 게이트 의미를 코드에 새김(기준 변경 성격). 승인 전 발사 금지 |
-| 13 | **HOOK-01 HarnessRegistry 1회성 훅** | queue/directive-HOOK01-harness-registry.md | server/ | **대기 — 우선** 코덱스 하네스 위임의 선행조건(영역 충돌 회피) |
+| 13 | **HOOK-01 HarnessRegistry 1회성 훅** | queue/directive-HOOK01-harness-registry.md | server/ | **진행** — 2026-07-11 17:0x 사람 승인 발사(PID 31528, 격리 발사). 로그 outputs/sonnet-HOOK01.out.log |
 | 14 | (추후 검수자가 추가) | — | — | — |
 
 ## 자동 발사 규칙 (조율자용)
