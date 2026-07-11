@@ -42,6 +42,9 @@ internal static class CliRouter
         if (args.Length > 0 && string.Equals(args[0], "tier2test", StringComparison.OrdinalIgnoreCase))
             return Tier2ApproverTestCli.Run(args);
 
+        if (args.Length > 0 && string.Equals(args[0], "e2e-usage", StringComparison.OrdinalIgnoreCase))
+            return E2EUsageCli.Run(args);
+
         return null;
     }
 
