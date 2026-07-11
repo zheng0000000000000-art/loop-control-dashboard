@@ -3,7 +3,7 @@
   "projectName": "개발 팩 — 자기 검수 루프",
   "currentStage": "apply",
   "overallStatus": "warning",
-  "loopState": "halted",
+  "loopState": "running",
   "mode": "normal",
   "suspendedTracks": [
     {
@@ -150,7 +150,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-11T19:33:41.6958382+09:00",
+  "lastUpdated": "2026-07-11T19:33:44.9362230+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
@@ -175,6 +175,12 @@
       "type": "loopIteration",
       "loopIteration": 11,
       "acknowledgedAt": "2026-07-11T19:33:39.2734825+09:00"
+    },
+    {
+      "id": "guardrail",
+      "type": "loopIteration",
+      "loopIteration": 12,
+      "acknowledgedAt": "2026-07-11T19:33:44.9362152+09:00"
     }
   ],
   "acknowledgedCheckpoints": [
@@ -189,16 +195,5 @@
     "smallTouchTargets=1",
     "skillDomainViolations=2",
     "maxFunctionLength=159"
-  ],
-  "haltedAt": "2026-07-11T19:33:41.6958216+09:00",
-  "haltedBy": {
-    "type": "guardrail",
-    "breaches": [
-      {
-        "type": "loopIteration",
-        "actual": 12,
-        "limit": 10
-      }
-    ]
-  }
+  ]
 }
