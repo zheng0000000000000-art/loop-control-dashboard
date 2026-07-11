@@ -1,6 +1,6 @@
 ﻿{
     "schemaVersion":  2,
-    "note":  null,
+    "note":  "발사 래퍼(outputs/launch/run-executor.ps1)가 자동 기록한다. 하네스는 읽기만 한다 - 쓰는 자와 검사하는 자를 분리한다. allowlistSource가 null이면 'allowlist 미상'이며 빈 목록과 다르다.",
     "claims":  [
                    {
                        "claimId":  "LEDGER-04-34288",
