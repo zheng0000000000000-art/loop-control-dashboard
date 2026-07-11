@@ -1,0 +1,26 @@
+﻿{
+    "schemaVersion":  1,
+    "note":  "발사 래퍼(outputs/launch/run-executor.ps1)가 자동 기록한다. LEDGER-04 항목은 래퍼에 claim 기능을 넣기 전 실행분이라 sentinel(실제 pid/시각)과 지시서 allowlist로 재구성했다 - 값은 실측이며 지어낸 것이 아니다.",
+    "claims":  [
+                   {
+                       "claimId":  "LEDGER-04-34288",
+                       "actor":  "sonnet",
+                       "taskId":  "LEDGER-04",
+                       "paths":  [
+                                     "server/OllamaExecutor.cs",
+                                     "server/Program.cs",
+                                     "docs/handoff/WORKSTATE.json",
+                                     "docs/context/RUNTIME-INDEX.md",
+                                     "docs/handoff/HANDOFF.md",
+                                     "docs/verification/ledger04-metricid-normalization.md",
+                                     "docs/directives/LEDGER04-metricid-normalization.md"
+                                 ],
+                       "pid":  34288,
+                       "claimedAt":  "2026-07-12T04:00:09.2006692+09:00",
+                       "expiresAt":  "2026-07-12T06:00:09.2006692+09:00",
+                       "releasedAt":  "2026-07-12T04:10:34.3794265+09:00",
+                       "status":  "released",
+                       "exitCode":  -1
+                   }
+               ]
+}
