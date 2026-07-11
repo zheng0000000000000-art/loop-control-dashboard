@@ -1283,3 +1283,21 @@
 - **QUOTA_SIGNAL**: outputs/*.log 검색 결과 미검출.
 
 <run-summary>P0-04 Projection 실행자(PID 9804)가 여전히 생존 중이라 server 레인(CliRouter.cs·HarnessRegistry.cs·HandoffIntegrityCli.cs·ProjectionCli.cs) 전부 미접촉·미커밋 유지(gate-clean FAIL 지속, 신규 아님). codex의 23:30 hs-scan follow-up 문서 3건(HS-CANDIDATES 갱신, P0-05 data-gate 블록 기록, 세션050)을 doc-integrity 재확인 후 로컬 커밋(d34f210)함. 회차 중 WORKSTATE/handoff-integrity 결과가 두 시점 사이 달라진 것을 관찰(실행자 실시간 갱신 중으로 추정, 조치 없음). HUMAN-INBOX·기준 파일 변경 없음, QUOTA_SIGNAL 없음. push 대기 3건, 사람 배치 승인 필요. sonnet 발사·git push 없음.</run-summary>
+## 조율자 2026-07-11 23:52 (recursion1-result-check)
+
+- **경로 규칙**: 저장소 정본만 읽음. 세션 outputs 사본 미접촉.
+- **0단계 안정성**: 회차 시작 시점 미스테이징/미추적 파일 전체 5초 간격 2회(Get-FileHash) 비교 -> 전부 STABLE(변경 없음 확인 후 처리 시작).
+- **하네스 판정**: gate-clean server exit0 PASS(contentDirtyCount 0) - server/ 코드 변경 없음, 이번 회차 server 레인 커밋 대상 없음. doc-integrity exit0 INTACT(핵심 문서 12개 전부 무결, CLAUDE.md 포함) - 커밋 전/후 재확인 2회.
+- **문서 커밋(로컬 전용, 레인: 문서.큐.정책)**:
+  - 6ec9093 - CLAUDE.md(검수자 읽기 순서 절 추가) + docs/handoff/REVIEWER-HANDOFF.md(P0-04 PASS 갱신, WORKSTATE changedFiles 회전 잔여 결함 기록) + docs/handoff/decisions/ADR-007-session-lifecycle.md 신규(상태: 승인됨, 사람 choi 2026-07-11). CLAUDE.md는 표에 명시된 경로는 아니나 doc-integrity 하네스가 감시하는 핵심 문서 목록에 포함되어 있고 순수 문서 변경이라 이 레인으로 판단.기록함(코드 미혼입 diff로 확인).
+  - 0ab7021 - docs/handoff/queue/directive-LEDGER01-token-ledger.md 신규 등재(회차 중 외부 주체가 생성, 5초 안정성 확인 후 커밋). **불일치 발견**: 지시서 서두가 "근거: ADR-006(사람 승인 2026-07-12)"라 적었으나, ADR-006-resource-ledger-p0.md 상태 필드는 여전히 "사람 승인 대기"이고 HUMAN-INBOX 2026-07-11 23:22 항목도 동일(대기). 조율자는 원인.정오를 판단하지 않고 불일치만 사실로 기록(커밋 메시지에 명시). 결재 자체는 대행하지 않음.
+- **커밋 제외(레인 없음/런타임)**: dashboard/data/dev-pack/{measurement,patch-proposal,review-report,run-log,workflow-state}.json(런타임, 표에 명시된 제외 대상) - 미커밋 유지. docs/plan/(테이블에 레인 미정의 - 임의로 레인을 만들지 않음, 미커밋 유지, 다음 회차 이관 필요 시 사람/검수자 판단 요). outputs/DECISION-BRIEF-2026-07-11-v3.md, outputs/reviewer-log.md(검수자 전용 기록 파일 - 읽기만, 쓰기.커밋 안 함), outputs/*.log 전부, sonnet-active.pid.outputs/sonnet-active.pid(런타임 PID 파일).
+- **실행자 발사 감지(조율자는 발사하지 않음 - 관측만)**: 회차 진행 중 outputs/sonnet-active.pid(신규 경로, PID 20896) 및 outputs/sonnet-LEDGER01.{out,err}.log(빈 파일, 방금 시작)가 새로 나타남. Get-Process 조회 결과 PID 20896 = claude.exe, StartTime 2026-07-11 23:50:24 - 생존 확인. 이 발사는 조율자가 수행하지 않았다(조율자는 sonnet을 spawn하지 않음 - 규칙 4조). 주체 미상(사람 직접 발사 또는 별도 자동화로 추정 - 정황상 추정이며 확정 아님). LEDGER-01이 진행 상태로 전환된 것으로 관측. server/(OllamaExecutor.cs.OllamaReviewer.cs.Tier2Approver.cs)는 이번 회차 gate-clean 시점 기준 아직 미변경.
+  - 루트 sonnet-active.pid는 여전히 구 PID 9804(P0-04, 이미 종료.커밋 완료 회차) 값 그대로 - 정리 안 됨(조율자 권한 밖, 기록만).
+- **기준 파일**(blueprint.json.workflow-definition.json): 이번 회차 변경 없음.
+- **HUMAN-INBOX**: 신규 등재 없음. 기존 대기 항목(ADR-006 P0 승격, ADR-001 안전 등급, dev-pack proposal 리비전 다수, outbox 반입 등) 그대로.
+- **발사(조율자는 발사 안 함)**: SONNET-QUEUE #1~19 전부 완료 상태 유지. LEDGER-01은 큐 표에는 아직 행이 없고 지시서만 등재된 상태(위 참조) - 외부 주체가 이미 발사함. 조율자가 새로 발사할 필요.여지 없음.
+- **push(사람 배치 게이트, 대행 안 함)**: git fetch 후 git log origin/main..HEAD --oneline = **11건**(이번 회차 로컬 커밋 2건 포함: 6ec9093.0ab7021, 이전 미push 9건 유지). 사람 배치 승인 필요.
+- **QUOTA_SIGNAL**: outputs/sonnet-HOOK01.out.log에서 과거 잔존 신호 1건 발견("You've hit your limit - resets 5:40pm") - 그러나 HOOK-01은 이미 완료.커밋됨(2e28f7a, 재시도 후 성공)이 SONNET-QUEUE에 기록되어 있어 과거 재시도 잔여 로그로 판단, 현재 진행 중인 신규 신호 아님. 이번 회차 활성 실행자(LEDGER-01, PID 20896) 로그는 아직 빈 상태라 QUOTA_SIGNAL 여부 판단 불가(다음 회차 재확인 필요).
+
+<run-summary>이번 회차엔 server/ 코드 변경이 없어(gate-clean PASS 0건) server 레인 커밋은 없음. 문서 레인에서 ADR-007(주체별 세션 수명 정책, 이미 사람 승인됨) 반입 + REVIEWER-HANDOFF/CLAUDE.md 갱신을 커밋(6ec9093), 그리고 회차 중 새로 등장한 LEDGER-01 지시서를 doc-integrity 통과 후 커밋했다(0ab7021) - 단 이 지시서가 근거로 인용한 ADR-006은 아직 "사람 승인 대기" 상태라 서두 문구와 불일치함을 발견해 그대로 기록만 했다(판단 대행 안 함). 가장 중요한 관측: 회차 도중 조율자가 발사하지 않은 LEDGER-01 sonnet 실행자(PID 20896, claude.exe)가 새로 생존 상태로 나타났다 - 외부 주체(추정, 미확정) 발사로 보이며 조율자는 관여하지 않았다. dev-pack 런타임 json 5종.docs/plan/.DECISION-BRIEF.reviewer-log는 레인/소유권 규칙에 따라 미커밋 유지. 기준 파일.HUMAN-INBOX 변경 없음. push 대기 11건(사람 배치 승인 필요), git push.sonnet 발사 이번 회차에도 하지 않음.</run-summary>
