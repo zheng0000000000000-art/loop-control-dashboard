@@ -469,3 +469,12 @@
 - 미반영 제외: dev-pack 런타임 json 5건, server/EXECUTOR_REPORT.md.
 - 결재·반입·proposal 대행 없음.
 - rec 로그 QUOTA_SIGNAL 없음 (rec6b/7/8/9/10).
+
+## 조율자 2026-07-11 13:04
+- 안정성 게이트: docs/wiki/failures/cases/FAIL-2026-008-dispatch-self-refactor-template-stale.md 2회 해시 동일(614ADFEF...) → 안정 확인.
+- server/: server/*.cs 미커밋 없음 → 검수/커밋 대상 없음. dispatch-templates/*.txt(ApplyMeasurementResult.txt, BalanceTunerSearch.txt), docs/handoff/WORKSTATE.json 변경은 server PASS 게이트 미충족으로 커밋 보류.
+- docs/qa·docs/wiki: FAIL-2026-008 위키 케이스 갱신(6KB, 코드 미혼입 확인) → 커밋 7a9352a push 완료.
+- outputs/last-reviewed-commit.txt: 7a9352a6d9b97edfb388fc7f001d367c16e19454 로 갱신.
+- 미반영 제외: dev-pack 런타임 json 5건, server/EXECUTOR_REPORT.md.
+- 결재·반입·proposal 대행 없음.
+- rec 로그 QUOTA_SIGNAL 없음 (rec6b/7/8/9/10).
