@@ -6,8 +6,6 @@
 
 - `skills/common/directive-writing.md`
 - `skills/common/verification.md`
-- `skills/domains/dev/file-navigation.md`
-- `skills/domains/game/balance-tuning.md`
 
 ## 변경 요약
 

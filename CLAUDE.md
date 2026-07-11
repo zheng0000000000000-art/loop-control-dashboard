@@ -11,6 +11,11 @@
 ## 금지 사항
 - blueprint·workflow-definition·측정 코드를 수정해서 게이트를 통과하는 것.
   기준 변경은 사람 결재 사항이다.
+  - **기준 파일은 `dashboard/data/*/blueprint.json`(목표치)과 `dashboard/data/*/workflow-definition.json`(가드레일·정책) 둘이다.**
+    이 둘은 **커밋 대상**이다 — 나머지 `dashboard/data`(measurement·run-log·patch-proposal·review-report·workflow-state)는 런타임 산출물이라 커밋하지 않는다.
+    2026-07-11까지 `dashboard/data` 통째 제외 규칙 때문에 **기준 변경이 git 이력에 하나도 남지 않았다.** 결재는 사람만 하는데 그 결과물이 버전관리 밖에 있었다.
+  - 기준 파일을 바꿨으면 **`outputs/review-log.md`에 ①주체(누가 승인했는가) ②근거 ③되돌리는 법을 반드시 남긴다.**
+    근거 기록 없는 기준 파일 변경은 **커밋되지 않고 HUMAN-INBOX에 '무단 변경 의심'으로 올라간다**(조율자 규칙).
 - approve/reject 계열 액션 호출. 결재는 사람 몫이다.
 - Engine.cs·Storage.cs·Guardrails.cs에 도메인 지식(게임 용어, metricId, ollama 코드)을 넣는 것.
 
