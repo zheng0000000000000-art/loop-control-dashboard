@@ -3,7 +3,7 @@
   "projectName": "개발 팩 — 자기 검수 루프",
   "currentStage": "apply",
   "overallStatus": "warning",
-  "loopState": "running",
+  "loopState": "halted",
   "mode": "normal",
   "suspendedTracks": [
     {
@@ -17,15 +17,9 @@
       "detectedAt": "2026-07-10T09:39:27.4424984+09:00",
       "relatedProposalId": "proposal-1783630076578",
       "suspectConfidence": "temporal"
-    },
-    {
-      "metricId": "functionsWithoutComment",
-      "detectedAt": "2026-07-11T19:02:13.7032477+09:00",
-      "relatedProposalId": null,
-      "suspectConfidence": "temporal"
     }
   ],
-  "loopIteration": 12,
+  "loopIteration": 13,
   "stages": {
     "goals": "passed",
     "measure": "passed",
@@ -55,7 +49,7 @@
       "issues": []
     },
     "deviationCheck": {
-      "summary": "측정 결과에서 4개 괴리가 감지됐다.",
+      "summary": "측정 결과에서 3개 괴리가 감지됐다.",
       "metrics": [
         {
           "label": "domainWordsInEngine",
@@ -63,7 +57,7 @@
         },
         {
           "label": "functionsWithoutComment",
-          "value": "6 / 0"
+          "value": "0 / 0"
         },
         {
           "label": "directiveAcceptanceCriteria",
@@ -111,7 +105,7 @@
         },
         {
           "label": "programCsLines",
-          "value": "2296 / 0~2661"
+          "value": "2326 / 0~2661"
         },
         {
           "label": "appJsLines",
@@ -123,7 +117,6 @@
         }
       ],
       "issues": [
-        "functionsWithoutComment: 측정값 6이 기준 0을 벗어났다. 근거: server/Harness/ScopeCheckCli.cs:156; docs/handoff/queue/OrchestratorObserverCli.reference.cs:161; docs/handoff/queue/OrchestratorObserverCli.reference.cs:186",
         "smallTouchTargets: 측정값 1이 기준 0을 벗어났다. 근거: dashboard/style.css:1133",
         "skillDomainViolations: 측정값 2이 기준 0을 벗어났다. 근거: docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md",
         "maxFunctionLength: 측정값 159이 기준 0~80을 벗어났다. 근거: dashboard/app.js:852-1010"
@@ -150,7 +143,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-11T19:33:44.9362230+09:00",
+  "lastUpdated": "2026-07-11T19:53:00.5092607+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
@@ -191,9 +184,19 @@
     }
   ],
   "applyBaselineViolations": [
-    "functionsWithoutComment=6",
     "smallTouchTargets=1",
     "skillDomainViolations=2",
     "maxFunctionLength=159"
-  ]
+  ],
+  "haltedAt": "2026-07-11T19:53:00.5092425+09:00",
+  "haltedBy": {
+    "type": "guardrail",
+    "breaches": [
+      {
+        "type": "loopIteration",
+        "actual": 13,
+        "limit": 10
+      }
+    ]
+  }
 }

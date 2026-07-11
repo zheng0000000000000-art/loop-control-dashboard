@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-11T19:31:45.1348001+09:00",
+  "measuredAt": "2026-07-11T19:52:30.4758185+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
@@ -11,15 +11,8 @@
     },
     {
       "metricId": "functionsWithoutComment",
-      "value": 6,
-      "evidence": [
-        "server/Harness/ScopeCheckCli.cs:156",
-        "docs/handoff/queue/OrchestratorObserverCli.reference.cs:161",
-        "docs/handoff/queue/OrchestratorObserverCli.reference.cs:186",
-        "docs/handoff/queue/OrchestratorObserverCli.reference.cs:204",
-        "docs/handoff/queue/OrchestratorObserverCli.reference.cs:211",
-        "docs/handoff/queue/OrchestratorObserverCli.reference.cs:217"
-      ]
+      "value": 0,
+      "evidence": []
     },
     {
       "metricId": "directiveAcceptanceCriteria",
@@ -85,9 +78,9 @@
     },
     {
       "metricId": "programCsLines",
-      "value": 2296,
+      "value": 2326,
       "evidence": [
-        "server/Program.cs:2296 lines"
+        "server/Program.cs:2326 lines"
       ]
     },
     {
