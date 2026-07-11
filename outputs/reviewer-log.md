@@ -1,0 +1,117 @@
+# reviewer-log — 검수자 세션 전용 기록 (다른 주체는 읽기만)
+
+> 2026-07-11 신설. 검수자가 `outputs/review-log.md`(조율자 전용)에 쓰다가 동시 쓰기로 기록 3건이 소실됐다. 이제 검수자는 여기에만 쓴다.
+
+## 2026-07-11 20:2x — 소실된 기록 3건 복원
+
+1. **기준 변경(maxLoopIterations 10→100)**: 사람 승인·근거·되돌리는 법 → `docs/handoff/BASELINE-CHANGES.md` BC-001로 이관(정본).
+2. **claim-check MISMATCH = 오탐 확정**: 정규식 `server/[A-Za-z0-9_/\.]+\.cs`에 종단 경계가 없어 `.csproj`를 `.cs` 파일 주장으로 오인. → **코덱스가 H-6(a941177)로 수정 완료. 재실행 결과 claimCount 12 / mismatch 0 / MATCH.** 조율자가 ACTOR-01을 커밋(6929406). **해소됨.**
+3. **하네스 오탐 override 규칙**: 사람 승인 + 실체 입증 + 하네스 수정 과제 등재 + `[harness-override]` 커밋 메시지, 4개 전부 충족 시에만. → 조율자 프롬프트에 반영됨. **이번 건은 override 없이 코덱스가 고쳐서 자연 해소.**
+
+## 2026-07-11 20:2x — FIX-04 검수 (measure 4 → 1)
+
+- 하네스: build exit 0 / verify-behavior exit 0(behaviorEqual:true) / measure exit 1(violationCount **1**, 직전 4).
+- 해소: smallTouchTargets 0 · skillDomainViolations 0 · functionsWithoutComment 0 · renderApprovalPanel 159→78줄(appJsLines 2692 상한 유지).
+- 잔존: maxFunctionLength 115 (server/BalanceTuner.cs:43-157) — 가장 긴 함수가 해소되자 그 뒤 사전 위반이 드러남(두더지 잡기 구조). 실행자는 allowlist 밖이라 중단·보고 = 지시서 준수. → FIX-05 발사(PID 24408).
+- **ACK 미검출 3번째**(ORCH-01·ACTOR-01·FIX-04 전부). `claude -p`는 stdout에 최종 메시지만 내보내므로 "맨 첫 줄 ACK" 규약은 **구조적으로 작동하지 않는다.** launch-check(H-00)가 이걸 반영하지 않으면 정상 산출물을 전부 오탐 처리한다 — 코덱스에 전달 필요.
+## 2026-07-11 23:5x — P0-04 검수 + WORKSTATE 정정
+
+- **P0-04 PASS**: projection exit 0 / **handoff-integrity exit 1 → exit 0(PASS)** / idempotent(2회 해시 동일) / measure 비악화(1, 코덱스 몫) / GENERATED 경고 삽입 확인.
+- **ADR-005 자진신고 절이 첫 회에 작동**: 실행자가 `## 지표는 만족했으나 목적은 미달인 부분`에 **"WORKSTATE diId를 P0-04로 갱신하지 못함"**을 스스로 신고했다. 검수자가 잡기 전에 실행자가 먼저 말했다. **자리를 주면 쓴다.**
+- **검수자 정정**: WORKSTATE의 phaseId/wpId/diId를 FIX-07 → **P0-04**, status → verifying 으로 수정하고 `projection` 재실행해 L0 갱신. 상태 원본이 낡은 채로 남는 것이 P0-04의 존재 이유와 정면 충돌하므로 즉시 정정했다.
+- 이사(ADR-007): 코덱스 `target_thread_id` 제거 완료(TOML 파서 검증). 검수자용 `docs/handoff/REVIEWER-HANDOFF.md` 신설.
+
+## 2026-07-12 00:0x — 새 검수자 세션: P0-04 재판정 + 하네스 반증 시험
+
+인수인계 4문서(REVIEWER-HANDOFF / RUNTIME-INDEX / review-log / SESSION-051)로 상태 재구성. 문서 대신 실체로 재판정했다.
+
+**실측 (전부 exit code)**
+
+| 검사 | 명령 | exit | 결과 |
+| --- | --- | ---: | --- |
+| P0-04 성공 기준 | `-- handoff-integrity` | **0** | PASS, changedFileCount=3, failureCount=0 |
+| projection 멱등성 | `-- projection` ×2 | 0 | RUNTIME-INDEX 해시 2회 동일(`83746EDF…`) → 멱등 |
+| **하네스 반증 시험(신규)** | FIX07 지시서에 1줄 주입 → `handoff-integrity` | **1** | FAIL, `hashMatches:false` 정확히 그 파일만 지목 |
+| 원복 후 재실행 | `git checkout --` → `handoff-integrity` | **0** | PASS 복귀 |
+
+→ **게이트는 공허하지 않다.** 통과를 믿기 전에 **실패시킬 수 있음**을 먼저 증명했다. exit 0은 "검사가 없어서"가 아니라 "검사를 통과해서"다. **P0-04 성공 기준 충족.**
+
+**지표는 만족했으나 목적은 미달인 부분 (ADR-005)**
+
+1. **WORKSTATE가 P0-04를 선언하면서 `changedFiles`는 여전히 FIX-07의 것**(`dashboard/app.js`, `docs/verification/fix07-*`, `docs/directives/FIX07-*`). 앞 세션이 diId만 P0-04로 고치고 `changedFiles`를 `history`로 회전시키지 않았다. 결과: **하네스는 P0-04의 산출물이 아니라 남의 DI의 파일 3건을 검증하고 green이다.** 해시 검증 자체는 진짜지만, **"핸드오프가 현실을 기술한다"는 목적은 미달.** ← P0-04의 잔여 결함. (수정 주체: 실행자/코덱스. 검수자는 WORKSTATE에 쓰지 않는다.)
+2. **스탬핑 주체 = 검증 주체.** `projection`이 sha256을 쓰고 `handoff-integrity`가 그걸 검증한다. 탬퍼(파일 변경)는 잡지만 **재스탬핑(projection 재실행)으로 언제든 green을 제조할 수 있다.** 구조적 한계 → `HS-GATE-P00` 판정 시 사람이 알고 있어야 할 항목. 게이트 자체를 폐기할 사유는 아니다(현재 목적은 드리프트 탐지).
+
+**정정된 낡은 정보**
+
+- SESSION-051 "P0-03 하네스 코드가 워크트리에 미커밋" → **틀렸다(지금은).** `a7068ad`로 projection CLI + handoff-integrity 하네스 **커밋 완료**, `server/` 워크트리 clean.
+- P0-04 실행자 **PID 9804 = DEAD**(종료). 산출물 커밋됨. 실행 중 sonnet 없음.
+- 샌드박스 git의 `fatal: unknown index entry format 0xffff0000` → **저장소 손상 아님.** 호스트 git은 정상 동작. 리눅스 샌드박스 git 버전이 Windows가 쓴 index 포맷을 못 읽는 것뿐. **프록시를 원인으로 단정하지 않았다.**
+
+## 2026-07-11 23:50 — LEDGER-01 발사 (사람 승인, ADR-006)
+
+사람(choi)이 명시 승인 → 발사. **발사는 사람 게이트다.**
+
+**지시서 근거를 실측으로 다시 깔았다** (ADR-006의 숫자는 낡아 있었다 — "664건"이 실제로는 938건):
+
+| 사실 | 실측(호스트) |
+| --- | --- |
+| `run-log.json` `entries` | **938건** |
+| `cost` 필드 보유 항목 | 938/938 |
+| **토큰 값이 채워진 항목** | **0건** |
+| ollama 데몬 | **UP** (`/api/tags` 200, qwen3:8b·llama3.1:8b·qwen3:14b) |
+
+→ ollama가 살아 있으므로 **"실제 호출로 토큰이 기록되는가"를 검수 기준으로 삼을 수 있다.** 코드 설명이 아니라 **기록된 숫자**를 증거로 요구했다.
+
+**발사 전 게이트 4개 (실측)**
+
+| 게이트 | 결과 |
+| --- | --- |
+| `gate-clean server` | **exit 0**, contentDirtyCount=0 |
+| 실행 중 sonnet 실행자 없음 | ✅ 살아있던 claude 2건은 `--input-format stream-json` **데스크톱 세션**(헤드리스 `-p` 실행자 아님). PID 9804(P0-04)는 DEAD, sonnet-P004 로그 23:38 이후 정지 |
+| 이전 항목 커밋됨 | ✅ P0-04 = `a7068ad`, `server/` clean |
+| 다음 대기 존재 | ✅ `queue/directive-LEDGER01-token-ledger.md` 신규 발행 |
+
+**발사**: PID **20896**. §6 방식(단일 인용 문자열 argline) 준수 → `cmdlen=1191`로 **프롬프트 온전 도착 확인**(FAIL-2026-013 회피). I-1 완화: 다른 큐/지시서 열람 금지 + task ID 결속. SONNET-QUEUE #20에 **진행(PID)** 표기 → **조율자 이중 발사 차단.**
+
+**지시서에 실은 안전장치**: 신규 스키마·필드·하네스 0개 / `estimatedUSD`·`subscriptionCalls` 무접촉(로컬 ollama는 과금 없음, 0을 "모름"으로 바꾸는 것도 스키마 변경) / **토큰 필드가 없으면 추정치를 넣지 말고 0 유지 후 보고** / **dev-pack json 손 편집 = 위조 = 즉시 반려**(값은 서버가 실행되며 스스로 적어야 한다) / `handoff-integrity` exit 0 유지(P0-04에서 막 세운 게이트를 깨지 마라).
+
+## 2026-07-12 00:1x — 도구 주의: **샌드박스 마운트는 실체가 아니다**
+
+리눅스 샌드박스에서 `run-log.json`을 읽으니 11,379줄에서 잘려 **JSON 파싱 실패**했다. "런타임 파일 손상"으로 보고할 뻔했다. **호스트에서 재측정: 22,626줄, JSON 유효, 해시 2회 안정.** 파일은 멀쩡했고 **마운트가 절반만 보여준 것**이다.
+
+같은 계열로, 샌드박스 `git status`는 `fatal: unknown index entry format 0xffff0000`을 냈지만 **호스트 git은 정상**이다(리눅스 git이 Windows가 쓴 index 포맷을 못 읽음). **저장소 손상 아님.**
+
+→ **규칙: 이 저장소의 실체 판정은 호스트(PowerShell)에서 한다. 샌드박스 뷰로 결함을 단정하지 마라.** 오늘 하마터면 다섯 번째로 프록시에 속을 뻔했다.
+
+**다음 수**
+
+- LEDGER-01 검수(PID 20896 종료 후): 위 6개 하네스 exit code + **토큰이 실제로 기록된 run-log 항목 원문**. 자기보고 신뢰 금지 — 하네스 직접 재실행.
+- WORKSTATE `changedFiles` 회전(FIX-07 → history) — LEDGER-01 지시서에 실어 실행자가 처리하게 했다.
+- P0-05는 여전히 data gate 블록(`requiredInputs`/`readOrder` 스키마 부재).
+
+## 2026-07-12 00:2x — 조율자 23:52 회차 검수 (자기보고 ↔ 실체 대조)
+
+조율자가 **자기 오염을 스스로 신고**했다(`review-log.md` 전체 재작성 → 기존 깨진 글자 재인코딩 → `git checkout`으로 되돌리고 append로 재작성 → 커밋 교체). **자기보고가 실체와 일치하는지 직접 확인했다:**
+
+| 확인 | 실측 |
+| --- | --- |
+| 이력 재작성 흔적 | reflog: `fcb085b`(오염) → `reset fcb085b~1` → `7dab8f2`(정상). **로컬 전용** — origin은 12커밋 뒤라 **공유 이력 훼손 0** |
+| `7dab8f2`가 실제로 깨끗한가 | diff = `outputs/review-log.md` **1파일, +19/-1**. 전체 재작성이 아니라 **순수 추가** → 되돌림이 실제로 먹혔다 |
+| 파일 오염 잔존 | U+FFFD **0개** |
+| 내 기록 손실 | 없음(4개 항목 전부 생존) |
+
+→ **조율자 자기보고 = 실체. 이 회차 통과.** 결재 대행 없음, sonnet 발사 없음, 기준 파일 무접촉 — 전부 규칙대로다.
+
+### 그러나 조율자가 한 번 프록시로 추측했다 (FAIL-2026-012 재발)
+
+조율자 보고: *"PID 20896이 `server/OllamaReviewer.cs`와 **`docs/handoff/SONNET-QUEUE.md`**를 편집하기 시작했다."*
+
+**틀렸다.** `git diff -- docs/handoff/SONNET-QUEUE.md` = **row 20 한 줄, 전부 검수자(나)의 편집**이다. 실행자는 큐를 건드리지 않았다 — **지시서가 큐 열람을 금지했고, 실행자는 그걸 지켰다.** 조율자는 "같은 시각에 바뀐 파일 = 그 프로세스가 썼다"고 **타이밍 상관으로 주체를 단정**했다. 실체(diff 내용)를 보면 1초면 알 수 있었다.
+
+**작은 오판이지만 그냥 넘기지 않는다** — 오늘 우리를 네 번 틀리게 한 바로 그 사고방식이고, 여기서는 무해했지만 **"실행자가 지시서를 어겼다"는 누명**이 될 수 있었다. 주체 판정은 **diff 내용**으로 한다.
+
+### 이번 회차로 고친 것 (CLAUDE.md 직접 경로, 사유 기록)
+
+1. **`## 관례 > 기록 파일은 append만 한다`** 신설 — 근본 원인은 조율자의 부주의가 아니라 **저장소에 이미 박혀 있는 깨진 한글**이다(`WORKSTATE.json`의 note: `"IsWithinRoot(separator-bounded) ?ы띁"`). 그 바이트를 통째로 다시 쓰면 조용히 바뀐다. 게다가 **U+FFFD가 아니라 이중 디코딩된 정상 유니코드라 자동 검출도 안 된다.** 그래서 **규칙으로 막는다** — 프롬프트로 시키지 말고 코드/규칙으로 강제하라(INTENT-DIGEST).
+2. **`outputs/reviewer-log.md`를 git에 넣었다.** 오늘까지 **untracked**였다 — 조율자 로그는 커밋되는데 검수자 로그만 버전관리 밖이었다. **판정 근거가 git 밖에 있는 것**은 CLAUDE.md가 지적한 "기준 변경이 이력에 하나도 안 남았다"와 같은 병이다. ADR-003 보강으로 **검수자가 직접 커밋**한다고 명시했다.
+3. **ADR-006 상태를 `승인됨`으로 갱신**(사람 choi, 2026-07-11 23:5x) + §1의 낡은 수치(664건) → 실측(938건)으로 정정. 조율자가 관측한 "승인상태 불일치" 해소.
