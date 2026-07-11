@@ -64,3 +64,16 @@
 - 내용: 커밋 메시지·내용은 이번 조율자가 검증하려던 것과 거의 동일(하네스 5종 구현, build 0/0, verify-behavior true, measure 5→3)이지만, **범위 규칙 위반**: server/*.cs 6건 외에 docs/handoff/HARNESSES.md·HS-CANDIDATES.md·HUMAN-INBOX.md·SONNET-QUEUE.md·session 파일 10건(codex-011~021 중 일부)·skills/common/hs-gate.md·docs/verification/feat02-e2e-harness.md까지 한 커밋(23개 파일)에 혼입됨. 지시서 규칙(server 커밋은 server/*.cs·WORKSTATE.json·docs/verification/refactor·fix*·docs/directives/*·.gitignore로 한정, docs/handoff류는 별도)을 벗어남 — 15:46·16:08 기록된 동일 패턴("동시 작업 중인 실행자가 git add를 미리 수행")의 재발이나, 이번엔 커밋 자체가 알 수 없는 identity로 실행됨.
 - 조치: ① `review-session <review@local>` 주체가 무엇인지(다른 조율자 인스턴스 중복 실행? 별도 자동화 스크립트? 오케스트레이터 골격 코드?) 사람 확인 필요. ② 이 identity의 git 직접 커밋 권한이 의도된 것인지 점검 필요(조율자 지시서상 git 커밋은 "조율자"만 하도록 설계됨). ③ 필요 시 되돌리기(reset)는 조율자 재량 밖 — 사람 판단.
 - 확인 시각: 2026-07-11 16:12경 (조율자, recursion1-result-check).
+
+## 결정 필요: FEAT-01 한정 이양(게이트 클린 반입 AI 승인) 발사 여부 — 안전 재검토 문구 소실 확인 필요 (2026-07-11 16:17경 최초 관측, 조율자 재확인)
+
+- 맥락: outputs 폴더의 조율자용 SONNET-QUEUE.md 사본은 FEAT-01을 "보류 — 안전 재검토(무인 결재 이양 위험)"로 표시했었음. 그러나 저장소 정본 `docs/handoff/SONNET-QUEUE.md`(현재 확인)에는 이 보류 문구 없이 순번 #4로 단순 "대기"만 표기되어 있음(#1·#2·#3·#6·#7·#8·#9·#11 완료, #10 취소).
+- 이슈: 안전 재검토가 실제로 완료되어 보류가 해제된 것인지, 문구가 유실된 것인지 불명. FEAT-01 자체가 "무인 결재 이양"(반입 승인을 AI에 위임)이라는 북극성 원칙(결재는 항상 사람)과 직결되는 민감 이양이라 조율자는 이 항목을 자동 "발사 대기" 목록에 올리지 않고 있음(16:17·이후 회차 지속).
+- 조치: 사람이 (1) FEAT-01 안전 재검토가 실제 완료됐는지 확인, (2) 완료됐다면 저장소 정본 SONNET-QUEUE.md에 그 결론(승인/조건)을 명시적으로 남기고, (3) 발사 여부를 직접 승인/보류 결정. 조율자는 이 판단을 대행하지 않음.
+- 확인 시각: 2026-07-11 (조율자, recursion1-result-check, 최초 16:17 관측 이후 지속 재확인).
+
+## 참고: HS-GATE 판정 반영 요청 — HS-CANDIDATES.md에 path-guard-check·ORCH 확장 하네스 후보 추가 필요 (2026-07-11)
+
+- 맥락: docs/qa/hs-gate-2026-07-11.md(코덱스 작성, 로컬 커밋 184d121)에서 `path_escape`(FAIL-2026-006/007)·`executor-orchestration`(FAIL-2026-004/005/008/010) 두 계열을 "즉시제작" 판정(각 11점). `config_side_effect`는 "보류/기존확장" 판정.
+- 조치: 코덱스 쓰기 영역 제한으로 docs/handoff/HS-CANDIDATES.md는 직접 수정되지 않음. 이 판정을 HS-CANDIDATES에 반영하고 필요 시 SONNET-QUEUE에 `path-guard-check`·ORCH 확장 하네스 지시서를 추가하는 것은 검수자/오케스트레이터 콘텐츠 편집 사안(단순 결재 항목 아님) — 조율자는 콘텐츠 편집을 대행하지 않고 참고로만 기록.
+- 확인 시각: 2026-07-11 (조율자, recursion1-result-check).
