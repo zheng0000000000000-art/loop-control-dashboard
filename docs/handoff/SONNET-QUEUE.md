@@ -13,11 +13,12 @@
 | 5 | ORCH-01 오케스트레이터 관측 스캐폴드 (dotnet -- orch-observe) | queue/directive-ORCH01-observer.md | server/ | 대기 — 관측 전용(발사·커밋·결재 없음), 비전문서 1단계 코드화 |
 | 6 | HARNESS-01 gate-clean (트리 clean을 정규화 내용 해시로 판정) | queue/directive-HARNESS01-gate-clean.md | server/ | **완료** — 검수자 세션 직접 구현·빌드 0/0·장애주입 회귀 통과 |
 | 7 | HARNESS-02 hs-scan (승격 심사 트리거 기계 탐지) | queue/directive-HARNESS02-hs-scan.md | server/ | **완료** — 검수자 세션 직접 구현. 실행 시 후보 3건 자동 검출 확인 |
-| 8 | **HARNESS-04 gate-audit** (사람 전용 게이트 위반 감사) | queue/directive-HARNESS04-gate-audit.md | server/ | **완료** — 직접 구현. 실행 결과 **위반 22건 검출**(수작업 12건보다 10건 많음, 오탐 0) |
+| 8 | ~~HARNESS-04 gate-audit~~ | ~~queue/directive-HARNESS04-gate-audit.md~~ | — | **철회** — 승격 근거가 오판(`[loop]`는 주체 서명이 아님). 하네스 삭제. FAIL-2026-012 |
 | 9 | HARNESS-03 claim-check (자기보고→실체 대조) | queue/directive-HARNESS03-claim-check.md | server/ | **완료** — 직접 구현. 허위주장 주입 시 MISMATCH 검출 확인 |
 | 10 | ~~FIX-03 measure 스캔에서 docs/ 제외~~ | — | — | **취소** — 참조본을 삭제해 해결(측정 코드 수정은 CLAUDE.md 금지사항). measure 5→3건, 기준선 복귀 |
 | 11 | HARNESS-05 doc-integrity (문서 잘림 검출) | (직접 구현) | server/ | **완료** — I-9를 승격으로 뒤집음(3회차 재현). 오탐 0, 주입 잘림 검출 확인 |
-| 12 | (추후 검수자가 추가) | — | — | — |
+| 12 | **ACTOR-01 결재 액션 actor 기록** | queue/directive-ACTOR01-actor-provenance.md | server/ | **사람 결재 대기** — 결재 게이트 의미를 코드에 새김(기준 변경 성격). 승인 전 발사 금지 |
+| 13 | (추후 검수자가 추가) | — | — | — |
 
 ## 자동 발사 규칙 (조율자용)
 

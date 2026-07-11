@@ -5,8 +5,8 @@
 > **판정 주체는 코덱스**(파이프라인 1단계). 검수자가 올린 후보는 `코덱스 확정 대기`로 표시하고, 코덱스가 HS-GATE 회차에 확정한다.
 
 <!-- hs-scan 이 읽는 메타. HS-GATE 수행 시 갱신할 것. -->
-- `lastGate: 2026-07-11 16:30`
-- `judgedClasses: unnormalized_gate, self_report_as_truth, undeclared_gate_bypass`
+- `lastGate: 2026-07-11 16:55`
+- `judgedClasses: unnormalized_gate, self_report_as_truth`
 
 ## HS-01 `gate-clean` — 트리 clean을 정규화 내용 해시로 판정 (하네스)
 
@@ -70,10 +70,13 @@ FAIL-005는 "실행 중인가"를 StartTime으로, FAIL-010은 "깨끗한가"를
 - 산출: SONNET-QUEUE #8 `HARNESS-03`.
 - 검사 내용: `claim-check <diId>` — verification 문서/WORKSTATE가 주장하는 검수기준 항목을 파싱 → ①주장된 심볼·파일이 실제 코드에 존재하는가(git grep) ②주장된 빌드/게이트 결과가 재현되는가 ③주장된 커밋이 로그에 있는가. 불일치 목록 출력, 있으면 exit 1.
 
-## HS-04 `gate-audit` — 사람 전용 게이트 위반 감사 (하네스) ★최우선
+## ~~HS-04 `gate-audit`~~ — **철회됨 (2026-07-11 16:5x)** ※승격 자체가 오판이었다
 
-- 상태: **즉시제작 제안 (12/12) — 코덱스 확정 대기**
-- 근거 데이터: `git log`에 `[loop] dev-pack 회차N: approve proposal-...` / `acknowledge-guardrail ...` 커밋 **12건 실측**(회차5·6·7·8·9·10, 두 계열). HUMAN-INBOX가 34f5116 1건을 관측하고 "출처 미확정"으로 남긴 뒤 **6건 이상 추가 재발**.
+- 상태: **철회.** 승격 근거였던 "무인 결재 22건"이 **오판**이었다. 하네스 삭제·CliRouter 등록 해제 완료.
+- **철회 사유**: `[loop]`는 자동 주체의 서명이 **아니다**. `GitDataCommitter.CommitHumanAction`이 붙이는 커밋 메시지 형식이며 **사람 승인에도 붙는다**. `Approve()` 호출자는 HTTP 엔드포인트 하나뿐이고 서버에 proposal 자동승인 경로는 없다. 상세: **FAIL-2026-012**.
+- **교훈(HS-GATE 절차 보강)**: 점수표의 '결정가능성'은 *데이터가 있을 때* 기계 판정 가능한지를 묻는 것이다. **하네스를 승격하기 전에 "이 하네스가 볼 데이터가 실제로 존재하는가"를 먼저 확인해야 한다.** gate-audit이 볼 actor 데이터는 애초에 존재하지 않았다. 이 확인 단계를 `skills/common/hs-gate.md`에 추가했다.
+- **대체 과제**: ACTOR-01(결재 액션 actor 기록). 그게 서면 gate-audit을 재심사한다.
+- (철회 전 원 근거 — 이력 보존) `git log`에 `[loop] dev-pack 회차N: approve proposal-...` / `acknowledge-guardrail ...` 커밋 **12건 실측**(회차5·6·7·8·9·10, 두 계열). HUMAN-INBOX가 34f5116 1건을 관측하고 "출처 미확정"으로 남긴 뒤 **6건 이상 추가 재발**.
 
 ### 원인 분석 (증상 아니라 원인을 올린다)
 - **증상**: 대시보드 loop이 proposal을 무인 승인하고 자동 커밋한다.
