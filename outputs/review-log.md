@@ -1725,3 +1725,41 @@
 - **사람 판단 필요**: 재개 시점 도래 시 REVIEWER-HANDOFF.md 「재개 절차」 1~5단계를 따를 것. 1단계(코덱스 침묵 원인 확인)부터 시작하고, 2단계에서 이 예약 작업을 다시 enabled: true로 켤 것(이번에 꺼둔 상태 유지 중).
 
 <run-summary>저장소에 기록된 "자동화 전면 정지"(01:56~01:57 커밋)를 확인했고, 실제 Cowork 스케줄러는 아직 활성 상태였던 불일치를 발견해 recursion1-result-check를 enabled:false로 전환함. 그 외 정지 상태를 존중해 이번 회차의 통상 검수·커밋·발사·push 절차는 전부 건너뜀 — 사람이 재개 절차를 밟을 때까지 대기.</run-summary>
+
+## 조율자 2026-07-12 04:08 (recursion1-result-check, 자동 실행분)
+
+- 선(先) 게이트: server/OllamaExecutor.cs·Program.cs dirty(레인 안), docs/handoff/REVIEWER-HANDOFF.md dirty(검수자 소유 문서 — 손대지 않음), docs/plan/ untracked 3파일(AI-RUNTIME-REFACTOR-MICRO-DIRECTIVES-v9.md·ALIGNMENT-v9.md·INTENT-DIGEST.md, 커밋 레인 밖 — 손대지 않음), dashboard/data 런타임 8종(레인 제외, 항상 dirty). 안정성 게이트: 5초 간격 해시 동일 파일 전부 안정.
+- exit.json sentinel: outputs/launch/ 비어있음 — 완료 신호 없음.
+- 프로세스 확인: PID 34288(claude) 04:00:09 시작, 확인 시각(04:07:58) 기준 ALIVE. outputs/sonnet-active.pid=34288과 일치 — LEDGER-04(metricId 정규화+계속기록) 실행 중으로 판단.
+- server/*.cs dirty는 LEDGER-04 진행 중 편집으로 판단(WORKSTATE.json의 diId=LEDGER-03/status=verifying은 갱신 누락 — LEDGER-03은 이미 f0f874a로 커밋·검수 완료된 이전 항목. projection 재실행은 조율자 권한 밖).
+- **조치**: 실행자 ALIVE 확인 → 빌드·하네스(gate-clean/handoff-integrity 등)·커밋 전부 보류(exe 락 위험 + 미완성 코드 커밋 방지). HUMAN-INBOX 신규 등재 없음(직전 회차 대비 변화 없음 — 마지막 항목인 metricId 정책은 사람이 이미 2안으로 결정해 LEDGER-04로 발사된 상태로 확인).
+- 발사(사람 게이트): 진행 중 실행자(PID 34288) 있음 → 신규 발사 안 함(순차 엄수).
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 53건 — 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>LEDGER-04 실행자(PID 34288)가 ALIVE로 확인되어 server/*.cs 편집이 진행 중 — 이번 회차는 빌드/하네스/커밋을 보류하고 상태만 기록했다. HUMAN-INBOX·BASELINE-CHANGES 신규 항목 없음, 발사·push 미실행(push 대기 53건 그대로). 저장소 상태에 실질 변경 없음.</run-summary>
+
+## 조율자 2026-07-12 04:16 (recursion1-result-check, 자동 실행분)
+
+- 선(先) 게이트: outputs/launch/LEDGER-04.exit.json 발견(processed:false) → 검수 진행.
+- **exitCode 이상치 확인**: sentinel의 exitCode가 null(0 아님). 그러나 run-executor.ps1 자체 주석에 "핸들을 미리 캐시한다 — 이걸 안 하면 종료 후 ExitCode가 null이 된다(.NET 동작)... 실제로 LEDGER-04에서 null이 나왔다"고 명시돼 있고, 현재 스크립트는 이미 그 수정(Handle 캐싱 + null이면 -1 기록)이 반영된 버전이다 → LEDGER-04의 null은 **수정 전 버전의 알려진 래퍼 버그**로 확인(추정 아님, 스크립트 주석이 이 사건을 직접 지목). 이를 그대로 "비정상 종료"로 단정하지 않고, 아래 하네스 재실행으로 실체를 직접 대조했다.
+- PID 34288 확인 결과 ALIVE 아님(정상 종료 후 프로세스 소멸).
+- WORKSTATE.json: diId LEDGER-04로 갱신, changedFiles 4건 전부 sha256 채워짐(LEDGER-03 때의 null-sha 사고 재발 없음).
+- **하네스 직접 재실행(임시 빌드 -o 우회, 이후 dotnet run으로 교차 확인)**:
+  - dotnet build server -c Release → exit 0, warning 0, error 0 (실행자 주장과 일치)
+  - erify-behavior → exit 0, behaviorEqual:true
+  - measure dev-pack → exit 0, violationCount:0
+  - gate-clean server → exit 1 — server/OllamaExecutor.cs·Program.cs content-dirty(실제 코드 변경, 예상된 결과) + server/Harness/ContextPackIntegrityCli.cs(미추적, LEDGER-04 범위 밖 — 코덱스 산출물로 추정, 손대지 않음)
+  - claim-check LEDGER-04 → exit 0, claimCount13/mismatchCount0, verdict MATCH
+  - handoff-integrity → exit 0, verdict PASS, failures:[] — WORKSTATE 해시 전부 실체와 일치
+  - doc-integrity → exit 0, 전 문서 intact
+- **커밋(로컬만, push 안 함)**: 레인 분리하여 3건 — 91bea7b(server 코드: OllamaExecutor.cs·Program.cs) / a2efaa3(문서: verification·directive 보관본) / 42ac3e0(상태: WORKSTATE.json·HANDOFF.md·RUNTIME-INDEX.md).
+- SONNET-QUEUE.md #23을 "진행" → "완료"로 갱신 후 단독 커밋(4fe3139, doc-integrity exit0 확인).
+- exit.json processed:false → true로 갱신.
+- 범위 밖이라 손대지 않은 것: docs/plan/(신규 3파일), docs/handoff/sessions/SESSION-2026-07-12-codex-052.md(코덱스 소유), server/Harness/HarnessRegistry.cs(dirty)·ContextPackIntegrityCli.cs(신규, 미추적) — LEDGER-04 changedFiles·allowlist에 없음, 코덱스 산출물로 추정(확정 아님). dashboard/data/dev-pack·ruined-lab 런타임 8종은 레인 제외.
+- HUMAN-INBOX: 신규 등재 없음(이번 회차 새 결정 필요 항목 없음). BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 변경 없음.
+- 발사(사람 게이트): SONNET-QUEUE #24가 "(추후 검수자가 추가)"로 공석 — 다음 대기 항목 없음. 조율자는 발사하지 않음.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 59건(이번 회차 +6) → 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>LEDGER-04(metricId 대소문자 정규화) 실행자 산출물을 검수 — 하네스 6종(build/verify-behavior/measure/gate-clean/claim-check/handoff-integrity) 전부 실행자 주장과 일치 확인, exitCode:null은 스크립트 자체 주석으로 확인된 기존 래퍼 버그(비정상 종료 아님)로 판정. server 코드·문서·상태 3레인 로컬 커밋(91bea7b/a2efaa3/42ac3e0) + SONNET-QUEUE #23 완료 갱신(4fe3139). 다음 대기 항목 없어 발사 안 함. push 대기 59건, HUMAN-INBOX 신규 없음.</run-summary>
