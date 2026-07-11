@@ -31,6 +31,45 @@
 - 이 절이 `scope-check` 하네스의 입력이 된다. **판정할 데이터를 먼저 만든다** — 근거 없는 하네스는 프록시에 기대다 오보를 낸다(FAIL-2026-012).
 - 산문 '경계' 절은 사람용 설명으로 유지하되, **기계 판정 근거는 이 allowlist다.**
 
+## Context Pack — 모든 지시서 필수 (P0-05, 2026-07-12 신설)
+
+모든 지시서는 **머리에** 기계가 파싱할 수 있는 Context Pack 블록을 포함한다. 형식 고정 — 언어 태그는 `context-pack`:
+
+````
+```context-pack
+{
+  "diId": "FEAT-01",
+  "requiredInputs": [
+    { "path": "docs/directives/_header.md", "sha256": "58e7595e..." }
+  ],
+  "readOrder": [
+    "docs/context/RUNTIME-INDEX.md",
+    "docs/directives/_header.md",
+    "docs/handoff/queue/directive-FEAT01-conditional-delegation.md"
+  ],
+  "forbiddenActions": ["git commit", "git push", "approve", "reject", "import", "spawn-executor", "edit-baseline"]
+}
+```
+````
+
+### 세 필드의 뜻
+
+- **`requiredInputs`** — 이 작업을 하려면 **읽어야 하는 참조 입력**. 경로 + **sha256**.
+  - **`sha256`은 프로그램이 계산한다. LLM이 적지 않는다.** 해시를 손으로 적는 순간 그건 검증이 아니라 창작이다.
+  - **allowlist(쓰기 대상)와 겹치지 않는다.** 읽기 참조 = `requiredInputs`, 쓰기 대상 = `allowlist`. 작업 중 바뀌는 파일에 해시를 걸면 게이트가 **자기 작업에 걸려 넘어진다.**
+- **`readOrder`** — 읽는 순서. **L0(가장 짧은 상태) → 지시서 → 참조** 로 좁혀 읽는다. 실행자가 저장소를 헤매지 않게 한다.
+- **`forbiddenActions`** — 이 작업에서 금지된 행위. 산문이 아니라 목록이라 기계가 대조할 수 있다.
+
+### 왜 필요한가 (실측 근거)
+
+**지시서가 삭제된 파일을 계속 가리켰다.** `docs/STATUS.md`가 "ORCH-01 참조 `.cs` 준비됨"이라고 적었지만 그 파일은 커밋 `797e7bc`가 **이미 지운 상태**였다. 발사 직전에 **사람이 손으로** 발견했다 — 하네스 6개가 돌고 있었는데 아무도 못 잡았다. 참조 입력에 **경로만 있고 해시가 없었기 때문**이다.
+
+`context-pack-integrity` 하네스가 이 블록을 읽어 판정한다: 파일이 사라졌거나(`missing`) 해시가 어긋나면(`stale`) **exit 1**. 발사 전에 기계가 막는다.
+
+### 하위 호환
+
+기존 지시서(#1~#19)에는 소급 적용하지 않는다. **신규 지시서부터 필수**이며, 하네스는 블록이 **없는** 지시서를 `skipped`로 세고 실패로 치지 않는다 — 과거 때문에 게이트가 영구 잠기면 안 된다(FAIL-2026-010의 교훈).
+
 ## 완료 조건 작성 규칙 — 지표와 목적을 분리하라 (ADR-005)
 
 1. **지표 기준**(기계 판정): measure·build·verify-behavior 등 exit code로 판정 가능한 것.

@@ -1,5 +1,29 @@
 # FEAT-01 — 한정 이양: 게이트 클린 반입의 상위 AI 승인
 
+```context-pack
+{
+  "diId": "FEAT-01",
+  "requiredInputs": [
+    { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
+    { "path": "docs/verification/_template.md", "sha256": "cca162b7cfc7387e3d369148c5d0d170cea9dfe73d86feb9c77a40ab44829145" },
+    { "path": "docs/handoff/decisions/ADR-005-metric-vs-purpose.md", "sha256": "0b9fb7c5756b27923ceeafab6c8dcd44d00b3c73708d00abdb0887f1891a4bed" },
+    { "path": "docs/handoff/QUOTA-POLICY.md", "sha256": "4bc62f76041527b6984eb2e9d3e0dc1d5a985c7329b62ae2ac65450711462a5c" },
+    { "path": "skills/common/verification.md", "sha256": "9476af73b5c5347569d96c98de022f739eec3b77ec15317f37ea0beae53876ea" }
+  ],
+  "readOrder": [
+    "docs/context/RUNTIME-INDEX.md",
+    "docs/directives/_header.md",
+    "docs/handoff/queue/directive-FEAT01-conditional-delegation.md",
+    "docs/handoff/decisions/ADR-005-metric-vs-purpose.md",
+    "docs/verification/_template.md"
+  ],
+  "forbiddenActions": ["git commit", "git push", "approve", "reject", "import", "spawn-executor", "edit-baseline"]
+}
+```
+
+> Context Pack 형식은 `docs/directives/_header.md`의 「Context Pack」 절을 따른다. **`sha256`은 프로그램이 계산했다**(`Get-FileHash`, 검수자 2026-07-12). 손으로 적은 값이 아니다.
+> **주의(사람 결재 대기)**: 이 지시서는 **안전 보류 중**이다 — `HUMAN-INBOX.md` 참조. 발사 금지.
+
 이 지시서는 `docs/directives/_header.md`의 불변 제약을 따른다. 작업 시작 전 먼저 읽어라.
 유형: implementation. 근거: 사람이 승인한 한정 이양안(게이트 클린 반입만 상위 AI가 검토·승인, 감사·일일캡·이상 시 자동중단+사람복귀, DECISIONS 기록). 현재 Tier2Approver가 활성 상태이므로 그 위에 조건을 얹는다.
 

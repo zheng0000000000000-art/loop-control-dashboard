@@ -69,7 +69,29 @@
 | 순번 | 작업 | 근거 | 영역 | 상태 |
 | --- | --- | --- | --- | --- |
 | **P0-03** | **`handoff-integrity` 하네스 (신규 1/2) ★최우선** — `WORKSTATE.json`이 실체와 일치하는지 검사: ①schema ②`changedFiles`의 실제 존재·hash ③`status`와 큐 표의 일치 ④blocker가 있는데 다음 항목이 진행 중인지 ⑤완료 주장 산출물의 실재. exit 0/1. | **가장 큰 구멍**: WORKSTATE가 `phaseId=FEAT-01, status=verifying`으로 며칠간 거짓말했는데 아무도 못 잡았다. 계획서 DI-00-05가 요구하는 항목. | `server/Harness/` | **대기** |
-| **P0-05** | **`context-pack-integrity` 하네스 (신규 2/2)** — 지시서(=우리의 Context Pack)의 `requiredInputs` 경로가 **실재하고 hash가 일치하는지** 검사. 없으면 exit 1. | ORCH-01 지시서가 **삭제된 참조 스캐폴드**를 가리키고 있었다(커밋 797e7bc가 지움). 검수자가 손으로 발견했다 — 기계가 잡아야 한다. | `server/Harness/` | 대기(P0-03 후) |
+| **P0-05** | **`context-pack-integrity` 하네스 (신규 2/2)** — 지시서(=우리의 Context Pack)의 `requiredInputs` 경로가 **실재하고 hash가 일치하는지** 검사. 없으면 exit 1. | ORCH-01 지시서가 **삭제된 참조 스캐폴드**를 가리키고 있었다(커밋 797e7bc가 지움). 검수자가 손으로 발견했다 — 기계가 잡아야 한다. | `server/Harness/` | **착수 가능(2026-07-12) — 데이터 관문 열림** ↓ |
+
+### P0-05 데이터 관문 해제 (2026-07-12, 검수자)
+
+**너는 두 회차 연속(세션 050·051) "볼 데이터가 없다"며 정확히 기각했다. 옳았다.** `hs-gate.md` 2항을 지킨 것이다. 이제 데이터를 만들었으니 착수해라.
+
+- **형식 정본**: `docs/directives/_header.md`의 **「Context Pack」 절**. 언어 태그 `context-pack`인 펜스 블록 안에 JSON. 필드는 `diId` · `requiredInputs[{path, sha256}]` · `readOrder[]` · `forbiddenActions[]`.
+- **실데이터 1건**: `docs/handoff/queue/directive-FEAT01-conditional-delegation.md` 머리에 실제 블록이 들어 있다. **sha256은 프로그램(`Get-FileHash`)이 계산한 진짜 값**이다 — 손으로 적은 값이 아니다.
+- **음성 표본**: 나머지 지시서 16건에는 블록이 **없다**. 하네스는 이들을 `skipped`로 세고 **실패로 치지 마라** — 과거 때문에 게이트가 영구 잠기면 안 된다(FAIL-2026-010 교훈).
+
+**판정 규칙 (이게 이 하네스의 존재 이유다)**
+
+| 조건 | 판정 |
+| --- | --- |
+| `requiredInputs`의 경로가 **없는 파일** | `missing` → **exit 1** ← ORCH-01 유령 참조가 바로 이것 |
+| 파일은 있으나 **sha256 불일치** | `stale` → **exit 1** |
+| 전부 일치 | `ok` → exit 0 |
+| Context Pack 블록 자체가 없음 | `skipped` → exit code에 영향 없음 |
+
+- **주의(P0-04에서 배운 것)**: `handoff-integrity`는 **스탬핑 주체와 검증 주체가 같아서**(`projection`이 쓰고 자기가 검증) 재실행으로 green을 제조할 수 있다. `context-pack-integrity`는 **스탬핑 기능을 넣지 마라 — 검사만 해라.** 해시 갱신은 사람/검수자가 지시서를 고칠 때 한다. **고치는 자와 검사하는 자를 분리한다**(ADR-002와 같은 원리).
+- **장애 주입 시험(필수)**: ①`requiredInputs`의 파일 하나를 임시로 지워 `missing` exit 1 확인 ②한 줄 바꿔 `stale` exit 1 확인 ③원복 후 exit 0 복귀. **통과를 믿기 전에 실패시킬 수 있음을 먼저 증명해라**(검수자가 P0-04에서 이 방식으로 판정했다).
+- **allowlist와 겹치면 안 된다**: `requiredInputs`는 **읽기 참조**, allowlist는 **쓰기 대상**. 작업 중 바뀌는 파일에 해시를 걸면 게이트가 자기 작업에 걸려 넘어진다. 겹치면 경고를 내라.
+
 | **P0-06** | **`scope-check` 확장(기존 확장, 신규 아님)** — 발사 시 지시서 allowlist를 **claim으로 등록**하고, 실행 중 다른 주체가 같은 파일을 만지면 검출. 사후 검출 → **사전 경고**. | 계획서 §0-A.4 `FILE-CLAIMS`. 고아 코드 109줄 사건(주체 규명 불가)의 재발 방지. | `server/Harness/` | 대기(P0-05 후) |
 | **H-00 수정** | **`launch-check`를 파일 기반 ACK로 바꿔라 (ADR-004)** | **실측: ORCH-01·ACTOR-01·FIX-04·FIX-05·FIX-06 5건 모두 stdout에 ACK를 출력하지 않았다.** `claude -p`는 최종 메시지만 내보내므로 "첫 줄 ACK"는 구조적으로 불가능하다. 그런데 5건 다 지시서를 정확히 지켰다 — **지시는 도착했다.** 현행 stdout 기반 launch-check를 그대로 쓰면 **정상 산출물을 전부 오탐으로 죽인다.** 대신 실행자가 시작 시 `outputs/ack-<taskId>.txt`를 쓰게 하고 그 **파일 존재**로 판정하라. | `server/Harness/` | **긴급** |
 
