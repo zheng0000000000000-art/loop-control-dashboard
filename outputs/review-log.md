@@ -1057,3 +1057,6 @@
 - QUOTA_SIGNAL: 미검출.
 
 <run-summary>이번 회차 변경 없음: 커밋 0건(미커밋 항목 전부 런타임 제외/레인 밖). gate-clean PASS, doc-integrity INTACT. patch-proposal(99→[0,80])은 직전 회차에 이미 HUMAN-INBOX 등재·커밋된 것과 동일 건으로 재처리 불필요. HUMAN-INBOX·BASELINE-CHANGES·reviewer-log 신규 없음. 발사 없음(다음 대기 FIX-07, 사람 승인 후 발사만 기록). push 대기 23건, 사람 배치 승인 필요. QUOTA_SIGNAL 없음.</run-summary>
+### 정정/추가 (2026-07-11 21:41, 같은 회차)
+
+- 위 기록 작성 후 review-log.md 자체를 로컬 커밋(b207b3b, 1개 파일만 변경). push 대기 갱신: **24건**(이번 커밋 포함) — 사람 배치 승인 필요.
