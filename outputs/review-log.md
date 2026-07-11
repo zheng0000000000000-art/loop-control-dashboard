@@ -1132,3 +1132,19 @@
 - 참고(편집 안 함, 기록만): SONNET-QUEUE.md 표상 #17 FIX-06이 "대기"로 남아있으나 git log에 3df722f(FIX-06 완료 커밋)가 이미 존재 — 표 갱신은 조율자 권한이나 이번 회차는 관측만 남기고 편집 보류(활성 실행자와의 충돌 우려, FIX-07 진행 중 안정화 후 처리 권장).
 - push 대기: 32건 — 사람 배치 승인 필요.
 - 발사: 없음(활성 실행자 존재, 순차 규칙).
+
+## 조율자 2026-07-11 22:49 기록 (codex 신규 하네스 server+docs 커밋 3건)
+
+- 0단계 안정성: 최초 git status 확인 시각과 실제 커밋 시각 사이 codex가 계속 작업 중이라 상태가 갱신됨(HS-CANDIDATES.md 추가 diff, docs/qa·sessions 신규 파일 등장). 대상 5개 파일(server/Harness/HarnessRegistry.cs·ProjectApiEdgeCheckCli.cs·docs/handoff/HS-CANDIDATES.md·docs/qa/project-api-edge-check-harness-2026-07-11.md·docs/handoff/sessions/SESSION-2026-07-11-codex-047.md) 해시 5초 간격 2회 동일(안정) 확인 후 처리.
+- 실행자 상태: sonnet-active.pid=32956(FIX-07, dashboard/app.js 장문 함수 분할) 계속 생존·진행 중. 이번 회차 접촉 안 함(다른 주체 영역).
+- **server 코드 레인 커밋** c9b2743: server/Harness/HarnessRegistry.cs(1줄 등록)·server/Harness/ProjectApiEdgeCheckCli.cs(신규, actor=codex, FAIL-2026-009 HTTP edge 회귀 하네스 project-api-edge-check). 게이트: build-verify exit0 PASS(임시경로 빌드, 락 우회), verify-behavior behaviorEqual:true, measure dev-pack violationCount=1(기준선 1, 비악화), doc-integrity exit0 INTACT. claim-check는 이 항목이 SONNET-QUEUE DI가 아닌 codex 자체 QA 산출물이라 미해당(근거: docs/qa/project-api-edge-check-harness-2026-07-11.md에 actor·하네스결과·참조스킬 기재 확인).
+- **문서 레인 커밋 2건**: 735de64(HS-CANDIDATES.md 22:45 갱신 + codex-047 세션 + QA 리포트, doc-integrity 재검사 INTACT) / e20f922(HUMAN-INBOX에 신규 dev-pack proposal-1783777837699 등재, doc-integrity 재검사 INTACT).
+- gate-clean server 최종: PASS(exit0, contentDirtyCount 0).
+- 커밋 제외(런타임/미소유, 미접촉): dashboard/data/dev-pack/{measurement,patch-proposal,review-report,run-log,workflow-state}.json, outputs/*.log, sonnet-active.pid, outputs/DECISION-BRIEF-v3.md·reviewer-log.md(레인 없음). docs/plan/AI-RUNTIME-REFACTOR-MICRO-DIRECTIVES-v9.md(2026-07-10자 기존 미추적 파일, 레인표에 없음, 미접촉).
+- 기준 파일(blueprint.json·workflow-definition.json): 이번 회차 변경 없음.
+- HUMAN-INBOX: dev-pack proposal-1783777837699(revisionOf -1783777328782, "함수 길이 단축", maxFunctionLength 99→[0,80]) 신규 등재(중복 아님, 확인 후). 기존 결정 대기 항목(outbox 반입 2건·ACTOR-01/FEAT-01·v3 결재 브리핑 등)은 그대로 유지.
+- 발사(조율자는 발사하지 않음): FIX-07 진행 중이므로 신규 발사 없음(순차 규칙).
+- push 대기: git log origin/main..HEAD --oneline = **37건**(이번 회차 로컬 커밋 3건 포함). 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미검출.
+
+<run-summary>codex가 신규 회귀 하네스 project-api-edge-check(FAIL-2026-009용)를 제작해 server/Harness/에 등록했고, 조율자가 build-verify·verify-behavior·measure·doc-integrity 4개 게이트 전부 PASS 확인 후 server 코드 커밋(c9b2743) + 문서 커밋 2건(735de64, e20f922)을 로컬에 남겼다. FIX-07(dashboard/app.js 분할) sonnet은 계속 실행 중이라 접촉하지 않았고 신규 발사도 없었다. dev-pack proposal 신규 리비전 1건을 HUMAN-INBOX에 등재. push 대기 37건, 사람 배치 승인 필요. QUOTA_SIGNAL 없음, git push·sonnet 발사 없음.</run-summary>
