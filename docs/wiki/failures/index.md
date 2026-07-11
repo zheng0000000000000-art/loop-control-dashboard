@@ -12,3 +12,4 @@
 | [FAIL-2026-008](cases/FAIL-2026-008-dispatch-self-refactor-template-stale.md) | self-refactor dispatch 템플릿이 현행 코드와 어긋나 빌드 실패 | 확인됨 | stale_template, design_learning | dispatch-executor, executor-orchestration |
 | [FAIL-2026-009](cases/FAIL-2026-009-missing-project-api-returns-500.md) | 없는 projectId 조회가 4xx 대신 500을 반환 | 확인됨 | error_handling, design_learning | project-api-read |
 | [FAIL-2026-010](cases/FAIL-2026-010-crlf-gate-deadlock.md) | 줄바꿈 표현 차이가 발사 게이트를 영구 잠금(큐 정지) | 해결됨 | unnormalized_gate, config_side_effect, design_learning | executor-orchestration, gate-evaluation |
+| [FAIL-2026-012](cases/FAIL-2026-012-proxy-actor-misjudgment.md) | 커밋 메시지 접두사를 행위 주체로 오판해 위반 22건을 날조 | 해결됨 | unnormalized_gate, design_learning | gate-evaluation, executor-orchestration |
