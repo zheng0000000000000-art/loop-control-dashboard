@@ -1,0 +1,11 @@
+﻿{
+    "schemaVersion":  1,
+    "taskId":  "LEDGER-04",
+    "pid":  34288,
+    "exitCode":  null,
+    "startedAt":  "2026-07-12T04:00:09.2006692+09:00",
+    "exitedAt":  "2026-07-12T04:10:34.3794265+09:00",
+    "outLog":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-LEDGER-04.out.log",
+    "processed":  true,
+    "argLength":  2765
+}
