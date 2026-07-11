@@ -5,8 +5,8 @@
 > **판정 주체는 코덱스**(파이프라인 1단계). 검수자가 올린 후보는 `코덱스 확정 대기`로 표시하고, 코덱스가 HS-GATE 회차에 확정한다.
 
 <!-- hs-scan 이 읽는 메타. HS-GATE 수행 시 갱신할 것. -->
-- `lastGate: 2026-07-11 18:45`
-- `judgedClasses: unnormalized_gate, self_report_as_truth`
+- `lastGate: 2026-07-11 20:30`
+- `judgedClasses: unnormalized_gate, self_report_as_truth, config_side_effect, observability, path_escape, executor-orchestration`
 
 ## HS-01 `gate-clean` — 트리 clean을 정규화 내용 해시로 판정 (하네스)
 
@@ -219,3 +219,59 @@ FAIL-005는 "실행 중인가"를 StartTime으로, FAIL-010은 "깨끗한가"를
 | `path_escape` | 2회 | FAIL-2026-006, FAIL-2026-007 | **미심사** — KNOWLEDGE-PROMOTION 첫 후보표의 `path-guard-check`와 대응. 다음 HS-GATE에서 점수화 대상. |
 
 > `judgedClasses`에 없는 2회+ 계열은 hs-scan이 자동으로 후보로 올린다. 이 표는 그 예고이며, 코덱스가 심사하면 위 HS-XX 절로 승격 기록된다.
+
+## 2026-07-11 19:15 codex hs-scan follow-up
+
+- actor: codex
+- command: `dotnet run --project server -c Release -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidates=`config_side_effect(2)`, `observability(2)`, `path_escape(2)`, `executor-orchestration(6)`.
+- data-existence gate:
+  - `observability`: PASS. Data exists in `FAIL-2026-005`, `FAIL-2026-013`, launch logs under `outputs/sonnet-*.out.log`, and queue/directive text requiring `ACK-<taskId>`.
+  - `path_escape`: PASS. Data exists in `FAIL-2026-006`, `FAIL-2026-007`, and prior reproduction docs.
+  - `executor-orchestration`: PASS. Data exists across `FAIL-2026-004/005/008/010/012/013`.
+  - `config_side_effect`: PASS but already partly covered by `gate-clean`; keep as existing-extension candidate.
+- promoted this cycle: H-00 `launch-check` for the `observability`/`executor-orchestration` intersection. Score: 12/12. Reason: repeated, mechanically decidable by exit code, role-injection is a log with/without `ACK-<taskId>`, read-only, observable JSON fields, directly prevents accepting untied executor output.
+- next candidates remain: H-0 `scope-check`, H-01 `build-verify`, H-1 `path-guard-check`.
+
+## 2026-07-11 19:30 codex hs-scan follow-up
+
+- actor: codex
+- command: `dotnet run --project server -c Release -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidate=`executor-orchestration(6)` only, because prior judged classes are now recorded.
+- data-existence gate: PASS. `scope-check` uses directive `## 허용 파일 (allowlist)` sections and `git status --porcelain`; both exist in the repository now. Evidence: `docs/directives/_header.md`, `docs/handoff/queue/directive-*.md`, `docs/handoff/HS-CANDIDATES.md` HS-06.
+- promoted this cycle: H-0 `scope-check`. Score: 12/12. Reason: repeated executor-orchestration failure, fully mechanical set comparison, synthetic role injection is an out-of-allowlist changed file, read-only, outputs exact offending paths, and directly blocks the known directive-scope drift class.
+- next candidates remain: H-01 `build-verify`, H-1 `path-guard-check`.
+
+## 2026-07-11 19:45 codex hs-scan follow-up
+
+- actor: codex
+- command: `dotnet run --project server -c Release -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidate=`executor-orchestration(6)`.
+- data-existence gate: PASS. `build-verify` can observe actual `dotnet build` exit codes. This cycle also reproduced the concrete data: direct `dotnet build server -c Release` exited 1 because `server/obj/Release/net8.0/rjsmrazor.dswa.cache.json` was locked, while a copied temp-source Release build exited 0.
+- promoted this cycle: H-01 `build-verify`. Score: 11/12. Reason: repeated false build judgment, fully mechanical exit-code decision, read-only/temp-copy isolation, diagnostic output separates locked/stale build artifacts from code errors, and directly prevents text-regex build claims.
+- next candidates remain: H-1 `path-guard-check`, H-2 `call-integrity-check`.
+
+## 2026-07-11 20:15 codex hs-scan follow-up / H-6 claim-check precision fix
+
+- actor: codex
+- command: `dotnet run --project server -c Release -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidate=`executor-orchestration(6)`.
+- data-existence gate: PASS. The false-positive input exists as concrete text in `docs/verification/actor01-actor-provenance.md`: the build command mentions `server/LocalFirstWorkflowDashboard.Server.csproj`. Before H-6, `claim-check ACTOR-01` parsed that as a file claim for `server/LocalFirstWorkflowDashboard.Server.cs`, producing `claimCount=13`, `mismatchCount=1`, exit 1.
+- fixed this cycle: H-6 `claim-check` path-boundary precision. Score: existing HS-03 maintenance, not a new promotion. The harness had real data but the extraction regex used a proxy boundary; adding an extension boundary prevents `.csproj` and `.csv` from being treated as `.cs` files.
+- post-fix proof: `claim-check ACTOR-01` exit 0, `claimCount=12`, `mismatchCount=0`, `verdict=MATCH`; regex probe matched `server/Foo.cs`, `server/Bar.cs`, `server/Baz.cs` and ignored `server/Foo.csproj` / `server/Foo.csv`.
+- next candidates remain: H-1 `path-guard-check`, H-7 quota/root-cause skill hardening, H-2 `call-integrity-check`.
+
+## 2026-07-11 20:30 codex hs-scan follow-up / H-7 quota diagnosis hardening
+
+- actor: codex
+- command: `dotnet run --project server -c Release -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidate=`executor-orchestration(6)`.
+- data-existence gate: PASS. Quota diagnosis can use concrete executor logs (`hit your limit`, `rate limit`, `QUOTA_SIGNAL`) and process/exit-code observations. The immediate queue evidence records the real quota phrase: `You've hit your limit · resets 5:40pm`.
+- fixed this cycle: H-7 `root-cause-diagnosis` skill hardening plus `launch-check` quota signal split. Score: existing executor-orchestration extension, not a new promotion. The change separates usage-limit exhaustion from prompt delivery/scope failures so "actor did not work" is not diagnosed from silence alone.
+- post-fix proof: `launch-check H7 <pass.log>` exit 0 / `verdict=PASS`; `launch-check H7 <quota.log>` exit 1 / `verdict=QUOTA`; `launch-check H7 <quota-ack.log>` exit 1 / `verdict=QUOTA`.
+- next candidates remain: H-1 `path-guard-check`, H-2 `call-integrity-check`, H-3 `template-sync-check`.

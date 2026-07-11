@@ -29,6 +29,7 @@
 
 | 순번 | 작업 | 근거 | 영역 | 상태 |
 | --- | --- | --- | --- | --- |
+| **H-6** | **`claim-check` 오탐 수정 ★★지금 최우선 — 큐가 이것 때문에 잠겨 있다** — 주장 추출 정규식 `server/[A-Za-z0-9_/\.]+\.cs` 에 **종단 경계가 없어** `server/Foo.csproj` 를 `server/Foo.cs` 존재 주장으로 오인한다. `(?![A-Za-z0-9])` 같은 경계를 붙이고, `.csproj`·`.csv` 등 회귀 테스트를 넣어라. | **실측(2026-07-11 19:5x)**: ACTOR-01 검증문서의 빌드 명령줄(`...Server.csproj`)이 파일 존재 주장으로 오인돼 claim-check MISMATCH(13건 중 1건) → 조율자가 정상 산출물 커밋 보류 → gate-clean FAIL 지속 → 다음 발사 차단. **검수자가 만든 하네스가 오보 증폭기가 된 4번째 사례**(FAIL-2026-012 계열). 실체는 12/13 일치, actor 기록은 코드에 실재. | `server/Harness/` | **최우선** |
 | **H-00** | **`launch-check` 하네스 ★최우선** — 발사 로그에서 **ACK-\<taskId\> 에코백**을 확인. 없으면 exit 1(=지시 미도착, 산출물 폐기 대상). 입력: taskId + 로그 경로. | **FAIL-2026-013**. 프롬프트가 인자 경계에서 잘려 실행자가 지시서를 **받은 적이 없었다.** 지시 없이 저장소만 읽고 **안전 보류 항목(FEAT-01)까지 구현**했다. `scope-check`가 사후 검출이라면 이건 **사전 검출**이다 | `server/Harness/` | 대기(HOOK-01 후) |
 | **H-0** | **`scope-check` 하네스 ★최우선** — 지시서의 `## 허용 파일 (allowlist)` glob을 파싱해 `git status` 변경파일과 대조. 허용 밖이면 exit 1 + 목록 출력. **되돌리지 말고 검출·보고만.** | HS-CANDIDATES **HS-06 (12/12)**. I-1 지시서 이탈 반복 + 오늘 2건(Tier2Approver.cs, Tier2ApproverTestCli.cs). 격리·화이트리스트 **프롬프트가 둘 다 실패**했다 — 말이 아니라 사후 검출로 강제해야 한다 | `server/Harness/` | 대기(HOOK-01 후) |
 | **H-01** | **`build-verify` 하네스** — 빌드 판정을 **exit code**로. `-o <임시경로>`로 exe 락을 우회해 **코드 자체의 성패**를 얻고, "락 때문에 실패(I-3)"와 "코드 오류"를 **분해해서** 출력. | **HS-07 (11/12)**. 검수자가 `error CS` 정규식으로 "build 0/0"을 여러 커밋에 거짓 기록. **네가 5주기 연속 지적했는데 검수자가 안 읽었다.** 네 관측이 옳았다 | `server/Harness/` | 대기(HOOK-01 후) |
@@ -45,3 +46,17 @@
 - 위에서부터. `진행`이 있으면 그것 우선 마무리.
 - 새 sonnet 커밋이 있고 큐에 해당 QA가 없으면 §3(최근 커밋 QA)을 자체 수행하고 SESSION에 기록.
 - 코드 수정 필요한 발견은 FAIL 위키에 등록만(수정은 sonnet). 큐에 "sonnet 수정 필요: FAIL-XXX" 후보로 남긴다.
+
+## 코덱스 몫으로 남은 measure 위반 (2026-07-11, 검수자)
+
+- `server/Harness/ScopeCheckCli.cs:156` — 함수 기능 주석 없음(`functionsWithoutComment` 위반 1건). CLAUDE.md 관례: 함수 위 1줄 한국어 기능 주석. **네 영역이라 sonnet이 못 고친다 — H-0 마무리 시 같이 처리하라.**
+- 나머지 measure 위반(smallTouchTargets·maxFunctionLength·skillDomainViolations)은 sonnet FIX-04가 맡는다. **dashboard/·docs/verification/tuning-advanced.md 는 건드리지 마라.**
+
+
+## H-7 — 스킬 보강: "안 돌면 한도부터 배제하라" (2026-07-11, 사람 지적)
+
+- **문제**: 주체가 일을 안 하면 우리는 곧장 "버그·지시서 이탈·설정 오류"를 의심한다. 그런데 오늘 sonnet이 멈춘 진짜 원인은 **사용량 한도**였다(`You've hit your limit · resets 5:40pm`). 검수자는 그걸 "지시서 이탈"로 오귀인했다(FAIL-2026-012 계열, 네 번째).
+- **사람 지적(2026-07-11 20:0x)**: **코덱스도 자기 한도에 걸릴 수 있다.** 그때 "코덱스가 H-6을 안 잡는다 → 큐 인식 버그"로 오진할 위험이 있다.
+- **요청**: `skills/common/root-cause-diagnosis.md`에 **감별 0순위** 절을 넣어라 — *"주체가 안 움직이면, 버그를 의심하기 전에 **한도(quota)·인증·프로세스 생존**부터 배제하라. 그 셋은 실체로 즉시 확인된다(로그의 limit 문구, exit code, 프로세스 목록). 배제하지 않고 원인을 지목하면 그것이 프록시다."*
+- 가능하면 기계 검출도: 실행 로그에서 한도 문구(`hit your limit`·`rate limit`·`QUOTA_SIGNAL`)를 찾아 **"작업 실패"와 "한도 소진"을 분해**하는 검사를 `launch-check`에 얹어라(별도 하네스 불필요).
+- 영역: `skills/` + `server/Harness/`. 우선순위: H-6 다음.
