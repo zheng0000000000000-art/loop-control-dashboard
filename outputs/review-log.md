@@ -1763,3 +1763,19 @@
 - QUOTA_SIGNAL: 미감지.
 
 <run-summary>LEDGER-04(metricId 대소문자 정규화) 실행자 산출물을 검수 — 하네스 6종(build/verify-behavior/measure/gate-clean/claim-check/handoff-integrity) 전부 실행자 주장과 일치 확인, exitCode:null은 스크립트 자체 주석으로 확인된 기존 래퍼 버그(비정상 종료 아님)로 판정. server 코드·문서·상태 3레인 로컬 커밋(91bea7b/a2efaa3/42ac3e0) + SONNET-QUEUE #23 완료 갱신(4fe3139). 다음 대기 항목 없어 발사 안 함. push 대기 59건, HUMAN-INBOX 신규 없음.</run-summary>
+## 조율자 04:27 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: lanes 12건 dirty(server/dashboard/docs 혼재) + outputs/launch/SMOKE-01.exit.json processed:false 신호 1건 → 처리 진행.
+- SMOKE-01.exit.json: exitCode0, MEASURE exit=0 violations=0(파일 변경 없는 스모크 테스트) → processed:true 갱신.
+- 안정성 게이트: dirty 파일 해시 5초 간격 2회 비교 → 전부 안정.
+- server 레인 검수 대상: server/Harness/HarnessRegistry.cs(수정)·ContextPackIntegrityCli.cs(신규, 코덱스 052 세션 산출물, P0-05 데이터 관문 하네스). 직전 회차(04:16)엔 "범위 밖" 판단으로 보류됐던 항목 — 세션 문서(actor: codex) 확인 후 이번 회차에 정식 검수.
+- 하네스 재실행: build exit0(0/0) · verify-behavior exit0(behaviorEqual:true) · measure dev-pack exit0(violationCount0, 비악화) · doc-integrity exit0(전 문서 intact) · handoff-integrity exit0(failures/warnings 없음) · context-pack-integrity(신규 하네스 자체) exit0(checkedDirectiveCount21, failureCount0) — 세션 문서가 자진신고한 "실측 시 stale 2건·exit1"은 이번 재실행에선 재현 안 됨(참조 상태가 그 사이 바뀐 것으로 추정, 확정 아님).
+- diId 미등재(SONNET-QUEUE 비경유, 코덱스 자체 작업) → claim-check 생략, VERIFY-PROTOCOL §5(코덱스=1차 검수자, 하네스 독립 재실행으로 대체)에 따라 처리.
+- 커밋(로컬만, push 안 함) 3건, 레인 분리: 35aff37(server 코드: HarnessRegistry.cs+ContextPackIntegrityCli.cs) / c29551a(문서: SESSION-2026-07-12-codex-052.md) / 714003c(문서: docs/plan/ v9 계획 3종 — INTENT-DIGEST·ALIGNMENT-v9·MICRO-DIRECTIVES-v9, 검수자 세션 작성분).
+- 커밋 안 함(런타임/스테이징 제외): dashboard/data/dev-pack·ruined-lab 8종(measurement/patch-proposal/review-report/run-log/workflow-state), outputs/ 잡파일·로그 다수, sonnet-active.pid, outputs/launch/*.exit.json — 전부 커밋 레인 표의 "커밋 안 함" 대상.
+- HUMAN-INBOX: 신규 등재 없음. BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 이번 회차 변경 없음.
+- 발사(사람 게이트): SONNET-QUEUE #24 공석("추후 검수자가 추가") — 다음 대기 항목 없음. 조율자는 발사하지 않음.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 65건(이번 회차 +3) → 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>SMOKE-01 신호 처리(processed:true) + 코덱스 052 세션의 P0-05 context-pack-integrity 하네스(신규 CLI+HarnessRegistry 등록)를 하네스 6종 독립 재실행으로 검수 후 PASS 판정, server/문서 레인 분리 로컬 커밋 3건(35aff37/c29551a/714003c). SONNET-QUEUE 다음 대기 항목 없어 발사 안 함. push 대기 65건, HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
