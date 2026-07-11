@@ -79,3 +79,39 @@
 - CLAUDE.md 관례: **함수 위 1줄 한국어 기능 주석**. 네 영역이니 네가 고쳐라. 커밋은 조율자가 한다.
 - **하네스 자체는 훌륭하다** — 첫 실행에서 진짜 결함(`WORKSTATE.changedFiles`에 sha256 없음)을 잡아냈다. 그건 계획서 §0.5 위반이며 별도 과제로 처리한다(sonnet).
 - **교훈**: 하네스가 게이트를 지키는데 하네스 자신이 게이트를 깼다. 산출물 제출 전 `measure dev-pack` 을 돌려라(exit 0 확인).
+
+## ★ 동시성·한도 제어 상세 사양 (2026-07-11 23:3x, 사람 승인)
+
+> **원칙: 시간으로 충돌을 피하지 말고, 동시에 만져도 안전하게 만든다.** 스케줄 위상 조정은 확률적 완화일 뿐이다(조율자 jitter 185s가 있어 여전히 겹칠 수 있다). **확정적 해법은 락이다.**
+> 위상 오프셋은 검수자가 이미 적용했다(코덱스 heartbeat: :07/:22/:37/:52 — 조율자 `*/5`의 골짜기).
+
+### P0-06 상세 — 파일 소유권 claim (`scope-check` 확장, 신규 하네스 아님)
+
+- **원장**: `docs/handoff/FILE-CLAIMS.json` (계획서 §0-A.4의 이름 그대로 — **재발명 금지**)
+  `json
+  {"schemaVersion":1,"claims":[
+    {"claimId":"...","actor":"sonnet|codex|coordinator|reviewer","taskId":"P0-04",
+     "paths":["server/ProjectionCli.cs","docs/handoff/WORKSTATE.json"],
+     "pid":9804,"claimedAt":"...","expiresAt":"...","status":"active|released|expired"}]}
+  `
+- **claim 등록**: 발사 시 지시서의 `## 허용 파일 (allowlist)`을 그대로 claim으로 적는다(사람/검수자가 발사하므로 등록 주체는 발사자).
+- **`scope-check` 확장(네 몫)**:
+  1. `git status`의 변경 파일이 **다른 주체의 active claim과 겹치면 exit 1** + 겹친 파일·주체·taskId 출력. (**사후 검출 → 사전 경고**)
+  2. **stale claim 검출**: `pid`가 죽었는데 `status: active`면 경고(`expired` 후보). **자동으로 지우지 마라 — 검출만.**
+  3. 기존 기능(allowlist 대조)은 그대로 유지.
+- **하지 않는 것**: 되돌리기·삭제·프로세스 kill. **검출·보고만.**
+- 근거: 고아 코드 109줄 사건(주체 규명 불가) · 조율자가 코덱스 작업 중 파일을 "진행중 추정"으로 커밋 보류한 사례 다수.
+
+### H-7 확장 — 한도 창 원장 + 발사 금지 계산 (`launch-check`에 얹는다, 신규 하네스 아님)
+
+- **원장**: `outputs/quota-windows.json`
+  `json
+  {"schemaVersion":1,"windows":[
+    {"actor":"sonnet","lastHitAt":"2026-07-11T16:43:59+09:00","resetAt":"2026-07-11T17:40:00+09:00","source":"outputs/sonnet-HOOK01.out.log"}]}
+  `
+- **파싱 대상(실측 확인됨)**: 실행 로그의 `You've hit your limit · resets 5:40pm (Asia/Seoul)` / `rate limit` / `QUOTA_SIGNAL`.
+- **`launch-check` 확장(네 몫)**:
+  1. 로그에서 위 문구를 찾아 **"작업 실패"와 "한도 소진"을 분해**해 출력한다.
+  2. `quota-windows.json`을 갱신한다(관측한 사실만. 추측 금지).
+  3. **`resetAt`까지 20분 미만이면 `blockers`에 `quota-window-closing`을 넣는다** — 무거운 발사는 그 창에서 하지 않는다. **단, 발사를 막지는 마라(하네스는 발사하지 않고 발사를 금지하지도 않는다). 판정만 출력하고, 발사 게이트는 사람·검수자가 본다.**
+- 근거: 한도로 죽은 실행자가 고아 코드를 남겼고(FAIL 계열), 검수자가 그걸 "지시서 이탈"로 오귀인했다. **`docs/handoff/QUOTA-POLICY.md` 참조.**
