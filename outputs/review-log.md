@@ -949,3 +949,27 @@
 - QUOTA_SIGNAL: 미검출.
 
 <run-summary>H-1(path-guard-check) 하네스를 재검증(build/path-guard-check자체회귀/verify-behavior/measure 4개 커맨드 전부 QA문서 claim과 일치 확인) 후 로컬 커밋 1건(447af2f), push 없음. 직전 회차가 QA문서 헤더만 보고 "미완"으로 오판했던 부분을 문서 전문 재확인으로 정정("H-1 완료: PASS" 명시 확인). 신규 파일 server/Harness/CallIntegrityCheckCli.cs가 관측됐으나 이번 회차엔 안정성 미확보로 미접촉. dev-pack 런타임·기준 파일 변경 없음. outputs/DECISION-BRIEF·reviewer-log.md는 커밋 레인 부재로 계속 미커밋(참고만). SONNET-QUEUE 표가 FIX-06을 "대기"로 잘못 표기 중인 콘텐츠 불일치를 관측(정정은 대행 안 함), 실질 다음 대기 항목 FIX-07은 발사 대기 기록만 하고 발사하지 않음. sonnet-active.pid 사망 확인, 신규 발사 없음. push 대기 11건, 사람 배치 승인 필요. QUOTA_SIGNAL 없음.</run-summary>
+
+## 조율자 2026-07-11 21:1x (recursion1-result-check)
+
+- 0단계 안정성: git status 미커밋 26개 파일(수정 5·신규 21) 5초 간격 2회 해시 비교 → 전부 동일(안정).
+- 하네스 판정(초기): gate-clean server → FAIL(exit1, contentDirtyCount 1: server/Harness/CallIntegrityCheckCli.cs 미추적). doc-integrity → PASS(exit0, INTACT 12/12).
+- **H-2(call-integrity-check) 검수·커밋**: docs/qa/call-integrity-check-harness-2026-07-11.md(actor: codex) 자기보고 명령을 전부 재실행 대조 —
+  - dotnet build server -c Release -o <tmp> exit0(경고0/오류0) — 일치.
+  - call-integrity-check(무인자 기본규칙 5건) exit0, ruleCount5/failureCount0/verdict PASS — 일치.
+  - verify-behavior exit0, behaviorEqual:true — 일치.
+  - measure dev-pack exit1, violationCount1(기준1과 동일, 비악화) — 일치.
+  - diId 미등록(하네스 자체 개선, H-1/H-6/H-7 선례와 동일) → claim-check 대상 아님, 직접 재실행 대조로 검증 완료. 주장=실체 확인 → **로컬 커밋 fba53b9**(server/Harness/CallIntegrityCheckCli.cs).
+  - 부수 관측: HarnessRegistry.cs의 call-integrity-check 등록 1줄이 이전 커밋 447af2f(H-1)에 이미 포함돼 있었음(당시 CLI 파일은 미포함 — 그 커밋 단독으로는 빌드 불가했을 가능성). 이번 커밋으로 트리 정합 완성. 과거 이력 문제라 별도 조치 불요, 기록만.
+  - 커밋 후 재검증: gate-clean server → PASS(exit0, contentDirtyCount 0).
+- **문서 레인 커밋**: docs/handoff/HS-CANDIDATES.md(lastGate 21:00 갱신, H-2 확정 기록)·docs/handoff/sessions/SESSION-2026-07-11-codex-040.md(신규)·docs/qa/call-integrity-check-harness-2026-07-11.md(신규) → doc-integrity exit0(INTACT) 확인, 코드 미혼입 확인 후 **로컬 커밋 be28fa3**.
+- **HUMAN-INBOX 신규 등재**: dashboard/data/dev-pack/patch-proposal.json이 proposal-1783771617329(revisionOf proposal-1783771319530, "함수 길이 단축", createdBy ollama/qwen3:8b, maxFunctionLength 99→[0,80])로 갱신 관측 — 신규 리비전이라 기존 항목과 중복 아님, doc-integrity 확인 후 **로컬 커밋 21335c6**(주의: 최초 시도 시 상대경로 AppendAllText가 PowerShell 세션의 Set-Location과 어긋나 파일에 반영되지 않는 결함 발견 — 절대경로로 재시도해 정정, git status로 실제 반영 확인 후 커밋).
+- dev-pack 런타임 파일(measurement.json·patch-proposal.json·review-report.json·run-log.json·workflow-state.json): 규칙대로 **커밋 제외**.
+- 기준 파일: dashboard/data/dev-pack/blueprint.json·workflow-definition.json 이번 회차 변경 없음(git status 미표기) — 추가 조치 불필요.
+- outputs/ 잡파일: outputs/DECISION-BRIEF-2026-07-11-v3.md·outputs/reviewer-log.md(검수자 전용, 읽기만)는 커밋 레인 부재/소유권 규칙에 따라 미접촉. outputs/*.log·sonnet-active.pid는 런타임 제외 대상.
+- docs/qa 외 docs/wiki: 이번 회차 변경 없음.
+- 발사(4단계, 조율자는 발사하지 않음): sonnet-active.pid=30956 사망 확인(Get-Process 없음). SONNET-QUEUE.md 표는 #17 FIX-06을 여전히 "대기"로 표기하나 3df722f로 이미 완료·커밋된 상태(기존 관측과 동일, 콘텐츠 편집 대행 안 함). 실질 다음 대기 항목은 #18 FIX-07(dashboard/app.js 장문 함수 3건 분할, 사람 승인 완료). **발사 대기: FIX-07 — 사람 승인 후 발사**만 기록, 발사하지 않음.
+- push(5단계, 조율자는 push하지 않음): git log origin/main..HEAD --oneline = **15건**(이번 회차 로컬 커밋 3건 포함). **push 대기 15건 — 사람 배치 승인 필요.**
+- QUOTA_SIGNAL: 미검출.
+
+<run-summary>H-2(call-integrity-check) 하네스를 QA문서 자기보고 4개 명령(build/call-integrity-check/verify-behavior/measure) 전부 재실행 대조 후 로컬 커밋(fba53b9), 문서 레인 커밋(be28fa3, HS-CANDIDATES·세션기록·QA문서). dev-pack proposal-1783771617329(함수 길이 단축) 신규 리비전을 HUMAN-INBOX에 등재(21335c6) — 첫 시도에서 상대경로 AppendAllText 결함으로 기록이 반영 안 되는 것을 발견해 절대경로로 정정 후 커밋. gate-clean 최종 PASS. 발사 없음(sonnet-active.pid 사망 확인, 다음 대기 FIX-07은 사람 승인 후 발사만 기록). push 대기 15건, 사람 배치 승인 필요. QUOTA_SIGNAL 없음.</run-summary>
