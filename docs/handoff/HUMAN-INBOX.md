@@ -276,3 +276,11 @@
 - 맥락: dashboard/data/dev-pack/patch-proposal.json이 proposal-1783780003286(revisionOf proposal-1783779990797, "함수 주석 추가", createdBy ollama/qwen3:8b)로 갱신됨. 대상: server/Harness/HandoffIntegrityCli.cs의 functionsWithoutComment 5→0. 이 파일은 P0-03 handoff-integrity 하네스(코덱스 산출물)로, CODEX-QUEUE에 "네 영역이니 네가 고쳐라"로 이미 등재되어 코덱스가 처리 예정이다.
 - 조치: 사람의 승인/거절 판단 필요(대시보드 dev-pack 루프 표준 절차). 조율자는 결재를 대행하지 않음.
 - 확인 시각: 2026-07-11 23:28 (조율자, recursion1-result-check).
+
+
+## 결정 필요: dev-pack proposal 신규 리비전 (proposal-1783784673421, 2026-07-12 00:44, 조율자)
+
+- 맥락: dashboard/data/dev-pack/patch-proposal.json이 proposal-1783784673421(revisionOf proposal-1783784605619, 제목 "블루프린트 괴리 해소 제안", createdBy rule-engine)로 갱신됨. lifecycle submitted. 변경 1건: functionsWithoutComment 1→0, 대상 server/OllamaExecutor.cs:569.
+- 참고: OllamaExecutor.cs는 현재 LEDGER-02 실행자(PID 29060)가 작업 중인 allowlist 파일이다. 이 위반은 진행 중인 편집에서 발생했을 가능성이 있다(확정 아님 — 주체 미상, 추정만 기록).
+- 조치: 사람의 승인(approve) 또는 거절(reject) 판단 필요. 조율자는 결재를 대행하지 않음.
+- 확인 시각: 2026-07-12 00:44 (조율자, recursion1-result-check).
