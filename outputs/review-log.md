@@ -478,3 +478,12 @@
 - 미반영 제외: dev-pack 런타임 json 5건, server/EXECUTOR_REPORT.md.
 - 결재·반입·proposal 대행 없음.
 - rec 로그 QUOTA_SIGNAL 없음 (rec6b/7/8/9/10).
+
+## 조율자 2026-07-11 13:03
+- 안정성 게이트: server/dispatch-templates/*.txt(2), docs/verification/fail-2026-008-template-sync.md 2회 해시 동일 → 안정 확인. QUOTA_SIGNAL 없음(rec6b/7/8/9/10 정상).
+- server/: server/*.cs 미커밋 없음 → 검수/커밋 대상 없음. dispatch-templates/*.txt, docs/handoff/WORKSTATE.json 변경은 커밋 허용목록(.cs·WORKSTATE.json은 .cs 동반 시만·refactor-*.md·R0*.md·gitignore) 밖이라 보류.
+- 신규 관찰: docs/verification/fail-2026-008-template-sync.md (sonnet, FAIL-2026-008 템플릿 수정 검증 리포트, 임시사본 빌드 통과 기록) — docs/verification/refactor-*.md 패턴·docs/qa·docs/wiki 어디에도 속하지 않아 이번 회차 커밋 대상 아님. 관찰만.
+- docs/qa·docs/wiki(코덱스): 신규 변경 없음 → 커밋 없음.
+- outputs/last-reviewed-commit.txt: 7a9352a6d9b97edfb388fc7f001d367c16e19454 유지 (마지막 실제 산출물 커밋).
+- 미반영 제외: dev-pack 런타임 json 5건, server/EXECUTOR_REPORT.md.
+- 결재·반입·proposal 대행 없음.
