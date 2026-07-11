@@ -1,4 +1,4 @@
-
+﻿
 ## R-04 ���ɽ�Ʈ������ 2026-07-10 22:34:31
 - ����: R-04 ���� �� (server/MeasurementService.cs ������, Program.cs �ؽ� ����). �˼���Ŀ�� ����.
 
@@ -1540,3 +1540,75 @@
 - QUOTA_SIGNAL: 없음.
 
 <run-summary>직전 회차(00:55) 이후 신규 커밋 없음. LEDGER-02(PID 29060) 여전히 진행 중(약31분 경과, 산출물 로그 0바이트, CPU 활동은 확인돼 hang 단정 안 함)이라 Program.cs·WORKSTATE.json·RUNTIME-INDEX.md·HANDOFF.md 커밋 보류 유지. gate-clean FAIL(예상된 진행중 상태)·doc-integrity PASS(12/12) 재확인. OllamaExecutor.cs는 이번 회차 clean으로 관측(경위 불명). dev-pack proposal 신규 1건은 superseded 상태라 결재 불요. HUMAN-INBOX 신규 없음. push 대기 32건. sonnet 발사·git push 이번 회차도 하지 않음.</run-summary>
+
+## 조율자 2026-07-12 01:10 (recursion1-result-check)
+
+- 0단계 안정성: git status --short 미커밋 파일 5초 간격 2회 일치 → STABLE.
+- 실행 상태 변화: outputs/sonnet-active.pid=29060 (LEDGER-02) — 01:03 회차까지 ALIVE였으나 이번 회차 Get-Process 조회 실패 → DEAD 확인(완료 후 프로세스 종료로 판단). sonnet-active.pid(루트)=9804도 계속 DEAD.
+- LEDGER-02 산출물 검수: outputs/sonnet-LEDGER02.out.log에 "모든 하네스 완료" 최종 요약 확인(QUOTA_SIGNAL 없음, 정상 종료로 판단).
+- 하네스 재검증(조율자 직접 실행, exit code 기준):
+  - build server -c Release: exit 0 (경고0/오류0)
+  - verify-behavior: exit 0 (behaviorEqual:true)
+  - measure dev-pack: exit 0 (violationCount 0, 기준선 0 대비 비악화)
+  - claim-check LEDGER-02: exit 0 (제시 항목 전부 match)
+  - doc-integrity: exit 0 (INTACT, 커밋 전/후 모두 확인)
+- allowlist 대조: 이번 회차 변경 파일(server/Program.cs·docs/handoff/WORKSTATE.json·docs/context/RUNTIME-INDEX.md·docs/handoff/HANDOFF.md·docs/verification/ledger02-executor-token-wiring.md·docs/directives/LEDGER02-executor-token-wiring.md·dashboard/data/dev-pack/*.json)가 directive-LEDGER02 allowlist 범위 안에 전부 포함 확인. 무단 변경 없음.
+- 커밋 실행(로컬만, 레인 분리):
+  - server 코드 레인: 040d017 server/Program.cs (게이트 전부 PASS 확인 후)
+  - 문서·큐·정책 + 상태 레인: f6bef6b docs/verification·docs/directives·RUNTIME-INDEX·HANDOFF·WORKSTATE.json (doc-integrity exit0 확인 후, 코드 미혼입 확인)
+  - 커밋 후 gate-clean server 재확인: contentDirtyCount 0 → PASS.
+- 커밋 제외 확인(변경 없음, 허용 범위 밖 또는 런타임): dashboard/data/dev-pack/measurement.json·run-log.json·patch-proposal.json·review-report.json·workflow-state.json(런타임) · docs/plan/ 3종(이번 회차도 범위 밖, 무변경, 종전 회차와 동일 판단 유지) · outputs/*.log·*.json 테스트 산출물 전부 · sonnet-active.pid 2종.
+- 기준 파일(blueprint.json·workflow-definition.json): 이번 회차 변경 없음.
+- HUMAN-INBOX: 신규 결정 필요 항목 없음(마지막 00:44 proposal-1783784673421 항목 확인, 현재 해당 proposal 체인 lifecycle=superseded로 자연 해소 — 조율자가 대행 결재한 것 아님, 대기 상태 그대로 유지).
+- 발사(사람 게이트): LEDGER-02 실행자(PID 29060)가 사망(완료로 판단)했고 커밋도 완료됨. SONNET-QUEUE #21은 사람/검수자가 완료로 갱신 필요(조율자는 표 편집 대신 이 기록으로 대체). 다음 대기 항목(#4 FEAT-01, #15 FIX-04 등)에 대한 sonnet 발사는 이번 회차에도 수행하지 않음(사람 게이트).
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 35건 → 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 없음.
+
+<run-summary>LEDGER-02 실행자(PID 29060)가 종료됨을 확인. 하네스 전부 재검증 PASS(build/verify-behavior/measure/claim-check/doc-integrity) 후 server 코드(040d017)와 문서+상태(f6bef6b) 두 레인으로 로컬 커밋 완료, gate-clean server PASS로 전환. HUMAN-INBOX 신규 항목 없음(기존 proposal은 superseded로 자연 해소). push 대기 35건, sonnet 발사·git push 이번 회차도 수행하지 않음(사람 게이트).</run-summary>
+
+## 조율자 2026-07-12 01:14 (recursion1-result-check)
+
+- 0단계 안정성: git status --short 미커밋 파일 해시 5초 간격 2회 일치 → STABLE(직전 01:10 회차와 동일 파일 목록, 변화 없음).
+- 하네스 재확인(exit code 기준): gate-clean server exit0 PASS(contentDirtyCount0) — 01:10 회차 커밋(040d017/f6bef6b) 이후 그대로 유지. doc-integrity exit0 INTACT(12/12).
+- 실행 상태: sonnet-active.pid(outputs)=29060 DEAD, sonnet-active.pid(루트)=9804 DEAD. 신규 발사·진행 항목 없음.
+- server/*.cs·dashboard/*.js·css·html: 이번 회차 dirty 파일 없음 → 신규 커밋 대상 없음.
+- HUMAN-INBOX: 신규 항목 없음(기존 proposal-1783780003286·proposal-1783784673421 두 건과 동일, 중복 방지 유지). reviewer-log.md 확인 — OllamaExecutor.cs:569 `__TokenProbe` 임시 디버그 함수 관련 우려는 이미 proposal-1783784673421 항목으로 HUMAN-INBOX에 등재돼 있음(신규 아님).
+- BASELINE-CHANGES.md: 신규 항목 없음(빈 템플릿만 확인). 기준 파일(blueprint.json·workflow-definition.json) 이번 회차 변경 없음.
+- 커밋 제외 확인(런타임/범위 밖, 변동 없음): dashboard/data/dev-pack/*.json 5종(run-log.json·review-report.json 대폭 증가는 서버 실행 로그 누적, 런타임 산출물) · docs/plan/ · outputs/*.log·*.json 테스트 산출물 전부 · sonnet-active.pid 2종.
+- 발사(사람 게이트): 진행 중 항목 없음(LEDGER-02 완료·커밋 확인됨). SONNET-QUEUE #21 표는 여전히 "진행"으로 표기돼 있으나 실제로는 완료·커밋 완료 상태 — 표 갱신은 검수자/사람 몫(조율자는 표 편집 안 함). 다음 "대기" 항목(#4 FEAT-01, #15 FIX-04 등) 발사는 사람 게이트라 이번 회차도 수행하지 않음.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 35건(01:10 회차와 동일) → 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 없음.
+
+<run-summary>직전 회차(01:10) 이후 변화 없음: gate-clean·doc-integrity 재확인 PASS, server/dashboard 신규 dirty 파일 없어 신규 커밋 없음. LEDGER-02 실행자(PID 29060) 계속 DEAD(완료 상태 유지). HUMAN-INBOX 신규 없음, push 대기 35건 불변. sonnet 발사·git push 이번 회차도 수행하지 않음.</run-summary>
+
+## 조율자 2026-07-12 01:19 (recursion1-result-check)
+
+- 0단계 안정성: git status --short 확인 — server/*.cs, dashboard/*.js·css·html 변경 없음(신규 커밋 대상 없음). 변경분은 전부 런타임(dashboard/data/*/measurement.json·run-log.json·workflow-state.json 등)·범위 밖(docs/plan/, outputs/*.log·*.json 테스트 산출물, sonnet-active.pid 2종)뿐.
+- 하네스 재확인(exit code 기준): gate-clean server exit0 PASS(contentDirtyCount 0) · doc-integrity exit0 INTACT. 01:14 회차와 동일 상태 유지.
+- 실행 상태: outputs/sonnet-active.pid=29060(LEDGER-02) DEAD, 루트 sonnet-active.pid=9804 DEAD. 진행 중 실행자 없음.
+- reviewer-log.md 확인(검수자 전용 파일, 읽기만): 01:1x 항목에 LEDGER-02 검수 결과 기록 — 지표(build/verify-behavior/measure/handoff-integrity/gate-clean) 전부 exit0, 비-LLM 항목 토큰 날조 없음(0건) 확인되었으나 proposal.generated 경로에 토큰이 한 번도 찍히지 않아 배선 자체는 미검증(조건부 PASS)로 판정됨. 원인은 server/OllamaExecutor.cs:395 metricId 대소문자 완전일치 실패(unctionsWithOutComment vs unctionsWithoutComment)로 확인, rule-engine 폴백이 무음 처리되는 구조적 문제로 진단됨. 사람 승인으로 LEDGER-03(docs/handoff/queue/directive-LEDGER03-fallback-observability.md, 관측부터 켠다) 이미 발행 확인.
+- dev-pack proposal: proposal-1783785514531(lifecycle superseded) 변동 없음 — 결재 대상 아님. ruined-lab proposal-1783782110783(lifecycle decided) 변동 없음.
+- BASELINE-CHANGES.md: BC-001 외 신규 항목 없음. 기준 파일(blueprint.json·workflow-definition.json) 이번 회차 변경 없음.
+- HUMAN-INBOX: 신규 결정 필요 항목 없음(기존 목록과 동일, 중복 방지 유지).
+- 발사(사람 게이트): 진행 중 항목 없음. SONNET-QUEUE #21(LEDGER-02)은 표기상 "진행"이나 실제로는 완료·검수·커밋 완료 상태(01:10 회차 기록) — 표 갱신은 검수자/사람 몫. LEDGER-03은 큐 표에 아직 미등재 상태로 관측(검수자가 지시서 파일만 발행, 표 반영은 검수자 몫). 신규 sonnet 발사 이번 회차 수행하지 않음.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 36건 → 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 없음.
+
+<run-summary>변경 없음 회차: server/dashboard 신규 dirty 파일 없어 커밋 없음. gate-clean·doc-integrity 재확인 PASS 유지. reviewer-log에서 LEDGER-02가 "조건부 PASS"(지표 전부 통과, 단 실제 배선 실행 미검증) 판정과 근본 원인(OllamaExecutor.cs 메트릭ID 대소문자 불일치로 인한 무음 rule-engine 폴백) 진단, 사람 승인으로 LEDGER-03 발행됨을 확인. HUMAN-INBOX·BASELINE-CHANGES 신규 없음. push 대기 36건. sonnet 발사·git push 이번 회차도 수행하지 않음.</run-summary>
+
+## 조율자 2026-07-12 01:25 (recursion1-result-check)
+
+- 0단계 안정성: git status --short 미커밋 목록 확인, 파일 해시 스냅샷 채취 → STABLE(직전 01:19 회차와 동일 패턴, server/dashboard 코드 변경 없음).
+- 실행 상태 변화(신규 발견): outputs/sonnet-active.pid=29292로 갱신됨(01:24:19 생성) — 새 sonnet 프로세스 ALIVE 확인(Get-Process 29292, claude, CPU 활동 있음). SONNET-QUEUE.md 확인 결과 #22 LEDGER-03(조용한 폴백 관측)이 "진행(PID 29292, 01:24 발사)"로 이미 사람 승인 후 발사됨(조율자가 발사한 것 아님 — 외부/사람 발사 관측). 루트 sonnet-active.pid=9804는 계속 DEAD(불명 잔존 파일, 조율자 권한 밖).
+- 순차 엄수: 진행 항목(LEDGER-03, PID 29292)이 있으므로 이번 회차 신규 발사 없음(규칙 3 준수).
+- 하네스 재확인(exit code 기준): gate-clean server exit0 PASS(contentDirtyCount0) · doc-integrity exit0 INTACT(전 파일 intact). server/*.cs·dashboard/*.js·css·html 이번 회차 dirty 없음 → 신규 커밋 대상 없음(LEDGER-03이 아직 파일을 쓰기 시작하지 않은 것으로 판단, 로그 0바이트).
+- HUMAN-INBOX: 신규 항목 없음(기존 4건 — ADR-001·ADR-006·proposal-1783780003286·proposal-1783784673421 — 과 동일, 중복 방지 유지).
+- reviewer-log.md/BASELINE-CHANGES.md: 01:19 회차 이후 신규 기록 없음(재확인만).
+- 커밋 제외 확인(런타임/범위 밖, 변동 없음): dashboard/data/*/measurement.json·run-log.json·patch-proposal.json·review-report.json·workflow-state.json · docs/plan/ · outputs/*.log·*.json 테스트 산출물 전부 · sonnet-active.pid 2종.
+- 기준 파일(blueprint.json·workflow-definition.json): 이번 회차 변경 없음.
+- 발사(사람 게이트): LEDGER-03(PID 29292) 진행 중 — 조율자는 발사하지 않음. 다음 대기 항목(#4 FEAT-01, #15 FIX-04) 발사도 이번 회차 수행하지 않음.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 36건(불변) → 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 없음.
+- 기록 매체 정리: 이번 회차에 outputs/review-log.md 누적된 미커밋 항목(01:10/01:14/01:19/01:25)을 조율자 전용 커밋으로 일괄 반영(코드 미혼입, 조율자 소유 파일 단독 변경).
+
+<run-summary>신규 발견: 사람이 LEDGER-03(PID 29292)을 01:24 발사함(조율자 발사 아님) — 진행 중이라 이번 회차도 신규 발사 없음. gate-clean·doc-integrity 재확인 PASS, server/dashboard 신규 dirty 없어 신규 코드 커밋 없음. HUMAN-INBOX·BASELINE-CHANGES 변화 없음, push 대기 36건 불변. review-log.md 누적 미커밋분(01:10~01:25)을 이번에 커밋으로 정리.</run-summary>
