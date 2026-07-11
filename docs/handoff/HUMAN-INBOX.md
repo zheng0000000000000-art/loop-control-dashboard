@@ -256,3 +256,9 @@
 - 맥락: dashboard/data/dev-pack/patch-proposal.json이 proposal-1783777837699(revisionOf proposal-1783777328782, 제목 "함수 길이 단축", createdBy ollama/qwen3:8b)로 갱신됨. lifecycle submitted. 변경 1건: maxFunctionLength 99→[0,80].
 - 조치: 사람의 승인(approve) 또는 거절(reject) 판단 필요. 조율자는 결재를 대행하지 않음.
 - 확인 시각: 2026-07-11 22:49 (조율자, recursion1-result-check).
+
+## 결정 필요: ADR-001 운영 등급 승격 제안 (2026-07-11 22:57, 조율자)
+
+- 맥락: docs/handoff/decisions/ADR-001-operating-grade.md 신규 등재(검수자 세션 제안). 운영 등급을 Required Before Multi-model Parallel Work로 승격하자는 제안(상태: 사람 승인 대기). 근거: docs/plan/AI-RUNTIME-REFACTOR-MICRO-DIRECTIVES-v9.md §0-A.6 · docs/plan/ALIGNMENT-v9.md. 승격 조건 8개 중 7개 충족 주장.
+- 조치: 사람의 승인(A안: 등급 승격 + Phase 0 착수) 또는 대안(B: 등급 하향/병렬·자동화 중단) 판단 필요. 조율자는 결재를 대행하지 않음.
+- 확인 시각: 2026-07-11 22:57 (조율자, recursion1-result-check).
