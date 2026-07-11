@@ -15918,6 +15918,172 @@
         "subscriptionCalls": 0,
         "role": "runtime"
       }
+    },
+    {
+      "createdAt": "2026-07-11T19:31:45.1440547+09:00",
+      "event": "measure.completed",
+      "params": {
+        "providerId": "dev-pack-checks",
+        "violationCount": 4,
+        "durationMs": 222
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 11,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-11T19:31:45.1525299+09:00",
+      "event": "stage.warning",
+      "params": {
+        "stage": "deviationCheck",
+        "text": "블루프린트 대비 괴리가 감지됐다.",
+        "reasonCode": "checklist.blueprint_deviation"
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 11,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-11T19:31:50.6298383+09:00",
+      "event": "proposal.generated",
+      "params": {
+        "provider": "ollama",
+        "model": "qwen3:8b",
+        "durationMs": 5472,
+        "fallback": false,
+        "selfReviewed": false,
+        "selfReviewPassed": false,
+        "reasonCode": "",
+        "text": "",
+        "failReason": ""
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "ollama",
+        "model": "qwen3:8b"
+      },
+      "attempt": 1,
+      "loopIteration": 11,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-11T19:31:50.6334480+09:00",
+      "event": "proposal.created",
+      "params": {
+        "proposalId": "proposal-1783765910626"
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "ollama",
+        "model": "qwen3:8b"
+      },
+      "attempt": 1,
+      "loopIteration": 11,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-11T19:32:07.7560159+09:00",
+      "event": "review.tier1_completed",
+      "params": {
+        "proposalId": "proposal-1783765910626",
+        "verdict": "approved",
+        "model": "qwen3:14b",
+        "durationMs": 17118,
+        "checkCount": 12,
+        "uncertainCount": 0,
+        "attempts": 12,
+        "text": ""
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "attempt": 1,
+      "loopIteration": 11,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-11T19:32:07.7625755+09:00",
+      "event": "guardrail.halted",
+      "params": {
+        "text": "loopIteration 11 >= 10"
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "guardrails",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 11,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-11T19:33:39.2743611+09:00",
+      "event": "guardrail.acknowledged",
+      "params": {
+        "id": "guardrail"
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "human",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 11,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
     }
   ]
 }

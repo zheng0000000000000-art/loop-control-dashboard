@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
-  "currentStage": "apply",
+  "currentStage": "changeReview",
   "overallStatus": "warning",
-  "loopState": "halted",
+  "loopState": "running",
   "mode": "normal",
   "suspendedTracks": [
     {
@@ -30,10 +30,14 @@
     "goals": "passed",
     "measure": "passed",
     "deviationCheck": "warning",
-    "changeReview": "approved",
-    "apply": "in_progress"
+    "changeReview": "pending_review",
+    "apply": "blocked"
   },
-  "blockInfo": {},
+  "blockInfo": {
+    "apply": {
+      "kind": "waiting"
+    }
+  },
   "stageDetails": {
     "goals": {
       "summary": "개발 팩은 저장소의 핵심 규칙을 측정하고 블루프린트 기준과 비교한다.",
@@ -63,7 +67,7 @@
         },
         {
           "label": "functionsWithoutComment",
-          "value": "5 / 0"
+          "value": "6 / 0"
         },
         {
           "label": "directiveAcceptanceCriteria",
@@ -123,7 +127,7 @@
         }
       ],
       "issues": [
-        "functionsWithoutComment: 측정값 5이 기준 0을 벗어났다. 근거: docs/handoff/queue/OrchestratorObserverCli.reference.cs:161; docs/handoff/queue/OrchestratorObserverCli.reference.cs:186; docs/handoff/queue/OrchestratorObserverCli.reference.cs:204",
+        "functionsWithoutComment: 측정값 6이 기준 0을 벗어났다. 근거: server/Harness/ScopeCheckCli.cs:156; docs/handoff/queue/OrchestratorObserverCli.reference.cs:161; docs/handoff/queue/OrchestratorObserverCli.reference.cs:186",
         "smallTouchTargets: 측정값 1이 기준 0을 벗어났다. 근거: dashboard/style.css:1133",
         "skillDomainViolations: 측정값 2이 기준 0을 벗어났다. 근거: docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md",
         "maxFunctionLength: 측정값 159이 기준 0~80을 벗어났다. 근거: dashboard/app.js:852-1010"
@@ -140,17 +144,19 @@
       "issues": []
     },
     "apply": {
-      "summary": "승인된 변경을 반영하는 중이다 — 실제로 반영한 뒤 재측정하면 다음 단계로 넘어간다.",
+      "summary": "변경 승인이 완료될 때까지 차단된다.",
       "metrics": [
         {
           "label": "적용 상태",
-          "value": "진행 중"
+          "value": "차단됨"
         }
       ],
-      "issues": []
+      "issues": [
+        "이전 단계가 아직 완료되지 않았다."
+      ]
     }
   },
-  "lastUpdated": "2026-07-11T19:24:28.0447537+09:00",
+  "lastUpdated": "2026-07-11T19:33:39.2734918+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
@@ -169,6 +175,12 @@
       "type": "guardrail",
       "loopIteration": 10,
       "acknowledgedAt": "2026-07-11T19:23:49.6408921+09:00"
+    },
+    {
+      "id": "guardrail",
+      "type": "loopIteration",
+      "loopIteration": 11,
+      "acknowledgedAt": "2026-07-11T19:33:39.2734825+09:00"
     }
   ],
   "acknowledgedCheckpoints": [
@@ -183,16 +195,5 @@
     "smallTouchTargets=1",
     "skillDomainViolations=2",
     "maxFunctionLength=159"
-  ],
-  "haltedAt": "2026-07-11T19:24:28.0446568+09:00",
-  "haltedBy": {
-    "type": "guardrail",
-    "breaches": [
-      {
-        "type": "loopIteration",
-        "actual": 11,
-        "limit": 10
-      }
-    ]
-  }
+  ]
 }
