@@ -23,7 +23,7 @@
 | 16 | **FIX-05 마지막 measure 위반 제거**(server/BalanceTuner.cs 115줄 함수 분할) | queue/directive-FIX05-balancetuner-split.md | server/ | **완료(ba5f750)** — 조율자 20:32 검수: build exit0(0/0), verify-behavior true, measure dev-pack 1건(기준선 1, 비악화), claim-check FIX-05 MATCH(exit0, claimCount3/mismatch0). 잔여: server/Tier2Approver.cs:38-138(101줄) 새로 노출 — FIX-06 큐 등재됨(다음 지시서 대상) |
 | 17 | **FIX-06 server/ 장문 함수 4건 분할** | queue/directive-FIX06-server-long-functions.md | server/ | **완료(3df722f)** — 사람 승인(2026-07-11) 후 반영. Tier2Approver·OutboxManager·Program·Engine 장문 함수 분할 |
 | 18 | **FIX-07 app.js 장문 함수 3건 분할 → measure 0 달성** | queue/directive-FIX07-appjs-long-functions.md | dashboard/ | **완료(ebb0312)** — 조율자 23:03 검수: build/verify-behavior/measure/claim-check/scope-check 전부 PASS. app.js 줄수 상한(2692) 유지 확인 |
-| 19 | **P0-04 Projection 생성기** (`dotnet run -- projection`) — WORKSTATE에서 STATUS·HANDOFF·RUNTIME-INDEX를 **생성**. 손편집 금지 | queue/directive-P004-projection.md (작성 예정) | server/ + docs | **대기** — P0-03(handoff-integrity) 완료 후. 근거: 손으로 쓴 STATUS가 삭제된 파일을 '준비됨'이라 거짓말했다 |
+| 19 | **P0-04 Projection 생성기** (`dotnet run -- projection`) — WORKSTATE에서 STATUS·HANDOFF·RUNTIME-INDEX를 **생성**. 손편집 금지 | queue/directive-P004-projection.md  | server/ + docs | **완료(a7068ad server + 88d0ab5 docs)** — 조율자 23:44 검수: build 0/0, verify-behavior true, measure violationCount1(기준선과 동일), claim-check P0-04 MATCH(exit0). 자진신고(ADR-005): WORKSTATE diId가 여전히 FIX-07(P0-04로 projection 재실행 갱신은 조율자 권한 밖 — 하네스 아닌 쓰기 액션이라 보류, 사람/검수자 판단 필요) |
 | 20 | (추후 검수자가 추가) | — | — | — |
 
 ## 자동 발사 규칙 (조율자용)
