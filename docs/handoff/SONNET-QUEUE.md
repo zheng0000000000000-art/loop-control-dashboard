@@ -13,7 +13,10 @@
 | 5 | ORCH-01 오케스트레이터 관측 스캐폴드 (dotnet -- orch-observe) | queue/directive-ORCH01-observer.md (+참조 queue/OrchestratorObserverCli.reference.cs) | server/ | 대기 — 관측 전용(발사·커밋·결재 없음), 비전문서 1단계 코드화 |
 | 6 | HARNESS-01 gate-clean (트리 clean을 정규화 내용 해시로 판정) | queue/directive-HARNESS01-gate-clean.md (+참조 queue/GateCleanCli.reference.cs) | server/ | 대기 — HS-GATE 12/12 즉시제작. FAIL-010 회귀 하네스 |
 | 7 | HARNESS-02 hs-scan (승격 심사 트리거 기계 탐지) | queue/directive-HARNESS02-hs-scan.md (+참조 queue/HsScanCli.reference.cs) | server/ | 대기 — 승격 파이프라인이 재량이라 한 번도 안 돌던 문제 해소 |
-| 8 | (추후 검수자가 추가) | — | — | — |
+| 8 | **HARNESS-04 gate-audit** (사람 전용 게이트 위반 감사) | queue/directive-HARNESS04-gate-audit.md | server/ | 대기 — **HS-GATE 12/12 최우선**. 북극성 고정점이 12회 깨진 것을 검출. |
+| 9 | HARNESS-03 claim-check (자기보고→실체 대조) | queue/directive-HARNESS03-claim-check.md | server/ | 대기 — HS-GATE 11/12. FIX-01 허위 완료주장 3회의 회귀 하네스 |
+| 10 | FIX-03 measure 스캔에서 docs/ 제외 | queue/directive-FIX03-measure-scope-docs.md | server/ | 대기 — 검수자 세션이 유발한 위반 13건 해소(FIX-02 동일 계열) |
+| 11 | (추후 검수자가 추가) | — | — | — |
 
 ## 자동 발사 규칙 (조율자용)
 
