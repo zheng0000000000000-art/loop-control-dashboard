@@ -1,7 +1,7 @@
 # STATUS — 진행 스냅샷 (세션 이어받기용)
 
 > 갱신: 2026-07-11. 이 파일 + docs/handoff/ + docs/verification/ 만 읽으면 어떤 세션이든 이어받는다.
-> **새 세션 진입 순서**: ①이 파일 ②docs/handoff/WORKSTATE.json(현재 DI) ③docs/handoff/CODEX-QUEUE.md ④outputs/review-log.md(최근 검수) → 자동 루프 상태 확인 → 다음 작업.
+> **새 세션 진입 순서**: ①이 파일 ②`docs/handoff/SESSION-HANDOFF-2026-07-11-reviewer.md` (최신 인수인계) ③**`outputs/review-log.md`(조율자) + `docs/handoff/sessions/SESSION-*codex*.md`(코덱스) — 독립 관찰자 기록을 반드시 먼저 읽는다. 안 읽고 추측하다 검수자가 하루에 네 번 틀렸다** ④`docs/handoff/HARNESSES.md`(하네스·필독 스킬) ⑤`docs/handoff/HUMAN-INBOX.md`(사람 결재).
 
 ## 한 줄 정의 / 북극성
 
