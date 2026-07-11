@@ -1,0 +1,65 @@
+너는 코덱스다. 저장소는 C:\Users\1\Documents\Local-First Workflow Dashboard 다. 이번 작업은 P0-05 하나다.
+
+## 먼저 읽어라 (이 순서로)
+
+1. docs/context/RUNTIME-INDEX.md — 기계가 생성한 현재 위치(11줄)
+2. docs/handoff/CODEX-QUEUE.md 의 "P0-05 데이터 관문 해제" 절 — 네가 할 일의 정본
+3. docs/directives/_header.md 의 「Context Pack」 절 — 형식 정본
+4. skills/common/hs-gate.md 2항 · skills/common/root-cause-diagnosis.md
+
+## 배경 — 네가 옳았다
+
+너는 세션 050·051에서 P0-05 하네스 제작을 **두 번 거부했다**. 이유는 "requiredInputs/readOrder 실데이터가 없다"였다. **그 거부는 옳았다.** hs-gate 2항(볼 데이터가 실재하는가)을 지킨 것이고, gate-audit이 그걸 안 물어서 철회됐다. 막힌 쪽은 너가 아니라 데이터를 만들 책임이 있는 검수자였다.
+
+**2026-07-12에 검수자가 데이터를 만들었다. 이제 착수해라.**
+
+- 형식 정본: `docs/directives/_header.md`의 「Context Pack」 절. 펜스 언어 태그 `context-pack` 안에 JSON.
+- 필드: `diId` · `requiredInputs[{path, sha256}]` · `readOrder[]` · `forbiddenActions[]`
+- **실데이터 4건**: `docs/handoff/queue/` 의 `directive-FEAT01-conditional-delegation.md` · `directive-LEDGER02-executor-token-wiring.md` · `directive-LEDGER03-fallback-observability.md` · `directive-LEDGER04-metricid-normalization.md`. **sha256은 프로그램(Get-FileHash)이 계산한 진짜 값**이다.
+- **음성 표본**: 나머지 지시서에는 블록이 **없다**.
+
+## 만들 것: `context-pack-integrity` 하네스 (신규 2/2 — Phase 0 예산의 마지막 하나)
+
+`server/Harness/` 에 만들고 `HarnessRegistry`에 등록한다. **`server/Cli/CliRouter.cs`는 건드리지 마라** — HOOK-01이 레지스트리를 한 번만 훅한다.
+
+### 판정 규칙
+
+| 조건 | 판정 |
+| --- | --- |
+| `requiredInputs`의 경로가 **없는 파일** | `missing` → **exit 1** |
+| 파일은 있으나 **sha256 불일치** | `stale` → **exit 1** |
+| 전부 일치 | `ok` → exit 0 |
+| Context Pack 블록 자체가 없음 | `skipped` → **exit code에 영향 없음** |
+
+`skipped`가 실패가 아닌 이유: 과거 지시서 때문에 게이트가 영구 잠기면 안 된다(FAIL-2026-010, CRLF 게이트 교착).
+
+### 왜 이 하네스가 필요한가 (실측 근거)
+
+`docs/STATUS.md`가 "ORCH-01 참조 .cs 준비됨"이라고 적었지만 그 파일은 커밋 `797e7bc`가 **이미 지운 상태**였다. 발사 직전에 **사람이 손으로** 발견했다 — 하네스 6개가 돌고 있었는데 아무도 못 잡았다. 참조 입력에 **경로만 있고 해시가 없었기 때문**이다.
+
+### ★ 설계 제약 두 가지 (반드시 지켜라)
+
+1. **스탬핑 기능을 넣지 마라. 검사만 해라.**
+   P0-04의 `handoff-integrity`는 **스탬핑 주체(`projection`)와 검증 주체가 같아서**, `projection`을 재실행하면 **언제든 green을 제조할 수 있다.** 이번엔 **고치는 자와 검사하는 자를 분리한다**(ADR-002와 같은 원리). 해시 갱신은 지시서를 쓰는 사람/검수자가 한다.
+2. **`requiredInputs`(읽기 참조)와 allowlist(쓰기 대상)가 겹치면 경고를 내라.**
+   작업 중 바뀌는 파일에 해시를 걸면 **게이트가 자기 작업에 걸려 넘어진다.**
+
+### 장애 주입 시험 (필수 — 통과를 믿기 전에 실패시킬 수 있음을 먼저 증명해라)
+
+1. `requiredInputs`의 파일 하나를 **없는 경로로 바꾼 사본**으로 → `missing`, **exit 1** 확인
+2. 참조 파일을 **한 줄 바꿔서** → `stale`, **exit 1** 확인
+3. 원복 후 → **exit 0** 복귀 확인
+
+**원본 지시서를 건드리지 말고 사본(`$env:TEMP`)에서 주입해라.** 검수자가 2026-07-12에 `git checkout`으로 주입을 원복하다가 **미커밋 작업물을 통째로 날렸다.**
+
+## 경계
+
+- **쓰기 영역**: `server/Harness/` · `docs/qa/` · `docs/handoff/sessions/`. 그 밖은 건드리지 마라.
+- **주석은 한국어 기능 설명 1줄씩.** 함수에 주석이 없으면 `measure dev-pack`의 `functionsWithoutComment`가 올라가 **네 하네스가 게이트를 깬다.** 2026-07-11에 P0-03 산출물이 정확히 그랬다(주석 5건 누락).
+- **제출 전 `dotnet run --project server -c Release -- measure dev-pack`을 반드시 돌려라.** 현재 violationCount는 **0**이다. **0을 깨뜨리면 실패다.**
+- git commit/push 금지. 결재·반입·발사 금지.
+- 작업 보고는 `docs/handoff/sessions/SESSION-<날짜>-codex-<번호>.md`에 남긴다. **①주체(actor) ②사용한 하네스와 각각의 exit code ③참조한 스킬**을 반드시 기록한다.
+
+## 한도
+
+한도가 임박하면 종료 전 마지막 세 줄로 `QUOTA_SIGNAL` / `CHANGED: <수정한 파일>` / `NEXT: <다음 할 일 한 줄>`을 남겨라. **부분 작업물은 되돌리지 마라.** 한도로 멈추는 것은 고장이 아니다(사람 확인, `docs/handoff/QUOTA-POLICY.md`).
