@@ -3,15 +3,13 @@
 # HANDOFF — 인수인계 문서
 
 ## 현재 위치
-- **diId**: LEDGER-01  **phaseId**: P0-04  **status**: verifying
+- **diId**: LEDGER-02  **phaseId**: P0-04  **status**: verifying
 - **갱신자**: claude-sonnet-4-6  **갱신일**: 2026-07-12
 
-## 변경 파일 (5개)
-- `server/OllamaExecutor.cs` [3d89ddd32a64582f…] — CallModel()·TryGenerateNote/Summary/TuningNote/TuningSummary·RunSelfReviewIfEnabled에서 prompt_eval_count·eval_count 추출. ExecutorGenerateResult에 InputTokens·OutputTokens 추가.
-- `server/OllamaReviewer.cs` [e47ba9c2a2cfea1f…] — CallModel()에서 prompt_eval_count·eval_count 추출. SingleCheckResult·ModelReviewAttempt에 토큰 필드 추가. LogEntry·RuntimeCost에 토큰 파라미터 연결.
-- `server/Tier2Approver.cs` [1b581d5ae92ee2d4…] — RequestReviewWithModel()에서 prompt_eval_count·eval_count 추출. ReviewOutcome에 InputTokens·OutputTokens 추가.
-- `docs/verification/ledger01-token-ledger.md` [8656b81485ef8f3e…] — LEDGER-01 작업 검증 문서 신규.
-- `docs/directives/LEDGER01-token-ledger.md` [c708668a56c2f905…] — 지시서 보관본.
+## 변경 파일 (3개)
+- `server/Program.cs` [252f7f6e8c419027…] — RuntimeCost()에 int inputTokens=0, int outputTokens=0 추가. GeneratedLogEntry()에 토큰 파라미터 추가. ollama 성공 경로 2곳(GenerateProposalWithFallback, GenerateTuningProposalWithFallback)에서 generated.InputTokens·generated.OutputTokens 전달.
+- `docs/verification/ledger02-executor-token-wiring.md` [24f834c3a9f105b1…] — LEDGER-02 작업 검증 문서 신규.
+- `docs/directives/LEDGER02-executor-token-wiring.md` [d4d55b839c532443…] — 지시서 보관본.
 
 ## 완료 이력
 - **FIX-06**: 6개 파일
@@ -25,6 +23,7 @@
 - **FEAT-01**: 2개 파일
 - **HOOK-01**: 7개 파일
 - **FIX-07**: 3개 파일
+- **LEDGER-01**: 5개 파일
 
 ## 검증 결과
 - behaviorEqual: true
@@ -40,4 +39,4 @@ dotnet run --project server -c Release -- verify-behavior
 ```
 
 ## 노트
-LEDGER-01: ollama /api/generate 응답의 prompt_eval_count·eval_count를 3개 호출 지점(OllamaExecutor·OllamaReviewer·Tier2Approver)에서 읽어 기존 cost 필드에 기록하도록 수정. 직접 경로 사유: allowlist 포함 파일만 수정. 증명 제한: 현재 dev-pack violations=0이라 review 사이클이 실제 트리거되지 않음 — 위반 발생 시 자동으로 토큰이 기록됨.
+LEDGER-02: Program.cs의 RuntimeCost()·GeneratedLogEntry()에 토큰 파라미터 추가, ollama 성공 경로 2곳에서 실제 토큰 전달. 직접 경로 사유: allowlist 포함 파일만 수정. 증명 제한: qwen3:8b가 functionsWithoutComment metricId를 일관되게 대소문자 오류(functionsWithOutComment)로 반환해 ParseNoteResponse가 거부 — ollama 성공 경로 end-to-end 증명 불가. 자진 신고 확인: 지표는 만족, 목적(실체 증명) 미달.
