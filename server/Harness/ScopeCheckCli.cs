@@ -1,5 +1,6 @@
-// Directive scope harness.
-// Compares the directive allowlist against git status and reports out-of-scope files without modifying them.
+// 지시서 allowlist와 파일 claim을 git 변경분에 대조하는 읽기 전용 하네스.
+// 범위 밖 변경과 활성 claim 충돌을 보고만 하고 파일·프로세스는 수정하지 않는다.
+using System.Diagnostics;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -13,18 +14,19 @@ internal static class ScopeCheckCli
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    // scope-check entry. exit 0=all changed files allowed, 1=out-of-scope files exist, 2=usage or malformed directive.
+    // CLI 인자를 해석해 allowlist 대조와 claim 충돌 검사를 실행한다.
     internal static int Run(string[] args)
     {
         try
         {
             if (args.Length < 2)
             {
-                Console.Error.WriteLine("{\"error\":\"usage: scope-check <directivePath|diId>\"}");
+                Console.Error.WriteLine("{\"error\":\"usage: scope-check <directivePath|diId> [--actor <actor>] [--claims <claimsPath>]\"}");
                 return 2;
             }
 
             var root = GitTools.FindRepoRoot();
+            var options = ParseOptions(args);
             var directive = ResolveDirective(root, args[1]);
             if (directive is null)
             {
@@ -47,21 +49,31 @@ internal static class ScopeCheckCli
                     outOfScope.Add(file);
             }
 
+            var claimReport = ReadClaims(root, options.ClaimsPath, options.Actor, changed);
+            var conflictCount = claimReport.Conflicts.Count;
             var report = new JsonObject
             {
                 ["harness"] = "scope-check",
                 ["directive"] = Path.GetRelativePath(root, directive).Replace('\\', '/'),
+                ["actor"] = options.Actor,
+                ["claimsFile"] = claimReport.RelativePath,
                 ["allowlistCount"] = allowlist.Count,
                 ["changedFileCount"] = changed.Count,
                 ["outOfScopeCount"] = outOfScope.Count,
-                ["verdict"] = outOfScope.Count == 0 ? "PASS" : "FAIL",
+                ["claimConflictCount"] = conflictCount,
+                ["staleClaimCount"] = claimReport.StaleClaims.Count,
+                ["unknownAllowlistClaimCount"] = claimReport.UnknownAllowlistClaims.Count,
+                ["verdict"] = outOfScope.Count == 0 && conflictCount == 0 ? "PASS" : "FAIL",
                 ["allowlist"] = new JsonArray(allowlist.Select(p => (JsonNode)p).ToArray()),
                 ["outOfScopeFiles"] = outOfScope,
-                ["note"] = "Read-only check. Out-of-scope files must be handled by the orchestrator or implementer.",
+                ["claimConflicts"] = claimReport.Conflicts,
+                ["staleClaims"] = claimReport.StaleClaims,
+                ["unknownAllowlistClaims"] = claimReport.UnknownAllowlistClaims,
+                ["note"] = "Read-only check. Out-of-scope files and active claim conflicts must be handled by the orchestrator or implementer.",
             };
 
             Console.WriteLine(report.ToJsonString(JsonOptions));
-            return outOfScope.Count == 0 ? 0 : 1;
+            return outOfScope.Count == 0 && conflictCount == 0 ? 0 : 1;
         }
         catch (Exception ex)
         {
@@ -70,7 +82,32 @@ internal static class ScopeCheckCli
         }
     }
 
-    // Resolves either a path or a directive id such as ORCH01 / HOOK01.
+    // 선택 인자의 기본값과 파일 경로를 정한다.
+    private static ScopeOptions ParseOptions(string[] args)
+    {
+        var actor = "codex";
+        string? claimsPath = null;
+        for (var i = 2; i < args.Length; i++)
+        {
+            if (args[i] == "--actor" && i + 1 < args.Length)
+            {
+                actor = args[++i];
+                continue;
+            }
+
+            if (args[i] == "--claims" && i + 1 < args.Length)
+            {
+                claimsPath = args[++i];
+                continue;
+            }
+
+            throw new ArgumentException($"unknown option: {args[i]}");
+        }
+
+        return new ScopeOptions(actor, claimsPath);
+    }
+
+    // 경로 또는 ORCH01/HOOK01 같은 지시서 ID를 실제 파일로 해석한다.
     private static string? ResolveDirective(string root, string input)
     {
         var direct = Path.GetFullPath(Path.IsPathRooted(input) ? input : Path.Combine(root, input));
@@ -93,7 +130,7 @@ internal static class ScopeCheckCli
         return null;
     }
 
-    // Extracts bullet glob patterns under a markdown heading containing "allowlist".
+    // allowlist 제목 아래의 글머리표 glob 패턴을 추출한다.
     private static List<string> ParseAllowlist(string directive)
     {
         var patterns = new List<string>();
@@ -117,7 +154,7 @@ internal static class ScopeCheckCli
         return patterns.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 
-    // Reads changed files from git status. Rename entries use the destination path.
+    // git status에서 변경 파일을 읽고 rename은 목적지 경로로 판정한다.
     private static List<string> GetChangedFiles(string root)
     {
         var status = GitTools.RunGitText(root, "status --porcelain") ?? "";
@@ -134,7 +171,117 @@ internal static class ScopeCheckCli
         return files.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
-    // Minimal glob matcher for directive allowlists: *, **, and literal paths.
+    // claim 원장을 읽어 활성 충돌, 죽은 PID, allowlist 미상 claim을 분리한다.
+    private static ClaimReport ReadClaims(string root, string? claimsPathOption, string selfActor, List<string> changedFiles)
+    {
+        var claimsPath = Path.GetFullPath(Path.IsPathRooted(claimsPathOption ?? "")
+            ? claimsPathOption!
+            : Path.Combine(root, claimsPathOption ?? Path.Combine("docs", "handoff", "FILE-CLAIMS.json")));
+        var relativePath = Path.GetRelativePath(root, claimsPath).Replace('\\', '/');
+        var conflicts = new JsonArray();
+        var staleClaims = new JsonArray();
+        var unknownAllowlistClaims = new JsonArray();
+
+        if (!File.Exists(claimsPath))
+            return new ClaimReport(relativePath, conflicts, staleClaims, unknownAllowlistClaims);
+
+        var doc = JsonNode.Parse(File.ReadAllText(claimsPath))?.AsObject()
+            ?? throw new InvalidOperationException($"claims file is not a JSON object: {relativePath}");
+        var claims = doc["claims"]?.AsArray();
+        if (claims is null) return new ClaimReport(relativePath, conflicts, staleClaims, unknownAllowlistClaims);
+
+        foreach (var item in claims.OfType<JsonObject>())
+        {
+            var status = item["status"]?.GetValue<string>() ?? "";
+            var actor = item["actor"]?.GetValue<string>() ?? "";
+            var taskId = item["taskId"]?.GetValue<string>() ?? "";
+            var claimId = item["claimId"]?.GetValue<string>() ?? "";
+            var pid = ReadInt(item["pid"]);
+            var allowlistSource = item["allowlistSource"]?.GetValue<string>();
+            var paths = ReadPaths(item["paths"]);
+
+            if (string.IsNullOrWhiteSpace(allowlistSource))
+                unknownAllowlistClaims.Add(BuildClaimSummary(item, "allowlist-unknown"));
+
+            if (!status.Equals("active", StringComparison.OrdinalIgnoreCase)) continue;
+
+            if (pid is null || !IsProcessAlive(pid.Value))
+                staleClaims.Add(BuildClaimSummary(item, "pid-dead"));
+
+            if (actor.Equals(selfActor, StringComparison.OrdinalIgnoreCase)) continue;
+            foreach (var file in changedFiles)
+            {
+                var matchedPath = paths.FirstOrDefault(path => GlobMatches(path, file));
+                if (matchedPath is null) continue;
+                conflicts.Add(new JsonObject
+                {
+                    ["file"] = file,
+                    ["claimedPath"] = matchedPath,
+                    ["actor"] = actor,
+                    ["taskId"] = taskId,
+                    ["pid"] = pid,
+                    ["claimId"] = claimId,
+                });
+            }
+        }
+
+        return new ClaimReport(relativePath, conflicts, staleClaims, unknownAllowlistClaims);
+    }
+
+    // claim의 paths 배열을 문자열 목록으로 정규화한다.
+    private static List<string> ReadPaths(JsonNode? node)
+    {
+        if (node is null) return [];
+        if (node is JsonArray array)
+            return array.OfType<JsonValue>()
+                .Select(value => value.GetValue<string>().Replace('\\', '/'))
+                .Where(value => value.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        return [];
+    }
+
+    // JSON 숫자 또는 문자열 PID를 정수로 읽는다.
+    private static int? ReadInt(JsonNode? node)
+    {
+        if (node is null) return null;
+        if (node is JsonValue value && value.TryGetValue<int>(out var n)) return n;
+        if (node is JsonValue text && text.TryGetValue<string>(out var s) && int.TryParse(s, out var parsed)) return parsed;
+        return null;
+    }
+
+    // OS 프로세스 테이블에서 PID 생존 여부를 확인한다.
+    private static bool IsProcessAlive(int pid)
+    {
+        if (pid <= 0) return false;
+        try
+        {
+            using var process = Process.GetProcessById(pid);
+            return !process.HasExited;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    // 경고 출력용 claim 요약 객체를 만든다.
+    private static JsonObject BuildClaimSummary(JsonObject item, string reason)
+    {
+        return new JsonObject
+        {
+            ["reason"] = reason,
+            ["claimId"] = item["claimId"]?.DeepClone(),
+            ["actor"] = item["actor"]?.DeepClone(),
+            ["taskId"] = item["taskId"]?.DeepClone(),
+            ["pid"] = item["pid"]?.DeepClone(),
+            ["status"] = item["status"]?.DeepClone(),
+            ["allowlistSource"] = item["allowlistSource"]?.DeepClone(),
+            ["expiresAt"] = item["expiresAt"]?.DeepClone(),
+        };
+    }
+
+    // 지시서와 claim allowlist에서 쓰는 최소 glob 규칙을 판정한다.
     private static bool GlobMatches(string pattern, string file)
     {
         var p = pattern.Trim().Replace('\\', '/');
@@ -153,7 +300,15 @@ internal static class ScopeCheckCli
         return Regex.IsMatch(f, regex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
-    // Normalizes directive ids and filenames for loose id lookup.
+    // 지시서 ID와 파일명 비교를 위해 기호를 제거한다.
     private static string Normalize(string value)
         => Regex.Replace(value, "[^A-Za-z0-9]", "").ToLowerInvariant();
+
+    private sealed record ScopeOptions(string Actor, string? ClaimsPath);
+
+    private sealed record ClaimReport(
+        string RelativePath,
+        JsonArray Conflicts,
+        JsonArray StaleClaims,
+        JsonArray UnknownAllowlistClaims);
 }
