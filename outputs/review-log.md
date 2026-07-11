@@ -1182,3 +1182,28 @@
 - QUOTA_SIGNAL: 미검출.
 
 <run-summary>FIX-07(dashboard/app.js 장문 함수 3건 분할, measure violationCount 1→0) 완료를 자체 하네스로 전부 재검증(build/verify-behavior/measure/claim-check/scope-check 전부 PASS)한 뒤 레인 분리하여 로컬 커밋 4건(e6b4e1b, ebb0312, 57f821a, f6f7117) 남김: ADR-001 신규+HUMAN-INBOX 등재, dashboard 코드+WORKSTATE, FIX-07 검증/지시서+ADR-001 승인반영+ADR-002~004 신규+CLAUDE.md/큐 갱신, codex 세션048+QA리뷰+HS-CANDIDATES. 코드 미혼입·doc-integrity INTACT·gate-clean PASS 매 커밋 전 확인. sonnet 발사·git push 없음. push 대기 42건, 사람 배치 승인 필요. QUOTA_SIGNAL 없음.</run-summary>
+
+## 조율자 2026-07-11 23:0x 기록 (SONNET-QUEUE 상태 정정 커밋 1건, push 대기 44건)
+
+- 0단계 안정성: 미스테이징 파일 미변화 확인(5초 간격 2회 해시 동일, 안정). 대상: dashboard/data/dev-pack/*.json 5건 + outputs/*.log·reviewer-log.md·DECISION-BRIEF-v3.md·sonnet-active.pid + docs/plan/(기존 미추적) — 전부 런타임/레인 밖으로 커밋 제외 대상, 변경 없음.
+- 하네스: gate-clean server exit0(PASS, contentDirtyCount 0) · doc-integrity exit0(INTACT, 12개 문서 무결).
+- 발견: docs/handoff/SONNET-QUEUE.md 큐 표에서 FIX-06(row17)·FIX-07(row18)이 실제로는 이미 로컬 커밋됨(3df722f, ebb0312 — 직전 회차들 review-log에도 완료 기록 있음)에도 표 상태가 "대기"로 남아 있었음(57f821a 커밋이 row19만 추가하고 기존 행 미갱신). 큐 표는 발사 판단에 쓰이는 정본이라 정정 필요.
+- 조치: SONNET-QUEUE.md row17·row18 상태를 "대기"→"완료(커밋해시)"로 정정(문서 레인, 코드 미혼입, doc-integrity 재확인 후). **로컬 커밋 1건(70d03f3)**, push 없음.
+- HUMAN-INBOX: 22:57 이후 신규 등재 없음(기존 결재 대기 항목 그대로 유지 — dev-pack proposal 리비전 3건, ADR-001 등, 대행 안 함).
+- 기준 파일(blueprint.json·workflow-definition.json): 이번 회차 변경 없음.
+- 발사(조율자는 발사하지 않음): sonnet-active.pid=32956 프로세스 사망 확인(Get-Process 결과 없음). 큐상 다음 후보 P0-04(row19)는 전제조건 P0-03(handoff-integrity, CODEX-QUEUE 상 아직 "대기", 지시서 파일 자체가 미작성)이 충족되지 않아 **발사 대상 아님**. FEAT-01(row4)은 오래전부터 "대기" 상태 그대로(우선순위 판단은 조율자 권한 밖, 그대로 기록만). **현재 발사 가능한 항목 없음.**
+- push(조율자는 push하지 않음): git log origin/main..HEAD --oneline = **44건**(이번 회차 로컬 커밋 1건 포함). 직전 회차 기록치(42건)와 차이 있음 — 과거 회차들에서 카운트 시점 오차가 반복 지적된 바 있어(38건/42건 재확인 필요 메모 참조), 이번 수치(44)는 방금 직접 측정한 실측치로 보고함. **push 대기 44건 — 사람 배치 승인 필요.**
+- QUOTA_SIGNAL: outputs/*.log 전체 검색 결과 미검출.
+
+<run-summary>SONNET-QUEUE.md에서 FIX-06/FIX-07이 이미 커밋됐음에도 "대기"로 잘못 표시된 걸 발견해 doc-integrity 확인 후 "완료(커밋해시)"로 정정, 로컬 커밋 1건(70d03f3) 남김(push 없음). server/dashboard 코드 변경은 이번 회차 없음(모든 미스테이징 항목이 런타임/레인 밖). sonnet-active.pid(32956) 사망 확인, 재발사 없음. HUMAN-INBOX 신규 없음, 기준 파일 변경 없음, QUOTA_SIGNAL 없음. push 대기 44건(실측), 사람 배치 승인 필요.</run-summary>
+
+## 조율자 2026-07-11 23:1x 추가 기록 (ADR-005 문서 레인 커밋 1건, push 대기 46건)
+
+- 최초 기록(23:0x) 이후 새로 안정화된 변경 발견: docs/directives/_header.md·docs/verification/_template.md 수정 + docs/handoff/decisions/ADR-005-metric-vs-purpose.md 신규(다른 주체가 작업 중이던 것으로 추정, 5초 간격 2회 해시로 안정 확인 후 처리).
+- 내용 확인: ADR-005(지표 충족 ≠ 목적 달성 구분 원칙) — 상태 **승인됨(2026-07-11)**으로 이미 기재돼 있어 HUMAN-INBOX 신규 등재 불필요로 판단. _header.md·_template.md에 관련 절 신설(코드 미혼입, 문서만).
+- doc-integrity exit0(INTACT) 재확인 후 **로컬 커밋 1건(8cb76ff)**, push 없음.
+- push 대기: git log origin/main..HEAD --oneline = **46건**(이번 회차 로컬 커밋 2건 합산: 70d03f3, 8cb76ff). 사람 배치 승인 필요.
+- 잔여 미스테이징: dashboard/data/dev-pack/*.json 5종(런타임, 커밋 제외) + outputs/*.log·reviewer-log.md·DECISION-BRIEF-v3.md·sonnet-active.pid(레인/소유권 없음, 미접촉) + docs/plan/(기존 미추적, 미접촉). 전부 정책상 그대로 유지.
+- QUOTA_SIGNAL: 미검출.
+
+<run-summary>회차 중간에 새로 안정화된 ADR-005 관련 문서 3건(승인됨 상태 확인)을 doc-integrity 재확인 후 로컬 커밋(8cb76ff)함. 이번 회차 총 로컬 커밋 2건(SONNET-QUEUE 정정 70d03f3 + ADR-005 반영 8cb76ff), push·sonnet 발사 없음. push 대기 46건, 사람 배치 승인 필요.</run-summary>
