@@ -1,7 +1,7 @@
 # REVIEWER-HANDOFF — 검수자 세션 인수인계 (상시 최신)
 
 > **쓰기 주체: 검수자만**(ADR-003 단일 기록자). 이 문서는 **판단할 때마다 갱신한다** — 세션 종료 시점이 아니다. 세션은 예고 없이 죽는다(한도·컨텍스트 한계).
-> 갱신: 2026-07-12 00:0x
+> 갱신: 2026-07-12 01:4x
 
 ## 0. 새 검수자 세션이 읽는 순서 (이것만 읽으면 이어받는다)
 
@@ -46,11 +46,54 @@
 
 ## 4. 다음 세 수
 
-*(P0-04 검수 완료로 갱신 — 2026-07-12 00:0x)*
+*(2026-07-12 01:4x 전면 갱신 — LEDGER-01/02/03 처리, P0-05 데이터 관문 해제 완료)*
 
-1. **WORKSTATE `changedFiles` 회전** — ⚠️ **P0-04 잔여 결함.** WORKSTATE는 `diId: P0-04`를 선언하는데 `changedFiles`는 **FIX-07의 파일 3건 그대로다**(앞 세션이 diId만 고치고 회전을 안 했다). 하네스는 **남의 DI 파일을 검증하며 green**이다. 해시 검증은 진짜지만 **핸드오프가 현실을 기술하지 않는다** = 목적 미달(ADR-005). FIX-07 항목을 `history`로 내리고 P0-04 산출물(`server/Cli/*`, projection·handoff-integrity 코드)로 교체 후 `projection` 재실행. **코덱스/실행자 몫 — 검수자는 WORKSTATE에 쓰지 않는다(ADR-003).**
-2. **LEDGER-01 검수** — ✅ **발사됨**(2026-07-11 23:50, 사람 승인, **PID 20896**, SONNET-QUEUE #20 진행). 종료 후 검수: build·verify-behavior·measure·gate-clean·**handoff-integrity(exit 0 유지)** 직접 재실행 + **`cost.inputTokens>0 && cost.outputTokens>0` 항목이 run-log에 실제로 기록됐는가**. **자기보고를 믿지 말고 하네스를 직접 돌려라.** 실측 근거: entries 938건 전부 `cost` 필드 보유, **토큰 채워진 것 0건**, ollama UP.
-3. **P0-05 → P0-06 → P0-07(HS-GATE)**. P0-05는 여전히 **data gate 블록**(코덱스 051: 기계가 읽을 `requiredInputs`/`readOrder` 실데이터가 없어 하네스를 못 만든다). 스키마부터 확정해야 진행된다.
+### 1. ★ **사람 결정 1건이 모든 걸 막고 있다 — metricId 폴백을 어떻게 할 것인가**
+
+**LEDGER-03이 침묵을 걷어냈다. 이제 원인이 결정적으로 보인다:**
+
+```json
+{ "event": "proposal.fallback", "level": "warn",
+  "params": { "reason": "parse-rejected-metricid",
+              "expectedMetricId": "functionsWithoutComment",
+              "actualMetricId":   "functionsWithOutComment" } }   ← 대문자 O
+```
+
+`qwen3:8b`가 metricId 대소문자를 **일관되게** 틀린다 → `OllamaExecutor.cs:408`이 엄격 대조로 거부 → **rule-engine으로 폴백.** 즉 **우리는 LLM을 쓴다고 믿으면서 rule-engine 출력을 받아왔다**(2026-07-11 23:40 이후, 회귀 아님 — 원래 그랬고 아무도 몰랐다).
+
+| 선택지 | 성격 |
+| --- | --- |
+| ① 파서를 대소문자 무시로 완화 | 즉시 복구. **위험: 모델 오류를 코드가 흡수해 감춘다.** 다음에 다른 방식으로 틀리면 또 조용해진다 |
+| ② **정규화 + 계속 기록 (권고)** | 대소문자 무시로만 통과시키되 **정규화가 필요했다는 사실을 warn 이벤트로 계속 남긴다.** ollama는 살리고 **모델 품질 저하는 계속 보인다** — 관측을 끄지 않는 복구 |
+| ③ 프롬프트를 고쳐 모델이 정확히 뱉게 | 근본이지만 모델 의존적. 모델 바꾸면 또 깨진다 |
+
+**추천은 ②다. 그러나 사람이 정한다.** 정하면 `LEDGER-04` 지시서로 발사.
+
+### 2. **LEDGER-02는 커밋됐지만 미검증이다 — "완료"로 잊지 마라**
+
+`proposal.generated`에 토큰을 싣는 배선(`Program.cs`, `040d017`)은 **한 번도 실행된 적이 없다.** ollama 제안 경로가 폴백으로 죽어 있었기 때문이다. **위 ①②③ 중 무엇이든 골라 ollama 경로가 살아나면, 그때 `proposal.generated`의 `cost.inputTokens > 0`을 확인해야 LEDGER-02가 비로소 검증된다.** 두 작업은 여기서 만난다.
+
+### 3. **Phase 0 완주: P0-05(코덱스 착수 가능) → P0-06 → P0-07(HS-GATE)**
+
+- **P0-05 데이터 관문은 열렸다**(2026-07-12, 검수자). 형식 = `docs/directives/_header.md`의 「Context Pack」 절, 실데이터 = `directive-FEAT01`·`LEDGER02`·`LEDGER03` 머리의 `context-pack` 블록(해시는 프로그램이 계산). **코덱스가 `context-pack-integrity`를 만들면 된다** — `CODEX-QUEUE.md` P0-05에 판정 규칙표·장애주입 의무까지 실어뒀다.
+- **P0-06 `FILE-CLAIMS`의 근거가 2건으로 늘었다.** ①고아 코드 109줄(주체 규명 불가) ②**2026-07-12: 런타임이 실행자가 편집 중인 `OllamaExecutor.cs`를 측정해 유령 제안을 만들었다**(승인했으면 활성 파일에 겹쳐 썼다). 실시간 충돌 직전이었다.
+- **P0-07 `HS-GATE-P00`은 사람이 PASS 판정.**
+
+### HS-GATE-P00 판정 시 사람이 알아야 할 구조적 한계
+
+- **스탬핑 주체 = 검증 주체.** `projection`이 sha256을 쓰고 `handoff-integrity`가 그걸 검증한다. 파일 변조는 잡지만, **`projection` 재실행으로 언제든 green을 제조할 수 있다.** 현재 게이트의 목적은 "핸드오프 이후 드리프트 탐지"이며 그 범위에서는 유효하다. 폐기 사유는 아니지만 **게이트를 신뢰의 근거로 삼을 때 이 한계를 알고 있어야 한다.**
+  - → **`context-pack-integrity`에는 이 결함을 넣지 않았다**(검사만, 스탬핑 없음). 고치는 자와 검사하는 자를 분리했다.
+- ACK는 없을 것이다(ADR-004: `claude -p`는 첫 줄 ACK를 못 낸다. 5/5 실패). **폐기 사유 아니다.**
+
+### 이 세션에서 확인된 것 (전부 exit code·실체로 판정)
+
+| DI | 판정 | 근거 |
+| --- | --- | --- |
+| P0-04 | **PASS** | `handoff-integrity` exit 0 + **반증 시험**(1줄 변조 → exit 1, 원복 → exit 0). 게이트가 공허하지 않음을 먼저 증명 |
+| P0-05 | **데이터 관문 해제** | 형식 정본 + 실데이터 3건. 프로토타입 검사기로 정상/유령참조/미적용 3케이스 실측 |
+| LEDGER-01 | **PASS** (목적 1/3) | 토큰 실기록 `in=1541 out=144`. 단 3개 호출부 중 1개만 run-log 도달 — **검수자 allowlist 오류** |
+| LEDGER-02 | **조건부 PASS** | 지표 전부 exit 0, 날조 0건. **단 배선 미검증**(실행된 적 없음) |
+| LEDGER-03 | **PASS** | `proposal.fallback` 이벤트 실기록. **검수자 진단이 실체로 적중**(대문자 O). 파서는 엄격 유지 |
 
 ### HS-GATE-P00 판정 시 사람이 알아야 할 구조적 한계
 

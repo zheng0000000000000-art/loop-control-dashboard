@@ -262,3 +262,41 @@ proposal: functionsWithoutComment @ server/OllamaExecutor.cs:569
 - **run-log 항목 스키마 불변** — 사유는 `params`에 담는다.
 - **실체 증명의 난점을 지시서에 정면으로 실었다**: 저장소 위반이 0건이라(dev-pack·ruined-lab 둘 다) 제안 생성이 자연 트리거되지 않는다. 그래서 위반 주입을 **조건부 허용**하되 ①즉시 제거 ②measure 0 복귀 확인 ③주입 창에 뜨는 유령 제안은 **승인 금지·보고만**을 못박았다.
 - **검수자의 진단을 실행자가 검증하게 했다**: "`actualMetricId`가 진짜 `functionsWithOutComment`인지 네가 확인해라. **틀렸으면 틀렸다고 보고하라 — 그게 더 가치 있다.**"
+
+## 2026-07-12 01:4x — LEDGER-03 검수: **PASS. 침묵이 사라졌다.**
+
+조율자 커밋(`14ad2fc` server / `9ed5732` docs). **직접 재실행해 대조했다.**
+
+**실체 (run-log 원문)**
+
+```json
+{ "event": "proposal.fallback", "level": "warn",
+  "params": { "reason": "parse-rejected-metricid",
+              "expectedMetricId": "functionsWithoutComment",
+              "actualMetricId":   "functionsWithOutComment",
+              "provider": "ollama", "model": "qwen3:8b" } }
+```
+
+| 검수 항목 | 결과 |
+| --- | --- |
+| `proposal.fallback` 이벤트가 찍히는가 | ✅ **찍힌다.** `level: warn`, `reason` 분해됨 |
+| **검수자 진단이 맞았는가** | ✅ **적중.** `actualMetricId = functionsWithOutComment`(대문자 O) — **실체로 확인됐다** |
+| **파서를 몰래 완화했는가**(범위 밖 금지) | ✅ **안 했다.** `OllamaExecutor.cs:408` — `if (metricId != expectedMetricId)` **여전히 엄격** |
+| run-log 스키마 불변 | ✅ 사유는 전부 `params`에. 최상위 필드 추가 없음 |
+| 주입 흔적 제거 + measure 복귀 | ✅ `git grep` 0건, `violationCount 0` |
+
+**판정: LEDGER-03 = PASS.** **이제 우리는 폴백이 일어나면 안다.**
+
+### 이제 데이터가 있다 — 다음은 사람의 결정이다
+
+원인이 **결정적**임이 확인됐다: `qwen3:8b`가 metricId의 대소문자를 일관되게 틀린다. 선택지는 셋이고 **성격이 다르다.**
+
+1. **파서를 대소문자 무시로 완화** — ollama가 즉시 되살아난다. 위험: **모델 오류를 코드가 흡수해 감춘다.** 다음에 모델이 다른 방식으로 틀리면 또 조용해진다.
+2. **정규화 + 계속 기록**(권고) — 기대값과 **대소문자 무시로만** 대조해 통과시키되, **정규화가 필요했다는 사실을 `proposal.fallback`이 아닌 `warn` 이벤트로 계속 남긴다.** ollama는 살리고 **모델 품질 저하는 계속 보인다.** 관측을 끄지 않는 복구다.
+3. **프롬프트를 고쳐 모델이 정확히 뱉게 한다** — 근본이지만 모델 의존적이고, 다른 모델로 바꾸면 다시 깨진다.
+
+**추천: 2번.** 이 프로젝트의 원칙("프로그램이 검증한다")과 오늘의 교훈("침묵이 병이다")을 둘 다 지킨다. **단 이건 사람 결정이다.**
+
+### LEDGER-02는 여전히 미검증이다 — 잊지 마라
+
+`proposal.generated`에 토큰이 찍히는 배선(LEDGER-02)은 **아직 한 번도 실행되지 않았다.** ollama 제안 경로가 폴백으로 죽어 있었기 때문이다. **위 결정으로 ollama 경로가 되살아나면, 그때 `proposal.generated`의 `cost.inputTokens > 0`을 확인해야 LEDGER-02가 비로소 검증된다.** 두 작업은 이 지점에서 만난다.
