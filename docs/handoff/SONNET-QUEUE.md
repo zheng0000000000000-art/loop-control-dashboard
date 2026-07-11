@@ -25,7 +25,8 @@
 | 18 | **FIX-07 app.js 장문 함수 3건 분할 → measure 0 달성** | queue/directive-FIX07-appjs-long-functions.md | dashboard/ | **완료(ebb0312)** — 조율자 23:03 검수: build/verify-behavior/measure/claim-check/scope-check 전부 PASS. app.js 줄수 상한(2692) 유지 확인 |
 | 19 | **P0-04 Projection 생성기** (`dotnet run -- projection`) — WORKSTATE에서 STATUS·HANDOFF·RUNTIME-INDEX를 **생성**. 손편집 금지 | queue/directive-P004-projection.md  | server/ + docs | **완료(a7068ad server + 88d0ab5 docs)** — 조율자 23:44 검수: build 0/0, verify-behavior true, measure violationCount1(기준선과 동일), claim-check P0-04 MATCH(exit0). 자진신고(ADR-005): WORKSTATE diId가 여전히 FIX-07(P0-04로 projection 재실행 갱신은 조율자 권한 밖 — 하네스 아닌 쓰기 액션이라 보류, 사람/검수자 판단 필요) |
 | 20 | **LEDGER-01 ollama 토큰 계측** (`prompt_eval_count`/`eval_count` → 기존 `cost` 필드) | queue/directive-LEDGER01-token-ledger.md | server/ | **완료(9d4aac5 server + 8a982d4 docs + 174be5f state)** — 조율자 2026-07-12 00:22 검수: build exit0(0/0), verify-behavior true, measure dev-pack violationCount0(기준선0 비악화), claim-check LEDGER-01 MATCH(claimCount14/mismatch0), doc-integrity INTACT(exit0). 실체 증명: run-log cost.inputTokens:1541/outputTokens:144 기록 확인. 자진신고(실행자): OllamaExecutor 일부 경로(Program.cs 경유)·Tier2Approver는 여전히 0 — 후속 과제 필요. |
-| 21 | (추후 검수자가 추가) | — | — | — |
+| 21 | **LEDGER-02 실행자 토큰 배선** (`ExecutorGenerateResult` 토큰 → `Program.cs` run-log 기록) | queue/directive-LEDGER02-executor-token-wiring.md | server/ | **진행(PID 29060, 2026-07-12 00:32 발사)** — 사람 승인. **조율자: 이중 발사 금지.** 근거: LEDGER-01 자진신고(ADR-005) + 검수자 실측 — 958건 중 토큰 기록 **1건뿐**, `proposal.generated`(최대 소비 경로)는 **0**. 원인은 검수자의 allowlist 오류(`Engine.cs`로 적었으나 실제 배선부는 `Program.cs`). **검수 핵심: LLM 항목엔 토큰이 찍히고, 비-LLM 항목(rule-engine·측정·결재)은 여전히 0인가** — 토큰 채우기가 목표가 되면 안 쓴 곳에도 숫자를 채운다 |
+| 22 | (추후 검수자가 추가) | — | — | — |
 
 ## 자동 발사 규칙 (조율자용)
 
