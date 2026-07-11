@@ -3,13 +3,15 @@
 # HANDOFF — 인수인계 문서
 
 ## 현재 위치
-- **diId**: P0-04  **phaseId**: P0-04  **status**: verifying
-- **갱신자**: claude-sonnet-4-6  **갱신일**: 2026-07-11
+- **diId**: LEDGER-01  **phaseId**: P0-04  **status**: verifying
+- **갱신자**: claude-sonnet-4-6  **갱신일**: 2026-07-12
 
-## 변경 파일 (3개)
-- `dashboard/app.js` [5e3e9df1c63eb27e…] — renderImportPendingItem(81→80줄), renderProposalChange(86→80줄), renderStageDetail(99→80줄). appendStageMetricsSection 헬퍼 추출. 총 2692→2688줄.
-- `docs/verification/fix07-appjs-long-functions.md` [a936b6a98ef156a5…] — FIX-07 검증 문서 신규.
-- `docs/directives/FIX07-appjs-long-functions.md` [d5d3b6bc6e10e2d3…] — 지시서 보관.
+## 변경 파일 (5개)
+- `server/OllamaExecutor.cs` [3d89ddd32a64582f…] — CallModel()·TryGenerateNote/Summary/TuningNote/TuningSummary·RunSelfReviewIfEnabled에서 prompt_eval_count·eval_count 추출. ExecutorGenerateResult에 InputTokens·OutputTokens 추가.
+- `server/OllamaReviewer.cs` [e47ba9c2a2cfea1f…] — CallModel()에서 prompt_eval_count·eval_count 추출. SingleCheckResult·ModelReviewAttempt에 토큰 필드 추가. LogEntry·RuntimeCost에 토큰 파라미터 연결.
+- `server/Tier2Approver.cs` [1b581d5ae92ee2d4…] — RequestReviewWithModel()에서 prompt_eval_count·eval_count 추출. ReviewOutcome에 InputTokens·OutputTokens 추가.
+- `docs/verification/ledger01-token-ledger.md` [8656b81485ef8f3e…] — LEDGER-01 작업 검증 문서 신규.
+- `docs/directives/LEDGER01-token-ledger.md` [c708668a56c2f905…] — 지시서 보관본.
 
 ## 완료 이력
 - **FIX-06**: 6개 파일
@@ -22,6 +24,7 @@
 - **FEAT-02**: 2개 파일
 - **FEAT-01**: 2개 파일
 - **HOOK-01**: 7개 파일
+- **FIX-07**: 3개 파일
 
 ## 검증 결과
 - behaviorEqual: true
@@ -37,5 +40,4 @@ dotnet run --project server -c Release -- verify-behavior
 ```
 
 ## 노트
-FIX-07 완료: dashboard/app.js 장문 함수 3건 모두 80줄 이하 달성. appendStageMetricsSection 헬퍼 추출, 빈 줄 최소화로 2692 상한 내 유지(2688줄). measure violationCount=0. 직접 경로 사유: allowlist 포함 파일(docs/verification/*, docs/directives/*, docs/handoff/WORKSTATE.json).
-[P0-04 추가] sha256 필드 스탬핑 완료(projection CLI). WORKSTATE diId를 P0-04로 갱신하려면 SONNET-QUEUE.md(allowlist 밖)에서 P0-04를 '완료'로 표시 후 projection 재실행 필요.
+LEDGER-01: ollama /api/generate 응답의 prompt_eval_count·eval_count를 3개 호출 지점(OllamaExecutor·OllamaReviewer·Tier2Approver)에서 읽어 기존 cost 필드에 기록하도록 수정. 직접 경로 사유: allowlist 포함 파일만 수정. 증명 제한: 현재 dev-pack violations=0이라 review 사이클이 실제 트리거되지 않음 — 위반 발생 시 자동으로 토큰이 기록됨.
