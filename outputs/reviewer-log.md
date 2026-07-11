@@ -216,3 +216,49 @@ proposal: functionsWithoutComment @ server/OllamaExecutor.cs:569
 ### `__TokenProbe`는 개입하지 않는다 — 게이트가 잡는다
 
 실행자가 이 디버그 함수를 지우지 않고 끝내면 `measure violationCount`가 **0 → 1**이 된다. LEDGER-02 지시서에 **"현재 violationCount 0이다. 네가 0을 깨뜨리면 실패다"**를 검수 기준으로 못박아뒀다. **자기 기준에 자기가 걸린다.** 손대지 않고 지켜본다 — **개입하면 게이트가 작동했는지 알 수 없게 된다.**
+
+> **후속(01:1x)**: 실행자가 **스스로 제거했다.** `git grep __TokenProbe` = 0건, `measure dev-pack` violationCount **0** 복귀. **게이트가 작동했다. 개입하지 않은 판단이 옳았다.**
+
+## 2026-07-12 01:1x — LEDGER-02 검수: **지표 PASS, 핵심 실체 증명 미달** + ★ 진짜 병 발견
+
+조율자가 먼저 검수·커밋했다(`040d017` server / `f6bef6b` docs+상태). **직접 재실행해 대조했다.**
+
+| 판정선 | 결과 |
+| --- | --- |
+| build / verify-behavior / measure / handoff-integrity / gate-clean | 전부 **exit 0** |
+| `__TokenProbe` 제거 | ✅ 스스로 제거, measure 0 복귀 |
+| **비-LLM 항목에 토큰을 날조했는가** | ✅ **0건** — rule-engine 항목 전부 0 유지. **"안 쓴 곳에도 숫자를 채우지 마라"를 지켰다** |
+| **`proposal.generated`에 토큰이 찍혔는가** | ❌ **0** — **배선이 한 번도 실행되지 않았다** |
+
+**실행자가 미달을 자진 신고했다(ADR-005 세 번째 연속 작동).** 12회 시도했으나 전부 실패. 그 실패의 원인 추적이 **이 회차의 진짜 수확이다.**
+
+### ★ 우리는 LLM을 쓴다고 믿었지만 rule-engine 출력을 받고 있었다
+
+```
+00:57:50  review.tier1_completed   provider=ollama       in=1541 out=147   ← ollama 호출됨(토큰 있음)
+00:57:56  proposal.generated       provider=rule-engine  in=0    out=0     ← 6초 뒤, 산출물은 rule-engine
+00:58:02  review.tier1_completed   provider=ollama       in=1541 out=146
+00:58:09  proposal.generated       provider=rule-engine  in=0    out=0
+```
+
+**원인(실체 확인)**: `server/OllamaExecutor.cs:395` — `metricId == expectedMetricId` **대소문자 완전일치**. `qwen3:8b`가 `functionsWithoutComment`를 **`functionsWithOutComment`(대문자 O)**로 반환 → `ParseNoteResponse` → `null` → **rule-engine 폴백.**
+
+**그리고 그 폴백이 완전히 조용하다.** run-log에 `fallback`·`fail`·`warn`·`error` 이벤트 **0건**.
+
+**회귀 아님(타임라인으로 확인 — 프록시로 단정하지 않았다)**: 마지막 ollama 제안 **2026-07-11 23:40**, LEDGER-01 커밋 **00:22**. **우리 변경 이전부터 그랬다.** 아무도 몰랐을 뿐이다.
+
+### 이것이 ADR-006이 옳았다는 증거다
+
+"토큰을 재자"고 켰더니 **첫 계측에서 "우리가 LLM을 안 쓰고 있었다"가 나왔다.** 계측이 없었으면 영영 몰랐다. **지표는 목적의 프록시지만, 없는 지표는 프록시조차 아니다.**
+
+**판정: LEDGER-02 = 조건부 PASS.** 지표 전부 통과 + 날조 없음. **단 배선은 미검증이다** — 코드는 커밋됐지만(조율자) **실행된 적이 없다. "완료"로 잊지 마라.** LEDGER-03 이후 재검증한다.
+
+### LEDGER-03 발행 (사람 승인: 관측부터 켠다)
+
+`docs/handoff/queue/directive-LEDGER03-fallback-observability.md`. 사람이 4개 선택지 중 **"관측부터 켠다"**를 선택했다.
+
+- **파서를 관대하게 고치지 않는다.** 대소문자 무시로 바꾸면 **모델 출력 오류를 코드가 흡수해 감춘다.** 먼저 **빈도와 원인을 재고**, 그 데이터로 다음을 정한다(hs-gate 2항 — 데이터가 먼저다).
+- `proposal.fallback` 이벤트(`level: warn`) + **`reason`을 5종으로 분해**(`parse-rejected-metricid`/`-note`/`-json`/`ollama-unreachable`/`ollama-disabled`, 나머지는 `unknown` + 원문 앞 200자). **"실패했다"로 뭉치면 다음 사람이 프록시로 추측한다.**
+- **run-log 항목 스키마 불변** — 사유는 `params`에 담는다.
+- **실체 증명의 난점을 지시서에 정면으로 실었다**: 저장소 위반이 0건이라(dev-pack·ruined-lab 둘 다) 제안 생성이 자연 트리거되지 않는다. 그래서 위반 주입을 **조건부 허용**하되 ①즉시 제거 ②measure 0 복귀 확인 ③주입 창에 뜨는 유령 제안은 **승인 금지·보고만**을 못박았다.
+- **검수자의 진단을 실행자가 검증하게 했다**: "`actualMetricId`가 진짜 `functionsWithOutComment`인지 네가 확인해라. **틀렸으면 틀렸다고 보고하라 — 그게 더 가치 있다.**"
