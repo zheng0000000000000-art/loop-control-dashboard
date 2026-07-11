@@ -10,7 +10,7 @@
 | 2 | FIX-02 measure outbox 스캔 제외 | queue/directive-FIX02-measure-scope.md | server/ | 완료(9a43f54/49b00d6) |
 | 3 | FEAT-02 E2E 실사용 하네스 내재화 (dotnet -- e2e-usage) | queue/directive-FEAT02-e2e-harness.md | server/ | **완료(a87e484)** — 사람 승인 발사(PID 30036, 격리 발사). 조율자 검수: build 0/0, verify-behavior true, measure 비악화 |
 | 4 | FEAT-01 한정 이양(게이트 클린 반입 AI 승인) | queue/directive-FEAT01-conditional-delegation.md | server/ | 대기 |
-| 5 | ORCH-01 오케스트레이터 관측 스캐폴드 (dotnet -- orch-observe) | queue/directive-ORCH01-observer.md | server/ | 대기 — 관측 전용(발사·커밋·결재 없음), 비전문서 1단계 코드화 |
+| 5 | ORCH-01 오케스트레이터 관측 스캐폴드 (dotnet -- orch-observe) | queue/directive-ORCH01-observer.md | server/ | **완료(ee21611)** — 조율자 검수: build 0/0, doc-integrity INTACT(exit0), claim-check ORCH-01 MATCH(exit0), verify-behavior true, measure dev-pack 4건(기준선 5건 대비 비악화) |
 | 6 | HARNESS-01 gate-clean (트리 clean을 정규화 내용 해시로 판정) | queue/directive-HARNESS01-gate-clean.md | server/ | **완료** — 검수자 세션 직접 구현·빌드 0/0·장애주입 회귀 통과 |
 | 7 | HARNESS-02 hs-scan (승격 심사 트리거 기계 탐지) | queue/directive-HARNESS02-hs-scan.md | server/ | **완료** — 검수자 세션 직접 구현. 실행 시 후보 3건 자동 검출 확인 |
 | 8 | ~~HARNESS-04 gate-audit~~ | ~~queue/directive-HARNESS04-gate-audit.md~~ | — | **철회** — 승격 근거가 오판(`[loop]`는 주체 서명이 아님). 하네스 삭제. FAIL-2026-012 |
