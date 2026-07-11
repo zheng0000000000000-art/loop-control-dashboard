@@ -24,7 +24,9 @@
 ## 자동 발사 규칙 (조율자용)
 
 1. **발사 조건 전부 충족 시에만**: ①server/ clean — **raw `git status`로 판정하지 말 것**(줄바꿈 같은 표현 차이만으로 dirty가 되어 게이트가 영구 잠긴다: FAIL-2026-010). **`dotnet run --project server -c Release -- gate-clean server` exit 0**으로 판정한다(구현 완료). 전체 하네스 목록·배선은 `docs/handoff/HARNESSES.md`. ②실행 중 sonnet 프로세스 없음(newest claude가 5분 이상 전 or 로그 완료) ③현재 `진행` 항목의 커밋이 로그에 존재(완료 확인) ④다음 `대기` 항목 존재.
-2. 발사: 해당 지시서 경로로 sonnet 헤드리스 실행(FAIL-005 방식: 프롬프트 인자 직접 전달 + RedirectStandardOutput + PID 확인). 발사 후 그 항목 상태를 `진행`으로 기록(review-log).
+2. 발사: sonnet 헤드리스 실행. **네 가지를 모두 해야 발사다**:
+   ① 프롬프트 인자 직접 전달 ② **세션 격리 — `--session-id <새 GUID> --fork-session` 필수**(FAIL-2026-013: 이게 없으면 기존 세션을 이어받아 **남의 작업을 계속한다**. '지시서 이탈'의 진짜 정체였다) ③ RedirectStandardOutput + PID 파일로 실행 확인(FAIL-005) ④ 완료 후 산출물이 지시서 `## 허용 파일 (allowlist)` 범위 안인지 대조(scope-check, HS-06).
+   발사 후 그 항목 상태를 `진행`으로 기록(review-log).
 3. **순차 엄수**: 이미 `진행` 항목이 있으면 새로 발사하지 않는다(동시 발사 = FAIL-004 재발).
 4. 큐가 모두 `완료`면 "구현 큐 소진 — 대기" 기록. 검토 루프(코덱스·조율자)는 계속.
 5. QUOTA_SIGNAL 감지 시 발사 중단.
@@ -32,7 +34,7 @@
 ## 발사 프롬프트 템플릿
 
 ```
-다음 지시서 하나만 읽고 그대로 수행하라: docs/handoff/queue/<지시서>. 다른 큐/지시서 파일은 읽지 마라(I-1 지시서 이탈 방지). 시작 전 AGENT-GUIDE.md와 docs/directives/_header.md를 먼저 읽어라. v9 산출물 문서 생성. 빌드·CLI는 dotnet -c Release. 지정 영역만, 타 실행자 영역(dashboard/·docs/qa/·docs/wiki/) 무접촉. git commit/push 금지. 완료 시 수행요약·검수기준 자가점검표 출력. **verification 문서에 ①주체(actor: 누가 했는가) ②사용한 하네스와 결과(명령·exit code·수치) ③참조한 스킬을 반드시 기록하라 — 없으면 조율자가 반려한다.** rate limit 시 마지막 줄 QUOTA_SIGNAL.
+**이전 대화 맥락이 있다면 전부 무시하라. 지금 할 일은 이것뿐이다.** 다음 지시서 하나만 읽고 그대로 수행하라: docs/handoff/queue/<지시서>. 지시서의 `## 허용 파일 (allowlist)` 밖은 수정 금지. 다른 큐/지시서 파일은 읽지 마라. 시작 전 AGENT-GUIDE.md와 docs/directives/_header.md를 먼저 읽어라. v9 산출물 문서 생성. 빌드·CLI는 dotnet -c Release. 지정 영역만, 타 실행자 영역(dashboard/·docs/qa/·docs/wiki/) 무접촉. git commit/push 금지. 완료 시 수행요약·검수기준 자가점검표 출력. **verification 문서에 ①주체(actor: 누가 했는가) ②사용한 하네스와 결과(명령·exit code·수치) ③참조한 스킬을 반드시 기록하라 — 없으면 조율자가 반려한다.** rate limit 시 마지막 줄 QUOTA_SIGNAL.
 ```
 
 ## 상태 갱신
