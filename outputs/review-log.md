@@ -1256,3 +1256,9 @@
 - **QUOTA_SIGNAL**: 미검출.
 
 <run-summary>gate-clean FAIL(server/Harness 2파일 미커밋 유지, measure 회귀로 커밋 보류 — codex 원인 인지·수정 예정), doc-integrity INTACT. 문서 레인 6개 파일 로컬 커밋(ADR-005 확장, CODEX-QUEUE P0-03 회귀 기록, HS-CANDIDATES 갱신, HUMAN-INBOX 2건 신규(ADR-006 결재+dev-pack 리비전), codex 세션049, QA리포트). **중요 발견**: 직전 회차가 남긴 push 대기 47건이 이번 확인 시점엔 이미 사람이 push 완료(origin/main=532b0d7, reflog 확인)한 상태였다 — 조율자 push 아님. sonnet 실행자 없음(32956 사망), 발사 가능 항목 없음(P0-03 미완료로 P0-04 보류, FEAT-01 안전보류). QUOTA_SIGNAL 없음.</run-summary>
+
+### 추가 기록 (같은 회차, 커밋 직후 발견)
+
+- **커밋 완료**: 문서 레인 로컬 커밋 eded188(push 안 함). doc-integrity 커밋 전후 exit0 INTACT 재확인.
+- **★ 활성 실행자 발견(커밋 스테이징 이후)**: sonnet-active.pid = **9804**(생존 확인, StartTime 23:26:07) — 직전 스캔(23:22) 당시 32956 사망만 확인했으나, 그 사이 사람이 **P0-04 Projection 생성기**를 새로 발사한 것으로 판단(근거: 신규 미추적 server/ProjectionCli.cs·docs/handoff/queue/directive-P004-projection.md·docs/handoff/HANDOFF.md·docs/context/, 수정 중 server/Cli/CliRouter.cs·docs/handoff/WORKSTATE.json·docs/handoff/SONNET-QUEUE.md). **이 파일들은 이번 회차 스테이징·커밋에 전혀 포함시키지 않음**(git add 시점에 이미 명시적으로 7개 파일만 지정, 교차 오염 없음 확인: git diff --cached --stat 7개 파일만 표시). 활성 실행자 영역이므로 미접촉 유지, 순차 규칙상 신규 발사 없음(애초에 조율자는 발사하지 않음).
+- **push 대기 갱신**: git log origin/main..HEAD --oneline = **1건**(eded188만, 방금 사람이 이전 47건을 이미 push했기 때문). 사람 배치 승인 필요.
