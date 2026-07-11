@@ -16,6 +16,7 @@ internal static class HarnessRegistry
         ["call-integrity-check"] = CallIntegrityCheckCli.Run,
         ["template-sync-check"] = TemplateSyncCheckCli.Run,
         ["project-api-edge-check"] = ProjectApiEdgeCheckCli.Run,
+        ["handoff-integrity"] = HandoffIntegrityCli.Run,
     };
 
     // 이름이 표에 있으면 해당 하네스를 실행하고 exit code를 반환한다. 없으면 null을 반환한다.

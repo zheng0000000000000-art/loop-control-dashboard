@@ -45,6 +45,10 @@ internal static class CliRouter
         if (args.Length > 0 && string.Equals(args[0], "tier2test", StringComparison.OrdinalIgnoreCase))
             return Tier2ApproverTestCli.Run(args);
 
+        // WORKSTATE sha256 스탬핑 및 Projection 파일 생성 CLI.
+        if (args.Length > 0 && string.Equals(args[0], "projection", StringComparison.OrdinalIgnoreCase))
+            return ProjectionCli.Run(args);
+
         var harness = HarnessRegistry.TryRun(args);
         if (harness is not null) return harness;
 

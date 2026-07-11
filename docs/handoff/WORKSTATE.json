@@ -1,96 +1,198 @@
 {
   "schemaVersion": "v9-min",
-  "phaseId": "FIX-07",
-  "wpId": "FIX-07",
-  "diId": "FIX-07",
-  "status": "done",
+  "phaseId": "P0-04",
+  "wpId": "P0-04",
+  "diId": "P0-04",
+  "status": "verifying",
   "updatedBy": "claude-sonnet-4-6",
   "updatedAt": "2026-07-11",
   "history": [
     {
       "diId": "FIX-06",
       "changedFiles": [
-        {"path": "server/Tier2Approver.cs"},
-        {"path": "server/OutboxManager.cs"},
-        {"path": "server/Program.cs"},
-        {"path": "server/Engine.cs"},
-        {"path": "docs/verification/fix06-server-long-functions.md"},
-        {"path": "docs/directives/FIX06-server-long-functions.md"}
+        {
+          "path": "server/Tier2Approver.cs"
+        },
+        {
+          "path": "server/OutboxManager.cs"
+        },
+        {
+          "path": "server/Program.cs"
+        },
+        {
+          "path": "server/Engine.cs"
+        },
+        {
+          "path": "docs/verification/fix06-server-long-functions.md"
+        },
+        {
+          "path": "docs/directives/FIX06-server-long-functions.md"
+        }
       ]
     },
     {
       "diId": "DI-R-01",
       "changedFiles": [
-        {"path": "server/Program.cs", "linesBefore": 2801, "linesAfter": 2517},
-        {"path": "server/Cli/CliRouter.cs", "linesBefore": 0, "linesAfter": 244}
+        {
+          "path": "server/Program.cs",
+          "linesBefore": 2801,
+          "linesAfter": 2517
+        },
+        {
+          "path": "server/Cli/CliRouter.cs",
+          "linesBefore": 0,
+          "linesAfter": 244
+        }
       ]
     },
     {
       "diId": "DI-R-02",
       "changedFiles": [
-        {"path": "server/Program.cs", "linesBefore": 2517, "linesAfter": 2398},
-        {"path": "server/InboxBuilder.cs", "linesBefore": 0, "linesAfter": 127}
+        {
+          "path": "server/Program.cs",
+          "linesBefore": 2517,
+          "linesAfter": 2398
+        },
+        {
+          "path": "server/InboxBuilder.cs",
+          "linesBefore": 0,
+          "linesAfter": 127
+        }
       ]
     },
     {
       "diId": "DI-R-03",
       "changedFiles": [
-        {"path": "server/Program.cs", "linesBefore": 2398, "linesAfter": 2321},
-        {"path": "server/CycleSummaryBuilder.cs", "linesBefore": 0, "linesAfter": 92}
+        {
+          "path": "server/Program.cs",
+          "linesBefore": 2398,
+          "linesAfter": 2321
+        },
+        {
+          "path": "server/CycleSummaryBuilder.cs",
+          "linesBefore": 0,
+          "linesAfter": 92
+        }
       ]
     },
     {
       "diId": "DI-R-04",
       "changedFiles": [
-        {"path": "server/Program.cs", "linesBefore": 2321, "linesAfter": 2296},
-        {"path": "server/MeasurementService.cs", "linesBefore": 0, "linesAfter": 65},
-        {"path": "server/Cli/CliRouter.cs", "linesBefore": 299, "linesAfter": 297}
+        {
+          "path": "server/Program.cs",
+          "linesBefore": 2321,
+          "linesAfter": 2296
+        },
+        {
+          "path": "server/MeasurementService.cs",
+          "linesBefore": 0,
+          "linesAfter": 65
+        },
+        {
+          "path": "server/Cli/CliRouter.cs",
+          "linesBefore": 299,
+          "linesAfter": 297
+        }
       ]
     },
     {
       "diId": "FIX-01",
       "changedFiles": [
-        {"path": "server/Storage.cs", "note": "IsWithinRoot(separator-bounded) 헬퍼. FAIL-2026-006 해소."},
-        {"path": "server/OutboxManager.cs", "note": "IsWithinRoot 헬퍼. FAIL-2026-007 해소."}
+        {
+          "path": "server/Storage.cs",
+          "note": "IsWithinRoot(separator-bounded) 헬퍼. FAIL-2026-006 해소."
+        },
+        {
+          "path": "server/OutboxManager.cs",
+          "note": "IsWithinRoot 헬퍼. FAIL-2026-007 해소."
+        }
       ]
     },
     {
       "diId": "FIX-02",
       "changedFiles": [
-        {"path": "server/DevPackMeasures.cs", "note": "IsGeneratedOrRuntimePath에 /outbox/ 제외. maxFunctionLength evidence 교정."}
+        {
+          "path": "server/DevPackMeasures.cs",
+          "note": "IsGeneratedOrRuntimePath에 /outbox/ 제외. maxFunctionLength evidence 교정."
+        }
       ]
     },
     {
       "diId": "FEAT-02",
       "changedFiles": [
-        {"path": "server/E2EUsageCli.cs", "note": "신규. 6개 E2E 시나리오 인프로세스 하네스."},
-        {"path": "server/Cli/CliRouter.cs", "note": "e2e-usage 분기 추가."}
+        {
+          "path": "server/E2EUsageCli.cs",
+          "note": "신규. 6개 E2E 시나리오 인프로세스 하네스."
+        },
+        {
+          "path": "server/Cli/CliRouter.cs",
+          "note": "e2e-usage 분기 추가."
+        }
       ]
     },
     {
       "diId": "FEAT-01",
       "changedFiles": [
-        {"path": "server/Tier2Approver.cs", "note": "FEAT-01 변경 — 검수자 확인 필요(codex-030 FAIL 판정)"},
-        {"path": "server/Tier2ApproverTestCli.cs", "note": "FEAT-01 변경 — 검수자 확인 필요"}
+        {
+          "path": "server/Tier2Approver.cs",
+          "note": "FEAT-01 변경 — 검수자 확인 필요(codex-030 FAIL 판정)"
+        },
+        {
+          "path": "server/Tier2ApproverTestCli.cs",
+          "note": "FEAT-01 변경 — 검수자 확인 필요"
+        }
       ]
     },
     {
       "diId": "HOOK-01",
       "changedFiles": [
-        {"path": "server/Harness/HarnessRegistry.cs", "note": "신규. 하네스 이름→핸들러 표, TryRun(string[] args) 진입점."},
-        {"path": "server/Harness/GateCleanCli.cs", "note": "server/GateCleanCli.cs에서 이동."},
-        {"path": "server/Harness/HsScanCli.cs", "note": "server/HsScanCli.cs에서 이동."},
-        {"path": "server/Harness/ClaimCheckCli.cs", "note": "server/ClaimCheckCli.cs에서 이동."},
-        {"path": "server/Harness/DocIntegrityCli.cs", "note": "server/DocIntegrityCli.cs에서 이동."},
-        {"path": "server/Harness/E2EUsageCli.cs", "note": "server/E2EUsageCli.cs에서 이동."},
-        {"path": "server/Cli/CliRouter.cs", "note": "하네스 5개 분기 제거 → HarnessRegistry.TryRun(args) 1줄."}
+        {
+          "path": "server/Harness/HarnessRegistry.cs",
+          "note": "신규. 하네스 이름→핸들러 표, TryRun(string[] args) 진입점."
+        },
+        {
+          "path": "server/Harness/GateCleanCli.cs",
+          "note": "server/GateCleanCli.cs에서 이동."
+        },
+        {
+          "path": "server/Harness/HsScanCli.cs",
+          "note": "server/HsScanCli.cs에서 이동."
+        },
+        {
+          "path": "server/Harness/ClaimCheckCli.cs",
+          "note": "server/ClaimCheckCli.cs에서 이동."
+        },
+        {
+          "path": "server/Harness/DocIntegrityCli.cs",
+          "note": "server/DocIntegrityCli.cs에서 이동."
+        },
+        {
+          "path": "server/Harness/E2EUsageCli.cs",
+          "note": "server/E2EUsageCli.cs에서 이동."
+        },
+        {
+          "path": "server/Cli/CliRouter.cs",
+          "note": "하네스 5개 분기 제거 → HarnessRegistry.TryRun(args) 1줄."
+        }
       ]
     }
   ],
   "changedFiles": [
-    {"path": "dashboard/app.js", "note": "renderImportPendingItem(81→80줄), renderProposalChange(86→80줄), renderStageDetail(99→80줄). appendStageMetricsSection 헬퍼 추출. 총 2692→2688줄."},
-    {"path": "docs/verification/fix07-appjs-long-functions.md", "note": "FIX-07 검증 문서 신규."},
-    {"path": "docs/directives/FIX07-appjs-long-functions.md", "note": "지시서 보관."}
+    {
+      "path": "dashboard/app.js",
+      "note": "renderImportPendingItem(81→80줄), renderProposalChange(86→80줄), renderStageDetail(99→80줄). appendStageMetricsSection 헬퍼 추출. 총 2692→2688줄.",
+      "sha256": "5e3e9df1c63eb27e887f1f57308b8d30b6ee14079037d8464755359770733b8e"
+    },
+    {
+      "path": "docs/verification/fix07-appjs-long-functions.md",
+      "note": "FIX-07 검증 문서 신규.",
+      "sha256": "a936b6a98ef156a52f8dbae9884de1ae44bdf2957aab466333388ea81d3c9aa1"
+    },
+    {
+      "path": "docs/directives/FIX07-appjs-long-functions.md",
+      "note": "지시서 보관.",
+      "sha256": "d5d3b6bc6e10e2d36d60513910f8bd5f37415f7a8a0082c3671c6d4833651c20"
+    }
   ],
   "tests": {
     "behaviorEqual": true,
@@ -102,5 +204,5 @@
     "verifyBehaviorExit": 0
   },
   "nextActions": [],
-  "notes": "FIX-07 완료: dashboard/app.js 장문 함수 3건 모두 80줄 이하 달성. appendStageMetricsSection 헬퍼 추출, 빈 줄 최소화로 2692 상한 내 유지(2688줄). measure violationCount=0. 직접 경로 사유: allowlist 포함 파일(docs/verification/*, docs/directives/*, docs/handoff/WORKSTATE.json)."
+  "notes": "FIX-07 완료: dashboard/app.js 장문 함수 3건 모두 80줄 이하 달성. appendStageMetricsSection 헬퍼 추출, 빈 줄 최소화로 2692 상한 내 유지(2688줄). measure violationCount=0. 직접 경로 사유: allowlist 포함 파일(docs/verification/*, docs/directives/*, docs/handoff/WORKSTATE.json).\n[P0-04 추가] sha256 필드 스탬핑 완료(projection CLI). WORKSTATE diId를 P0-04로 갱신하려면 SONNET-QUEUE.md(allowlist 밖)에서 P0-04를 '완료'로 표시 후 projection 재실행 필요."
 }
