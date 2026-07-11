@@ -9,8 +9,8 @@
 ## 변경 파일 (4개)
 - `server/OllamaExecutor.cs` [3d0fefc518f30962…] — ParseNoteResponse 반환 타입 확장(reason+actualMetricId). TryGenerateNote/TryGenerateTuningNote 거부 사유 전파. Unavailable에 fallbackReason/expectedMetricId/actualMetricId 추가. ExecutorGenerateResult 레코드에 선택 필드 3개 추가.
 - `server/Program.cs` [9011d7ec781d81ba…] — FallbackLogEntry 헬퍼 추가. GenerateProposalWithFallback·GenerateTuningProposalWithFallback 폴백 경로에 FallbackEntry 생성. ProposalGeneration 레코드에 FallbackEntry 추가. 4개 콜러에서 FallbackEntry 조건부 append.
-- `docs/verification/ledger03-fallback-observability.md` [MISSING] — LEDGER-03 작업 검증 문서 신규.
-- `docs/directives/LEDGER03-fallback-observability.md` [MISSING] — 지시서 보관본.
+- `docs/verification/ledger03-fallback-observability.md` [eba0cad65a60f313…] — LEDGER-03 작업 검증 문서 신규.
+- `docs/directives/LEDGER03-fallback-observability.md` [3bfdb3a31e7e7154…] — 지시서 보관본.
 
 ## 완료 이력
 - **LEDGER-02**: 3개 파일

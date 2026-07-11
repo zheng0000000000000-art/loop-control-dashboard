@@ -254,14 +254,12 @@
     {
       "path": "docs/verification/ledger03-fallback-observability.md",
       "note": "LEDGER-03 작업 검증 문서 신규.",
-      "sha256": null,
-      "missing": true
+      "sha256": "eba0cad65a60f313bc11b697eb1bea8fa6111f16f0d4543ed398fe7eeffb3815"
     },
     {
       "path": "docs/directives/LEDGER03-fallback-observability.md",
       "note": "지시서 보관본.",
-      "sha256": null,
-      "missing": true
+      "sha256": "3bfdb3a31e7e71541b2493534801d05932dadf64f93f716b92e2395c3f15d5ea"
     }
   ],
   "tests": {
