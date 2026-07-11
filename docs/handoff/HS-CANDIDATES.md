@@ -5,7 +5,7 @@
 > **판정 주체는 코덱스**(파이프라인 1단계). 검수자가 올린 후보는 `코덱스 확정 대기`로 표시하고, 코덱스가 HS-GATE 회차에 확정한다.
 
 <!-- hs-scan 이 읽는 메타. HS-GATE 수행 시 갱신할 것. -->
-- `lastGate: 2026-07-11 21:00`
+- `lastGate: 2026-07-11 21:15`
 - `judgedClasses: unnormalized_gate, self_report_as_truth, config_side_effect, observability, path_escape, executor-orchestration`
 
 ## HS-01 `gate-clean` — 트리 clean을 정규화 내용 해시로 판정 (하네스)
@@ -297,3 +297,14 @@ FAIL-005는 "실행 중인가"를 StartTime으로, FAIL-010은 "깨끗한가"를
 - fixed this cycle: H-2 `call-integrity-check`. Score: existing refactor-call-integrity candidate now implemented. The harness checks each moved method has exactly one definition in the expected file, enough qualified call sites, and no stale unqualified call in `server/Program.cs`.
 - post-fix proof: default rule set exit 0 with 5/5 rules PASS; bad definition-file injection for `MeasurementService.RunMeasureCore` exit 1.
 - next candidates remain: H-3 `template-sync-check`, H-4 `path-escape-qa` skill, H-5 inherited harness review.
+
+## 2026-07-11 21:15 codex hs-scan follow-up / H-3 template-sync-check
+
+- actor: codex
+- command: `dotnet run --project server -c Release -- hs-scan`
+- exitCode: 1
+- observed: `failureCaseCount=14`; candidate=`executor-orchestration(6)`.
+- data-existence gate: PASS. FAIL-2026-008 and `docs/verification/fail-2026-008-template-sync.md` identify concrete dispatch templates, and `DispatchExecutorCli` can apply them in a temp copy.
+- fixed this cycle: H-3 `template-sync-check`. Score: existing template-sync candidate now implemented. The harness copies the needed workspace subset to temp, runs `dispatch-executor claude-code "Program.cs Orchestrator.cs ProposalFlow.cs"`, then builds the temp server with Release and uses exit code as the source of truth.
+- post-fix proof: default mode exit 0 with `dispatchExitCode=0`, `buildExitCode=0`; missing-template injection exit 1 with `dispatchExitCode=1`.
+- next candidates remain: H-4 `path-escape-qa` skill, H-5 inherited harness review.
