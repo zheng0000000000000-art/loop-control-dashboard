@@ -1,42 +1,29 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783767156154",
-  "title": "UI/UX 개선 및 코드 품질 향상",
-  "lifecycle": "decided",
+  "id": "proposal-1783780895094",
+  "title": "블루프린트 괴리 해소 제안",
+  "lifecycle": "superseded",
   "createdBy": {
-    "provider": "ollama",
-    "model": "qwen3:8b"
+    "provider": "rule-engine",
+    "model": null
   },
-  "revisionOf": "proposal-1783767101398",
-  "summary": "작은 탭 대상 크기, 리뷰 요약 지침 명시, 함수 길이 단축 등을 통해 사용자 편의성과 코드 품질을 개선합니다.",
-  "assumptions": [],
+  "revisionOf": "proposal-1783780869127",
+  "summary": "측정 결과가 블루프린트 기준을 벗어난 항목을 수정 대상으로 제안한다.",
   "changes": [
     {
-      "path": "smallTouchTargets",
-      "before": 1,
-      "after": 0,
-      "note": "작은 탭 대상 크기 문제를 개선하여 사용자가 쉽게 터치할 수 있도록 했습니다. 예상된 변경 후 값은 0입니다."
-    },
-    {
-      "path": "skillDomainViolations",
-      "before": 2,
-      "after": 0,
-      "note": "기존 리뷰 요약이 적용 지침임을 명시하여, 잘못된 판단을 방지하고 정확한 수정을 유도할 예정입니다."
-    },
-    {
-      "path": "maxFunctionLength",
-      "before": 159,
+      "path": "directiveAcceptanceCriteria",
+      "before": 0,
       "after": [
-        0,
-        80
+        3,
+        99
       ],
-      "note": "함수 길이를 단축하여 가독성과 유지보수성을 향상시키고, 목표 범위 내로 조정하고자 함"
+      "note": "docs/directives/P004-projection.md"
     }
   ],
   "impact": [
     {
       "label": "위반 항목",
-      "value": "3"
+      "value": "1"
     },
     {
       "label": "예상 비용",

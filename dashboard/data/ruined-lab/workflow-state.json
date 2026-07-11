@@ -1,19 +1,19 @@
 {
   "schemaVersion": 2,
   "projectName": "폐허 연구소 — 게임 밸런싱 쇼케이스",
-  "currentStage": "balanceValidation",
-  "overallStatus": "completed",
-  "loopState": "aligned",
+  "currentStage": "unityExport",
+  "overallStatus": "in_progress",
+  "loopState": "running",
   "mode": "normal",
   "suspendedTracks": [],
-  "loopIteration": 7,
+  "loopIteration": 8,
   "stages": {
     "design": "approved",
     "gameData": "completed",
     "schemaValidation": "passed",
     "balanceValidation": "passed",
-    "patchApproval": "not_started",
-    "unityExport": "not_started"
+    "patchApproval": "approved",
+    "unityExport": "in_progress"
   },
   "blockInfo": {},
   "stageDetails": {
@@ -95,15 +95,16 @@
       ]
     },
     "unityExport": {
-      "summary": "아직 시작되지 않았다.",
+      "summary": "승인된 변경을 반영하는 중이다 — 실제로 반영한 뒤 재측정하면 다음 단계로 넘어간다.",
       "metrics": [
         {
           "label": "적용 상태",
-          "value": "대기"
+          "value": "진행 중"
         }
       ],
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-10T12:43:36.8345463+09:00"
+  "lastUpdated": "2026-07-12T00:10:24.6408910+09:00",
+  "applyBaselineViolations": []
 }

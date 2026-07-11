@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783654821573",
+  "id": "proposal-1783782110783",
   "title": "방별 도달률 기준 추가 제안",
-  "lifecycle": "superseded",
+  "lifecycle": "decided",
   "kind": "blueprint_metric",
   "createdBy": {
     "provider": "rule-engine",

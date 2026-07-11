@@ -1,31 +1,18 @@
 {
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
-  "currentStage": "apply",
-  "overallStatus": "warning",
-  "loopState": "halted",
+  "currentStage": "deviationCheck",
+  "overallStatus": "completed",
+  "loopState": "aligned",
   "mode": "normal",
-  "suspendedTracks": [
-    {
-      "metricId": "skillDomainViolations",
-      "detectedAt": "2026-07-10T00:00:23.5963707+09:00",
-      "relatedProposalId": null,
-      "suspectConfidence": "temporal"
-    },
-    {
-      "metricId": "smallTouchTargets",
-      "detectedAt": "2026-07-10T09:39:27.4424984+09:00",
-      "relatedProposalId": "proposal-1783630076578",
-      "suspectConfidence": "temporal"
-    }
-  ],
+  "suspendedTracks": [],
   "loopIteration": 13,
   "stages": {
     "goals": "passed",
     "measure": "passed",
-    "deviationCheck": "warning",
-    "changeReview": "approved",
-    "apply": "in_progress"
+    "deviationCheck": "passed",
+    "changeReview": "not_started",
+    "apply": "not_started"
   },
   "blockInfo": {},
   "stageDetails": {
@@ -49,7 +36,7 @@
       "issues": []
     },
     "deviationCheck": {
-      "summary": "측정 결과에서 3개 괴리가 감지됐다.",
+      "summary": "측정 결과가 블루프린트 기준을 만족한다.",
       "metrics": [
         {
           "label": "domainWordsInEngine",
@@ -89,7 +76,7 @@
         },
         {
           "label": "smallTouchTargets",
-          "value": "1 / 0"
+          "value": "0 / 0"
         },
         {
           "label": "newFontFamilies",
@@ -101,26 +88,22 @@
         },
         {
           "label": "skillDomainViolations",
-          "value": "2 / 0"
+          "value": "0 / 0"
         },
         {
           "label": "programCsLines",
-          "value": "2326 / 0~2661"
+          "value": "2333 / 0~2661"
         },
         {
           "label": "appJsLines",
-          "value": "2692 / 0~2692"
+          "value": "2688 / 0~2692"
         },
         {
           "label": "maxFunctionLength",
-          "value": "159 / 0~80"
+          "value": "80 / 0~80"
         }
       ],
-      "issues": [
-        "smallTouchTargets: 측정값 1이 기준 0을 벗어났다. 근거: dashboard/style.css:1133",
-        "skillDomainViolations: 측정값 2이 기준 0을 벗어났다. 근거: docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md; docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md",
-        "maxFunctionLength: 측정값 159이 기준 0~80을 벗어났다. 근거: dashboard/app.js:852-1010"
-      ]
+      "issues": []
     },
     "changeReview": {
       "summary": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
@@ -133,17 +116,17 @@
       "issues": []
     },
     "apply": {
-      "summary": "승인된 변경을 반영하는 중이다 — 실제로 반영한 뒤 재측정하면 다음 단계로 넘어간다.",
+      "summary": "아직 시작되지 않았다.",
       "metrics": [
         {
           "label": "적용 상태",
-          "value": "진행 중"
+          "value": "대기"
         }
       ],
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-11T19:53:00.5092607+09:00",
+  "lastUpdated": "2026-07-12T00:06:55.6053697+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
@@ -187,16 +170,5 @@
     "smallTouchTargets=1",
     "skillDomainViolations=2",
     "maxFunctionLength=159"
-  ],
-  "haltedAt": "2026-07-11T19:53:00.5092425+09:00",
-  "haltedBy": {
-    "type": "guardrail",
-    "breaches": [
-      {
-        "type": "loopIteration",
-        "actual": 13,
-        "limit": 10
-      }
-    ]
-  }
+  ]
 }

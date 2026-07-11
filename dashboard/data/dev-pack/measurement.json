@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-11T19:52:30.4758185+09:00",
+  "measuredAt": "2026-07-12T00:06:55.5933502+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
@@ -18,7 +18,7 @@
       "metricId": "directiveAcceptanceCriteria",
       "value": 6,
       "evidence": [
-        "docs/directives/ORCH01-observer.md"
+        "docs/directives/FIX07-appjs-long-functions.md"
       ]
     },
     {
@@ -53,10 +53,8 @@
     },
     {
       "metricId": "smallTouchTargets",
-      "value": 1,
-      "evidence": [
-        "dashboard/style.css:1133"
-      ]
+      "value": 0,
+      "evidence": []
     },
     {
       "metricId": "newFontFamilies",
@@ -70,31 +68,28 @@
     },
     {
       "metricId": "skillDomainViolations",
-      "value": 2,
-      "evidence": [
-        "docs/verification/tuning-advanced.md -> skills/domains/dev/file-navigation.md",
-        "docs/verification/tuning-advanced.md -> skills/domains/game/balance-tuning.md"
-      ]
+      "value": 0,
+      "evidence": []
     },
     {
       "metricId": "programCsLines",
-      "value": 2326,
+      "value": 2333,
       "evidence": [
-        "server/Program.cs:2326 lines"
+        "server/Program.cs:2333 lines"
       ]
     },
     {
       "metricId": "appJsLines",
-      "value": 2692,
+      "value": 2688,
       "evidence": [
-        "dashboard/app.js:2692 lines"
+        "dashboard/app.js:2688 lines"
       ]
     },
     {
       "metricId": "maxFunctionLength",
-      "value": 159,
+      "value": 80,
       "evidence": [
-        "dashboard/app.js:852-1010"
+        "dashboard/app.js:535-614"
       ]
     }
   ]
