@@ -45,6 +45,7 @@ internal static class LaunchCheckCli
 
             var ackFound = text.Contains(expectedAck, StringComparison.Ordinal);
             var firstLineExact = string.Equals(firstNonEmptyLine, expectedAck, StringComparison.Ordinal);
+            var quotaSignal = DetectQuotaSignal(text);
 
             var report = new JsonObject
             {
@@ -55,13 +56,16 @@ internal static class LaunchCheckCli
                 ["logExists"] = exists,
                 ["ackFound"] = ackFound,
                 ["firstLineExact"] = firstLineExact,
+                ["quotaSignal"] = quotaSignal,
                 ["firstNonEmptyLine"] = firstNonEmptyLine,
-                ["verdict"] = exists && ackFound ? "PASS" : "FAIL",
-                ["note"] = "ACK absence means the executor output is not tied to the launch prompt and must be discarded.",
+                ["verdict"] = quotaSignal ? "QUOTA" : exists && ackFound ? "PASS" : "FAIL",
+                ["note"] = quotaSignal
+                    ? "Quota signal found. Separate usage-limit exhaustion from prompt delivery or scope failures."
+                    : "ACK absence means the executor output is not tied to the launch prompt and must be discarded.",
             };
 
             Console.WriteLine(report.ToJsonString(JsonOptions));
-            return exists && ackFound ? 0 : 1;
+            return exists && ackFound && !quotaSignal ? 0 : 1;
         }
         catch (Exception ex)
         {
@@ -69,4 +73,10 @@ internal static class LaunchCheckCli
             return 2;
         }
     }
+
+    // 실행 로그에서 사용량 한도 신호를 찾는다.
+    private static bool DetectQuotaSignal(string text)
+        => text.Contains("hit your limit", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("rate limit", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("QUOTA_SIGNAL", StringComparison.OrdinalIgnoreCase);
 }
