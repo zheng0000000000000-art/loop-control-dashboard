@@ -105,6 +105,12 @@ public static class BalanceTuner
             onProgress?.Invoke($"[tuning] 채택: candidates={candidatesUsed} distance={currentScore.PrimaryDistance:0.###} progress={currentScore.AverageProgressedRooms:0.###} score={currentScore.Total:0.######} levers={string.Join(", ", best.LeverPaths)}");
         }
 
+        return BuildTuningResult(baseline, current, levers, baselineResult, currentResult, blueprint, baselineScore, currentScore, candidatesUsed, restartAttempts);
+    }
+
+    // 탐색 완료 후 레버 변화·예측 지표·잔여 위반을 수집해 TuningResult를 만든다.
+    private static TuningResult BuildTuningResult(JsonObject baseline, JsonObject current, List<TunableLever> levers, SimResult baselineResult, SimResult currentResult, JsonObject blueprint, TuningScore baselineScore, TuningScore currentScore, int candidatesUsed, int restartAttempts)
+    {
         var changedLevers = new List<LeverChange>();
         foreach (var lever in levers)
         {

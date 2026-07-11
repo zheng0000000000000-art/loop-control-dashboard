@@ -1,8 +1,8 @@
 {
   "schemaVersion": "v9-min",
-  "phaseId": "ORCH-01",
-  "wpId": "ORCH-01",
-  "diId": "ORCH-01",
+  "phaseId": "FIX-05",
+  "wpId": "FIX-05",
+  "diId": "FIX-05",
   "status": "done",
   "updatedBy": "claude-sonnet-4-6",
   "updatedAt": "2026-07-11",
@@ -78,24 +78,29 @@
   ],
   "changedFiles": [
     {
-      "path": "server/OrchestratorObserverCli.cs",
-      "note": "신규. SONNET-QUEUE 파싱·server/ clean 판정·PID 파일 감지·발사 결정 계산. 부작용 0."
+      "path": "server/BalanceTuner.cs",
+      "note": "Search 함수 43-157행(115줄) → 43-109행(67줄). BuildTuningResult 헬퍼 추출(112-163행, 52줄). 한국어 주석 추가."
     },
     {
-      "path": "server/Cli/CliRouter.cs",
-      "note": "orch-observe 분기 추가 3줄. 기존 CLI 분기 패턴."
+      "path": "docs/verification/fix05-balancetuner-split.md",
+      "note": "FIX-05 검증 문서 신규."
+    },
+    {
+      "path": "docs/directives/FIX05-balancetuner-split.md",
+      "note": "지시서 보관."
     }
   ],
   "tests": {
     "behaviorEqual": true,
-    "buildWarnings": 0,
-    "buildErrors": 0,
-    "measureViolationsBefore": 5,
-    "measureViolationsAfter": 5,
-    "orchObserveExit": 0,
-    "orchObserveMode": "observe-only",
-    "orchObserveWouldLaunch": false
+    "buildVerifyVerdict": "PASS",
+    "buildVerifyExit": 0,
+    "measureViolationsBefore": 1,
+    "measureViolationsAfter": 1,
+    "measureNote": "Search 함수 해소(115→67줄). 새로 드러난 위반: server/Tier2Approver.cs:38-138 (101줄) — 다음 지시서 대상",
+    "verifyBehaviorExit": 0
   },
-  "nextActions": ["조율자: SONNET-QUEUE #5 ORCH-01 완료 표시", "이후 ORCH-02(관측 리포트 5분 주기) 또는 FEAT-01 결재 대기 확인"],
-  "notes": "measure 5건 위반 모두 사전 위반(allowlist 밖): reference.cs 주석 5건, CSS smallTouchTargets, docs skillDomainViolations, Program.cs 라인수, app.js 라인수. 내 변경 기인 위반 0건. 직접 경로 사유: 지시서 직접 수행(조율자 태스크 ID ORCH-01)."
+  "nextActions": [
+    "조율자: server/Tier2Approver.cs:38-138 (101줄) maxFunctionLength 위반이 새로 드러남 — FIX-06 지시서 대상"
+  ],
+  "notes": "FIX-05 완료: BalanceTuner.cs Search 함수 115→67줄 분할, BuildTuningResult 헬퍼 추출. verify-behavior exit 0, build-verify PASS. 잔여 위반: Tier2Approver.cs:38-138 (101줄). 직접 경로 사유: 지시서 직접 경로 명시 + docs/verification/* allowlist 포함."
 }
