@@ -21,8 +21,8 @@
 | 13 | **HOOK-01 HarnessRegistry 1회성 훅** | queue/directive-HOOK01-harness-registry.md | server/ | **완료(2e28f7a)** — 조율자 18:51 재검증: gate-clean server PASS(exit0), doc-integrity INTACT(exit0), claim-check HOOK-01 MATCH(exit0, mismatchCount 0). r2~r5 재시도 로그는 outputs/에 잔존(정리 필요, 조율자 권한 밖). |
 | 15 | **FIX-04 measure 위반 0으로**(원인 제거 — 결재 루프 무한 재생성 차단) | queue/directive-FIX04-measure-zero.md | dashboard/ + docs | **대기** — 사람 승인 완료(2026-07-11). ACTOR-01 완료 후 순차 발사. 대상: smallTouchTargets 1·maxFunctionLength 159·skillDomainViolations 2 (functionsWithoutComment 5건은 검수자가 참조본 삭제로 제거, 1건은 코덱스 몫) |
 | 16 | **FIX-05 마지막 measure 위반 제거**(server/BalanceTuner.cs 115줄 함수 분할) | queue/directive-FIX05-balancetuner-split.md | server/ | **완료(ba5f750)** — 조율자 20:32 검수: build exit0(0/0), verify-behavior true, measure dev-pack 1건(기준선 1, 비악화), claim-check FIX-05 MATCH(exit0, claimCount3/mismatch0). 잔여: server/Tier2Approver.cs:38-138(101줄) 새로 노출 — FIX-06 큐 등재됨(다음 지시서 대상) |
-| 17 | **FIX-06 server/ 장문 함수 4건 분할** | queue/directive-FIX06-server-long-functions.md | server/ | **대기** — 사람 승인(2026-07-11). Tier2Approver 101·OutboxManager 99·Program 93·Engine 92줄 |
-| 18 | **FIX-07 app.js 장문 함수 3건 분할 → measure 0 달성** | queue/directive-FIX07-appjs-long-functions.md | dashboard/ | **대기** — FIX-06 완료 후 순차. app.js 줄수 상한(2692) 유지가 핵심 제약 |
+| 17 | **FIX-06 server/ 장문 함수 4건 분할** | queue/directive-FIX06-server-long-functions.md | server/ | **완료(3df722f)** — 사람 승인(2026-07-11) 후 반영. Tier2Approver·OutboxManager·Program·Engine 장문 함수 분할 |
+| 18 | **FIX-07 app.js 장문 함수 3건 분할 → measure 0 달성** | queue/directive-FIX07-appjs-long-functions.md | dashboard/ | **완료(ebb0312)** — 조율자 23:03 검수: build/verify-behavior/measure/claim-check/scope-check 전부 PASS. app.js 줄수 상한(2692) 유지 확인 |
 | 19 | **P0-04 Projection 생성기** (`dotnet run -- projection`) — WORKSTATE에서 STATUS·HANDOFF·RUNTIME-INDEX를 **생성**. 손편집 금지 | queue/directive-P004-projection.md (작성 예정) | server/ + docs | **대기** — P0-03(handoff-integrity) 완료 후. 근거: 손으로 쓴 STATUS가 삭제된 파일을 '준비됨'이라 거짓말했다 |
 | 20 | (추후 검수자가 추가) | — | — | — |
 
