@@ -47,9 +47,6 @@ internal static class CliRouter
         if (args.Length > 0 && string.Equals(args[0], "gate-clean", StringComparison.OrdinalIgnoreCase))
             return GateCleanCli.Run(args);
 
-        if (args.Length > 0 && string.Equals(args[0], "gate-audit", StringComparison.OrdinalIgnoreCase))
-            return GateAuditCli.Run(args);
-
         if (args.Length > 0 && string.Equals(args[0], "hs-scan", StringComparison.OrdinalIgnoreCase))
             return HsScanCli.Run(args);
 
