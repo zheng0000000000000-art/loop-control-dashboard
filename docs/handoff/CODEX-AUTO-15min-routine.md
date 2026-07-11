@@ -30,6 +30,12 @@ sonnet(구현·리팩토링 담당)이 방금 무엇을 바꿨는지 **저장소
 - 의심·오탐 → `docs/qa/bug-hunt-<날짜>.md` 또는 `docs/qa/review-<커밋>.md`에 기록(확정/오탐 구분).
 - sonnet 주장과 실측 불일치 발견 시 반드시 명시(검수 가치의 핵심).
 
+### 4.5 E2E 실사용 검사 (QA가 널널할 때 — 코덱스 담당)
+sonnet 신규 커밋 QA가 끝났거나 새 커밋이 없으면, E2E 실사용 검사를 수행한다(별도 예약 없이 코덱스가 겸한다):
+- FEAT-02(`e2e-usage` CLI)가 반입돼 있으면 `dotnet run --project server -c Release -- e2e-usage`를 실행하고 결과 JSON을 파싱한다(토큰 절감·결정론). CLI가 아직 없으면 `docs/handoff/E2E-USAGE-hunter.md`의 6개 시나리오를 Invoke-RestMethod로 수동 수행.
+- **안전 경계 필수**: 상태 변경 요청 금지(proposal 승인/거절·outbox 반입·dispatch·contributions). GET·measure·엣지 입력만.
+- 결과 → `docs/qa/e2e-usage-<날짜>.md`. 재현된 결함 → FAIL 위키. sonnet 수정 필요 결함은 "sonnet 수정 필요: FAIL-XXX"로 리포트에 명시.
+
 ### 5. SESSION 기록
 `docs/handoff/sessions/SESSION-<날짜>-codex-NNN.md`: ①확인한 sonnet 작업(커밋 해시) ②QA 결과 ③재현/의심/오탐 개수 ④다음 픽업 후보. 다음 코덱스 세션이 이걸로 이어받는다.
 
