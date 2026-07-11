@@ -1554,28 +1554,7 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
         ["cost"] = RuntimeCost(),
     }, Engine.GetLoopIteration(state));
 
-    var nextStage = Engine.GetNextStage(bundle.Definition, stageId);
-    var nextStageId = nextStage?["id"]?.GetValue<string>();
-    var entersApplyStage = nextStageId is not null && nextStageId == ResolveMeasurementStages(bundle.Definition).ApplyStageId;
-    var approvePatch = new JsonObject();
-    if (nextStage is null)
-    {
-        approvePatch["overallStatus"] = "completed";
-    }
-    else
-    {
-        approvePatch["currentStage"] = nextStageId;
-        approvePatch["stageStatuses"] = new JsonObject { [nextStageId!] = "in_progress" };
-        approvePatch["overallStatus"] = "in_progress";
-
-        if (entersApplyStage)
-        {
-            // 적용 단계로 들어갈 때 현재 위반 집합을 기준선으로 남긴다 — 재측정만으로
-            // 아직 아무것도 안 고쳤는데 새 검토가 열리는 것을 막기 위함(ViolationSignatureUnchanged).
-            var currentViolations = EvaluateBlueprintChecks(bundle.Blueprint, bundle.Measurement).Where(check => check.Implemented && !check.Passed).ToList();
-            approvePatch["applyBaselineViolations"] = BuildViolationSignature(currentViolations);
-        }
-    }
+    var (approvePatch, entersApplyStage, nextStageId) = ComputeNextStagePatch(bundle.Definition, bundle.Blueprint, bundle.Measurement, stageId);
 
     state = Engine.ApplyStatePatch(bundle.Definition, state, approvePatch);
 
@@ -1610,6 +1589,34 @@ static IResult Approve(Storage storage, string projectId, JsonObject body, JsonS
 
     GitDataCommitter.CommitHumanAction(gitDataCommitOptions, projectId, Engine.GetLoopIteration(committedBundle.State), "approve", proposalId, actor.ToLabel());
     return result;
+}
+
+// 다음 단계 전환 패치와 적용 단계 진입 여부·nextStageId를 계산한다.
+static (JsonObject patch, bool entersApplyStage, string? nextStageId) ComputeNextStagePatch(JsonObject definition, JsonObject blueprint, JsonObject measurement, string stageId)
+{
+    var nextStage = Engine.GetNextStage(definition, stageId);
+    var nextStageId = nextStage?["id"]?.GetValue<string>();
+    var entersApplyStage = nextStageId is not null && nextStageId == ResolveMeasurementStages(definition).ApplyStageId;
+    var patch = new JsonObject();
+    if (nextStage is null)
+    {
+        patch["overallStatus"] = "completed";
+    }
+    else
+    {
+        patch["currentStage"] = nextStageId;
+        patch["stageStatuses"] = new JsonObject { [nextStageId!] = "in_progress" };
+        patch["overallStatus"] = "in_progress";
+
+        if (entersApplyStage)
+        {
+            // 적용 단계로 들어갈 때 현재 위반 집합을 기준선으로 남긴다 — 재측정만으로
+            // 아직 아무것도 안 고쳤는데 새 검토가 열리는 것을 막기 위함(ViolationSignatureUnchanged).
+            var currentViolations = EvaluateBlueprintChecks(blueprint, measurement).Where(check => check.Implemented && !check.Passed).ToList();
+            patch["applyBaselineViolations"] = BuildViolationSignature(currentViolations);
+        }
+    }
+    return (patch, entersApplyStage, nextStageId);
 }
 
 // 승인된 튜닝 제안의 레버 변경을 game-data.json에 실제로 기록한다(원자 쓰기는 Storage가 담당).

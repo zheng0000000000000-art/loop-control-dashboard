@@ -1,8 +1,8 @@
 {
   "schemaVersion": "v9-min",
-  "phaseId": "FIX-05",
-  "wpId": "FIX-05",
-  "diId": "FIX-05",
+  "phaseId": "FIX-06",
+  "wpId": "FIX-06",
+  "diId": "FIX-06",
   "status": "done",
   "updatedBy": "claude-sonnet-4-6",
   "updatedAt": "2026-07-11",
@@ -77,18 +77,12 @@
     }
   ],
   "changedFiles": [
-    {
-      "path": "server/BalanceTuner.cs",
-      "note": "Search 함수 43-157행(115줄) → 43-109행(67줄). BuildTuningResult 헬퍼 추출(112-163행, 52줄). 한국어 주석 추가."
-    },
-    {
-      "path": "docs/verification/fix05-balancetuner-split.md",
-      "note": "FIX-05 검증 문서 신규."
-    },
-    {
-      "path": "docs/directives/FIX05-balancetuner-split.md",
-      "note": "지시서 보관."
-    }
+    {"path": "server/Tier2Approver.cs", "note": "MaybeAutoApprove 클러스터(101줄→71줄). ApplyImportAndRecord 헬퍼 추출."},
+    {"path": "server/OutboxManager.cs", "note": "DispatchAsync(99줄→73줄). AttachExecutionMeta·WriteDispatchFiles 헬퍼 추출."},
+    {"path": "server/Program.cs", "note": "Approve(93줄→72줄). ComputeNextStagePatch 헬퍼 추출."},
+    {"path": "server/Engine.cs", "note": "ApplyStatePatch(92줄→65줄). ApplyStageStatuses·ApplyBlockInfo 헬퍼 추출."},
+    {"path": "docs/verification/fix06-server-long-functions.md", "note": "FIX-06 검증 문서 신규."},
+    {"path": "docs/directives/FIX06-server-long-functions.md", "note": "지시서 보관."}
   ],
   "tests": {
     "behaviorEqual": true,
@@ -96,11 +90,11 @@
     "buildVerifyExit": 0,
     "measureViolationsBefore": 1,
     "measureViolationsAfter": 1,
-    "measureNote": "Search 함수 해소(115→67줄). 새로 드러난 위반: server/Tier2Approver.cs:38-138 (101줄) — 다음 지시서 대상",
+    "measureNote": "server/ 4건 해소. 잔여 위반: dashboard/app.js:751-849(99줄) — FIX-07 담당",
     "verifyBehaviorExit": 0
   },
   "nextActions": [
-    "조율자: server/Tier2Approver.cs:38-138 (101줄) maxFunctionLength 위반이 새로 드러남 — FIX-06 지시서 대상"
+    "FIX-07: dashboard/app.js 장문 함수 3건 분할 (maxFunctionLength=99, app.js:751-849)"
   ],
-  "notes": "FIX-05 완료: BalanceTuner.cs Search 함수 115→67줄 분할, BuildTuningResult 헬퍼 추출. verify-behavior exit 0, build-verify PASS. 잔여 위반: Tier2Approver.cs:38-138 (101줄). 직접 경로 사유: 지시서 직접 경로 명시 + docs/verification/* allowlist 포함."
+  "notes": "FIX-06 완료: server/ 4건(101·99·93·92줄) 모두 80줄 이하로 분할. verify-behavior exit 0, build-verify PASS. functionsWithoutComment=0 유지. 잔여: app.js:751-849(99줄)=FIX-07. 직접 경로 사유: docs/verification/* allowlist 포함."
 }

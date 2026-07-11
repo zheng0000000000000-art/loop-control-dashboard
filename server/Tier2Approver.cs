@@ -104,6 +104,12 @@ public sealed class Tier2Approver
             return meta;
         }
 
+        return ApplyImportAndRecord(outbox, taskId, taskDirectory, meta, tier2, state, today, todayCount, eligibility.ViolationsBefore, review.Reason, postImportViolationCountOverride);
+    }
+
+    // 반입을 실행하고 위반 변화 이상 감지 시 정지·감사 기록한다.
+    private JsonObject ApplyImportAndRecord(OutboxManager outbox, string taskId, string taskDirectory, JsonObject meta, JsonObject tier2, Tier2State state, string today, int todayCount, int violationsBefore, string reviewReason, Func<int>? postImportViolationCountOverride)
+    {
         try
         {
             var imported = outbox.ApplyAutoImport(taskId, taskDirectory, meta);
@@ -112,19 +118,19 @@ public sealed class Tier2Approver
                 ? postImportViolationCountOverride()
                 : OutboxManager.ParseViolationCount(OutboxManager.RunMeasureAsync(workspaceRoot, noBuild: true).GetAwaiter().GetResult().Stdout);
 
-            if (afterImportViolations > eligibility.ViolationsBefore)
+            if (afterImportViolations > violationsBefore)
             {
-                Halt(state, $"post-import violations {eligibility.ViolationsBefore} -> {afterImportViolations} (task {taskId})");
+                Halt(state, $"post-import violations {violationsBefore} -> {afterImportViolations} (task {taskId})");
                 tier2["decision"] = "anomaly_halted";
                 tier2["postImportViolations"] = afterImportViolations;
-                AppendAudit(taskId, imported, "anomaly_halted", $"violations {eligibility.ViolationsBefore} -> {afterImportViolations}");
+                AppendAudit(taskId, imported, "anomaly_halted", $"violations {violationsBefore} -> {afterImportViolations}");
                 return imported;
             }
 
             state.DailyCounts[today] = todayCount + 1;
             SaveState(state);
             tier2["decision"] = "approved";
-            AppendAudit(taskId, imported, "approved", review.Reason);
+            AppendAudit(taskId, imported, "approved", reviewReason);
             return imported;
         }
         catch (Exception error)

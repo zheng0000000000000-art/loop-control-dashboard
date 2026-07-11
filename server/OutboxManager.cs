@@ -87,20 +87,7 @@ public sealed class OutboxManager
             var hasChanges = changes.ChangedFiles.Count > 0 || changes.DeletedFiles.Count > 0;
             var status = execution.TimedOut || execution.ExitCode != 0 || !hasChanges || !passedStrictGate ? "failed" : "import_pending";
             var meta = BaseMeta(taskId, projectId, executor, instruction, status, stopwatch.ElapsedMilliseconds, SubscriptionCalls(executor));
-            meta["baseCommit"] = baseCommit;
-            meta["executorExitCode"] = execution.ExitCode;
-            meta["timedOut"] = execution.TimedOut;
-            meta["changedFiles"] = new JsonArray(changes.ChangedFiles.Select(file => JsonValue.Create(file)).ToArray<JsonNode?>());
-            meta["deletedFiles"] = new JsonArray(changes.DeletedFiles.Select(file => JsonValue.Create(file)).ToArray<JsonNode?>());
-            meta["originalFileHashes"] = BuildOriginalFileHashes(changes.ChangedFiles, originalHashes);
-            meta["measureExitCode"] = measure.ExitCode;
-            meta["measureSummary"] = measure.Stdout;
-            meta["behaviorExitCode"] = behavior.ExitCode;
-            meta["behaviorSummary"] = behavior.Stdout;
-            meta["strictGate"] = strictGate;
-            meta["completedAt"] = DateTimeOffset.Now.ToString("O");
-            // 컨텍스트 예산 측정값을 task 메타와 run-log 이벤트로 남긴다.
-            ContextBudget.Attach(meta, workspaceRoot, projectId, taskId, contextBudget);
+            AttachExecutionMeta(meta, baseCommit, projectId, taskId, execution, changes, originalHashes, measure, behavior, strictGate, contextBudget);
 
             if (baselineMeasure is not null)
             {
@@ -108,20 +95,7 @@ public sealed class OutboxManager
                 meta["gateViolationsAfter"] = ParseViolationCount(measure.Stdout);
             }
 
-            WriteText(Path.Combine(taskDirectory, "executor-report.md"), BuildExecutorReport(execution));
-            WriteText(Path.Combine(taskDirectory, "diff.patch"), changes.Patch);
-            WriteJson(Path.Combine(taskDirectory, "measure-result.json"), new JsonObject
-            {
-                ["exitCode"] = measure.ExitCode,
-                ["stdout"] = measure.Stdout,
-                ["stderr"] = measure.Stderr,
-            });
-            WriteJson(Path.Combine(taskDirectory, "behavior-result.json"), new JsonObject
-            {
-                ["exitCode"] = behavior.ExitCode,
-                ["stdout"] = behavior.Stdout,
-                ["stderr"] = behavior.Stderr,
-            });
+            WriteDispatchFiles(taskDirectory, execution, changes, measure, behavior);
             TryDeleteDirectory(copyRoot);
 
             // 게이트 클린(위반 비증가) + 코어/기준 파일 무수정 반입만 상위 티어 AI가 여기서 즉시 검토·승인한다.
@@ -133,6 +107,44 @@ public sealed class OutboxManager
         {
             DispatchLock.Release();
         }
+    }
+
+    // meta에 실행 추적 필드와 컨텍스트 예산을 추가한다.
+    private void AttachExecutionMeta(JsonObject meta, string baseCommit, string projectId, string taskId, ProcessResult execution, ChangeSet changes, Dictionary<string, string> originalHashes, ProcessResult measure, ProcessResult behavior, bool strictGate, JsonObject contextBudget)
+    {
+        meta["baseCommit"] = baseCommit;
+        meta["executorExitCode"] = execution.ExitCode;
+        meta["timedOut"] = execution.TimedOut;
+        meta["changedFiles"] = new JsonArray(changes.ChangedFiles.Select(file => JsonValue.Create(file)).ToArray<JsonNode?>());
+        meta["deletedFiles"] = new JsonArray(changes.DeletedFiles.Select(file => JsonValue.Create(file)).ToArray<JsonNode?>());
+        meta["originalFileHashes"] = BuildOriginalFileHashes(changes.ChangedFiles, originalHashes);
+        meta["measureExitCode"] = measure.ExitCode;
+        meta["measureSummary"] = measure.Stdout;
+        meta["behaviorExitCode"] = behavior.ExitCode;
+        meta["behaviorSummary"] = behavior.Stdout;
+        meta["strictGate"] = strictGate;
+        meta["completedAt"] = DateTimeOffset.Now.ToString("O");
+        // 컨텍스트 예산 측정값을 task 메타와 run-log 이벤트로 남긴다.
+        ContextBudget.Attach(meta, workspaceRoot, projectId, taskId, contextBudget);
+    }
+
+    // 실행 결과 파일을 task 디렉터리에 기록한다.
+    private void WriteDispatchFiles(string taskDirectory, ProcessResult execution, ChangeSet changes, ProcessResult measure, ProcessResult behavior)
+    {
+        WriteText(Path.Combine(taskDirectory, "executor-report.md"), BuildExecutorReport(execution));
+        WriteText(Path.Combine(taskDirectory, "diff.patch"), changes.Patch);
+        WriteJson(Path.Combine(taskDirectory, "measure-result.json"), new JsonObject
+        {
+            ["exitCode"] = measure.ExitCode,
+            ["stdout"] = measure.Stdout,
+            ["stderr"] = measure.Stderr,
+        });
+        WriteJson(Path.Combine(taskDirectory, "behavior-result.json"), new JsonObject
+        {
+            ["exitCode"] = behavior.ExitCode,
+            ["stdout"] = behavior.Stdout,
+            ["stderr"] = behavior.Stderr,
+        });
     }
 
     // 반입 대기 항목과 질문 대기 항목을 inbox 배열에 추가한다.

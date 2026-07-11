@@ -202,44 +202,56 @@ public static class Engine
 
         if (patch["stageStatuses"] is JsonObject stageStatuses)
         {
-            nextState["stages"] ??= new JsonObject();
-            nextState["blockInfo"] ??= new JsonObject();
-
-            foreach (var (stageId, statusNode) in stageStatuses)
-            {
-                var status = statusNode?.GetValue<string>() ?? "not_started";
-                nextState["stages"]!.AsObject()[stageId] = status;
-
-                if (status != "blocked")
-                {
-                    nextState["blockInfo"]!.AsObject().Remove(stageId);
-                }
-            }
+            ApplyStageStatuses(nextState, stageStatuses);
         }
 
         if (patch["blockInfo"] is JsonObject blockInfo)
         {
-            nextState["blockInfo"] ??= new JsonObject();
-
-            foreach (var (stageId, infoNode) in blockInfo)
-            {
-                if (infoNode is null)
-                {
-                    nextState["blockInfo"]!.AsObject().Remove(stageId);
-                    continue;
-                }
-
-                var info = CloneNode(infoNode).AsObject();
-                var kind = info["kind"]?.GetValue<string>();
-                info["kind"] = kind is not null && BlockKindValues.Contains(kind) ? kind : "waiting";
-                nextState["blockInfo"]!.AsObject()[stageId] = info;
-            }
+            ApplyBlockInfo(nextState, blockInfo);
         }
 
         var requestedOverall = patch["overallStatus"]?.GetValue<string>();
         nextState["overallStatus"] = IsKnownOverallStatus(requestedOverall) ? requestedOverall : ComputeOverallStatus(definition, nextState);
         nextState["lastUpdated"] = DateTimeOffset.Now.ToString("O");
         return nextState;
+    }
+
+    // 단계 상태 묶음을 nextState에 적용한다.
+    private static void ApplyStageStatuses(JsonObject nextState, JsonObject stageStatuses)
+    {
+        nextState["stages"] ??= new JsonObject();
+        nextState["blockInfo"] ??= new JsonObject();
+
+        foreach (var (stageId, statusNode) in stageStatuses)
+        {
+            var status = statusNode?.GetValue<string>() ?? "not_started";
+            nextState["stages"]!.AsObject()[stageId] = status;
+
+            if (status != "blocked")
+            {
+                nextState["blockInfo"]!.AsObject().Remove(stageId);
+            }
+        }
+    }
+
+    // 차단 정보 묶음을 nextState에 적용한다.
+    private static void ApplyBlockInfo(JsonObject nextState, JsonObject blockInfo)
+    {
+        nextState["blockInfo"] ??= new JsonObject();
+
+        foreach (var (stageId, infoNode) in blockInfo)
+        {
+            if (infoNode is null)
+            {
+                nextState["blockInfo"]!.AsObject().Remove(stageId);
+                continue;
+            }
+
+            var info = CloneNode(infoNode).AsObject();
+            var kind = info["kind"]?.GetValue<string>();
+            info["kind"] = kind is not null && BlockKindValues.Contains(kind) ? kind : "waiting";
+            nextState["blockInfo"]!.AsObject()[stageId] = info;
+        }
     }
 
     // 게이트 차단 상태와 차단 종류를 함께 적용한다.
