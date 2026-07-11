@@ -25,7 +25,7 @@
 ## 산출물
 
 - `docs/qa/review-feat01-conditional-delegation.md`
-- `docs/wiki/failures/cases/FAIL-2026-013-tier2test-verification-cli-crashes.md`
+- `docs/wiki/failures/cases/FAIL-2026-014-tier2test-verification-cli-crashes.md`
 - `docs/wiki/failures/by-component/tier2-approver.md`
 - `docs/wiki/failures/by-component/verification-harness.md`
 - `docs/wiki/failures/by-failure-class/verification_gap.md`
@@ -39,13 +39,13 @@ FEAT-01 조건부 반입 AI 검증: FAIL.
 
 ## 재현/의심/오탐
 
-- 재현된 진짜 버그: 1 (`FAIL-2026-013`)
+- 재현된 진짜 버그: 1 (`FAIL-2026-014`)
 - 의심: 1
   - Release build 잠금은 실행 중 서버 PID 14252 영향이나 universal protocol상 필수 build 실패로 기록해야 한다.
 - 오탐: 0
 
 ## 다음 픽업 후보
 
-1. sonnet에 `FAIL-2026-013` 수정 지시: tier2test 테스트 루트 디렉터리 생성/구조화 실패 처리, measure 문서 불일치 정정.
+1. sonnet에 `FAIL-2026-014` 수정 지시: tier2test 테스트 루트 디렉터리 생성/구조화 실패 처리, measure 문서 불일치 정정.
 2. 수정 후 `tier2test` 전체 시나리오를 독립 재실행.
 3. HS-06 `scope-check`는 아직 제작 대기이므로, CODEX-QUEUE H-0 진행 전 최신 heartbeat 프롬프트와 repo 문서의 쓰기 권한 충돌 해소 필요.
