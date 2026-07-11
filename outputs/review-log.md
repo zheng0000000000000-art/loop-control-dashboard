@@ -524,3 +524,28 @@
 ## 조율자 2026-07-11 16:40 (추가)
 
 - docs/handoff/SONNET-QUEUE.md #13 HOOK-01 상태가 "대기"→"진행"(PID 31528, 로그 outputs/sonnet-HOOK01.out.log)으로 갱신됨을 확인. 해시 안정성 확인(5초 간격 2회 동일) 후 review-log.md와 함께 로컬 커밋(조율자 로그, push 없음).
+
+## 조율자 2026-07-11 17:5x
+
+- 안정성 게이트: 해시 2회(5초 간격) 비교 완료. server/Tier2Approver.cs, docs/wiki/skill-candidates.md 모두 안정(변경 없음).
+- server/: server/Tier2Approver.cs (+109/-1) 미커밋 상태 확인. **커밋 보류**. 사유: HOOK-01(HarnessRegistry) 발사 직후 sonnet이 한도 초과로 즉시 중단된 잔여물로 추정되나 실제 변경 내용(Tier2Approver 반입 승인 로직에 dailyCount·import.ai 이벤트·rollback request 신설)은 HOOK-01 지시서 범위와 무관, 대응 지시서·검증 문서 없음. Codex 세션 024~027(15분×4회)이 전부 이 파일 충돌로 QA를 보류·재보고 중. 내용상 FEAT-01(보류 항목, 무인 결재 이양 위험)과 같은 영역으로 판단해 임의 커밋하지 않고 HUMAN-INBOX에 등재.
+- docs/qa: 변경 없음.
+- docs/wiki: skill-candidates.md(신규, 심층 검토 세션 관측 3건) 안정 확인 → 로컬 커밋(cd9adab). push 없음.
+- 발사(sonnet): 하지 않음. sonnet-active.pid PID 31528 확인 결과 프로세스 종료(死) — 실행 중 sonnet 없음. 그러나 server/가 clean이 아니므로(Tier2Approver.cs 미정리) SONNET-QUEUE 발사 조건 미충족. 다음 대기 항목(FIX-02는 이미 완료 확인됨, ORCH-01 대기)은 Tier2Approver.cs 정리 후 재평가 필요.
+- push: 하지 않음. git log origin/main..HEAD 10건(최신 cd9adab) — 사람 배치 승인 필요.
+- HUMAN-INBOX: server/Tier2Approver.cs 커밋/폐기 판단 요청 항목 신규 등재(중복 아님, 기존 FEAT-01 항목과 연관 언급). 결재·반입·proposal 대행 없음.
+- QUOTA_SIGNAL: outputs/sonnet-HOOK01.out.log에서 발견("You've hit your limit · resets 5:40pm Asia/Seoul", 확인 시각 17:44 기준 이미 리셋 시각 경과). 신규 발사는 어차피 조율자 권한 밖이므로 영향 없음, 기록만.
+
+## 조율자 2026-07-11 17:52
+
+- 안정성 게이트: server/Tier2Approver.cs, docs/handoff/HUMAN-INBOX.md 해시 5초 간격 2회 동일 → 안정.
+- (1) server/*.cs: Tier2Approver.cs(+109/-1) 미커밋 지속 확인. 전회(17:5x) 판단 유지 — 반입 승인 로직(dailyCount·import.ai 이벤트·rollback request 신설) 변경이 FEAT-01(보류 항목, 무인 결재 이양 위험)과 같은 영역이고 대응 지시서·검증 문서가 없어 빌드 게이트 실행 없이 **커밋 보류**. Codex QA가 024~028 5주기 연속 이 파일 충돌로 차단 지속 확인(SESSION-2026-07-11-codex-028 재확인).
+- (2) docs/qa·docs/wiki: 신규 변경 없음 → 스킵.
+- (3) 발사(사람 게이트, 조율자는 발사하지 않음): sonnet-active.pid=31528, 프로세스 목록에 없음(사망 — HOOK-01이 한도초과로 중단, 로그 "resets 5:40pm(Asia/Seoul)" 확인, 현재 17:52로 리셋 시각 경과했으나 무관). server dirty(Tier2Approver.cs 미해결)라 "server clean" 발사조건 미충족 → 발사 대기 기록하지 않음.
+- (4) push: git log origin/main..HEAD --oneline 10건 → **push 대기: 10건 — 사람 배치 승인 필요**.
+- (5) HUMAN-INBOX: 전회 작성된 "server/Tier2Approver.cs 미커밋 수정 — 커밋/폐기 판단" 항목을 이번에 review-log와 함께 로컬 커밋으로 확정(내용 변경 없음, 신규 append 아님). dev-pack proposal 최신(proposal-1783755473210, revisionOf proposal-1783755066233, "UI/UX 개선 및 코드 품질 개선")도 기존 결재대기 계열과 동일 성격 → 중복 미기재. 그 외 기존 항목(outbox 반입 대기 2건, ACTOR-01 결재 대기, HS-GATE 반영요청) 변동 없음.
+- 참고: sonnet-active.pid(stale, dead PID)·outputs/sonnet-HOOK01.*.log 정리는 조율자 권한 밖으로 판단해 삭제하지 않고 상태만 기록(코덱스가 정리방침 명시를 요청했으나, 이는 사람/오케스트레이터 결정 사안).
+- 이번 회차 커밋: docs/handoff/HUMAN-INBOX.md + outputs/review-log.md 1건(로컬만, push 없음).
+- QUOTA_SIGNAL 미감지.
+
+<run-summary>전회(17:5x) 작성됐던 server/Tier2Approver.cs(+109/-1) 커밋보류·HUMAN-INBOX 등재 판단을 재확인하고 review-log·HUMAN-INBOX를 로컬 커밋으로 확정. 이 파일은 FEAT-01 인접 영역(반입 승인 로직)이고 검증 문서가 없어 여전히 커밋하지 않음 — Codex QA가 5주기 연속 이 충돌로 차단 중. HOOK-01 sonnet(PID 31528)은 한도초과로 이미 죽어 실행 중 아님이나 server dirty라 발사 대기 보고는 하지 않음. push 대기 10건(사람 배치 승인 필요), HUMAN-INBOX 신규 항목 없음(기존 전부 재확인·중복 방지), QUOTA_SIGNAL 없음.</run-summary>

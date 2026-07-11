@@ -82,3 +82,13 @@
 - 맥락: docs/qa/hs-gate-2026-07-11.md(코덱스 작성, 로컬 커밋 184d121)에서 `path_escape`(FAIL-2026-006/007)·`executor-orchestration`(FAIL-2026-004/005/008/010) 두 계열을 "즉시제작" 판정(각 11점). `config_side_effect`는 "보류/기존확장" 판정.
 - 조치: 코덱스 쓰기 영역 제한으로 docs/handoff/HS-CANDIDATES.md는 직접 수정되지 않음. 이 판정을 HS-CANDIDATES에 반영하고 필요 시 SONNET-QUEUE에 `path-guard-check`·ORCH 확장 하네스 지시서를 추가하는 것은 검수자/오케스트레이터 콘텐츠 편집 사안(단순 결재 항목 아님) — 조율자는 콘텐츠 편집을 대행하지 않고 참고로만 기록.
 - 확인 시각: 2026-07-11 (조율자, recursion1-result-check).
+
+## 결정 필요: server/Tier2Approver.cs 미커밋 수정 — 커밋/폐기 판단 (2026-07-11 17:5x, 조율자)
+
+- 상태: server/Tier2Approver.cs가 109줄 추가(+109/-1)된 채 미커밋 상태로 지속. Codex 세션 보고(SESSION-2026-07-11-codex-024~027, 15분 간격 4회 연속) 전원이 이 파일 충돌을 이유로 QA 실행 검증을 보류하고 조율자/sonnet의 정리를 요청했다.
+- 출처 추정: SONNET-QUEUE #13 HOOK-01(HarnessRegistry) 발사 직후 sonnet이 한도 초과("You've hit your limit · resets 5:40pm")로 즉시 중단된 잔여물로 보이나, 변경 내용(Tier2Approver eligibility에 docs/verification/ 동반 확인 추가, dailyCount·WriteImportAiEvent·WriteRollbackRequest 신설)은 HOOK-01(HarnessRegistry) 지시서 범위와 무관하다. 출처 지시서 불명.
+- 위험 신호: 변경 내용이 자동 반입(import) 승인 로직(Tier2Approver)에 "AI 승인 이벤트 기록"·"일일 카운트"를 추가하는 것으로, HUMAN-INBOX 기존 항목("FEAT-01 게이트 이른 반입 AI 승인 발사 여부 — 안전 안전장치 문구 확인 필요")과 같은 영역으로 보인다. FEAT-01은 "보류 — 안전 재검토(무인 결재 이양 위험)"로 명시적으로 막혀 있다.
+- 이 변경에 대응하는 docs/verification/ 문서가 없다(자체 규칙이 요구하는 "검증 문서 동반"을 자기 자신은 충족 못함).
+- 조율자 조치: 결재·반입 로직 변경이자 FEAT-01 인접 영역으로 판단해 **커밋하지 않음**. 빌드/behavior/measure 게이트를 임의로 통과시켜 로컬 커밋하는 대신 사람 판단 요청.
+- 요청: 사람이 (1) 이 변경이 승인된 작업인지(어느 지시서 소산인지) 확인, (2) 커밋할지/버릴지(git checkout -- server/Tier2Approver.cs) 결정, (3) 커밋한다면 FEAT-01 안전 재검토와의 관계를 명시. 결정 전까지 Codex QA는 계속 블록된 상태로 남는다(15분 주기 4회 이상 낭비 중).
+- 확인 시각: 2026-07-11 17:5x경(조율자, recursion1-result-check).
