@@ -650,3 +650,107 @@
 - QUOTA_SIGNAL: 미관측.
 
 <run-summary>19:00 검수자 세션이 발사한 ORCH-01(PID 11060, 오케스트레이터 관측 스캐폴드 orch-observe)이 완료 확인됨 - gate-clean/doc-integrity/claim-check/verify-behavior 전부 PASS, measure 비악화(4≤5) → 로컬 커밋 ee21611 + 큐 갱신 커밋 14f1e31. sonnet 미실행(PID 11060 사망), 다음 대기 FEAT-01은 기존 안전보류 유지로 발사 안 함. push 대기 7건, HUMAN-INBOX 신규 항목 없음, QUOTA_SIGNAL 없음.</run-summary>
+## 조율자 2026-07-11 19:14
+
+- 경로 규칙 준수: 저장소 정본만 열람(세션 outputs 사본 미사용).
+- 도구 이슈 기록: 이번 회차 초반, PowerShell에서 cd 후 상대경로로 [System.IO.File]::AppendAllText를 호출하면 .NET CWD가 갱신 안 돼 다른 위치에 쓰기 시도 -> 기록 유실(HUMAN-INBOX 미반영)이 재발했다. 절대경로로 전환 후 정상 반영 확인. git checkout으로 이전 상태 원상복구 확인(콘텐츠 유실 없음, 소실은 쓰기 실패였을 뿐 파일 손상 아니었음).
+- 안정성 게이트: git status --short 5초 간격 2회 해시 비교 - 안정. 변경 파일: dashboard/data/dev-pack/*.json 5건(커밋 제외 대상) + docs/handoff/CODEX-HEARTBEAT-PROMPT.md·queue/OrchestratorObserverCli.reference.cs·sessions/SESSION-2026-07-11-codex-032·033.md·outputs/sonnet-HOOK01.*·ORCH01.* 로그(신규 미추적, 조율자 커밋 범위 밖 - docs/handoff 일반 파일은 검수자 담당).
+- server/*.cs: 미커밋 변경 없음(clean) -> server 검수 대상 없음, 커밋 없음.
+- docs/qa·docs/wiki: 변경 없음 -> 스킵.
+- 하네스 판정(exit code):
+  - gate-clean server: exit 0, contentDirtyCount 0, PASS.
+  - doc-integrity: exit 0, 12/12 intact, INTACT.
+- 발사(사람 게이트, 조율자 대행 안 함): sonnet-active.pid 파일 없음(미실행). SONNET-QUEUE.md(저장소 정본) 확인 - #1~#3·#5~#7·#9·#11·#13 완료, #10 취소, #4 FEAT-01만 "대기". FEAT-01은 HUMAN-INBOX 기존 안전보류(과거 Tier2Approver.cs 무단구현 사고·무인 결재 이양 위험) 미해결 유지 중 -> 발사 후보에서 제외 유지. **발사 보류: FEAT-01 — 사람 안전 재검토 미해결(기존 보류 유지, 신규 판단 아님).**
+- push: git rev-list --count origin/main..HEAD = 8건(직전 회차 대비 변화 없음). **push 대기: 8건 — 사람 배치 승인 필요.**
+- HUMAN-INBOX: 신규 항목 1건 추가 - dev-pack proposal 신규 리비전(proposal-1783764537625, revisionOf proposal-1783764235245, createdBy ollama/qwen3:8b, lifecycle submitted). 변경 4건: functionsWithoutComment 5→0, smallTouchTargets 1→0, skillDomainViolations 2→0, maxFunctionLength 159→[0,80]. 결재는 사람 판단(조율자 대행 안 함). 그 외 기존 미해결 다수(FEAT-01 안전재검토, ACTOR-01 결재대기, outbox 반입 2건, reviewer-session 미상 identity 재발 등) 유지 확인 - 재기재 생략(중복 방지).
+- QUOTA_SIGNAL: 미관측.
+
+<run-summary>server/*.cs·docs/qa·docs/wiki 변경 없음(커밋 대상 없음). gate-clean PASS(exit0)·doc-integrity INTACT(exit0) 확인. sonnet 미실행, 다음 대기 FEAT-01은 기존 안전보류 유지로 발사 안 함. push 대기 8건(변화 없음). HUMAN-INBOX에 신규 dev-pack proposal 결재 대기 1건(proposal-1783764537625) 추가, 그 외 기존 이슈 유지. 이번 회차 커밋 없음. 부록: 조율자 도구 사용 중 상대경로 .NET 쓰기 실패를 발견·시정(파일 손상 아님, 기록 유실이었음).</run-summary>
+## 조율자 2026-07-11 19:22 (같은 회차 추가 관측 - server/·docs/qa 신규 변경 발견)
+
+- 최초 검수 완료 후 재확인한 git status에서 신규 변경 발견(동시 작업 중인 검수자/코덱스 세션 소행으로 추정): server/Harness/HarnessRegistry.cs(수정)·server/Harness/LaunchCheckCli.cs(신규).
+- 안정성: 6초 간격 2회 해시 비교 - 안정.
+- 내용: launch-check 하네스 신규 추가(taskId ACK 에코백 검증, FAIL-2026-013 재발 방지). HarnessRegistry에 1줄 등록. WORKSTATE.json에 diId 매핑 없음 - gate-clean/hs-scan/claim-check/doc-integrity와 동일하게 검수자 직접구현 패턴으로 판단(claim-check 대상 아님).
+- 판정(exit code): build(exe락 우회, -o 임시경로) exit 0(경고0/오류0). gate-clean server exit 1(contentDirtyCount 2, 커밋 전 예상된 결과). verify-behavior exit 0(behaviorEqual true). measure dev-pack exit 1이나 violationCount 4=직전 기준(4) 동일 → 비악화 확인. launch-check 자체 스모크 테스트(존재하지 않는 로그) 정상 FAIL(exit1) 확인.
+- 조치: PASS 판정 → 선별 add(server/Harness/HarnessRegistry.cs, server/Harness/LaunchCheckCli.cs) → 로컬 커밋 cf6b2d2.
+- 이어서 docs/qa/launch-check-harness-2026-07-11.md(코덱스 작성, launch-check 독립 QA - hs-scan/build/launch-check pass·fail/verify-behavior/measure 전부 exit code 판정, 코드 미혼입) 발견 - 6초 안정 확인 후 로컬 커밋 da67747.
+- push: git rev-list --count origin/main..HEAD = 10건. **push 대기: 10건 — 사람 배치 승인 필요.**
+- 남은 미커밋: dashboard/data/dev-pack/*.json(제외 대상)·docs/handoff/HS-CANDIDATES.md·CODEX-HEARTBEAT-PROMPT.md·queue/OrchestratorObserverCli.reference.cs·sessions/codex-032·033·034.md(WORKSTATE.json 아닌 일반 docs/handoff류, 검수자 담당 - 조율자 범위 밖)·outputs/DECISION-BRIEF-2026-07-11-v3.md·server-run.*.log·sonnet-*.log(조율자 커밋 범위 밖) - 전부 미조치.
+- HUMAN-INBOX: 이번 추가 관측에 대한 신규 사람 결정 항목 없음(정상 검수·커밋 흐름).
+
+<run-summary>초기 검수 완료 후 같은 회차 내 재확인에서 server/Harness/에 신규 launch-check 하네스(taskId ACK 에코백 검증) 발견 - build 0/0·verify-behavior true·measure 비악화(4=4) 확인 후 로컬 커밋(cf6b2d2), 이를 검증한 코덱스 QA 문서(docs/qa/)도 로컬 커밋(da67747). push 대기 10건으로 갱신. 그 외 신규 사람 결정 사안 없음.</run-summary>
+## 조율자 2026-07-11 19:25
+
+- 경로 규칙 준수: 저장소 정본만 열람(세션 outputs 사본 미사용).
+- 안정성 게이트: git status --short 확인 후 대상 파일 5초 간격 2회 해시 비교 - 안정. 변경 파일: docs/handoff/HS-CANDIDATES.md·HUMAN-INBOX.md(조율자 본 회차 append 전 상태 기준)·outputs/review-log.md(수정) + docs/handoff/CODEX-HEARTBEAT-PROMPT.md·queue/OrchestratorObserverCli.reference.cs·sessions/SESSION-2026-07-11-codex-032·033·034.md·outputs/DECISION-BRIEF-2026-07-11-v3.md·sonnet-{HOOK01,ORCH01}.*.log(신규 미추적, 조율자 커밋 범위 밖 - docs/handoff 일반 파일·세션 로그는 검수자/실행자 영역). outputs/server-run.*.log 2건은 실행 중인 프로세스가 파일을 잠그고 있어 해시 확인 불가(락, 커밋 대상 아니므로 판정 무관).
+- server/*.cs: 미커밋 변경 없음(clean) → server 검수 대상 없음, 커밋 없음.
+- docs/qa·docs/wiki: 변경 없음 → 스킵.
+- 하네스 판정(exit code, 조율자 직접 재실행):
+  - gate-clean server: exit 0, contentDirtyCount 0, PASS.
+  - doc-integrity: exit 0, 12/12 intact, INTACT.
+- 발사(사람 게이트, 조율자 대행 안 함): sonnet-active.pid 파일 없음(미실행 확인). SONNET-QUEUE.md(저장소 정본) 확인 - #1~#3·#5~#7·#9·#11·#13 완료, #10 취소, #4 FEAT-01만 "대기". FEAT-01은 HUMAN-INBOX 기존 안전보류(과거 Tier2Approver.cs 무단구현 사고·무인 결재 이양 위험) 미해결 유지 중 → 발사 후보에서 제외 유지. **발사 보류: FEAT-01 — 사람 안전 재검토 미해결(기존 보류 유지, 신규 판단 아님).**
+- push: git rev-list --count origin/main..HEAD = 14건(직전 회차 8건 대비 +6). 이 중 4건은 조율자·검수자 소행이 아닌 "[loop] dev-pack 회차10/11" 커밋(아래 관측 참고), 나머지 2건은 직전 회차(19:22)에 이미 커밋된 cf6b2d2·da67747이 반영된 수치. **push 대기: 14건 — 사람 배치 승인 필요.**
+- 관측(신규, 결정 불요이나 기록 - dev-pack 루프 자체 승인): dashboard/data/dev-pack/ 아래 "[loop] dev-pack 회차10/11" 커밋 4건(aef54a1·7dcbf0d·9813ab3·ecfbecf, 19:23:49~19:24:28, git identity는 정상 JaeHyuk) 신규 관측. proposal-1783765207587에 acknowledge-guardrail 3회 + approve 1회. review-report.json 자기기록은 reviewer.type="human"·"사람 검토로 승인됐다"이나, 실제 사람 조작 여부는 조율자가 독립 검증할 수단이 없음(확정 아님, 정황만 - 주체 단정 안 함). workflow-state.json은 loopIteration 11이 한도 10 초과로 guardrail 발동, loopState="halted"(루프 자체는 정지됨). dashboard/data/*는 조율자 커밋 제외 대상이라 관여·커밋하지 않음(별도 주체가 이미 직접 커밋). HUMAN-INBOX에 사람 확인 요청 신규 항목으로 append.
+- HUMAN-INBOX: 신규 항목 1건 추가(위 dev-pack 자체승인 관측, proposal-1783765207587 - 중복 아님, 신규 proposal ID). 그 외 기존 미해결 다수(ACTOR-01 결재대기, outbox 반입 2건, FEAT-01 안전재검토, dev-pack proposal-1783764537625 결재대기 등) 유지 확인 - 재기재 생략(중복 방지).
+- QUOTA_SIGNAL: 미관측.
+
+<run-summary>server/*.cs·docs/qa·docs/wiki 변경 없음(커밋 대상 없음, gate-clean PASS exit0·doc-integrity INTACT exit0). sonnet 미실행, 다음 대기 FEAT-01은 기존 안전보류 유지로 발사 안 함. push 대기가 8건→14건으로 증가했는데, 그 중 4건은 조율자 소행이 아닌 "[loop] dev-pack" proposal-1783765207587 자체승인 커밋(review-report상 reviewer=human이나 실제 사람 여부 확인 불가, loopIteration 초과로 루프 자체는 halted)으로 확인되어 HUMAN-INBOX에 확인 요청 신규 등재. QUOTA_SIGNAL 없음.</run-summary>
+
+## 2026-07-11 19:3x — 검수자 세션: 서버 기동 관측 (Tier2 Enabled=true 유지, 사람 지시)
+
+- 주체(actor): 검수자 세션(Claude). 결재 액션(반입 거절 3건·proposal approve)은 **사람이 대시보드에서 직접 수행** — 본인 진술로 확인(추측 아님).
+- **I-3 해소**: 서버를 bin/Release 밖(C:\Users\1\wf-server-run)으로 빌드해 --contentroot server 로 기동(PID 30040, :5173). 서버 실행 중에도 dotnet build server -c Release **exit 0** — 결재(서버)와 검증(빌드)의 상호 배제가 풀렸다. 앞으로 서버는 이 방식으로 띄운다.
+- **"승인/거절이 안 된다"의 원인 = 서버 OFF**(코드 버그 아님). 결재 POST는 X-Action-Token(appsettings RemoteActionToken="1") 필요. 서버 기동 직후 reject-import 3건 전부 HTTP 200 → outbox 반입 3건 rejected(19:24:15~19). **HUMAN-INBOX 1항 해소.**
+- **Tier2(AI 자동 반입) 실측**: Enabled=true·ollama 가동 중이나 **자동 반입 실적 0건**. 이력 전체 시도 2건 모두 qwen3:14b verdict=reject → reviewed_not_approved. 단 두 건 다 eligible=true(적격 관문 통과) — **모델 판단이 유일한 방어선.** 위험 잠복, 브리핑 v3 0-B항 참조.
+- **[loop] 자동 커밋 4건**(19:23:49~19:24:28, acknowledge-guardrail 3 + approve 1): 서버 기동으로 dashboard loop가 재가동된 것. **approve 주체는 사람(본인 확인).** 무인 결재 아님 — FAIL-2026-012 결론 재확인. 다만 **데이터로는 여전히 구분 불가**(커밋 author=JaeHyuk, [loop]는 CommitHumanAction 형식) → ACTOR-01 필요성 4번째 실증.
+- **코덱스 재가동 확인**: heartbeat 교체(19:07) 후 server/Harness/LaunchCheckCli.cs(H-00, 19:17) 생성 + SESSION-034 + 조율자 QA 커밋 da67747(19:22). 하루 종일 0건이던 코덱스 하네스 제작이 처음 돌았다.
+- 사용한 하네스: gate-clean(exit 1 — 코덱스 신규 파일로 인한 정상 dirty), doc-integrity(exit 0, INTACT), claim-check ORCH-01(exit 0, MATCH 3/3), orch-observe(exit 0), build(exit 0, 서버 실행 중에도).
+
+
+## 2026-07-11 19:30 — 조율자
+
+- 안정성 게이트: 미커밋/미추적 파일 15개 해시 5초 간격 2회 비교 — 전부 동일(안정).
+- 하네스 판정(exit code): gate-clean server → PASS(exit0, contentDirtyCount 0, files:[]) — server/*.cs 미커밋 변경 없음. doc-integrity → PASS(exit0, INTACT) — AGENT-GUIDE.md·CLAUDE.md 등 무결.
+- 2단계(server 검수→커밋): 대상 없음(미커밋 .cs 0건) — 커밋 안 함.
+- 3단계(docs/qa·docs/wiki→커밋): 대상 없음(변경 0건) — 커밋 안 함.
+- 미커밋 상태로 남은 파일(M: docs/handoff/HS-CANDIDATES.md·HUMAN-INBOX.md / 신규: CODEX-HEARTBEAT-PROMPT.md·SESSION-032~034.md·queue/OrchestratorObserverCli.reference.cs·outputs/DECISION-BRIEF-2026-07-11-v3.md·sonnet-*/server-run 로그 6건)은 server/*.cs도 docs/qa·wiki도 아니라서 이번 지시서의 2·3단계 커밋 규칙 대상 밖 — **임의 커밋하지 않음**(지시서 범위 밖 확대 금지).
+- 발사(4단계): sonnet-active.pid 없음(미실행 확인). SONNET-QUEUE.md 정본 기준 다음 "대기" 항목은 FEAT-01이나, outputs/DECISION-BRIEF-2026-07-11-v3.md 0-B항(문서상 "보류"인데 appsettings.json Tier2Approver.Enabled=true로 코드는 이미 켜져 있음 — 모순 미해결)이 아직 사람 결정 전이라 정상 발사 대상 아님. ACTOR-01(#12)도 "사람 결재 대기" 유지. **이번 회차 발사 없음.**
+- push(5단계): git log origin/main..HEAD 14건, 직전 회차(19:25경) 대비 변동 없음 — 사람 배치 승인 필요.
+- HUMAN-INBOX(6단계): 신규 항목 없음. 기존 목록(FEAT-01 0-B 모순, dev-pack proposal-1783765207587 확인요청, outbox 반입 2건, ACTOR-01 결재대기 등)으로 충분 — 중복 방지 위해 재기재 생략.
+- QUOTA_SIGNAL: 미관측.
+
+<run-summary>변경 없음 — server/*.cs·docs/qa·docs/wiki 전부 커밋 대상 없음(gate-clean PASS exit0, doc-integrity PASS exit0). sonnet 미실행, 발사 없음(FEAT-01은 DECISION-BRIEF 0-B 모순 미해결로 보류, ACTOR-01은 결재 대기). push 대기 14건 그대로(변동 없음). QUOTA_SIGNAL 없음.</run-summary>
+### 추가 관측(같은 19:30 회차, 기록 후 발견)
+
+- review-log 기록 직후 재확인한 git status에서 server/Harness/HarnessRegistry.cs(M)·server/Harness/ScopeCheckCli.cs(신규 ??)가 새로 나타남 — 이번 회차 최초 안정성 게이트(0단계) 통과 **이후** 발생한 변경으로, 이번 회차 판단(gate-clean PASS/커밋 대상 없음)에는 포함되지 않았음.
+- 재해시(5초 간격 2회) 결과 두 파일 모두 안정(동일 해시) 확인. 단, **이번 회차에서 build/verify-behavior/measure/claim-check 등 2단계 전체 검증 절차를 밟지 않았으므로 커밋하지 않음** — 회차 중간 끼워넣기보다 **다음 회차에 처음부터 정식 검증**하는 편이 안전(조기 확정·서두른 판정 방지).
+- 다음 회차 조율자에게: server/Harness/HarnessRegistry.cs·ScopeCheckCli.cs를 0단계 안정성 게이트부터 다시 통과시킨 뒤 2단계(build exit code→verify-behavior→measure→claim-check) 전체를 수행할 것.
+
+## 조율자 19:47 (recursion1-result-check)
+
+- 0단계 안정성: git status 변경 30개 파일 해시 5초 간격 2회 비교 — 전부 동일(안정). 세션 중 docs/verification/actor01-actor-provenance.md가 새로 나타나 재확인 1회 추가 수행(그 시점 sonnet-ACTOR01 PID 22844가 마지막 파일을 쓰던 중이었던 것으로 추정) — 이후 재해시 안정 확인 후 진행.
+- 하네스: gate-clean server 최초 FAIL(exit1, contentDirty 5) — server/GitDataCommitter.cs·HarnessRegistry.cs·OutboxManager.cs·Program.cs·Harness/ScopeCheckCli.cs(신규). doc-integrity PASS(exit0, INTACT, 12건).
+- 원인 분해: 미커밋 변경이 서로 다른 두 작업 계열임을 확인.
+  - ① **H-0 scope-check**(코덱스, server/Harness/ 전용 영역): HarnessRegistry.cs(+1줄 등록)·ScopeCheckCli.cs(신규). docs/qa/scope-check-harness-2026-07-11.md QA기록과 대조해 재실행: build exit0(경고0·오류0), verify-behavior exit0(behaviorEqual:true), measure dev-pack exit1(violationCount=4, QA문서 기록치와 일치·비악화). claim-check 대상 아님(diId 미등록, 코덱스 자기영역 직접 재실행 대조로 갈음). **PASS → 커밋 7e3ba0a(server/Harness/)·9a631e9(docs/qa/)로 분리 로컬 커밋.**
+  - ② **ACTOR-01**(sonnet, allowlist: server/Program.cs·GitDataCommitter.cs·OutboxManager.cs·docs/verification/actor01-actor-provenance.md·WORKSTATE.json): outputs/sonnet-ACTOR01.out.log 확인 — actor 파라미터 추가(CommitHumanAction·ApproveImport·RejectImport·ExtractActor 등) 작업 완료 보고. sonnet-active.pid=22844는 현재 프로세스 목록에 없음(사망 확인). **claim-check ACTOR-01 → MISMATCH(exit1, 13건 중 1건 불일치)**: 검증문서가 "server/LocalFirstWorkflowDashboard.Server.cs 존재"를 주장하나 실제 없음(나머지 12건은 실체와 일치). **커밋 금지 원칙에 따라 이 3개 서버 파일은 미커밋 상태로 보류.** 범위(allowlist) 위반은 없음 — 격리 대상 아님, 단순 검증문서 오기재로 판단(확정 아님, 추정).
+- 참고: ACTOR-01은 SONNET-QUEUE.md #12에 "사람 결재 대기 — 승인 전 발사 금지"로 표기돼 있으나, 위 로그·PID 증거는 **이미 발사되어 완료까지 진행됐음**을 보여준다. 승인 경위는 조율자가 확인할 수 없음(HUMAN-INBOX에 별도 기록).
+- measure dev-pack 재실행이 부수효과로 신규 proposal(proposal-1783766535520, createdBy rule-engine)을 생성함 — 결재 행위 아님, 조율자 대행 안 함.
+- 발사(4단계): gate-clean 여전히 FAIL(exit1, contentDirty 3 — ACTOR-01 3파일 잔존)이므로 **발사 조건 미충족, 발사 보류**.
+- push(5단계): git log origin/main..HEAD 19건(이번 회차 2건 추가 반영) — **사람 배치 승인 필요, push 안 함**.
+- HUMAN-INBOX(6단계): ACTOR-01 실행 증거·claim-check MISMATCH 신규 append(중복 아님, 새 사실).
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>H-0 scope-check(코덱스) 검수 PASS → 로컬 커밋 2건(7e3ba0a server/Harness, 9a631e9 docs/qa). ACTOR-01(sonnet)은 이미 발사·완료된 흔적을 처음 확인했으나 claim-check MISMATCH(검증문서에 존재하지 않는 파일 주장 1건)로 3개 서버 파일 커밋 보류. gate-clean 여전히 FAIL이라 다음 발사도 보류. push 대기 19건, 사람 승인 필요. QUOTA_SIGNAL 없음.</run-summary>
+
+## 조율자 19:52 (recursion1-result-check)
+
+- 0단계 안정성: git status 변경 다수 파일 5초 간격 2회 해시 비교 → 동일(안정). outputs/server-run.*.log는 실행 중 서버가 잠가 해시 불가(커밋 대상 아니므로 무해).
+- 하네스 판정(exit code): gate-clean은 실행 중 서버의 obj/Release 잠금으로 in-place 빌드 자체가 실패(I-3, 락 원인) → 소스를 임시경로로 격리 복사해 별도 빌드: exit 0, 경고 0, 오류 0(현재 미커밋 전체 트리 포함, 코드 자체는 정상). doc-integrity exit0(INTACT, 12건). verify-behavior exit0(behaviorEqual:true). measure dev-pack exit1(violationCount=3, 기준선 유지·비악화; 실행 부수효과로 proposal-1783767156154 신규 생성됨 - 기존에 문서화된 known 부수효과).
+- claim-check ACTOR-01: 여전히 MISMATCH(exit1, 13건 중 1건 "server/LocalFirstWorkflowDashboard.Server.cs 존재" 오탐). CODEX-QUEUE.md에 이 회차 사이 H-6(★★최우선)로 원인이 규명됨: claim-check 주장 추출 정규식이 종단 경계가 없어 .csproj를 .cs 존재 주장으로 오인하는 하네스 버그. 실체는 12/13 일치, ACTOR-01 코드 자체는 정상. 그러나 하네스 수정(H-6)이 아직 코드에 반영되지 않았으므로 **규칙대로 커밋 보류 유지**(server/Program.cs·GitDataCommitter.cs·OutboxManager.cs·docs/verification/actor01-actor-provenance.md 미커밋 상태 지속). 원인 규명과 하네스 수정 완료를 구분해서 기록함(추정 아님, CODEX-QUEUE.md 원문 확인).
+- 신규 코덱스 산출물 발견: server/Harness/BuildVerifyCli.cs(신규, H-01 build-verify) + HarnessRegistry.cs 1줄 등록 + ScopeCheckCli.cs 기능주석 1줄. ACTOR-01과 무관한 별개 변경으로 판단(파일 수정 시각 19:46~19:50, ACTOR-01 관련 파일은 19:36~19:39). 직접 격리 빌드로 검증(build exit0, verify-behavior exit0, measure 기준선 비악화). claim-check 대상 아님(diId 미등록 - H-0 scope-check 선례와 동일 처리). **로컬 커밋 92e0260** (server/Harness/ 3파일만, docs/qa/build-verify-harness-2026-07-11.md는 이번 회차 중 새로 생겨 다음 회차에 별도 검토).
+- 발사(4단계): sonnet-active.pid=22844 사망 확인(프로세스 목록에 없음). ACTOR-01이 claim-check MISMATCH로 커밋 보류 중이라 "이전 항목 커밋됨" 조건 미충족 → 다음 대기 항목 발사 판단 보류. 발사 없음.
+- push(5단계): git log origin/main..HEAD = 21건(이번 회차 커밋 반영, 사람 배치 승인 필요). push 없음.
+- HUMAN-INBOX(6단계): 신규 결정 필요 항목 없음(ACTOR-01 결재·H-6 수정 대기는 기존 항목으로 충분). 참고로 H-6 원인 규명 사실만 review-log에 기록(중복 방지, HUMAN-INBOX 미기재).
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>server/Harness/BuildVerifyCli.cs(H-01 build-verify) 신규 발견·검증 후 로컬 커밋(92e0260, server/Harness/ 3파일). ACTOR-01(Program.cs·GitDataCommitter.cs·OutboxManager.cs·검증문서)은 claim-check MISMATCH 지속으로 미커밋 유지 - 단 원인이 이번 회차 사이 CODEX-QUEUE.md H-6으로 규명됨(claim-check 정규식이 .csproj를 .cs로 오인하는 하네스 버그, ACTOR-01 실체는 12/13 일치이나 하네스 수정 전이라 규칙대로 보류 지속). gate-clean은 서버 실행 중 obj 락으로 in-place 실패했으나 격리빌드로 코드 자체는 정상 확인(I-3, 코드오류 아님). doc-integrity/verify-behavior PASS, measure 기준선(3) 유지. 발사 없음(ACTOR-01 보류로 조건 미충족). push 대기 21건, 사람 배치 승인 필요. QUOTA_SIGNAL 없음.</run-summary>
