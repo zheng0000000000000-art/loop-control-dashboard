@@ -32,7 +32,7 @@ public static class OllamaExecutor
         "Review findings are instructions to apply, not text to quote. Do not put verdict words such as needs_changes, rejected, approved, or their Korean equivalents in note. " +
         "Describe only the purpose and expected effect of the change. Refer to predicted values as predictions, never as measured results.\n";
 
-    // definition 정책과 위반 목록으로 note·title·summary를 생성한다.
+    // definition 정책과 위반 목록으로 note·title·summary를 생성하고 토큰 합계를 반환한다.
     public static ExecutorGenerateResult Generate(JsonObject definition, List<MetricCheck> violations, JsonObject? previousReviewReport)
     {
         var timer = Stopwatch.StartNew();
@@ -48,10 +48,14 @@ public static class OllamaExecutor
         var maxRetries = Math.Max(1, Number(policy["maxRetries"], 1));
         var feedback = BuildFeedbackByMetric(previousReviewReport);
         var notes = new Dictionary<string, string>();
+        var totalIn = 0;
+        var totalOut = 0;
 
         foreach (var violation in violations)
         {
-            var (note, noteError) = TryGenerateNote(policy, model, violation, feedback.GetValueOrDefault(violation.MetricId), maxRetries);
+            var (note, noteError, noteIn, noteOut) = TryGenerateNote(policy, model, violation, feedback.GetValueOrDefault(violation.MetricId), maxRetries);
+            totalIn += noteIn;
+            totalOut += noteOut;
 
             if (note is null)
             {
@@ -61,7 +65,9 @@ public static class OllamaExecutor
             notes[violation.MetricId] = note;
         }
 
-        var (summary, summaryError) = TryGenerateSummary(policy, model, violations, notes, maxRetries);
+        var (summary, summaryError, sumIn, sumOut) = TryGenerateSummary(policy, model, violations, notes, maxRetries);
+        totalIn += sumIn;
+        totalOut += sumOut;
 
         if (summary is null)
         {
@@ -69,16 +75,19 @@ public static class OllamaExecutor
         }
 
         var selfReview = RunSelfReviewIfEnabled(definition, policy, model, "blueprint", notes, summary.Value.Title, summary.Value.Summary);
+        totalIn += selfReview.InputTokens;
+        totalOut += selfReview.OutputTokens;
+
         if (!selfReview.Passed)
         {
             return Unavailable(timer, selfReview.Error ?? "자가 비평 실패", provider, model, selfReview.Enabled, false);
         }
 
         timer.Stop();
-        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, summary.Value.Assumptions, timer.ElapsedMilliseconds, null, selfReview.Enabled, selfReview.Enabled);
+        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, summary.Value.Assumptions, timer.ElapsedMilliseconds, null, selfReview.Enabled, selfReview.Enabled, totalIn, totalOut);
     }
 
-    // 이미 결정된 레버 변경들을 서술하는 note·title·summary를 생성한다. 수치는 BalanceTuner가 이미 정했다 — 모델은 서술만 한다.
+    // 이미 결정된 레버 변경들을 서술하는 note·title·summary를 생성하고 토큰 합계를 반환한다.
     public static ExecutorGenerateResult GenerateForTuning(JsonObject definition, TuningResult tuning, JsonObject? previousReviewReport)
     {
         var timer = Stopwatch.StartNew();
@@ -94,10 +103,14 @@ public static class OllamaExecutor
         var maxRetries = Math.Max(1, Number(policy["maxRetries"], 1));
         var feedback = BuildFeedbackByMetric(previousReviewReport);
         var notes = new Dictionary<string, string>();
+        var totalIn = 0;
+        var totalOut = 0;
 
         foreach (var change in tuning.ChangedLevers)
         {
-            var (note, noteError) = TryGenerateTuningNote(policy, model, change, tuning.PredictedMetrics, feedback.GetValueOrDefault(change.Path), maxRetries);
+            var (note, noteError, noteIn, noteOut) = TryGenerateTuningNote(policy, model, change, tuning.PredictedMetrics, feedback.GetValueOrDefault(change.Path), maxRetries);
+            totalIn += noteIn;
+            totalOut += noteOut;
 
             if (note is null)
             {
@@ -107,7 +120,9 @@ public static class OllamaExecutor
             notes[change.Path] = note;
         }
 
-        var (summary, summaryError) = TryGenerateTuningSummary(policy, model, tuning, maxRetries);
+        var (summary, summaryError, sumIn, sumOut) = TryGenerateTuningSummary(policy, model, tuning, maxRetries);
+        totalIn += sumIn;
+        totalOut += sumOut;
 
         if (summary is null)
         {
@@ -115,16 +130,19 @@ public static class OllamaExecutor
         }
 
         var selfReview = RunSelfReviewIfEnabled(definition, policy, model, "tuning", notes, summary.Value.Title, summary.Value.Summary);
+        totalIn += selfReview.InputTokens;
+        totalOut += selfReview.OutputTokens;
+
         if (!selfReview.Passed)
         {
             return Unavailable(timer, selfReview.Error ?? "자가 비평 실패", provider, model, selfReview.Enabled, false);
         }
 
         timer.Stop();
-        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, summary.Value.Assumptions, timer.ElapsedMilliseconds, null, selfReview.Enabled, selfReview.Enabled);
+        return new ExecutorGenerateResult(false, provider, model, notes, summary.Value.Title, summary.Value.Summary, summary.Value.Assumptions, timer.ElapsedMilliseconds, null, selfReview.Enabled, selfReview.Enabled, totalIn, totalOut);
     }
 
-    // definition의 selfReview가 켜져 있으면 생성 결과를 모델로 한 번 자체 점검한다.
+    // definition의 selfReview가 켜져 있으면 생성 결과를 모델로 한 번 자체 점검하고 토큰 수를 반환한다.
     private static SelfReviewResult RunSelfReviewIfEnabled(JsonObject definition, JsonObject policy, string model, string kind, Dictionary<string, string> notes, string title, string summary)
     {
         if (definition["selfReview"]?.GetValue<bool>() != true)
@@ -134,19 +152,19 @@ public static class OllamaExecutor
 
         try
         {
-            var raw = CallModel(policy, model, BuildSelfReviewPrompt(kind, notes, title, summary));
+            var (raw, inTok, outTok) = CallModel(policy, model, BuildSelfReviewPrompt(kind, notes, title, summary));
             var parsed = ExtractJsonObject(StripThinkBlock(raw));
             var passed = parsed?["passed"]?.GetValue<bool>();
             var note = parsed?["note"]?.GetValue<string>() ?? "";
 
             if (passed is null)
             {
-                return new SelfReviewResult(true, false, "자가 비평 응답 스키마 불일치");
+                return new SelfReviewResult(true, false, "자가 비평 응답 스키마 불일치", inTok, outTok);
             }
 
             return passed.Value
-                ? new SelfReviewResult(true, true, null)
-                : new SelfReviewResult(true, false, $"자가 비평 실패: {note}");
+                ? new SelfReviewResult(true, true, null, inTok, outTok)
+                : new SelfReviewResult(true, false, $"자가 비평 실패: {note}", inTok, outTok);
         }
         catch (ReviewerUnavailableException error)
         {
@@ -175,28 +193,32 @@ public static class OllamaExecutor
             "답 형식: {\"passed\":true|false,\"note\":\"한 줄 근거\"}";
     }
 
-    // 레버 변경 하나에 대한 note를 생성한다. 실패 사유를 함께 반환한다.
-    private static (string? Note, string? Error) TryGenerateTuningNote(JsonObject policy, string model, LeverChange change, List<PredictedMetricChange> predicted, string? feedback, int maxRetries)
+    // 레버 변경 하나에 대한 note를 생성하고 누적 토큰 수를 함께 반환한다.
+    private static (string? Note, string? Error, int InputTokens, int OutputTokens) TryGenerateTuningNote(JsonObject policy, string model, LeverChange change, List<PredictedMetricChange> predicted, string? feedback, int maxRetries)
     {
         string? lastError = null;
+        var totalIn = 0;
+        var totalOut = 0;
 
         for (var attempt = 1; attempt <= maxRetries; attempt += 1)
         {
             try
             {
-                var raw = CallModel(policy, model, BuildTuningNotePrompt(change, predicted, feedback));
+                var (raw, inTok, outTok) = CallModel(policy, model, BuildTuningNotePrompt(change, predicted, feedback));
+                totalIn += inTok;
+                totalOut += outTok;
                 var parsed = ParseNoteResponse(raw, change.Path);
 
                 if (parsed is not null)
                 {
-                    return (parsed, null);
+                    return (parsed, null, totalIn, totalOut);
                 }
 
                 lastError = "응답 JSON 스키마 불일치 또는 빈/손상된 note";
             }
             catch (ReviewerUnavailableException error)
             {
-                return (null, error.Message);
+                return (null, error.Message, totalIn, totalOut);
             }
             catch (Exception error)
             {
@@ -204,7 +226,7 @@ public static class OllamaExecutor
             }
         }
 
-        return (null, lastError);
+        return (null, lastError, totalIn, totalOut);
     }
 
     // 레버 변경 note 생성 프롬프트를 만든다.
@@ -227,28 +249,32 @@ public static class OllamaExecutor
             $"답 형식: {{\"metricId\":\"{change.Path}\",\"note\":\"한두 문장 설명\"}}";
     }
 
-    // 튜닝 제안의 제목과 요약을 생성한다. 실패 사유를 함께 반환한다.
-    private static ((string Title, string Summary, List<string> Assumptions)? Result, string? Error) TryGenerateTuningSummary(JsonObject policy, string model, TuningResult tuning, int maxRetries)
+    // 튜닝 제안의 제목과 요약을 생성하고 누적 토큰 수를 함께 반환한다.
+    private static ((string Title, string Summary, List<string> Assumptions)? Result, string? Error, int InputTokens, int OutputTokens) TryGenerateTuningSummary(JsonObject policy, string model, TuningResult tuning, int maxRetries)
     {
         string? lastError = null;
+        var totalIn = 0;
+        var totalOut = 0;
 
         for (var attempt = 1; attempt <= maxRetries; attempt += 1)
         {
             try
             {
-                var raw = CallModel(policy, model, BuildTuningSummaryPrompt(tuning));
+                var (raw, inTok, outTok) = CallModel(policy, model, BuildTuningSummaryPrompt(tuning));
+                totalIn += inTok;
+                totalOut += outTok;
                 var parsed = ParseSummaryResponse(raw);
 
                 if (parsed is not null)
                 {
-                    return (parsed, null);
+                    return (parsed, null, totalIn, totalOut);
                 }
 
                 lastError = "응답 JSON 스키마 불일치 또는 빈/손상된 title·summary";
             }
             catch (ReviewerUnavailableException error)
             {
-                return (null, error.Message);
+                return (null, error.Message, totalIn, totalOut);
             }
             catch (Exception error)
             {
@@ -256,7 +282,7 @@ public static class OllamaExecutor
             }
         }
 
-        return (null, lastError);
+        return (null, lastError, totalIn, totalOut);
     }
 
     // 튜닝 제안 제목/요약 생성 프롬프트를 만든다.
@@ -305,28 +331,32 @@ public static class OllamaExecutor
         return result;
     }
 
-    // 위반 항목 하나에 대한 note를 생성한다. 실패 사유(HTTP 상태·예외 요약)를 함께 반환한다.
-    private static (string? Note, string? Error) TryGenerateNote(JsonObject policy, string model, MetricCheck violation, string? feedback, int maxRetries)
+    // 위반 항목 하나에 대한 note를 생성하고 누적 토큰 수를 함께 반환한다.
+    private static (string? Note, string? Error, int InputTokens, int OutputTokens) TryGenerateNote(JsonObject policy, string model, MetricCheck violation, string? feedback, int maxRetries)
     {
         string? lastError = null;
+        var totalIn = 0;
+        var totalOut = 0;
 
         for (var attempt = 1; attempt <= maxRetries; attempt += 1)
         {
             try
             {
-                var raw = CallModel(policy, model, BuildNotePrompt(violation, feedback));
+                var (raw, inTok, outTok) = CallModel(policy, model, BuildNotePrompt(violation, feedback));
+                totalIn += inTok;
+                totalOut += outTok;
                 var parsed = ParseNoteResponse(raw, violation.MetricId);
 
                 if (parsed is not null)
                 {
-                    return (parsed, null);
+                    return (parsed, null, totalIn, totalOut);
                 }
 
                 lastError = "응답 JSON 스키마 불일치 또는 빈/손상된 note";
             }
             catch (ReviewerUnavailableException error)
             {
-                return (null, error.Message);
+                return (null, error.Message, totalIn, totalOut);
             }
             catch (Exception error)
             {
@@ -334,7 +364,7 @@ public static class OllamaExecutor
             }
         }
 
-        return (null, lastError);
+        return (null, lastError, totalIn, totalOut);
     }
 
     // note 생성 프롬프트를 만든다.
@@ -380,28 +410,32 @@ public static class OllamaExecutor
         return text.Contains('�');
     }
 
-    // 제안 제목과 요약을 생성한다. 실패 사유(HTTP 상태·예외 요약)를 함께 반환한다.
-    private static ((string Title, string Summary, List<string> Assumptions)? Result, string? Error) TryGenerateSummary(JsonObject policy, string model, List<MetricCheck> violations, Dictionary<string, string> notes, int maxRetries)
+    // 제안 제목과 요약을 생성하고 누적 토큰 수를 함께 반환한다.
+    private static ((string Title, string Summary, List<string> Assumptions)? Result, string? Error, int InputTokens, int OutputTokens) TryGenerateSummary(JsonObject policy, string model, List<MetricCheck> violations, Dictionary<string, string> notes, int maxRetries)
     {
         string? lastError = null;
+        var totalIn = 0;
+        var totalOut = 0;
 
         for (var attempt = 1; attempt <= maxRetries; attempt += 1)
         {
             try
             {
-                var raw = CallModel(policy, model, BuildSummaryPrompt(violations, notes));
+                var (raw, inTok, outTok) = CallModel(policy, model, BuildSummaryPrompt(violations, notes));
+                totalIn += inTok;
+                totalOut += outTok;
                 var parsed = ParseSummaryResponse(raw);
 
                 if (parsed is not null)
                 {
-                    return (parsed, null);
+                    return (parsed, null, totalIn, totalOut);
                 }
 
                 lastError = "응답 JSON 스키마 불일치 또는 빈/손상된 title·summary";
             }
             catch (ReviewerUnavailableException error)
             {
-                return (null, error.Message);
+                return (null, error.Message, totalIn, totalOut);
             }
             catch (Exception error)
             {
@@ -409,7 +443,7 @@ public static class OllamaExecutor
             }
         }
 
-        return (null, lastError);
+        return (null, lastError, totalIn, totalOut);
     }
 
     // 제목/요약 생성 프롬프트를 만든다.
@@ -470,8 +504,8 @@ public static class OllamaExecutor
         return Regex.Replace(raw, "<think>.*?</think>", "", RegexOptions.Singleline | RegexOptions.IgnoreCase);
     }
 
-    // Ollama generate API를 호출한다.
-    private static string CallModel(JsonObject policy, string model, string prompt)
+    // Ollama generate API를 호출하고 응답 텍스트와 prompt_eval_count·eval_count를 반환한다.
+    private static (string Response, int InputTokens, int OutputTokens) CallModel(JsonObject policy, string model, string prompt)
     {
         var endpoint = (policy["endpoint"]?.GetValue<string>() ?? "http://127.0.0.1:11434").TrimEnd('/');
         var timeoutSeconds = Math.Max(1, Number(policy["timeoutSeconds"], 90));
@@ -500,7 +534,9 @@ public static class OllamaExecutor
             }
 
             var json = JsonNode.Parse(body)?.AsObject();
-            return json?["response"]?.GetValue<string>() ?? body;
+            var inputTokens = json?["prompt_eval_count"]?.GetValue<int>() ?? 0;
+            var outputTokens = json?["eval_count"]?.GetValue<int>() ?? 0;
+            return (json?["response"]?.GetValue<string>() ?? body, inputTokens, outputTokens);
         }
         catch (TaskCanceledException error)
         {
@@ -532,6 +568,6 @@ public static class OllamaExecutor
     }
 }
 
-public sealed record SelfReviewResult(bool Enabled, bool Passed, string? Error);
+public sealed record SelfReviewResult(bool Enabled, bool Passed, string? Error, int InputTokens = 0, int OutputTokens = 0);
 
-public sealed record ExecutorGenerateResult(bool Unavailable, string Provider, string? Model, Dictionary<string, string> Notes, string Title, string Summary, List<string> Assumptions, long DurationMs, string? Error, bool SelfReviewed, bool SelfReviewPassed);
+public sealed record ExecutorGenerateResult(bool Unavailable, string Provider, string? Model, Dictionary<string, string> Notes, string Title, string Summary, List<string> Assumptions, long DurationMs, string? Error, bool SelfReviewed, bool SelfReviewPassed, int InputTokens = 0, int OutputTokens = 0);

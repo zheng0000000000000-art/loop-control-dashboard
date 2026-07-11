@@ -207,7 +207,7 @@ public sealed class Tier2Approver
         return new ReviewOutcome(false, "reviewer_unavailable", null);
     }
 
-    // 지정한 모델로 실제 검토 요청을 보낸다.
+    // 지정한 모델로 실제 검토 요청을 보내고 prompt_eval_count·eval_count를 ReviewOutcome에 기록한다.
     private ReviewOutcome RequestReviewWithModel(string model, JsonObject meta, string diffText)
     {
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(Options.TimeoutSeconds) };
@@ -228,11 +228,13 @@ public sealed class Tier2Approver
         }
 
         var body = JsonNode.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())!.AsObject();
+        var inputTokens = body["prompt_eval_count"]?.GetValue<int>() ?? 0;
+        var outputTokens = body["eval_count"]?.GetValue<int>() ?? 0;
         var responseText = body["response"]?.GetValue<string>() ?? "";
         var verdict = JsonNode.Parse(ExtractJson(responseText))!.AsObject();
         var approved = string.Equals(verdict["verdict"]?.GetValue<string>(), "approve", StringComparison.OrdinalIgnoreCase);
         var reason = verdict["reason"]?.GetValue<string>() ?? "";
-        return new ReviewOutcome(approved, reason, model);
+        return new ReviewOutcome(approved, reason, model, inputTokens, outputTokens);
     }
 
     // 모델 응답 텍스트에서 첫 JSON 객체만 추출한다.
@@ -376,7 +378,7 @@ public sealed record Tier2ApproverOptions(bool Enabled, int DailyCap, string Pro
 
 public sealed record EligibilityResult(bool Eligible, List<string> Reasons, int ViolationsBefore, int ViolationsAfter);
 
-public sealed record ReviewOutcome(bool Approved, string Reason, string? Model);
+public sealed record ReviewOutcome(bool Approved, string Reason, string? Model, int InputTokens = 0, int OutputTokens = 0);
 
 public sealed class Tier2State
 {

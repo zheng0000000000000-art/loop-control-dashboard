@@ -67,16 +67,18 @@ public static class OllamaReviewer
         };
 
         timer.Stop();
-        return new Tier1ReviewResult(report, LogEntry(proposalId, verdict, provider, attempt.Model, timer.ElapsedMilliseconds, null, attempt.Findings.Count, CountUncertain(attempt.Findings), attempt.TotalAttempts), verdict, null);
+        return new Tier1ReviewResult(report, LogEntry(proposalId, verdict, provider, attempt.Model, timer.ElapsedMilliseconds, null, attempt.Findings.Count, CountUncertain(attempt.Findings), attempt.TotalAttempts, null, attempt.InputTokens, attempt.OutputTokens), verdict, null);
     }
 
-    // 단일 모델로 체크리스트 전체를 실행한다.
+    // 단일 모델로 체크리스트 전체를 실행하고 누적 토큰 수를 집계한다.
     private static ModelReviewAttempt TryReviewWithModel(JsonObject policy, JsonObject proposal, JsonObject measurement, JsonArray checklist, string model)
     {
         var findings = new JsonArray();
         var maxRetries = Math.Max(1, Number(policy["maxRetries"], 1));
         var changes = proposal["changes"]?.AsArray() ?? new JsonArray();
         var totalAttempts = 0;
+        var totalIn = 0;
+        var totalOut = 0;
 
         foreach (var check in checklist.OfType<JsonObject>())
         {
@@ -84,20 +86,22 @@ public static class OllamaReviewer
             {
                 var result = RunSingleCheck(policy, model, check, change, measurement, maxRetries);
                 totalAttempts += result.Attempts;
+                totalIn += result.InputTokens;
+                totalOut += result.OutputTokens;
 
                 if (result.Unavailable)
                 {
-                    return new ModelReviewAttempt(model, true, findings, totalAttempts, result.Error);
+                    return new ModelReviewAttempt(model, true, findings, totalAttempts, result.Error, totalIn, totalOut);
                 }
 
                 findings.Add(result.Finding);
             }
         }
 
-        return new ModelReviewAttempt(model, false, findings, totalAttempts, null);
+        return new ModelReviewAttempt(model, false, findings, totalAttempts, null, totalIn, totalOut);
     }
 
-    // 하나의 체크리스트 항목과 변경 항목을 검토한다.
+    // 하나의 체크리스트 항목과 변경 항목을 검토하고 누적 토큰 수를 함께 반환한다.
     private static SingleCheckResult RunSingleCheck(JsonObject policy, string model, JsonObject check, JsonObject change, JsonObject measurement, int maxRetries)
     {
         var checkId = check["id"]?.GetValue<string>() ?? "unknown-check";
@@ -105,26 +109,30 @@ public static class OllamaReviewer
         var onFail = check["onFail"]?.GetValue<string>() ?? "needs_changes";
         var target = change["path"]?.GetValue<string>() ?? "change";
         string? lastError = null;
+        var totalIn = 0;
+        var totalOut = 0;
 
         for (var attempt = 1; attempt <= maxRetries; attempt += 1)
         {
             try
             {
-                var raw = CallModel(policy, model, BuildPrompt(check, change, measurement));
+                var (raw, inTok, outTok) = CallModel(policy, model, BuildPrompt(check, change, measurement));
+                totalIn += inTok;
+                totalOut += outTok;
                 var parsed = ParseChecklistResponse(raw, checkId);
 
                 if (parsed is not null)
                 {
                     var uncertain = parsed.Confidence != "high";
                     var passed = !uncertain && parsed.Answer == expected;
-                    return new SingleCheckResult(false, null, attempt, Finding(target, checkId, parsed.Answer, expected, parsed.Confidence, parsed.Note, onFail, passed, uncertain, attempt, model));
+                    return new SingleCheckResult(false, null, attempt, Finding(target, checkId, parsed.Answer, expected, parsed.Confidence, parsed.Note, onFail, passed, uncertain, attempt, model), totalIn, totalOut);
                 }
 
                 lastError = "JSON 응답 파싱 실패";
             }
             catch (ReviewerUnavailableException error)
             {
-                return new SingleCheckResult(true, error.Message, attempt, Finding(target, checkId, null, expected, "low", error.Message, onFail, false, true, attempt, model));
+                return new SingleCheckResult(true, error.Message, attempt, Finding(target, checkId, null, expected, "low", error.Message, onFail, false, true, attempt, model), totalIn, totalOut);
             }
             catch (Exception error)
             {
@@ -132,11 +140,11 @@ public static class OllamaReviewer
             }
         }
 
-        return new SingleCheckResult(false, null, maxRetries, Finding(target, checkId, null, expected, "low", lastError ?? "응답을 해석할 수 없다.", onFail, false, true, maxRetries, model));
+        return new SingleCheckResult(false, null, maxRetries, Finding(target, checkId, null, expected, "low", lastError ?? "응답을 해석할 수 없다.", onFail, false, true, maxRetries, model), totalIn, totalOut);
     }
 
-    // Ollama generate API를 호출한다.
-    private static string CallModel(JsonObject policy, string model, string prompt)
+    // Ollama generate API를 호출하고 응답 텍스트와 prompt_eval_count·eval_count를 반환한다.
+    private static (string Response, int InputTokens, int OutputTokens) CallModel(JsonObject policy, string model, string prompt)
     {
         var endpoint = (policy["endpoint"]?.GetValue<string>() ?? "http://localhost:11434").TrimEnd('/');
         var timeoutSeconds = Math.Max(1, Number(policy["timeoutSeconds"], 60));
@@ -165,7 +173,9 @@ public static class OllamaReviewer
             }
 
             var json = JsonNode.Parse(body)?.AsObject();
-            return json?["response"]?.GetValue<string>() ?? body;
+            var inputTokens = json?["prompt_eval_count"]?.GetValue<int>() ?? 0;
+            var outputTokens = json?["eval_count"]?.GetValue<int>() ?? 0;
+            return (json?["response"]?.GetValue<string>() ?? body, inputTokens, outputTokens);
         }
         catch (TaskCanceledException error)
         {
@@ -296,7 +306,7 @@ public static class OllamaReviewer
     }
 
     // 실행 로그 항목을 만든다.
-    private static JsonObject LogEntry(string proposalId, string verdict, string provider, string? model, long durationMs, string? reasonCode, int checkCount, int uncertainCount, int attempts, string? text = null)
+    private static JsonObject LogEntry(string proposalId, string verdict, string provider, string? model, long durationMs, string? reasonCode, int checkCount, int uncertainCount, int attempts, string? text = null, int inputTokens = 0, int outputTokens = 0)
     {
         var parameters = new JsonObject
         {
@@ -321,7 +331,7 @@ public static class OllamaReviewer
             ["params"] = parameters,
             ["level"] = reasonCode is null && verdict == "approved" ? "info" : "warning",
             ["producedBy"] = new JsonObject { ["provider"] = provider, ["model"] = model },
-            ["cost"] = RuntimeCost(),
+            ["cost"] = RuntimeCost(inputTokens, outputTokens),
         };
     }
 
@@ -358,13 +368,13 @@ public static class OllamaReviewer
         };
     }
 
-    // 런타임 비용 0 객체를 만든다.
-    private static JsonObject RuntimeCost()
+    // ollama 응답 토큰을 담은 런타임 비용 객체를 만든다.
+    private static JsonObject RuntimeCost(int inputTokens = 0, int outputTokens = 0)
     {
         return new JsonObject
         {
-            ["inputTokens"] = 0,
-            ["outputTokens"] = 0,
+            ["inputTokens"] = inputTokens,
+            ["outputTokens"] = outputTokens,
             ["estimatedUSD"] = 0,
             ["subscriptionCalls"] = 0,
             ["role"] = "runtime",
@@ -376,14 +386,15 @@ public static class OllamaReviewer
     {
         return node is not null && int.TryParse(node.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? value : fallback;
     }
+
 }
 
 public sealed record Tier1ReviewResult(JsonObject? Report, JsonObject LogEntry, string Verdict, string? ReasonCode);
 
 public sealed record ChecklistAnswer(string CheckId, bool Answer, string Confidence, string Note);
 
-public sealed record ModelReviewAttempt(string Model, bool Unavailable, JsonArray Findings, int TotalAttempts, string? Error);
+public sealed record ModelReviewAttempt(string Model, bool Unavailable, JsonArray Findings, int TotalAttempts, string? Error, int InputTokens = 0, int OutputTokens = 0);
 
-public sealed record SingleCheckResult(bool Unavailable, string? Error, int Attempts, JsonObject Finding);
+public sealed record SingleCheckResult(bool Unavailable, string? Error, int Attempts, JsonObject Finding, int InputTokens = 0, int OutputTokens = 0);
 
 public sealed class ReviewerUnavailableException(string message) : Exception(message);
