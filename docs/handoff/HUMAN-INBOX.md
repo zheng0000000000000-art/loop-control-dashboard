@@ -370,3 +370,12 @@
 - 결과: **`state-transition` 명령이 저장소에서 사라졌다**(worktree·HEAD 양쪽). WORKSTATE의 유일한 writer를 호출할 수 없는 상태가 됐다.
 - 검수자가 `.bak`에서 복원 → build exit 0 → `state-transition` 멱등 호출로 배선 확인 → 커밋했다.
 - **후속 규칙(지시서 작성자용)**: **미커밋 변경이 남아 있는 파일은 다음 지시서의 allowlist에 반드시 포함하거나, 발사 전에 커밋해 트리를 비운다.** 둘 다 안 하면 조율자가 규칙대로 그것을 지운다.
+
+## ★ 게이트 잠김: handoff-integrity가 v9 계약(blockers[])을 모른다 (2026-07-12 23:0x, 검수자)
+
+- **실체**: `server/Harness/HandoffIntegrityCli.cs:232`가 **단수 `blocker`**를 읽는다. `WORKSTATE.json`은 **v9 canonical 복수 `blockers[]`**다(STATE-01이 신설).
+- **오늘 처음 `status=blocked`가 되자** 그 죽은 코드가 발화 → `blocked status requires a blocker field` → **`handoff-integrity` exit 1** → `state-transition`이 post-apply에서 실패(exit 1) → **저장소 게이트 전체가 잠겼다.**
+- **상태는 맞고 하네스가 틀렸다.** WORKSTATE를 왜곡해서 게이트를 통과시키지 않았다(그건 이 저장소가 금지한 행동이다).
+- **조율자에게**: 지금 `handoff-integrity` FAIL은 **하네스 결함이지 상태 손상이 아니다.** 커밋 보류 사유로 삼지 말고, 이 항목을 근거로 override를 판단하라.
+- **수정 주체**: 코덱스(`server/Harness/**`는 ADR-002상 배타 영역). `outputs/launch/CODEX-GATE-02.prompt.txt`에 **0순위**로 넣었다.
+- **사람 판단 필요**: 코덱스가 돌 때까지 게이트가 잠긴 채로 둘 것인가, 아니면 예외적으로 검수자가 하네스를 고칠 것인가(ADR-002 위반 — 권장하지 않는다).
