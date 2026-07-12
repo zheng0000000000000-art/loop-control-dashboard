@@ -987,3 +987,39 @@ claim은 등록되지만 **예약된 파일 목록이 비어 있어** 충돌을 
 ### 자진 신고 (검수자)
 
 - **내가 멱등 구멍을 실증하면서 실제 WORKSTATE에 전이를 적용했다**(`TEST-DI0001-2` 재사용). 사본에서 못 한 이유는 `StateApplierCli`가 여전히 repo root 고정이기 때문이다(D5, `--root`/`--dry-run` 없음). **검수 자체가 상태를 오염시키는 구조다.** 즉시 복구했지만, 이 구조가 남아 있는 한 검수자도 같은 위험을 진다.
+
+## 검수자 2026-07-12 21:3x — 클린화 + ★ 게이트가 전부 green인데 핵심 명령이 사라져 있었다
+
+### 사고: `state-transition` 배선 소실 → 복구
+
+- 조율자가 `server/Cli/CliRouter.cs`를 quarantine(21:17:19). **조율자는 옳았다** — DI-00-01 allowlist 밖 파일이었다.
+- **원인은 나다.** DI-00-01 지시서 allowlist에 `CliRouter.cs`를 넣지 않았다. STATE-01의 배선 변경분이 미커밋으로 트리에 남아 있었는데도.
+- 결과: **WORKSTATE의 유일한 writer를 CLI로 호출할 수 없게 됐다.** worktree·HEAD 양쪽에서 `state-transition` 문자열 0건.
+- `.bak`에서 복원 → build 0 → 멱등 호출(`{"ok":true,"idempotent":true}`, WORKSTATE 무변경) → 커밋.
+
+### ★ 이 사고가 드러낸 것 (오늘 세 번째 같은 병)
+
+**배선이 사라진 상태에서 게이트는 전부 green이었다**: `build` 0 · `gate-clean server` 0 · `di-completion-check POST-COMMIT` **5/5 PASS**.
+**CLI 명령이 사라져도 아무도 모른다.** 게다가 `CliRouter`가 명령을 못 찾으면 `Program.cs`가 **조용히 웹서버를 띄운다** → 프로세스가 종료되지 않는다(내 probe 2개가 실제로 hang했고, 그게 빌드 락까지 만들었다).
+**fail-closed가 아니라 fail-silent다.**
+
+같은 병의 오늘 목록:
+1. `scope-check`가 지시서 제목 때문에 exit 2로 죽어 있었다(검사가 안 돎)
+2. `run-executor.ps1`의 BOM 문제로 `FILE-CLAIMS.paths`가 항상 0이었다(사전 차단이 빈 배열)
+3. **CLI 배선이 사라져도 게이트가 green이다**(← 이번)
+
+**공통점: 검사는 있는데 입력이 없거나, 검사 대상이 사라진 것을 검사하지 않는다.**
+
+### 후속 지시서 7 (신규)
+
+**`cli-contract-check` 하네스**(코덱스): `HarnessRegistry`·`CliRouter`가 배선한 명령 목록을 **계약 파일과 대조**한다. 명령이 사라지면 exit 1. 그리고 **미인식 명령은 웹서버를 띄우지 말고 exit 2로 죽어야 한다**(fail-closed).
+
+### 클린 판정 (하네스로)
+
+`gate-clean server` **0** · `handoff-integrity` **0** · `doc-integrity` **0** · `context-pack-integrity` **0** · `measure dev-pack` **0** · `verify-behavior` **0** · `di-completion-check POST-COMMIT` **PASS**.
+WORKSTATE: `P00 / WP-00 / DI-00-01 / waiting`, `appliedTransitions`(11) == `applier-log`(11).
+**남은 dirty는 `dashboard/data` 런타임과 `outputs/` 스크래치뿐이다**(gate-clean 대상 아님). 증거 파일(transport·jsonl)이 섞여 있어 **삭제하지 않았다.**
+
+### 지시서 작성자 규칙 (내가 어긴 것)
+
+**미커밋 변경이 남아 있는 파일은 다음 지시서의 allowlist에 넣거나, 발사 전에 커밋해 트리를 비운다.** 둘 다 안 하면 조율자가 규칙대로 지운다.

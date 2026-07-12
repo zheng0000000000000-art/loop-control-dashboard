@@ -362,3 +362,11 @@
 - 처리: outputs/quarantine/CliRouter.cs.DI-00-01.20260712-211719.bak, outputs/quarantine/state01-applier.md.DI-00-01.20260712-211719.bak로 원본 보존 후, CliRouter.cs는 git checkout --으로 되돌리고 state01-applier.md(untracked)는 삭제. 되돌린 뒤 build-verify·verify-behavior·measure dev-pack·handoff-integrity·claim-check DI-00-01 전부 재확인 exit0/PASS/MATCH 확인 후 나머지 allowlist 파일만 커밋(0b556a2, 5a6bb07, 9712c0b).
 - **CliRouter.cs 변경 내용은 기능상 필요해 보임**: state-transition 서브커맨드가 없으면 새로 만든 StateApplierCli가 CLI로 호출 불가(죽은 코드). 다만 allowlist 밖이라 조율자가 임의로 승인 불가. **사람 결정 필요**: (가) CliRouter.cs 변경을 승인해 다음 회차에 커밋 반영, 또는 (나) 별도 지시서로 정식 등재 후 재작업.
 - **참고 판단(이견 있으면 조정 요망)**: 같은 배치의 docs/handoff/FILE-CLAIMS.json(claim 해제 기록 추가분)·docs/handoff/WORKSTATE.applier-log.jsonl(StateApplierCli 실행 로그, 신규)도 scope-check상 allowlist 밖으로 잡혔으나, 코드가 아닌 시스템 기계적 부기(전자는 launch wrapper의 claim 해제, 후자는 allowed 파일 StateApplierCli.cs의 자체 실행 로그)로 판단해 문서 레인(doc-integrity exit0 확인)으로 커밋함(9712c0b). CliRouter.cs·state01-applier.md와 달리 실행자가 의도적으로 작성한 콘텐츠가 아니라는 점에서 구분함.
+
+## 결정 필요 아님 / 사고 보고: state-transition 배선이 사라졌다가 복구됨 (2026-07-12 21:3x, 검수자)
+
+- 조율자가 `server/Cli/CliRouter.cs`를 quarantine했다(`outputs/quarantine/CliRouter.cs.DI-00-01.20260712-211719.bak`). **조율자는 규칙대로 행동했다** — 그 파일은 DI-00-01 allowlist 밖이었다.
+- **원인은 검수자다.** DI-00-01 지시서를 쓰면서 `server/Cli/CliRouter.cs`를 allowlist에서 뺐다. STATE-01의 배선 변경분이 **아직 미커밋 상태로 트리에 남아 있다는 것을 알면서도** 넣지 않았다.
+- 결과: **`state-transition` 명령이 저장소에서 사라졌다**(worktree·HEAD 양쪽). WORKSTATE의 유일한 writer를 호출할 수 없는 상태가 됐다.
+- 검수자가 `.bak`에서 복원 → build exit 0 → `state-transition` 멱등 호출로 배선 확인 → 커밋했다.
+- **후속 규칙(지시서 작성자용)**: **미커밋 변경이 남아 있는 파일은 다음 지시서의 allowlist에 반드시 포함하거나, 발사 전에 커밋해 트리를 비운다.** 둘 다 안 하면 조율자가 규칙대로 그것을 지운다.
