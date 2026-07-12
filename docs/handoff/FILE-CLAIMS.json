@@ -274,6 +274,20 @@
                        "expiresAt":  "2026-07-12T19:42:03.2641784+09:00",
                        "status":  "released",
                        "exitCode":  0
+                   },
+                   {
+                       "claimId":  "PROBE-00-31868",
+                       "actor":  "sonnet",
+                       "taskId":  "PROBE-00",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  31868,
+                       "claimedAt":  "2026-07-12T19:05:56.4110599+09:00",
+                       "expiresAt":  "2026-07-12T21:05:56.4110599+09:00",
+                       "status":  "released",
+                       "exitCode":  0
                    }
                ]
 }
