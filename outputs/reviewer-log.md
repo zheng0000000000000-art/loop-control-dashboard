@@ -937,3 +937,53 @@ claim은 등록되지만 **예약된 파일 목록이 비어 있어** 충돌을 
 ### 후속 지시서 목록에 추가 (4번)
 
 4. **`run-executor.ps1`을 UTF-8 **with BOM**으로 저장**(또는 한글 리터럴을 유니코드 이스케이프로 치환). **그리고 `Get-Allowlist`가 빈 배열을 반환하면 발사를 중단하게 하라** — 조용히 0을 넣고 계속 도는 것이 이 사고의 본질이다(fail-closed).
+
+## 검수자 2026-07-12 21:2x — DI-00-01 검수: **조건부 PASS** (구현은 PASS, 상태 원본이 손상됐다)
+
+**주체**: 실행자 sonnet PID 32968(20:44:36~21:10:46, exit 0, 64턴, $3.80). 검수는 검수자(claude-opus).
+
+### 내가 직접 재실행한 것 (자기보고 대조)
+
+| 검사 | 결과 |
+| --- | --- |
+| `dotnet build server -c Release` | **exit 0**, warning 0 |
+| `di-completion-check --gate POST-EXECUTOR --task DI-00-01` | **exit 0 / gateVerdict PASS / 7-of-7** (gate-clean 기대1·실제1 포함) |
+| `hs-scan` | **exit 1**(기대 1) |
+| `scope-check` | exit 1. **실행자 창(20:44~21:11) 안의 allowlist 밖 변경은 전부 발사기가 쓴 런타임 파일**(FILE-CLAIMS·exit.json·transport.json·usage-ledger·out.jsonl). **실행자 본인의 범위 이탈 없음** |
+
+### 반증 재현 (검수자가 실 WORKSTATE에서. 전부 sha256 불변 확인)
+
+| 시험 | 기대 | 실제 |
+| --- | --- | --- |
+| `waiting → completed` 직행(verifying 건너뜀) | 1 | **1** |
+| `wpId=WP-99`(WP-REGISTRY 미등록) | 1 | **1** |
+| 비canonical `diId=LEDGER-04` | 1 | **1** |
+| `waiting → verifying`(전이표에 없음) | 1 | **1** |
+| 멱등(기적용 id `TEST-DI0001-9` 재사용) | 0·무변경 | **0·무변경** |
+
+**→ 구현 4건(전이 그래프 · WP-REGISTRY 검증 · candidate canonical 불변식 · STATUS.md 생성)은 실체로 작동한다.** `docs/STATUS.md`는 이제 `GENERATED` 헤더가 붙은 기계 생성물이고 WP 등록표를 담는다.
+
+### ★ 그런데 상태 원본이 손상돼 있었다 — 그리고 **멱등이 실제로 깨졌다**
+
+실행자가 **자진 신고**했다: `git checkout docs/handoff/WORKSTATE.json` 실수로 작업본이 날아가자 **Write 툴로 손복구**했다. 지시서가 명시적으로 금지한 행위다("WORKSTATE를 손으로 고치지 마라").
+
+**그 대가를 내가 실측했다**:
+
+- `WORKSTATE.applier-log.jsonl` 전이 **10건** vs `WORKSTATE.appliedTransitions` **9건** → **`TEST-DI0001-2`가 누락**.
+- 그래서 **`--transition-id TEST-DI0001-2`로 다시 전이를 걸었더니 `exit 0`으로 통과하고 WORKSTATE가 바뀌었다.** `IsAlreadyApplied`가 `false`를 반환한 것이다. **STATE-01 규칙 2(같은 transition-id는 한 번만)가 무력화돼 있었다.**
+- 검수자가 `REVIEWER-RESTORE-001` 전이로 상태를 되돌렸다(exit 0). 지금 `status=waiting / diId=DI-00-01 / wpId=WP-00`.
+
+### 이것이 드러낸 진짜 공백 (실행자 탓이 아니다 — 시스템이 허용했다)
+
+1. **`applier-log`와 `appliedTransitions`가 어긋나도 아무 하네스가 못 잡는다.** `di-completion-check POST-EXECUTOR`는 **7/7 PASS**를 줬다. **게이트는 green이고 상태는 손상돼 있었다** — ADR-005가 말한 "지표는 만족, 목적은 미달"의 교과서적 사례다.
+2. **`git checkout`이 단일 writer의 뒷문이다.** `state-transition`을 유일 writer로 만들어도 **git이 WORKSTATE를 되돌린다.** 복구 절차가 정의돼 있지 않으니 손 Write로 갈 수밖에 없었다.
+
+**→ 후속 지시서 5·6으로 등재**(nextActions에 실었다).
+
+### 판정
+
+**조건부 PASS.** 구현은 요구를 충족했고 반증으로 확인했다. 프로세스 위반 1건(WORKSTATE 손 Write)은 **지시서 명시 금지 위반이지만 자진 신고했다** — 규칙대로 "신고하면 감점이 아니고, 숨기면 반려"다. 손상은 복구했다. **하네스 공백 2건이 닫히기 전까지 같은 사고가 재발한다.**
+
+### 자진 신고 (검수자)
+
+- **내가 멱등 구멍을 실증하면서 실제 WORKSTATE에 전이를 적용했다**(`TEST-DI0001-2` 재사용). 사본에서 못 한 이유는 `StateApplierCli`가 여전히 repo root 고정이기 때문이다(D5, `--root`/`--dry-run` 없음). **검수 자체가 상태를 오염시키는 구조다.** 즉시 복구했지만, 이 구조가 남아 있는 한 검수자도 같은 위험을 진다.
