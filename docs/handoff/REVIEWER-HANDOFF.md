@@ -139,7 +139,12 @@
 
 1. ~~**STATE-01 검수**~~ → **✅ 완료(PASS). §4-0-B 참조.** 후속 지시서 3건이 여기서 나왔다.
 2. **코덱스 재투입** — `outputs/launch/CODEX-GATE-MANIFEST.prompt.txt`(개정판). 게이트 2개 분리 + `triggeredBy` + `gateVerdict` + `outputs/gates/<task>.gate.json`.
-3. **v9 `DI-00-01~06` 적합성 행렬**(검수자 몫, **미착수**) — PASS/PARTIAL/MISSING/NOT_VERIFIED + 증거 경로. **`HS-GATE-P00.md` 안에 넣는다.** 예측: **`DI-00-06`은 PARTIAL**(Context Receipt·Context Budget·L1~L3 계층 없음).
+3. ~~**v9 `DI-00-01~06` 적합성 행렬**~~ → **✅ 완료.** `docs/verification/phase-gates/CONFORMANCE-P00-DI-00-01~06.md`
+   - **결론: `DI-00-07` 경계 주장은 반증됐다.** PASS는 `DI-00-03` 하나, 나머지 5개 PARTIAL, **가장 이른 미충족 = `DI-00-01`.** (예측했던 `DI-00-06` PARTIAL도 적중)
+   - **핵심**: 우리는 **v9의 DI 시퀀스를 실행한 적이 없다.** `ALIGNMENT-v9 §4`의 **로컬 P0-01~07**을 실행했다. **두 축을 섞은 채 canonical `diId`에 넣어 왔다**(`P0-04`·`LEDGER-04`) — 상태가 계속 어긋난 구조적 원인이다.
+   - **`diId` 택일은 사람 결재**(HUMAN-INBOX 20:1x): (가)`DI-00-01`로 내린다 **← 검수자 권고** / (나)기준 변경 / (다)새 ID.
+   - **`HS-GATE-P00.md`는 아직 만들지 마라** — v9는 `DI-00-07`이 **정확히 한 번** 생성하도록 못박았고, 그 입력인 `HS-REVIEW-P00-R1~R3`가 없다.
+   - **참고: `HS-GATE-P00.md`의 정본 경로는 `docs/verification/phase-gates/`다**(인수인계에 적혀 있던 `docs/plan/`은 v9와 어긋난다).
 4. **Local DI Runner ★v3★ §9 결재**(`docs/plan/LOCAL-DI-RUNNER-DRAFT-v3.md`) — **v2는 SUPERSEDED다. v2로 결재하지 마라.** 2차 외부 검수 9건 반영(D-PROBE 복구 · 무모델 대조군 `ADR-012` · DI-local/전역 gate 분리 · worktree 격리 · preimage 계약 · Receipt 층 분리 · 사실정정).
    - ★ **`LAUNCH-BUDGET` 전제가 틀렸다(검수자 실측)**: "실행자 49k"는 **SMOKE-01의 누적 과금액**이지 컨텍스트가 아니다. 턴별 실측 피크는 **STATE-01 134,528**(131턴 중 124턴이 32K 초과), RESUME-01 23,814. **32K·64K 로컬 모델로는 실제 DI를 Claude Code 루프에서 못 돌린다.** 예산은 **누적 토큰 / 턴별 컨텍스트 상한**을 분리해서 정한다.
 5. **SIM-0 → SIM-1** — **SIM-0(주석 1줄)만으로 Phase 0 완료를 선언하지 마라.** 하네스는 "주석이 있는가"만 본다. `// 이 함수는 필요한 작업을 수행한다`도 green이다. **객관적 oracle이 있는 SIM-1이 있어야 강한 주장이 된다.**

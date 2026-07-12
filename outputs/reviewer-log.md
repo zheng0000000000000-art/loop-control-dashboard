@@ -863,3 +863,31 @@ qwen3:14b는 `ADR-003`은 맞게(기록 파일 단일 기록자), **`ADR-005`는
 
 - **D-PROBE(`ollama launch claude`)가 우리 환경에서 실제로 되는지는 확인하지 않았다.** 외부 검수가 인용한 Ollama 문서도 내가 열어보지 않았다 → v3에 **"미검증"**이라고 적었다. **검증 전까지 D-PROBE를 실행 계획의 전제로 쓰지 마라.**
 - **턴별 컨텍스트는 sonnet 2개 과제만 쟀다**(STATE-01·RESUME-01). SMOKE-01·RULES-01은 `.out.json`에 usage 이벤트가 없어 못 쟀다. **표본 2개다.**
+
+## 검수자 2026-07-12 20:1x — v9 `DI-00-01~06` 적합성 행렬 (미착수였던 것)
+
+**주체**: 검수자(claude-opus). 산출물 `docs/verification/phase-gates/CONFORMANCE-P00-DI-00-01~06.md`.
+
+**결론: `DI-00-07` 경계 주장은 반증됐다.** PASS는 `DI-00-03` 하나, 나머지 5개 PARTIAL, **가장 이른 미충족 = `DI-00-01`.**
+
+| DI | 판정 | 결정적 근거(실체) |
+| --- | --- | --- |
+| DI-00-01 | PARTIAL | **WP 등록표가 저장소에 없다**(WORKSTATE.wpId=WP-00 하나). **역방향 전이 차단 없음** — `StateApplierCli.ValidateRequest`는 enum 소속만 본다. `completed → in_progress`가 통과한다. `docs/STATUS.md`는 2026-07-11자로 낡았고 projection이 생성하지 않는다 |
+| DI-00-02 | PARTIAL | `_template.md`에 **DI 유형별 완료 프로필이 없다** |
+| DI-00-03 | **PASS** | README·index·template + 사례 13 + by-component 12 + by-failure-class 13. 검증 4항 충족 |
+| DI-00-04 | PARTIAL | **`docs/verification/phase-gates/` 디렉터리가 아예 없었다**(이 행렬이 첫 파일). `hs-scan`은 **HS 승격 트리거 탐지**지 게이트 누락 탐지가 아니다(소스 머리 주석) |
+| DI-00-05 | PARTIAL | **`CONTEXT-MANIFEST.json` 없음.** blocker 차단 미구현(필드만 있다) |
+| DI-00-06 | PARTIAL | **예측 적중** — Context Receipt·Context Budget·L1~L3·schema 파일·packs 파일 전부 없음. Context Pack은 지시서 인라인 블록 9건뿐 |
+
+### 이 행렬이 밝힌 가장 중요한 것
+
+**`diId`에 로컬 큐 별칭(`P0-04`·`LEDGER-04`)이 들어가 있던 이유가 구조적이다** — 우리는 **v9의 DI 시퀀스를 실행한 적이 없다.** `ALIGNMENT-v9 §4`가 고른 **로컬 P0-01~07**을 실행했다. **두 축을 섞은 채 canonical 필드에 넣어 왔다.** 그래서 상태가 계속 어긋났다.
+
+**`blockers[]`가 오늘 처음 L0에 실렸다**(전이 `CONFORMANCE-P00-001`). `ProjectionCli:139`가 읽던 그 죽은 경로가 이제 값을 갖는다.
+
+### 자진 신고 (ADR-005)
+
+- **v9의 「금지사항」 절은 대조하지 않았다.** 산출물·검증 체크박스만 봤다 → 금지사항 위반 여부는 **NOT_VERIFIED**.
+- **등가물 인정은 내 판단이다**(`harnesses/` ↔ `server/Harness/`, `GATE-MANIFEST.json` ↔ Harness manifest). 사람이 등가를 인정하지 않으면 **DI-00-04는 더 내려간다.**
+- **`DI-00-03`을 PASS로 줬지만 마지막 1항(verification 템플릿의 실패사례 참조 필수화)은 미충족이다.** 엄격히는 PARTIAL이다.
+- **`phase-gates/` 디렉터리를 내가 만들었다** — 원래 `DI-00-04`의 산출물이다. **선취했다.**
