@@ -13,6 +13,14 @@ internal static class CliRouter
     // Program.cs 濡쒖뺄 ?⑥닔瑜?二쇱엯諛쏅뒗 ?꾩엫??
     internal static TryEscalateDelegate EscalateRefeedback = null!;
 
+    // CliRouter가 직접 처리하는 명령 이름 목록 — 미인식 오류 메시지의 known 목록 원본.
+    private static readonly string[] OwnCommandNames =
+    [
+        "snapshot-behavior", "verify-behavior", "dispatch-executor", "orch-observe",
+        "measure", "simtest", "simtune", "refeedbacktest", "tier2test",
+        "projection", "state-transition",
+    ];
+
     // CLI 紐낅졊??遺꾧린?쒕떎. ?대떦 紐낅졊???놁쑝硫?null??諛섑솚?????쒕쾭濡?吏꾪뻾?쒕떎.
     internal static int? TryRun(string[] args)
     {
@@ -55,6 +63,18 @@ internal static class CliRouter
 
         var harness = HarnessRegistry.TryRun(args);
         if (harness is not null) return harness;
+
+        // args가 있는데 어느 라우터도 인식하지 못하면 fail-closed: stderr JSON + exit 2.
+        if (args.Length > 0)
+        {
+            var known = OwnCommandNames.Concat(HarnessRegistry.RegisteredNames).ToArray();
+            Console.Error.WriteLine(new JsonObject
+            {
+                ["error"] = $"unknown command: {args[0]}",
+                ["known"] = new JsonArray(known.Select(k => (JsonNode?)k).ToArray()),
+            }.ToJsonString());
+            return 2;
+        }
 
         return null;
     }

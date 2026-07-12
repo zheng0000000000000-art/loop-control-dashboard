@@ -41,7 +41,9 @@ internal static class StateApplierCli
         string ExpectedSha256,
         string RequestPath,
         string? VerdictPath,
-        string? HumanDecisionPath);
+        string? HumanDecisionPath,
+        string? Root,    // 지정 시 이 경로를 저장소 루트로 사용한다.
+        bool DryRun);    // true면 검증만 하고 아무것도 쓰지 않는다.
 
     // state-transition 진입점. exit 0=성공, 1=검증 실패, 2=치명 오류.
     internal static int Run(string[] args)
@@ -55,7 +57,7 @@ internal static class StateApplierCli
 
         try
         {
-            var root = GitTools.FindRepoRoot();
+            var root = string.IsNullOrWhiteSpace(opts.Root) ? GitTools.FindRepoRoot() : opts.Root;
             var workstatePath = Path.Combine(root, "docs", "handoff", "WORKSTATE.json");
             if (!File.Exists(workstatePath))
             {
@@ -83,7 +85,7 @@ internal static class StateApplierCli
                 return ReportIdempotent(opts.TransitionId);
 
             var logPath = Path.Combine(root, "docs", "handoff", "WORKSTATE.applier-log.jsonl");
-            return ApplyAndVerify(workstatePath, logPath, workstate, opts, root);
+            return ApplyAndVerify(workstatePath, logPath, workstate, opts, GitTools.FindRepoRoot());
         }
         catch (Exception ex)
         {
@@ -92,62 +94,40 @@ internal static class StateApplierCli
         }
     }
 
-    // request 검증, candidate 구성, atomic replace, projection, handoff-integrity를 순서대로 실행한다.
+    // request 검증, candidate 구성, (dry-run이 아니면) atomic replace·post-apply를 순서대로 실행한다.
     private static int ApplyAndVerify(
         string workstatePath, string logPath, JsonObject workstate,
-        ApplierOptions opts, string root)
+        ApplierOptions opts, string actualRoot)
     {
         if (!File.Exists(opts.RequestPath))
         {
             WriteError($"request file not found: {opts.RequestPath}");
             return 2;
         }
-
         var request = JsonNode.Parse(File.ReadAllText(opts.RequestPath))?.AsObject();
-        if (request is null)
-        {
-            WriteError("request JSON은 JSON 객체여야 한다");
-            return 2;
-        }
+        if (request is null) { WriteError("request JSON은 JSON 객체여야 한다"); return 2; }
 
-        // Step 3-4: 입력 검증
-        var validErr = ValidateRequest(request, opts, workstate, root);
+        var validErr = ValidateRequest(request, opts, workstate, actualRoot);
         if (validErr is not null)
             return Fail(1, opts.TransitionId, "validation-failed", validErr);
 
-        // Step 5-6: candidate 구성 후 임시 파일에 쓴다.
         var candidate = BuildCandidate(workstate, request, opts);
+        if (opts.DryRun) return ApplyDryRun(workstate, candidate, opts, actualRoot);
+
         var tmpPath = workstatePath + ".stateapplier.tmp";
         File.WriteAllText(tmpPath, candidate.ToJsonString(WriteOptions), new UTF8Encoding(false));
 
-        // Step 7: candidate 재검증 (임시 파일에서 재로드).
         var candidateCheck = JsonNode.Parse(File.ReadAllText(tmpPath))?.AsObject();
-        var recheckErr = candidateCheck is null ? "임시 파일 파싱 실패" : ValidateCandidate(candidateCheck, root);
-        if (recheckErr is not null)
-        {
-            File.Delete(tmpPath);
-            return Fail(1, opts.TransitionId, "candidate-invalid", recheckErr);
-        }
+        var recheckErr = candidateCheck is null ? "임시 파일 파싱 실패" : ValidateCandidate(candidateCheck, actualRoot);
+        if (recheckErr is not null) { File.Delete(tmpPath); return Fail(1, opts.TransitionId, "candidate-invalid", recheckErr); }
 
-        // Step 8: atomic replace — 이 시점부터 WORKSTATE가 새 상태다.
         File.Move(tmpPath, workstatePath, overwrite: true);
 
-        // Step 9: projection 실행 (RUNTIME-INDEX.md, HANDOFF.md 재생성).
-        var projExit = ProjectionCli.Run(["projection"]);
-        if (projExit != 0)
+        // 커스텀 루트에서는 projection·handoff-integrity를 건너뛴다(GitTools로 실 저장소를 찾으므로 사본에 의미 없음).
+        if (string.IsNullOrWhiteSpace(opts.Root))
         {
-            AppendApplierLog(logPath, opts.TransitionId, "projection-failed", projExit);
-            Console.Error.WriteLine(PostApplyError(opts.TransitionId, "projection-failed", projExit, true, false));
-            return 1;
-        }
-
-        // Step 10: handoff-integrity 실행.
-        var integrityExit = HandoffIntegrityCli.Run(["handoff-integrity"]);
-        if (integrityExit != 0)
-        {
-            AppendApplierLog(logPath, opts.TransitionId, $"handoff-integrity-failed exit={integrityExit}", integrityExit);
-            Console.Error.WriteLine(PostApplyError(opts.TransitionId, $"handoff-integrity exit={integrityExit}", integrityExit, true, true));
-            return 1;
+            var postExit = RunPostApply(logPath, opts);
+            if (postExit != 0) return postExit;
         }
 
         var newSha = ComputeSha256(File.ReadAllText(workstatePath, new UTF8Encoding(false)));
@@ -160,6 +140,42 @@ internal static class StateApplierCli
             ["newStatus"] = candidate["status"]?.ToString(),
             ["workstateSha256"] = newSha,
         }.ToJsonString(WriteOptions));
+        return 0;
+    }
+
+    // dry-run 모드: candidate를 검증하고 결과를 출력하지만 아무것도 쓰지 않는다.
+    private static int ApplyDryRun(JsonObject workstate, JsonObject candidate, ApplierOptions opts, string actualRoot)
+    {
+        var err = ValidateCandidate(candidate, actualRoot);
+        if (err is not null) return Fail(1, opts.TransitionId, "candidate-invalid", err);
+        Console.WriteLine(new JsonObject
+        {
+            ["ok"] = true,
+            ["dryRun"] = true,
+            ["transitionId"] = opts.TransitionId,
+            ["previousStatus"] = workstate["status"]?.ToString(),
+            ["newStatus"] = candidate["status"]?.ToString(),
+        }.ToJsonString(WriteOptions));
+        return 0;
+    }
+
+    // projection과 handoff-integrity를 실행하고 실패 시 applier-log에 기록하고 exit code를 반환한다.
+    private static int RunPostApply(string logPath, ApplierOptions opts)
+    {
+        var projExit = ProjectionCli.Run(["projection"]);
+        if (projExit != 0)
+        {
+            AppendApplierLog(logPath, opts.TransitionId, "projection-failed", projExit);
+            Console.Error.WriteLine(PostApplyError(opts.TransitionId, "projection-failed", projExit, true, false));
+            return 1;
+        }
+        var intExit = HandoffIntegrityCli.Run(["handoff-integrity"]);
+        if (intExit != 0)
+        {
+            AppendApplierLog(logPath, opts.TransitionId, $"handoff-integrity-failed exit={intExit}", intExit);
+            Console.Error.WriteLine(PostApplyError(opts.TransitionId, $"handoff-integrity exit={intExit}", intExit, true, true));
+            return 1;
+        }
         return 0;
     }
 
@@ -338,13 +354,23 @@ internal static class StateApplierCli
     }
 
     // CLI 인수를 파싱한다. 필수 인수(transition-id·expected-workstate-sha256·request)가 없으면 null 반환.
+    // --root <경로>: 저장소 루트를 지정한다(사본 시험용). --dry-run: 검증만 하고 아무것도 쓰지 않는다.
     private static ApplierOptions? ParseArgs(string[] args)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        for (var i = 1; i < args.Length - 1; i++)
+        var dryRun = false;
+        for (var i = 1; i < args.Length; i++)
         {
-            if (args[i].StartsWith("--", StringComparison.Ordinal))
+            if (string.Equals(args[i], "--dry-run", StringComparison.OrdinalIgnoreCase))
+            {
+                dryRun = true;
+                continue;
+            }
+            if (args[i].StartsWith("--", StringComparison.Ordinal) && i + 1 < args.Length)
+            {
                 map[args[i][2..]] = args[i + 1];
+                i++;
+            }
         }
 
         if (!map.TryGetValue("transition-id", out var tid) || string.IsNullOrWhiteSpace(tid)) return null;
@@ -353,7 +379,8 @@ internal static class StateApplierCli
 
         map.TryGetValue("verdict", out var verdict);
         map.TryGetValue("human-decision", out var humanDec);
-        return new ApplierOptions(tid, sha, req, verdict, humanDec);
+        map.TryGetValue("root", out var root);
+        return new ApplierOptions(tid, sha, req, verdict, humanDec, root, dryRun);
     }
 
     // appliedTransitions에서 transition-id 중복 여부를 확인한다.
