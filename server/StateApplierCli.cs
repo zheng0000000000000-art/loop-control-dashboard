@@ -179,7 +179,7 @@ internal static class StateApplierCli
         return 0;
     }
 
-    // request JSON의 canonical ID 패턴, status enum, 사전조건(blocked/nextActions/verdict/human-decision)을 검증한다.
+    // request JSON의 canonical ID 패턴, status enum, DI 경계·전이 그래프·verdict·human-decision을 검증한다.
     private static string? ValidateRequest(JsonObject request, ApplierOptions opts, JsonObject current, string root)
     {
         if (request["phaseId"] is JsonNode ph && !Regex.IsMatch(ph.ToString(), @"^P\d{2,}$"))
@@ -195,43 +195,31 @@ internal static class StateApplierCli
         if (!ValidStatuses.Contains(newStatus))
             return $"status '{newStatus}'는 허용 목록(waiting|in_progress|verifying|completed|blocked)에 없습니다";
 
-        // Rule NEW: 허용 전이 그래프 검사 — 역방향 및 비허용 전이를 exit 1로 차단.
         var currentStatus = current["status"]?.ToString() ?? "";
-        if (!string.Equals(currentStatus, newStatus, StringComparison.OrdinalIgnoreCase))
-        {
-            if (string.Equals(currentStatus, "completed", StringComparison.OrdinalIgnoreCase))
-            {
-                // completed는 terminal — 사람 결재(human-decision approved:true) 없으면 차단.
-                var completedErr = ValidateHumanDecision(opts.HumanDecisionPath,
-                    $"completed 상태 전이({currentStatus} → {newStatus})");
-                if (completedErr is not null) return completedErr;
-            }
-            else if (AllowedTransitions.TryGetValue(currentStatus, out var allowed) && !allowed.Contains(newStatus))
-            {
-                var allowedStr = allowed.Count > 0 ? string.Join(", ", allowed) : "없음(terminal)";
-                return $"status 전이 {currentStatus} → {newStatus}는 허용되지 않습니다(허용: {allowedStr})";
-            }
-        }
+        var currentDiId = current["diId"]?.ToString() ?? "";
+        var requestDiId = request["diId"]?.ToString();
+
+        var transErr = ValidateStatusTransition(currentStatus, newStatus, currentDiId, requestDiId,
+            opts.HumanDecisionPath);
+        if (transErr is not null) return transErr;
 
         var newBlockers = request["blockers"] as JsonArray ?? current["blockers"] as JsonArray ?? new JsonArray();
         var newNext = request["nextActions"] as JsonArray ?? current["nextActions"] as JsonArray ?? new JsonArray();
 
-        // Rule 4: blocked → blockers 비어있으면 실패.
         if (string.Equals(newStatus, "blocked", StringComparison.OrdinalIgnoreCase) && newBlockers.Count == 0)
             return "status=blocked인데 blockers가 비어있습니다";
 
-        // Rule 5: non-terminal → nextActions 비어있으면 실패 (독립 재개 FAIL 방어선).
         if (NextActionsRequired.Contains(newStatus) && newNext.Count == 0)
             return $"status={newStatus}인데 nextActions가 비어있습니다 — 독립 재개가 실패하는 지점입니다";
 
-        // Rule 6: completed → 독립 검증 PASS 필수.
         if (string.Equals(newStatus, "completed", StringComparison.OrdinalIgnoreCase))
         {
-            var verdictErr = ValidateVerdict(opts.VerdictPath);
+            var targetDiId = requestDiId ?? currentDiId;
+            var wsUpdatedAt = current["updatedAt"]?.ToString() ?? "";
+            var verdictErr = ValidateVerdict(opts.VerdictPath, targetDiId, wsUpdatedAt);
             if (verdictErr is not null) return verdictErr;
         }
 
-        // Rule 7: Phase gate → 사람 결정 필수.
         var curPhase = current["phaseId"]?.ToString();
         var newPhase = request["phaseId"]?.ToString();
         if (newPhase is not null && !string.Equals(newPhase, curPhase, StringComparison.OrdinalIgnoreCase))
@@ -243,18 +231,92 @@ internal static class StateApplierCli
         return null;
     }
 
-    // verdict 파일이 verificationPassed=true, exitCode=0인지 검증한다.
-    private static string? ValidateVerdict(string? verdictPath)
+    // DI 경계와 전이 그래프를 검사한다. 새 DI 착수는 새 사이클로 취급해 전이 그래프를 적용하지 않는다.
+    private static string? ValidateStatusTransition(
+        string currentStatus, string newStatus, string currentDiId, string? requestDiId,
+        string? humanDecisionPath)
+    {
+        var isNewDi = requestDiId is not null &&
+                      !string.Equals(requestDiId, currentDiId, StringComparison.OrdinalIgnoreCase);
+
+        if (isNewDi)
+        {
+            // 미완 DI를 버리고 넘어갈 수 없다 — 현재 DI가 completed여야 한다.
+            if (!string.Equals(currentStatus, "completed", StringComparison.OrdinalIgnoreCase))
+                return $"새 DI 착수({currentDiId} → {requestDiId})는 현재 DI가 completed여야 합니다(현재: {currentStatus})";
+
+            // 새 DI 착수 시 status는 waiting 또는 in_progress만 허용한다.
+            if (!string.Equals(newStatus, "waiting", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(newStatus, "in_progress", StringComparison.OrdinalIgnoreCase))
+                return $"새 DI 착수 시 status는 waiting 또는 in_progress만 허용합니다(요청: {newStatus})";
+
+            return null;
+        }
+
+        // 같은 DI: 기존 허용 전이 그래프 적용 — completed는 terminal이다.
+        if (string.Equals(currentStatus, newStatus, StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        if (string.Equals(currentStatus, "completed", StringComparison.OrdinalIgnoreCase))
+            return ValidateHumanDecision(humanDecisionPath, $"completed 상태 전이({currentStatus} → {newStatus})");
+
+        if (AllowedTransitions.TryGetValue(currentStatus, out var allowed) && !allowed.Contains(newStatus))
+        {
+            var allowedStr = allowed.Count > 0 ? string.Join(", ", allowed) : "없음(terminal)";
+            return $"status 전이 {currentStatus} → {newStatus}는 허용되지 않습니다(허용: {allowedStr})";
+        }
+
+        return null;
+    }
+
+    // outputs/gates/<taskId>.gate.json 형식·gateVerdict·failureCount·taskId 일치·stale 여부를 검증한다.
+    // targetDiId: completed 전이 대상 diId. gate.taskId와 일치해야 한다.
+    // 대응 규칙: gate.taskId == 요청의 diId(있으면) 또는 현재 WORKSTATE.diId.
+    // stale 판정: gate.createdAt 날짜 < WORKSTATE.updatedAt 날짜이면 오래된 증거로 거부한다.
+    private static string? ValidateVerdict(string? verdictPath, string targetDiId, string workstateUpdatedAt)
     {
         if (string.IsNullOrWhiteSpace(verdictPath))
             return "status=completed 전이에는 --verdict 파일이 필요합니다";
+
+        // 경로 형식: outputs/gates/<taskId>.gate.json이어야 한다(다른 경로 거부).
+        var normalized = verdictPath.Replace('\\', '/');
+        var fileName = Path.GetFileName(normalized);
+        if (!fileName.EndsWith(".gate.json", StringComparison.OrdinalIgnoreCase))
+            return $"verdict 경로는 outputs/gates/<taskId>.gate.json 형식이어야 합니다(받음: {verdictPath})";
+
+        var dirPart = Path.GetDirectoryName(normalized)?.Replace('\\', '/') ?? "";
+        if (!dirPart.EndsWith("outputs/gates", StringComparison.OrdinalIgnoreCase))
+            return $"verdict 경로는 outputs/gates/<taskId>.gate.json 형식이어야 합니다(받음: {verdictPath})";
+
         if (!File.Exists(verdictPath))
             return $"verdict file not found: {verdictPath}";
-        var v = JsonNode.Parse(File.ReadAllText(verdictPath))?.AsObject();
-        if (v is null) return "verdict JSON이 유효하지 않습니다";
-        var passed = v["verificationPassed"]?.GetValue<bool>() ?? false;
-        var exitCode = v["exitCode"]?.GetValue<int>() ?? -1;
-        return (!passed || exitCode != 0) ? $"verdict: verificationPassed={passed}, exitCode={exitCode} — PASS가 아닙니다" : null;
+
+        var gateJson = JsonNode.Parse(File.ReadAllText(verdictPath))?.AsObject();
+        if (gateJson is null) return "gate JSON이 유효하지 않습니다";
+
+        var gateVerdict = gateJson["gateVerdict"]?.ToString();
+        if (!string.Equals(gateVerdict, "PASS", StringComparison.OrdinalIgnoreCase))
+            return $"gate verdict가 PASS가 아닙니다(gateVerdict={gateVerdict ?? "null"})";
+
+        var failureCount = gateJson["failureCount"]?.GetValue<int>() ?? -1;
+        if (failureCount != 0)
+            return $"gate failureCount가 0이 아닙니다(failureCount={failureCount})";
+
+        var gateTaskId = gateJson["taskId"]?.ToString();
+        if (!string.Equals(gateTaskId, targetDiId, StringComparison.OrdinalIgnoreCase))
+            return $"gate taskId({gateTaskId ?? "null"})가 전이 대상 DI({targetDiId})와 일치하지 않습니다";
+
+        // stale 검사: gate 생성일이 WORKSTATE updatedAt 날짜보다 이전이면 오래된 증거다.
+        var createdAtStr = gateJson["createdAt"]?.ToString();
+        if (createdAtStr is not null &&
+            DateTimeOffset.TryParse(createdAtStr, out var createdAt) &&
+            DateTime.TryParse(workstateUpdatedAt, out var wsUpdated) &&
+            createdAt.Date < wsUpdated.Date)
+        {
+            return $"gate 증거가 WORKSTATE updatedAt({workstateUpdatedAt})보다 오래됐습니다(gate createdAt={createdAt:yyyy-MM-dd})";
+        }
+
+        return null;
     }
 
     // human-decision 파일이 approved=true인지 검증한다. context는 오류 메시지에 포함된다.
