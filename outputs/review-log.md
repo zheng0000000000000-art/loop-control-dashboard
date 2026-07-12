@@ -2254,3 +2254,17 @@
 - QUOTA_SIGNAL: 미감지. exit signal: 신규 processed:false 없음.
 
 <run-summary>GUARD-01 실행자(PID 4396)가 21:30:56부터 계속 진행 중(18분 경과, 미종료) - 이전 회차(21:43) 대비 상태 변화 없음. 이전 회차 미커밋분을 발견해 별도 커밋(d83501c)으로 먼저 반영. server 코드는 활성 클레임 중이라 커밋 보류. push 대기 30건, QUOTA_SIGNAL 미감지.</run-summary>
+
+## 조율자 2026-07-12 21:56 회차
+
+- GUARD-01 exit sentinel(outputs/launch/GUARD-01.exit.json, exitCode 0, processed:false) 발견 → 검수 수행.
+- 하네스 전부 독립 재실행: build-verify exit0(경고0/오류0), verify-behavior true, measure dev-pack violationCount0, handoff-integrity exit0(failures 0), claim-check GUARD-01 MATCH, di-completion-check gateVerdict PASS(checkCount7/failureCount0). scope-check exit1(FAIL)이나 outOfScopeFiles 106개는 전부 GUARD-01과 무관한 기존 dirty 파일(dashboard/data/*, outputs/* 로그 등) — GUARD-01 자체 파일 5개(CliRouter.cs·StateApplierCli.cs·run-executor.ps1·RECOVERY.md·guard01-failclosed.md)는 전부 allowlist 내 확인.
+- git diff 직접 대조: CliRouter.cs(미인식 명령 exit2 fail-closed), StateApplierCli.cs(--root/--dry-run, ApplyDryRun/RunPostApply 분리, ParseArgs 경계버그 수정) — 자기보고와 실체 일치.
+- 커밋 2건(로컬만, push 안 함): server 코드 레인(d81a40b: CliRouter.cs/StateApplierCli.cs), 문서 레인(b86b8bc: RECOVERY.md 신설·guard01-failclosed.md 신설·FILE-CLAIMS.json 갱신).
+- outputs/launch/run-executor.ps1(변경됨, BOM+guard 추가)은 커밋 레인 표상 outputs/launch/*는 "커밋 안 함(런타임)"이라 미커밋 — GUARD-01 자체 allowlist엔 있었으나 레인 규칙 우선 적용.
+- GUARD-01.exit.json processed: false → true로 갱신(재처리 방지).
+- sonnet-active.pid(30728)는 프로세스 죽어있음(Get-Process/Get-CimInstance 둘 다 미검출) 확인 — 현재 활성 실행자 없음.
+- gate-clean server: 커밋 후 재실행 exit0/PASS(contentDirtyCount 0).
+- push 대기: 32건(기존 30건 + 이번 2건) — 사람 배치 승인 필요.
+- 발사: 하지 않음(정책). SONNET-QUEUE 대기 항목 FEAT-01(4번)·FIX-04(15번, ACTOR-01 완료 후 순차 발사 명시) 둘 다 대기 상태 — 어느 것이 다음인지는 사람/검수자 판단 필요, 조율자가 임의 발사하지 않음.
+- QUOTA_SIGNAL 미감지.
