@@ -3,9 +3,9 @@
   "phaseId": "P00",
   "wpId": "WP-00",
   "diId": "DI-00-04",
-  "status": "waiting",
+  "status": "verifying",
   "blockers": [],
-  "updatedBy": "reviewer",
+  "updatedBy": "sonnet-DI-00-04",
   "updatedAt": "2026-07-12",
   "history": [
     {
@@ -298,10 +298,10 @@
     "verifyBehaviorExit": 0
   },
   "nextActions": [
-    "DI-00-04 착수(v9): phase-gates/ 구조 + phase-gates/_template.md + HS-REVIEW-P00-R1 + Skill manifest 계약 + HS-GATE 누락 탐지 검사. 적합성 행렬 §2 DI-00-04 칸이 요구 목록이다",
-    "GUARD-02 검수 PASS(검수자 22:4x): 반증 9개 전부 사본에서 재현 — DI 경계 전이 · 손으로 쓴 verdict 거부(내가 통과시켰던 그 파일) · gate.json(gateVerdict=PASS)만 수용 · 완료 되돌림과 Phase 경계는 여전히 사람 결재",
-    "코덱스 대기: CODEX-GATE-02(큐 C-01) — handoff-integrity 멱등 대조 + di-completion-check CLI 계약 + GATE-MANIFEST 등재 + claim-check --untracked. 코덱스가 19:18 이후 침묵(원인 주체 미상)",
-    "사람 결재(HUMAN-INBOX): ADR-010 상태 · ADR-012 · LOCAL-DI-RUNNER-v3 §9 · LAUNCH-BUDGET(턴별 피크 134,528) · push 43건+"
+    "검수자: docs/verification/di0004-hs-gate-base.md 확인 → _template.md·HS-REVIEW-P00-R1·SKILL-MANIFEST 3파일 검수",
+    "코덱스 대기: CODEX-GATE-02(큐 C-01) — handoff-integrity 멱등 대조 + di-completion-check CLI 계약 + GATE-MANIFEST 등재 + claim-check --untracked",
+    "사람 결재(HUMAN-INBOX): ADR-010 상태 · ADR-012 · LOCAL-DI-RUNNER-v3 §9 · LAUNCH-BUDGET(턴별 피크 134,528) · push 43건+",
+    "H-4(HS-GATE 누락 탐지) 즉시 제작 필수 — 예산 예외 적용 사람 결재 필요. S-2(prepare-model-handoff) 즉시 제작 필수"
   ],
   "notes": "canonical 좌표는 v9 축이다(ADR-013). 완료: DI-00-01(작업추적) · DI-00-02(검증템플릿) · DI-00-03(실패위키). 가장 이른 미충족 = DI-00-04. 로컬 큐 별칭(P0-01~07 · LEDGER-01~04 · STATE-01 · GUARD-01/02 · TRANSPORT-01 · RULES-01 · DIET-01)은 이 필드에만 남긴다.",
   "appliedTransitions": [
@@ -368,6 +368,14 @@
     {
       "id": "DI-BOUNDARY-01-TO-04",
       "appliedAt": "2026-07-12T13:35:27.1772861Z"
+    },
+    {
+      "id": "DI-00-04-INPROG-001",
+      "appliedAt": "2026-07-12T13:55:33.0899984Z"
+    },
+    {
+      "id": "DI-00-04-VERIFY-001",
+      "appliedAt": "2026-07-12T13:55:51.6551261Z"
     }
   ]
 }

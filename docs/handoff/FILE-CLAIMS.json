@@ -386,6 +386,28 @@
                        "expiresAt":  "2026-07-13T00:12:27.4104311+09:00",
                        "status":  "released",
                        "exitCode":  0
+                   },
+                   {
+                       "claimId":  "DI-00-04-15124",
+                       "actor":  "sonnet",
+                       "taskId":  "DI-00-04",
+                       "paths":  [
+                                     "docs/verification/phase-gates/_template.md",
+                                     "docs/verification/phase-gates/HS-REVIEW-P00-R1.md",
+                                     "docs/handoff/SKILL-MANIFEST.md",
+                                     "docs/verification/di0004-hs-gate-base.md",
+                                     "docs/handoff/queue/directive-DI-00-04-hs-gate-base.md",
+                                     "docs/handoff/WORKSTATE.json",
+                                     "docs/context/RUNTIME-INDEX.md",
+                                     "docs/handoff/HANDOFF.md",
+                                     "docs/STATUS.md"
+                                 ],
+                       "allowlistSource":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\docs\\handoff\\queue\\directive-DI-00-04-hs-gate-base.md",
+                       "pid":  15124,
+                       "claimedAt":  "2026-07-12T22:42:20.4078384+09:00",
+                       "expiresAt":  "2026-07-13T00:42:20.4078384+09:00",
+                       "status":  "released",
+                       "exitCode":  0
                    }
                ]
 }
