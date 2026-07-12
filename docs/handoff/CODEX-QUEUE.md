@@ -137,3 +137,12 @@
   2. `quota-windows.json`을 갱신한다(관측한 사실만. 추측 금지).
   3. **`resetAt`까지 20분 미만이면 `blockers`에 `quota-window-closing`을 넣는다** — 무거운 발사는 그 창에서 하지 않는다. **단, 발사를 막지는 마라(하네스는 발사하지 않고 발사를 금지하지도 않는다). 판정만 출력하고, 발사 게이트는 사람·검수자가 본다.**
 - 근거: 한도로 죽은 실행자가 고아 코드를 남겼고(FAIL 계열), 검수자가 그걸 "지시서 이탈"로 오귀인했다. **`docs/handoff/QUOTA-POLICY.md` 참조.**
+
+## 하네스 확장 — 게이트가 "사라진 것"을 보게 (2026-07-12 21:5x, 검수자 등재)
+
+| 순번 | 작업 | 근거 | 영역 | 상태 |
+| --- | --- | --- | --- | --- |
+| C-01 | **CODEX-GATE-02** — ①`handoff-integrity`에 멱등 대조(appliedTransitions ↔ applier-log) ②`di-completion-check`에 CLI 계약 대조(+`CLI-CONTRACT.json` 신설) ③`GATE-MANIFEST`에 scope-check·claim-check 등재 ④`claim-check`에 `--untracked` | `docs/handoff/queue/directive-CODEX-GATE-02-cli-contract.md` | server/Harness/ + docs/handoff/ | **대기 — `GUARD-01` 커밋 후 착수** |
+
+> **왜 지금인가**: 오늘 게이트가 **네 번** 거짓말했다. `state-transition` 배선이 통째로 사라졌는데 `di-completion-check POST-COMMIT`이 **5/5 PASS**를 줬고, WORKSTATE의 멱등이 깨졌는데 `handoff-integrity`가 **exit 0**을 줬다. **전부 기존 하네스 확장이다 — 신규 하네스 예산을 쓰지 않는다.**
+> **`server/Cli/**`·`server/Program.cs` 무접촉** — `GUARD-01`(실행자)이 같은 시간에 그 파일들을 고치고 있다.
