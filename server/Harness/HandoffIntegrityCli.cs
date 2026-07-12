@@ -226,15 +226,16 @@ internal static class HandoffIntegrityCli
             warnings.Add(Warning(diId, "queue-mention-missing", "diId is not mentioned in CODEX or SONNET queue"));
     }
 
-    // Checks blocker fields for contradictory status.
+    // blocked 상태에서 blockers[] 배열이 비어 있거나 없으면 failure, completed 상태에서 blockers[]가 남아 있으면 stale failure.
     private static void CheckBlockerConsistency(JsonObject workstate, string status, JsonArray failures)
     {
-        var blocker = ReadString(workstate, "blocker");
+        var blockers = workstate["blockers"] as JsonArray;
+        var hasBlockers = blockers is not null && blockers.Count > 0;
         var blocked = status.Contains("block", StringComparison.OrdinalIgnoreCase);
-        if (blocked && string.IsNullOrWhiteSpace(blocker))
-            failures.Add(Failure("blocker", "missing", "blocked status requires a blocker field"));
-        if (!blocked && !string.IsNullOrWhiteSpace(blocker) && DoneStatuses.Contains(status))
-            failures.Add(Failure("blocker", "stale", "done status must not carry an active blocker"));
+        if (blocked && !hasBlockers)
+            failures.Add(Failure("blockers", "missing", "blocked status requires a non-empty blockers array"));
+        if (!blocked && hasBlockers && DoneStatuses.Contains(status))
+            failures.Add(Failure("blockers", "stale", "done status must not carry a non-empty blockers array"));
     }
 
     // 큐 행이 아직 열린 상태를 뜻하는지 판정한다.
