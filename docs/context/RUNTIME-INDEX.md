@@ -6,8 +6,8 @@
 | --- | --- |
 | phaseId | P00 |
 | wpId | WP-00 |
-| diId | DI-00-01 |
-| status | completed |
+| diId | DI-00-04 |
+| status | waiting |
 | blockers | — |
-| nextActions | 검수자 반증 재현 완료(reviewer-log 21:2x) — verdict 첨부 후 completed |
+| nextActions | DI-00-04 착수(v9): phase-gates/ 구조 + phase-gates/_template.md + HS-REVIEW-P00-R1 + Skill manifest 계약 + HS-GATE 누락 탐지 검사. 적합성 행렬 §2 DI-00-04 칸이 요구 목록이다; GUARD-02 검수 PASS(검수자 22:4x): 반증 9개 전부 사본에서 재현 — DI 경계 전이 · 손으로 쓴 verdict 거부(내가 통과시켰던 그 파일) · gate.json(gateVerdict=PASS)만 수용 · 완료 되돌림과 Phase 경계는 여전히 사람 결재; 코덱스 대기: CODEX-GATE-02(큐 C-01) — handoff-integrity 멱등 대조 + di-completion-check CLI 계약 + GATE-MANIFEST 등재 + claim-check --untracked. 코덱스가 19:18 이후 침묵(원인 주체 미상); 사람 결재(HUMAN-INBOX): ADR-010 상태 · ADR-012 · LOCAL-DI-RUNNER-v3 §9 · LAUNCH-BUDGET(턴별 피크 134,528) · push 43건+ |
 | updatedAt | 2026-07-12 |

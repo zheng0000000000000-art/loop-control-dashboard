@@ -14,3 +14,4 @@
 {"transitionId":"DI0001-INPROG","result":"ok","exitCode":0,"at":"2026-07-12T13:04:33.4678698Z"}
 {"transitionId":"DI0001-VERIFY","result":"ok","exitCode":0,"at":"2026-07-12T13:04:34.7591506Z"}
 {"transitionId":"DI0001-COMPLETED-2","result":"ok","exitCode":0,"at":"2026-07-12T13:04:53.4778133Z"}
+{"transitionId":"DI-BOUNDARY-01-TO-04","result":"ok","exitCode":0,"at":"2026-07-12T13:35:27.2022756Z"}

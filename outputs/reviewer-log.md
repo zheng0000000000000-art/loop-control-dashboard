@@ -1063,3 +1063,39 @@ WORKSTATE: `P00 / WP-00 / DI-00-01 / waiting`, `appliedTransitions`(11) == `appl
 - `outputs/quarantine/*.bak` 2건(조율자 격리분) 유지 — 증거.
 - **DI-00-01 claim이 stale로 남았다**(R7 실증용 발사를 즉시 kill했다). `scope-check`가 `pid-dead`로 검출한다 — 다음 발사에 지장 없음.
 - 다음: **CODEX-GATE-02**(코덱스 큐 C-01) — GUARD-01이 커밋됐으니 착수 가능.
+
+## 검수자 2026-07-12 22:4x — GUARD-02 검수: **PASS** (반증 9개 전부 사본에서 재현)
+
+**주체**: 실행자 sonnet PID 18332(22:05~22:26, exit 0, 55턴, $2.51). 조율자가 커밋(`ed35823`·`26a513b`). 검수는 검수자.
+
+### 반증 9개 — 검수자가 **`--root` 사본에서** 전부 재실행 (실 WORKSTATE 불변 확인)
+
+| # | 시험 | 기대 | 실측 |
+| --- | --- | --- | --- |
+| 1 | `completed` + `diId` 변경 → 새 DI(`DI-00-04`/waiting) | 0 | **0** |
+| 2 | 미완(waiting) 상태에서 `diId` 변경 | 1 | **1** — 미완 DI를 버릴 수 없다 |
+| 3 | **손으로 쓴 verdict**(`outputs/verdict-DI-00-01.json`)로 `completed` | 1 | **1** ← **내가 이 파일로 통과시켰던 그 구멍이 닫혔다** |
+| 4 | 진짜 `gate.json`(gateVerdict=PASS)로 `completed` | 0 | **0** |
+| 5 | `gateVerdict=FAIL`인 gate.json | 1 | **1** |
+| 6 | 존재하지 않는 gate.json 경로 | 1 | **1** |
+| 7 | 같은 DI에서 `completed → in_progress`(결재 없음) | 1 | **1** — 완료 되돌림은 여전히 사람 결재 |
+| 8 | `phaseId` 변경(결재 없음) | 1 | **1** — Phase 경계는 그대로 |
+| 9 | 새 DI 착수 시 비canonical `diId`(`LEDGER-05`) | 1 | **1** — canonical 검사 유지 |
+
+**게이트**: `di-completion-check POST-COMMIT` 0 · `handoff-integrity` 0 · `verify-behavior` 0 · `measure dev-pack` 0 · `context-pack-integrity` 0 · `gate-clean` 0.
+
+### ★ D3가 닫혔다 — "완료에는 독립 검증이 필요하다"가 이제 코드다
+
+STATE-01 검수(19:5x)에서 **"`--verdict`는 아무 파일이나 통과시킨다"**고 지적했고, 오늘 22:0x에 **내가 직접 그 구멍으로 `DI-00-01`을 completed로 만들었다**(손으로 쓴 JSON). 이제 **`outputs/gates/<taskId>.gate.json`(gateVerdict=PASS, failureCount=0, taskId 매칭, stale 아님)만** 받는다. **하위 호환 없음.**
+
+### ★ DI 경계를 넘었다 (실 WORKSTATE)
+
+`DI-BOUNDARY-01-TO-04` 전이 **exit 0** → `P00 / WP-00 / **DI-00-04** / waiting`.
+**완료: DI-00-01(작업추적) · DI-00-02(검증템플릿) · DI-00-03(실패위키).** 가장 이른 미충족 = **DI-00-04**.
+
+### 검수 중 내가 두 번 잘못 읽을 뻔했다 (기록)
+
+1. **R4가 exit 1로 나와 "실패"로 볼 뻔했다.** 실체: 내가 만든 증거(`POST-EXECUTOR` gate.json)의 `gateVerdict`가 **FAIL**이었다 — 조율자가 이미 커밋해 트리가 깨끗한데 `POST-EXECUTOR`는 `gate-clean` **기대 1**이기 때문이다. **증거가 FAIL이니 거부한 게 맞다.** `POST-COMMIT`으로 만든 진짜 PASS 증거로는 exit 0이었다.
+   → **교훈: verdict용 gate.json은 커밋 전이면 `POST-EXECUTOR`, 커밋 후면 `POST-COMMIT`으로 만들어야 한다.** 이걸 문서화해야 한다(후속).
+2. **R7이 exit 0으로 나와 "결함"으로 볼 뻔했다.** 실체: 앞 시험들이 사본 상태를 `in_progress`로 오염시켜 **전제가 성립하지 않았다.** 사본을 새로 만들어 다시 하니 exit 1이었다.
+   → **둘 다 "출력만 보고 원인을 단정하지 마라"에 걸릴 뻔했다.** 사본을 쓰는 검수도 **순서가 상태를 오염시킨다.**

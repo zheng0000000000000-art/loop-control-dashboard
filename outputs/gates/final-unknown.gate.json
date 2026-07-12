@@ -1,0 +1,85 @@
+{
+  "harness": "di-completion-check",
+  "gateId": "POST-COMMIT",
+  "taskId": "final-unknown",
+  "manifest": "C:/Users/1/AppData/Local/Temp/di-gate-tests-final-0b4cbd46a9544c0aa57980985cf27402/unknown.json",
+  "createdAt": "2026-07-12T19:16:34.7814551+09:00",
+  "gateVerdict": "FAIL",
+  "checkCount": 1,
+  "failureCount": 1,
+  "warningCount": 10,
+  "verdict": "FAIL",
+  "checks": [
+    {
+      "order": 1,
+      "command": "missing-command-for-test",
+      "args": [],
+      "expectedExit": 0,
+      "mutatesState": false,
+      "actualExit": 1,
+      "verdict": "FAIL-CLOSED",
+      "reason": "unknown command"
+    }
+  ],
+  "failures": [
+    {
+      "subject": "missing-command-for-test",
+      "code": "unknown-command",
+      "message": "manifest command is not registered"
+    }
+  ],
+  "warnings": [
+    {
+      "command": "call-integrity-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "claim-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "di-completion-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "e2e-usage",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "hs-scan",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "launch-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "path-guard-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "project-api-edge-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "scope-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "template-sync-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    }
+  ],
+  "note": "Pass/fail is decided by expectedExit versus actual exit code. stdout/stderr are diagnostic evidence.",
+  "evidencePath": "outputs/gates/final-unknown.gate.json"
+}

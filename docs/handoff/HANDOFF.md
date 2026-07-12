@@ -3,7 +3,7 @@
 # HANDOFF — 인수인계 문서
 
 ## 현재 위치
-- **diId**: DI-00-01  **phaseId**: P00  **status**: completed
+- **diId**: DI-00-04  **phaseId**: P00  **status**: waiting
 - **갱신자**: reviewer  **갱신일**: 2026-07-12
 
 ## 변경 파일 (4개)
@@ -34,7 +34,10 @@
 - measureViolationsAfter: 0
 
 ## 다음 작업
-- 검수자 반증 재현 완료(reviewer-log 21:2x) — verdict 첨부 후 completed
+- DI-00-04 착수(v9): phase-gates/ 구조 + phase-gates/_template.md + HS-REVIEW-P00-R1 + Skill manifest 계약 + HS-GATE 누락 탐지 검사. 적합성 행렬 §2 DI-00-04 칸이 요구 목록이다
+- GUARD-02 검수 PASS(검수자 22:4x): 반증 9개 전부 사본에서 재현 — DI 경계 전이 · 손으로 쓴 verdict 거부(내가 통과시켰던 그 파일) · gate.json(gateVerdict=PASS)만 수용 · 완료 되돌림과 Phase 경계는 여전히 사람 결재
+- 코덱스 대기: CODEX-GATE-02(큐 C-01) — handoff-integrity 멱등 대조 + di-completion-check CLI 계약 + GATE-MANIFEST 등재 + claim-check --untracked. 코덱스가 19:18 이후 침묵(원인 주체 미상)
+- 사람 결재(HUMAN-INBOX): ADR-010 상태 · ADR-012 · LOCAL-DI-RUNNER-v3 §9 · LAUNCH-BUDGET(턴별 피크 134,528) · push 43건+
 
 ## 재개 전 검증
 ```bash
@@ -45,4 +48,4 @@ dotnet run --project server -c Release -- verify-behavior
 ```
 
 ## 노트
-canonical 좌표는 v9 축이다(ADR-013, 사람 승인 2026-07-12). 로컬 큐 별칭은 여기에만 남긴다: P0-01~P0-07(ALIGNMENT-v9 §4의 진짜 공백 6개) 대부분 완료 · LEDGER-01~04(ollama 토큰 계측) · STATE-01(WORKSTATE 단일 writer, 검수 PASS 2026-07-12) · TRANSPORT-01/ADR-010 · RULES-01 · DIET-01. 이 산출물들은 사라지지 않았고 적합성 행렬의 각 DI 칸에 증거로 매핑되어 있다.
+canonical 좌표는 v9 축이다(ADR-013). 완료: DI-00-01(작업추적) · DI-00-02(검증템플릿) · DI-00-03(실패위키). 가장 이른 미충족 = DI-00-04. 로컬 큐 별칭(P0-01~07 · LEDGER-01~04 · STATE-01 · GUARD-01/02 · TRANSPORT-01 · RULES-01 · DIET-01)은 이 필드에만 남긴다.
