@@ -5,7 +5,7 @@
   "diId": "LEDGER-02",
   "requiredInputs": [
     { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
-    { "path": "docs/verification/_template.md", "sha256": "cca162b7cfc7387e3d369148c5d0d170cea9dfe73d86feb9c77a40ab44829145" },
+    { "path": "docs/verification/_template.md", "sha256": "15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69" },
     { "path": "docs/verification/ledger01-token-ledger.md", "sha256": "8656b81485ef8f3ed110b4ec54ee7f361c743dba30e8f903558dcbf2b0e05094" },
     { "path": "docs/handoff/decisions/ADR-006-resource-ledger-p0.md", "sha256": "0a4438498bc4fbb2322b9d2713e07e96ea8426f677526a58cc821d492c88ff58" },
     { "path": "docs/handoff/QUOTA-POLICY.md", "sha256": "6e001c2cf49aaf34d5ff3c628d7c83b3e5e323882e15b45ac383892ac4b62071" }

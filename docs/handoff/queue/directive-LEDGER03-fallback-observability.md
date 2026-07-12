@@ -5,7 +5,7 @@
   "diId": "LEDGER-03",
   "requiredInputs": [
     { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
-    { "path": "docs/verification/_template.md", "sha256": "cca162b7cfc7387e3d369148c5d0d170cea9dfe73d86feb9c77a40ab44829145" },
+    { "path": "docs/verification/_template.md", "sha256": "15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69" },
     { "path": "docs/verification/ledger02-executor-token-wiring.md", "sha256": "24f834c3a9f105b14c43af0fd94c03cef286b0740e7cea5f2986071839686ae3" },
     { "path": "docs/handoff/decisions/ADR-005-metric-vs-purpose.md", "sha256": "0b9fb7c5756b27923ceeafab6c8dcd44d00b3c73708d00abdb0887f1891a4bed" }
   ],

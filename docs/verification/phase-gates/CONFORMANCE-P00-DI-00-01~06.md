@@ -15,14 +15,18 @@
 
 | DI | 판정 | 한 줄 |
 | --- | --- | --- |
-| **DI-00-01** 작업 추적 파일 초기화 | **PARTIAL** | `docs/STATUS.md`는 있으나 **낡았고**(2026-07-11), **WP 등록표가 없고**, **역방향 상태 전이를 막는 것이 없다** |
-| **DI-00-02** 공통 검증 템플릿 | **PARTIAL** | `docs/verification/_template.md` 있음. **DI 유형별 완료 프로필**이 없다(공통 조건만) |
-| **DI-00-03** 실패 사례 위키 | **✅ PASS** | README·index·template·사례 13건·by-component 12·by-failure-class 13. 검증 4항 전부 충족 |
+| **DI-00-01** 작업 추적 파일 초기화 | **✅ PASS** *(2026-07-12 22:0x 갱신)* | `WP-REGISTRY.json` 신설(WP 목록 정본) · **역방향 전이가 코드로 차단**(`StateApplierCli` 전이 화이트리스트, 검수자 반증 재현) · `STATUS.md`가 `projection` 생성물이 됐다. 근거: `docs/verification/di0001-worktracking.md` + 검수자 재현(reviewer-log 21:2x) |
+| **DI-00-02** 공통 검증 템플릿 | **✅ PASS** *(2026-07-12 22:1x 갱신)* | `_template.md`에 **DI 유형 8종 선언**(v9 §0.1) · **유형별 필수 검증표** · **공통 완료 조건 6개** · **실패 분류·실패사례 ID 절**(§0.3) · 반증시험·잔여위험·완료판정 절 추가. `context-pack-integrity`가 stale 10건을 검출해(exit 1) 갱신 후 0 |
+| **DI-00-03** 실패 사례 위키 | **✅ PASS** | README·index·template·사례 13건·by-component 12·by-failure-class 13. 검증 4항 전부 충족. **잔여 1항(verification 템플릿의 실패사례 참조 필수화)도 DI-00-02에서 닫혔다** |
 | **DI-00-04** Harness·Skill 판정 기반 | **PARTIAL** | **`docs/verification/phase-gates/` 디렉터리 자체가 없었다** → `_template.md`·`HS-REVIEW-P00-R1` 없음. Skill manifest 없음. **HS-GATE 누락 탐지 검사 없음** |
 | **DI-00-05** 다중 AI 인수인계 기반 | **PARTIAL** | `handoff-integrity`·HANDOFF·WORKSTATE ✅. **`CONTEXT-MANIFEST.json` 없음**, `sessions/_template.md` 없음, `prepare-model-handoff` 스킬 없음, `HS-REVIEW-P00-R2` 없음, **blocker 차단 미구현** |
 | **DI-00-06** 컨텍스트 절약 기반 | **PARTIAL** | (예측 적중) `RUNTIME-INDEX`·`context-pack-integrity` ✅. **Context Receipt·Context Budget·L1~L3·schema 파일·packs 파일·스킬 2개·`HS-REVIEW-P00-R3` 전부 없음** |
 
-**가장 이른 미충족 DI = `DI-00-01`.**
+**가장 이른 미충족 DI = ~~`DI-00-01`~~ → `DI-00-04`** *(2026-07-12 22:1x 갱신. DI-00-01·02·03이 닫혔다.)*
+
+> **갱신 이력(append — 이전 판정을 지우지 않는다)**
+> - 2026-07-12 20:1x 최초 작성: PASS 1개(DI-00-03), 가장 이른 미충족 **DI-00-01**.
+> - 2026-07-12 22:1x: **DI-00-01 PASS**(실행자 DI-00-01 + 검수자 반증 재현) · **DI-00-02 PASS**(검수자가 템플릿 직접 개정) → 가장 이른 미충족은 **`DI-00-04`**(phase-gates 구조·HS-REVIEW-P00-R1·Skill manifest·HS-GATE 누락 탐지가 전부 없다).
 
 > **이것은 "우리가 아무것도 안 했다"는 뜻이 아니다.** 우리는 `ALIGNMENT-v9 §4`가 고른 **로컬 P0-01~07**(진짜 공백 6개)을 실행했고 그건 대부분 끝났다.
 > **v9의 DI 시퀀스와 로컬 P0 시퀀스는 다른 축이다.** 지금까지 `diId`에 `LEDGER-04`·`P0-04` 같은 **로컬 큐 별칭**이 들어가 있던 이유가 이것이다.

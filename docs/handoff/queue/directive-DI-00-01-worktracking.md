@@ -5,8 +5,8 @@
   "diId": "DI-00-01",
   "requiredInputs": [
     { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
-    { "path": "docs/verification/_template.md", "sha256": "cca162b7cfc7387e3d369148c5d0d170cea9dfe73d86feb9c77a40ab44829145" },
-    { "path": "docs/verification/phase-gates/CONFORMANCE-P00-DI-00-01~06.md", "sha256": "f4db3d5ffe2cf431772e3956ced0e69a6b73117742e4809dec6d41fcc6d79b49" },
+    { "path": "docs/verification/_template.md", "sha256": "15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69" },
+    { "path": "docs/verification/phase-gates/CONFORMANCE-P00-DI-00-01~06.md", "sha256": "8a4edd3f0483b010e6c42a10d5db7ebceb33f2775949aa4af18f57082622edce" },
     { "path": "docs/handoff/decisions/ADR-013-canonical-di-coordinate.md", "sha256": "fd40d98d748f497743f0b4d229c20abebc05b8c5f9f86d21830bc56baf76d3fb" }
   ],
   "readOrder": [
