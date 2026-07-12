@@ -2268,3 +2268,18 @@
 - push 대기: 32건(기존 30건 + 이번 2건) — 사람 배치 승인 필요.
 - 발사: 하지 않음(정책). SONNET-QUEUE 대기 항목 FEAT-01(4번)·FIX-04(15번, ACTOR-01 완료 후 순차 발사 명시) 둘 다 대기 상태 — 어느 것이 다음인지는 사람/검수자 판단 필요, 조율자가 임의 발사하지 않음.
 - QUOTA_SIGNAL 미감지.
+## 조율자 2026-07-12 22:13 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: lanes dirty(dashboard/data 런타임 8종[레인 제외] + docs/STATUS.md·RUNTIME-INDEX.md·HANDOFF.md·WORKSTATE.json·WORKSTATE.applier-log.jsonl) + exit signal 신규(processed:false) 0건 -> 처리 진행.
+- FILE-CLAIMS.json: DI-00-01-30728 클레임이 status:active로 남아있었으나 PID 30728 생존 확인 결과 사망(Get-CimInstance 미검출). reviewer-log 기록상 R7 실증(발사 즉시 kill 시험) 종료로 인한 stale claim으로 판단(정황 근거: reviewer-log "DI-00-01 claim이 stale로 남았다" 메모 + outputs/verdict-DI-00-01.json에 reviewer 자체 PASS 판정 존재).
+- 상태 갱신분 검수: docs/STATUS.md·RUNTIME-INDEX.md·HANDOFF.md·WORKSTATE.json·WORKSTATE.applier-log.jsonl의 diff를 직접 대조 -> DI-00-01 status waiting->completed 전이가 공식 state-transition 3건(DI0001-INPROG/VERIFY/COMPLETED-2, 전부 appliedTransitions에 exitCode 0 기록)을 경유했음을 확인(수기 편집 아님). 커밋 전 게이트: doc-integrity exit0(핵심문서 12종 intact), handoff-integrity exit0(failures 0, queue-mention-missing 경고 1건은 정보성), claim-check DI-00-01 MATCH(server/StateApplierCli.cs·ProjectionCli.cs 존재 일치). scope-check는 exit1이나 DI-00-01-30728 관련 4건 conflict는 전부 위 사유(pid 사망, 내용 검증됨)로 판단 -> 커밋 진행(9c694d1, 상태 레인).
+- docs/handoff/queue/directive-GUARD-02-di-boundary.md 신규 발견(안정성 확인 후 커밋 시도) -> 커밋 시도 중 동시성 확인: 사람/다른 프로세스가 이미 dfce050(22:12:26, author JaeHyuk)으로 동일 파일 + outputs/launch/GUARD-02.prompt.txt를 먼저 커밋함(내 git add 시점엔 이미 clean이라 "no changes added to commit"). **참고**: dfce050에 outputs/launch/GUARD-02.prompt.txt가 포함됐는데 이는 커밋 레인 표상 "커밋 안 함(런타임)" 대상 — 내가 아닌 다른 주체의 커밋이라 되돌리지 않고 기록만 남김.
+- 현재 활성 실행자 확인: sonnet-active.pid=18332, CommandLine에 --dangerously-skip-permissions 확인 -> GUARD-02 실행자 생존·진행 중(FILE-CLAIMS GUARD-02-18332, claimedAt 22:12:27, allowlist 7개: server/StateApplierCli.cs·docs/verification/guard02-di-boundary.md·docs/handoff/queue/directive-GUARD-02-di-boundary.md·WORKSTATE.json·RUNTIME-INDEX.md·HANDOFF.md·STATUS.md). 해당 allowlist 파일들은 이번 회차 커밋(9c694d1) 시점이 GUARD-02 claim 시각(22:12:27)보다 앞서므로 충돌 없음. docs/handoff/FILE-CLAIMS.json은 GUARD-02가 계속 갱신 중이라 이번 회차 커밋 대상에서 제외(활성 실행자 작업물 커밋 금지 원칙).
+- HUMAN-INBOX / BASELINE-CHANGES: 신규 결정 필요 항목 없음(기존 항목 그대로, 새 항목 추가 안 함). BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 변경 없음.
+- 커밋(로컬만) 2건: 9c694d1(상태 레인, DI-00-01 completed 반영). GUARD-02 지시서는 타 주체가 선점 커밋(dfce050) -> 조율자 커밋 불필요.
+- 발사(사람 게이트): 조율자는 발사하지 않음. GUARD-02는 이미 사람/타 주체가 발사한 상태로 확인됨(조율자 발사 아님).
+- push(사람 배치 게이트): git rev-list origin/main..HEAD --count = 39건 -> 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+- exit signal: 신규 processed:false 없음(전부 processed:true 확인).
+
+<run-summary>DI-00-01 completed 상태 전이(WORKSTATE·STATUS·RUNTIME-INDEX·HANDOFF·applier-log)를 검증 후 로컬 커밋(9c694d1) — 게이트 전부 PASS, stale claim(PID 30728 사망) 사유 명시. 별도로 GUARD-02 지시서가 신규 등록·발사됐고(사람/타 주체, PID 18332 현재 진행 중) 그 산출물은 이미 타 주체가 커밋(dfce050)해 조율자 커밋 불필요. push 대기 38->39건, QUOTA_SIGNAL 미감지.</run-summary>
