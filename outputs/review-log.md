@@ -2033,3 +2033,89 @@
 - exit signal: 신규 processed:false 없음 - 갱신 대상 없음.
 
 <run-summary>STATE-01 배치(server/StateApplierCli.cs 등)는 claim-check MISMATCH(하네스 결함, --untracked 미검색)가 5회차째 동일 재현되어 이번 회차도 커밋 보류 유지. 오버라이드 조건 미충족 재확인(사람 승인·큐 등재 둘 다 없음). 활성 sonnet 실행자 없음(9804 사망 확인, 자기 자신 세션 제외). 검수자(opus)가 새 커밋(2f085c8)과 HUMAN-INBOX 신규 항목(canonical diId 확정 요청)을 남긴 것을 관측만 함 - 조율자 개입 없음. 조율자 신규 커밋 0건, 변경 없음. 발사 없음(#24 공석), push 대기 9건, HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
+
+## 조율자 20:19 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: lanes dirty(20:14 회차와 동일 내역: dashboard/data 런타임 8종[커밋 제외 대상] + server/Cli/CliRouter.cs·server/ProjectionCli.cs 수정 + server/StateApplierCli.cs 신규 + docs/handoff/WORKSTATE.json·docs/context/RUNTIME-INDEX.md·docs/handoff/HANDOFF.md 수정 + docs/handoff/WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md 신규) + exit signal(processed:false) 없음(전부 processed:true) -> 처리 진행.
+- 안정성 게이트: lanes 파일 해시 5초 간격 2회 비교 -> 전부 STABLE(20:14 회차와 동일 해시).
+- 하네스 재확인: gate-clean server exit1(FAIL, server 3파일 content-dirty - 미추적 파일 사유, 기대값) / doc-integrity exit0(INTACT) / claim-check STATE-01 exit1(MISMATCH - AppendApplierLog "코드에 없음" 오판정, 19:44에 규명된 하네스 결함(ClaimCheckCli.cs git grep -l이 --untracked 미지원) 7회차째 동일 재현) / handoff-integrity exit0(PASS, failures 0).
+- 오버라이드 판단: 4조건(①review-log 실체입증 ②사람 승인 ③하네스 수정 과제 큐 등재 ④전부 충족) 중 ①만 충족. HUMAN-INBOX 301행 항목 재확인 -> 사람 응답 여전히 없음(② 미충족). docs/handoff/queue/ 디렉터리에 claim-check untracked 검색 결함 수정 지시서 없음(directive-HARNESS03-claim-check.md는 최초 구현 지시서일 뿐, ③ 미충족). -> override 불가. STATE-01 배치(server 3파일 + WORKSTATE.json·RUNTIME-INDEX.md·HANDOFF.md·WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md) 이번 회차도 미커밋 보류(7회 연속: 19:44/19:56/19:59/20:03/20:07/20:14/20:19).
+- 활성 실행자 확인: sonnet-active.pid 2건(루트 9804, outputs 2052) 모두 Get-Process 결과 없음(사망 확인). claude.exe 프로세스 전수 확인(--dangerously-skip-permissions 필터) 결과 이 조율자 세션 자신(PID 15340, recursion1-result-check 경로)을 제외하면 이 저장소 대상 활성 sonnet 실행자 없음.
+- 자진신고: 이번 회차 중 outputs/review-log.md에 잘못된 내용(20:14 항목의 중복 텍스트)을 실수로 append했다가 즉시 발견하여 `git checkout -- outputs/review-log.md`로 원복했다(커밋 전 상태였으므로 이력 오염 없음). 재발 방지를 위해 이번엔 FileSystem write(append) 도구로 재작성함.
+- 커밋(로컬만, push 안 함): 이번 회차 신규 커밋 없음(변경 없음, dashboard/data 런타임 8종은 레인 제외 대상이라 손대지 않음).
+- HUMAN-INBOX: 신규 등재 없음(claim-check 하네스 결함 항목 19:44에 이미 등재·미해결, 중복 방지). BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 변경 없음.
+- 발사(사람 게이트): SONNET-QUEUE #24 공석("추후 검수자가 추가") - 다음 대기 항목 없음, 발사 안 함.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 10건(20:14 회차와 동일) -> 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+- exit signal: 신규 processed:false 없음 - 갱신 대상 없음.
+
+<run-summary>STATE-01 배치(server/StateApplierCli.cs 등)는 claim-check MISMATCH(하네스 결함, untracked 파일 미검색)가 7회차째 동일 재현되어 이번 회차도 커밋 보류 유지. 오버라이드 조건 미충족 재확인(사람 승인·큐 등재 둘 다 없음). 활성 sonnet 실행자 없음(조율자 자기 세션 제외, sonnet-active.pid 2건 모두 사망). 조율자 신규 커밋 0건, 20:14 회차 대비 상태 변화 없음(push 대기 10건 동일). 자진신고: 회차 중 review-log.md 오기록을 자체 발견·git checkout으로 즉시 원복함. 발사 없음(#24 공석), HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
+
+## 조율자 20:25 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: lanes dirty(20:19 회차와 동일 내역: dashboard/data 런타임 8종[커밋 제외 대상] + server/Cli/CliRouter.cs·server/ProjectionCli.cs 수정 + server/StateApplierCli.cs 신규 + docs/handoff/WORKSTATE.json·docs/context/RUNTIME-INDEX.md·docs/handoff/HANDOFF.md 수정 + docs/handoff/WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md 신규) + exit signal(processed:false) 없음(전부 processed:true: LEDGER-04·PROBE-00·RESUME-01·RULES-01·SMOKE-01·STATE-01·TRANSPORT-01·TRANSPORT-PROBE·TRANSPORT-PROBE2) -> 처리 진행.
+- 안정성 게이트: lanes 파일 해시 5초 간격 2회 비교 -> 전부 STABLE(20:19 회차와 동일 해시).
+- 하네스 재확인: gate-clean server exit1(FAIL, server 3파일 content-dirty - 미추적 파일 사유, 기대값) / doc-integrity exit0(INTACT 12/12) / claim-check STATE-01 exit1(MISMATCH claimCount7/mismatch2 - ApplyAndVerify·AppendApplierLog "코드에 없음" 오판정, 19:44에 규명된 하네스 결함(git grep -l이 --untracked 미지원) 8회차째 동일 재현) / handoff-integrity exit0(PASS, diId **DI-00-01로 변경 확인**[직전 회차까지 LEDGER-04였음 - 사람 결재 커밋 ca99cea 반영], changedFileCount4, failures0, warning1[queue-mention-missing, 정보성]).
+- 오버라이드 판단: 4조건(①review-log 실체입증 ②사람 승인 ③하네스 수정 과제 큐 등재 ④전부 충족) 중 ①만 충족. HUMAN-INBOX 19:44 항목(claim-check --untracked 결함) 재확인 -> 사람 응답 여전히 없음(② 미충족). docs/handoff/queue/ 21개 지시서 전수 확인 -> claim-check untracked 검색 결함 수정 지시서 없음(directive-HARNESS03-claim-check.md는 최초 구현 지시서, ③ 미충족). -> override 불가. STATE-01 배치(server 3파일 + WORKSTATE.json·RUNTIME-INDEX.md·HANDOFF.md·WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md) 이번 회차도 미커밋 보류(8회 연속: 19:44/19:56/19:59/20:03/20:07/20:14/20:19/20:25).
+- 활성 실행자 확인: sonnet-active.pid 2건(루트 9804, outputs 2052) 모두 Get-Process 결과 없음(사망 확인). claude.exe 프로세스 전수 확인(--dangerously-skip-permissions 필터) 결과 이 조율자 세션 자신(PID 29132, recursion1-result-check 경로)을 제외하면 이 저장소 대상 활성 sonnet 실행자 없음.
+- 신규 관측(조율자 권한 밖, 사실만 기록): 사람(choi)이 직접 커밋 ca99cea("결재 반영: canonical diId = DI-00-01 [ADR-013]")를 남겨 WORKSTATE의 diId·notes 별칭 구조를 정정한 것을 확인 - handoff-integrity 재실행 결과 diId가 LEDGER-04에서 DI-00-01로 바뀐 것이 이 커밋 반영임을 대조로 확인.
+- 커밋(로컬만, push 안 함): 이번 회차 신규 커밋 없음(변경 없음, dashboard/data 런타임 8종은 레인 제외 대상이라 손대지 않음).
+- HUMAN-INBOX: 신규 등재 없음(claim-check 하네스 결함 항목 19:44에 이미 등재·미해결, 중복 방지). BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 변경 없음.
+- 발사(사람 게이트): SONNET-QUEUE #24 공석("추후 검수자가 추가") - 다음 대기 항목 없음, 발사 안 함.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 11건(ca99cea 최신, 사람 직접커밋 포함) -> 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+- exit signal: 신규 processed:false 없음 - 갱신 대상 없음.
+
+<run-summary>STATE-01 배치(server/StateApplierCli.cs 등)는 claim-check MISMATCH(하네스 결함, untracked 파일 미검색)가 8회차째 동일 재현되어 이번 회차도 커밋 보류 유지. 오버라이드 조건 미충족 재확인(사람 승인·큐 등재 둘 다 없음). 활성 sonnet 실행자 없음(조율자 자기 세션 제외). 사람(choi)이 직접 커밋(ca99cea)으로 canonical diId를 DI-00-01로 확정해 handoff-integrity의 diId 필드가 LEDGER-04->DI-00-01로 갱신된 것을 관측만 함(조율자 개입 없음). 조율자 신규 커밋 0건, 상태 변화 없음(push 대기 10->11건, 사람 커밋 1건 추가). 발사 없음(#24 공석), HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
+
+
+## 조율자 20:28 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: lanes dirty(20:25 회차와 동일 내역: dashboard/data 런타임 8종[커밋 제외 대상] + server/Cli/CliRouter.cs·server/ProjectionCli.cs 수정 + server/StateApplierCli.cs 신규 + docs/handoff/WORKSTATE.json·docs/context/RUNTIME-INDEX.md·docs/handoff/HANDOFF.md 수정 + docs/handoff/WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md 신규) + exit signal(processed:false) 없음(9건 전부 processed:true) -> 처리 진행.
+- 안정성 게이트: lanes 파일 해시 5초 간격 2회 비교 -> 전부 STABLE(20:25 회차와 동일 해시).
+- 하네스 재확인: gate-clean server exit1(FAIL, server 3파일 content-dirty - 미추적 파일 사유, 기대값) / doc-integrity exit0(INTACT 12/12) / claim-check STATE-01 exit1(MISMATCH claimCount7/mismatch2 - ApplyAndVerify·AppendApplierLog "코드에 없음" 오판정, 19:44에 규명된 하네스 결함(git grep -l이 --untracked 미지원) 9회차째 동일 재현) / handoff-integrity exit0(PASS, diId DI-00-01, changedFileCount4, failures0, warning1[queue-mention-missing, 정보성]).
+- 오버라이드 판단: 4조건 중 ①(review-log 실체입증)만 충족. HUMAN-INBOX 재확인 -> 사람 응답 여전히 없음(② 미충족, canonical diId 결정 요청 항목 그대로). docs/handoff/queue/ 21개 지시서 재확인 -> claim-check untracked 검색 결함 수정 지시서 없음(③ 미충족). -> override 불가. STATE-01 배치(server 3파일 + WORKSTATE.json·RUNTIME-INDEX.md·HANDOFF.md·WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md) 이번 회차도 미커밋 보류(9회 연속: 19:44/19:56/19:59/20:03/20:07/20:14/20:19/20:25/20:28).
+- 활성 실행자 확인: sonnet-active.pid 2건(루트 9804, outputs 2052) 모두 Get-Process 결과 없음(사망 확인). 이 저장소 대상 활성 sonnet 실행자 없음.
+- 커밋(로컬만, push 안 함): 이번 회차 신규 커밋 없음(변경 없음, dashboard/data 런타임 8종은 레인 제외 대상이라 손대지 않음).
+- HUMAN-INBOX: 신규 등재 없음(claim-check 하네스 결함·canonical diId 결정 항목 모두 기존 등재·미해결, 중복 방지). BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 변경 없음.
+- 발사(사람 게이트): SONNET-QUEUE #24 공석("추후 검수자가 추가") - 다음 대기 항목 없음, 발사 안 함.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 11건(20:25 회차와 동일) -> 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+- exit signal: 신규 processed:false 없음 - 갱신 대상 없음.
+
+<run-summary>STATE-01 배치(server/StateApplierCli.cs 등)는 claim-check MISMATCH(하네스 결함, untracked 파일 미검색)가 9회차째 동일 재현되어 이번 회차도 커밋 보류 유지. 오버라이드 조건 미충족 재확인(사람 승인·큐 등재 둘 다 없음). 활성 sonnet 실행자 없음. 조율자 신규 커밋 0건, 20:25 회차 대비 상태 변화 없음(push 대기 11건 동일, HUMAN-INBOX 신규 없음). 발사 없음(#24 공석), QUOTA_SIGNAL 미감지.</run-summary>
+
+## 조율자 20:34 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: lanes dirty(20:28 회차와 동일 내역: dashboard/data 런타임 8종[커밋 제외 대상] + server/Cli/CliRouter.cs·server/ProjectionCli.cs 수정 + server/StateApplierCli.cs 신규 + docs/handoff/WORKSTATE.json·docs/context/RUNTIME-INDEX.md·docs/handoff/HANDOFF.md 수정 + docs/handoff/WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md 신규) + exit signal(processed:false) 없음(전부 processed:true) -> 처리 진행.
+- 안정성 게이트: lanes 파일(server 3종 + docs 5종) 해시 5초 간격 2회 비교 -> 전부 STABLE(20:28 회차와 동일 해시).
+- 하네스 재확인: gate-clean server exit1(FAIL, server 3파일 content-dirty - 미추적 파일 사유, 기대값) / doc-integrity exit0(INTACT 12/12) / claim-check STATE-01 exit1(MISMATCH claimCount7/mismatch2 - ApplyAndVerify·AppendApplierLog "코드에 없음" 오판정, 19:44에 규명된 하네스 결함(git grep -l이 --untracked 미지원) 10회차째 동일 재현) / handoff-integrity exit0(PASS, diId DI-00-01, changedFileCount4, failures0, warning1[queue-mention-missing, 정보성]).
+- 오버라이드 판단: 4조건(①review-log 실체입증 ②사람 승인 ③하네스 수정 과제 큐 등재 ④전부 충족) 중 ①만 충족. HUMAN-INBOX 301행(claim-check 하네스 결함) 재확인 -> 사람 응답 여전히 없음(② 미충족). docs/handoff/HUMAN-INBOX.md 헤더 전수 확인(336행 "canonical diId" 항목이 최신, 그 이후 신규 없음). docs/handoff/queue/ 21개 지시서 재확인 -> claim-check untracked 검색 결함 수정 지시서 없음(③ 미충족). -> override 불가. STATE-01 배치(server 3파일 + WORKSTATE.json·RUNTIME-INDEX.md·HANDOFF.md·WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md) 이번 회차도 미커밋 보류(10회 연속: 19:44/19:56/19:59/20:03/20:07/20:14/20:19/20:25/20:28/20:34).
+- 활성 실행자 확인: sonnet-active.pid 2건(루트 9804, outputs 2052) 모두 Get-Process 결과 없음(사망 확인). claude.exe 프로세스 전수 확인(CommandLine에 --dangerously-skip-permissions 필터) 결과 이 조율자 세션 자신(PID 18188, recursion1-result-check 경로 포함) 제외하면 이 저장소 대상 활성 sonnet 실행자 없음. 나머지 claude.exe들은 Cowork 앱 자체의 인프라 프로세스(crashpad·gpu-process·renderer·utility 등)로 실행자가 아님을 CommandLine으로 확인.
+- 신규 관측(조율자 권한 밖, 사실만 기록): 20:28 회차 이후 HUMAN-INBOX·SONNET-QUEUE·reviewer-log에 새 항목 추가 없음.
+- 커밋(로컬만, push 안 함): 이번 회차 신규 커밋 없음(변경 없음, dashboard/data 런타임 8종은 레인 제외 대상이라 손대지 않음).
+- HUMAN-INBOX: 신규 등재 없음(claim-check 하네스 결함·canonical diId 항목 모두 기존 등재, 중복 방지). BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 변경 없음.
+- 발사(사람 게이트): SONNET-QUEUE #24 공석("추후 검수자가 추가") - 다음 대기 항목 없음, 발사 안 함.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 11건(ca99cea 최신, 20:28 회차와 동일) -> 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+- exit signal: 신규 processed:false 없음 - 갱신 대상 없음.
+
+<run-summary>STATE-01 배치(server/StateApplierCli.cs 등)는 claim-check MISMATCH(하네스 결함, untracked 파일 미검색)가 10회차째 동일 재현되어 이번 회차도 커밋 보류 유지. 오버라이드 조건 미충족 재확인(사람 승인·큐 등재 둘 다 없음). 활성 sonnet 실행자 없음(조율자 자기 세션 PID 18188 제외, sonnet-active.pid 2건 모두 사망). 조율자 신규 커밋 0건, 20:28 회차 대비 상태 변화 없음(push 대기 11건 동일). 발사 없음(#24 공석), HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
+
+## 조율자 20:39 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: lanes dirty(20:34 회차와 동일 내역: dashboard/data 런타임 8종[커밋 제외 대상] + server/Cli/CliRouter.cs·server/ProjectionCli.cs 수정 + server/StateApplierCli.cs 신규 + docs/handoff/WORKSTATE.json·docs/context/RUNTIME-INDEX.md·docs/handoff/HANDOFF.md 수정 + docs/handoff/WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md 신규) + exit signal(processed:false) 없음(LEDGER-04·PROBE-00·RESUME-01·RULES-01·SMOKE-01·STATE-01·TRANSPORT-01·TRANSPORT-PROBE·TRANSPORT-PROBE2 전부 processed:true) -> 처리 진행.
+- 안정성 게이트: server 3종 + docs 5종 + outputs/review-log.md 해시 5초 간격 2회 비교 -> 전부 STABLE.
+- WORKSTATE.json 확인: diId=DI-00-01(사람 결재 ca99cea 반영 유지). notes 필드는 기존에 이미 깨진 한글(이중 디코딩)이 박혀 있음을 재확인 - 손대지 않음.
+- 하네스 재확인: gate-clean server exit1(FAIL, server 3파일 content-dirty - ProjectionCli.cs는 정규화 후에도 실변경, StateApplierCli.cs는 미추적 사유, 기대값) / doc-integrity exit0(INTACT) / claim-check STATE-01 exit1(MISMATCH - ApplyAndVerify·AppendApplierLog "코드에 없음" 오판정, 19:44에 규명된 하네스 결함(ClaimCheckCli.cs의 git grep -l이 --untracked 미지원, StateApplierCli.cs가 신규 미추적 파일이라 검색 누락) 11회차째 동일 재현) / handoff-integrity exit0(PASS, diId DI-00-01, failures 0, warning1[queue-mention-missing, 정보성]).
+- 오버라이드 판단: 4조건(①review-log 실체입증 ②사람 승인 ③하네스 수정 과제 큐 등재 ④전부 충족) 중 ①만 충족. HUMAN-INBOX 전문 재확인 -> "claim-check 하네스 결함" 항목의 사람 결재 요청 3가지(1.하네스 수정 승인 2.수정 후 커밋 여부 3.diId 확정) 중 3번만 사람이 ca99cea로 결재 완료, 1·2번은 여전히 응답 없음(② 미충족). docs/handoff/queue/ 디렉터리 재확인(최신 파일 LEDGER02·FEAT01·LEDGER04 등) -> claim-check untracked 검색 결함 수정 지시서 없음(③ 미충족). -> override 불가. STATE-01 배치(server 3파일 + WORKSTATE.json·RUNTIME-INDEX.md·HANDOFF.md·WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md) 이번 회차도 미커밋 보류(11회 연속: 19:44/19:56/19:59/20:03/20:07/20:14/20:19/20:25/20:28/20:34/20:39).
+- 활성 실행자 확인: 루트 sonnet-active.pid=9804 -> Get-Process 결과 없음(사망 확인). claude.exe 프로세스 전수 확인(CommandLine에 --dangerously-skip-permissions 필터) 결과 이 조율자 세션 자신(PID 31492, recursion1-result-check 경로 포함) 제외하면 이 저장소 대상 활성 sonnet 실행자 없음.
+- 신규 관측(조율자 권한 밖, 사실만 기록): 20:34 회차 이후 HUMAN-INBOX·SONNET-QUEUE·reviewer-log에 새 항목 추가 확인 안 됨.
+- 커밋(로컬만, push 안 함): 이번 회차 신규 커밋 없음(변경 없음, dashboard/data 런타임 8종은 레인 제외 대상이라 손대지 않음).
+- HUMAN-INBOX: 신규 등재 없음(claim-check 하네스 결함 항목 19:44에 이미 등재·부분 미해결 재확인만 함, 중복 방지). BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 변경 없음.
+- 발사(사람 게이트): SONNET-QUEUE #24 공석("추후 검수자가 추가") - 다음 대기 항목 없음, 발사 안 함.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 11건(20:34 회차와 동일) -> 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+- exit signal: 신규 processed:false 없음 - 갱신 대상 없음.
+
+<run-summary>STATE-01 배치(server/StateApplierCli.cs 등)는 claim-check MISMATCH(하네스 결함, untracked 파일 미검색)가 11회차째 동일 재현되어 이번 회차도 커밋 보류 유지. 사람이 ca99cea로 diId(DI-00-01)는 확정했으나 하네스 수정 승인·커밋 여부는 여전히 미응답(오버라이드 조건 미충족). 활성 sonnet 실행자 없음(조율자 자기 세션 제외, sonnet-active.pid 사망 확인). 조율자 신규 커밋 0건, 20:34 회차 대비 상태 변화 없음(push 대기 11건 동일). 발사 없음(#24 공석), HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
