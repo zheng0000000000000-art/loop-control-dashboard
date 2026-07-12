@@ -6,7 +6,7 @@
 > **점수화 기준**: v9 §0.4 Harness 6기준·Skill 6기준. 각 0~2, 총 0~12.
 
 판정일: 2026-07-12
-판정 주체: sonnet (DI-00-04 실행자)
+판정 주체: Codex (DI-00-04 실행자)
 운영 등급: Required Before Multi-model Parallel Work
 
 ---
@@ -37,7 +37,7 @@
 | H-1: `cli-contract-check` | 2 | 2 | 2 | 2 | 2 | 2 | **12** | 기존 항목 확장 |
 | H-2: `handoff-integrity` 멱등 대조 확장 | 2 | 2 | 2 | 2 | 2 | 2 | **12** | 기존 항목 확장 |
 | H-3: `claim-check --untracked` | 2 | 2 | 2 | 2 | 2 | 2 | **12** | 기존 항목 확장 |
-| H-4: HS-GATE 누락 탐지 검사 | 2 | 2 | 2 | 2 | 2 | 2 | **12** | 즉시 제작 필수 |
+| H-4: HS-GATE 누락 탐지 검사 | 2 | 2 | 2 | 2 | 2 | 2 | **12** | 기존 항목 확장 |
 
 ### H-1: `cli-contract-check` (CLI 배선 계약 대조) — 기존 항목 확장
 
@@ -84,7 +84,7 @@
 
 **판정: 기존 항목 확장** — CODEX-GATE-02 큐 C-01 "claim-check" 항목으로 이미 등재됨. 중복 제작 금지. 코덱스가 기존 `claim-check`에 untracked 파일 스캔 기능 추가.
 
-### H-4: HS-GATE 누락 탐지 검사 (신규) — 즉시 제작 필수
+### H-4: HS-GATE 누락 탐지 검사 — 기존 항목 확장
 
 **근거 데이터**: `HS-GATE-P00.md` 없음. CLAUDE.md 문장만으로 Phase 경계 차단 불가. "없으면 Phase가 게이트 없이 넘어간다" (directive DI-00-04 §할 일 2항). CONFORMANCE §DI-00-04 "HS-GATE 없으면 다음 Phase 진입 차단 | 차단 코드 없음. 규칙은 CLAUDE.md 문장으로만 존재 | MISSING".
 
@@ -97,10 +97,10 @@
 | 관찰 가능성 | 2 | 어느 Phase에 HS-GATE가 없는지 경로와 함께 출력 |
 | 유지 비용 | 2 | 간단한 파일 존재 체크. 게이트가 직접 의존 (이것 없으면 Phase 경계가 규칙으로만 존재) |
 
-**판정: 즉시 제작 필수** (gate-critical)
+**판정: 기존 항목 확장** (gate-critical)
 - gate-critical 사유: CLAUDE.md "HS-GATE-P00 PASS 전까지 Phase 1으로 넘어가지 않는다"는 이 저장소의 제1원칙인데, 이를 강제하는 코드가 없다. 코드로 강제하라(CLAUDE.md 철학).
-- **예산 주의**: Phase 0 신규 Harness 예산(상한 2개)이 P0-03(`handoff-integrity`)·P0-05(`context-pack-integrity`)로 이미 소진됨. 이 항목은 예산 예외(출시 차단 불변식)로 제안 — **사람 결재 필요**.
-- CODEX-GATE-02에 없음. 신규 제작 필요.
+- **예산 주의**: 최신 L0가 `di-completion-check` 확장으로 정정했다. 신규 Harness가 아니므로 신규 Harness 예산 결재를 쓰지 않는다.
+- CODEX-GATE-03 C-02에 "HS-GATE 누락 탐지 검사 — `di-completion-check` 확장"으로 대기 중이다. 중복 제작 금지.
 
 ---
 
@@ -197,7 +197,7 @@
 
 | 유형 | 상한 | 기사용 | 이번 즉시제작 | 잔여 | 비고 |
 | --- | --- | --- | --- | --- | --- |
-| 신규 Harness | 2 | 2 (P0-03·P0-05) | 1 (H-4) | -1 | H-4는 예산 예외 적용 필요 → **사람 결재** |
+| 신규 Harness | 2 | 2 (P0-03·P0-05) | 0 | 0 | H-4는 `di-completion-check` 기존 확장으로 정정됨 → 예산 결재 불필요 |
 | 신규 Skill | 2 | 0 | 1 (S-2) | 1 | S-1은 기한부(Phase 1) → Phase 0 예산 미사용 |
 
 ---
@@ -215,7 +215,7 @@
 
 | 항목 | 유형 | 근거 | 예산 |
 | --- | --- | --- | --- |
-| H-4: HS-GATE 누락 탐지 검사 | 신규 Harness | gate-critical. CLAUDE.md 철학 "코드로 강제하라" | 예산 예외 → 사람 결재 |
+| H-4: HS-GATE 누락 탐지 검사 | Harness 기존 확장 | gate-critical. CLAUDE.md 철학 "코드로 강제하라" | 신규 예산 미사용 |
 | S-2: `prepare-model-handoff` | 신규 Skill | gate-critical. Required Before Multi-model Parallel Work | Phase 0 예산 내 (1/2) |
 
 ---
@@ -232,4 +232,4 @@
 **이 문서는 Phase 0 최종 판정 문서가 아니다.** 최종 판정은 `DI-00-07`이 수행한다.
 이 문서의 결론: **DI-00-07 착수를 위한 Harness·Skill 후보 판정 완료.**
 
-즉시 제작 필수 2개(H-4·S-2), 기존 확장 3개(H-1·H-2·H-3, CODEX-GATE-02 대기), 기한부 1개(S-1, Phase 1), 보류 2개(S-3·S-4, DI-00-06 완료 대기).
+즉시 제작 필수 1개(S-2), 기존 확장 4개(H-1·H-2·H-3·H-4, CODEX-GATE-02/03 대기), 기한부 1개(S-1, Phase 1), 보류 2개(S-3·S-4, DI-00-06 완료 대기).

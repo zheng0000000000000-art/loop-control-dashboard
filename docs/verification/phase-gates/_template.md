@@ -92,6 +92,18 @@ procedural | assisted | executable
 - `assisted`: LLM이 주도하되 사람 승인 포인트 포함.
 - `executable`: 스크립트·CLI로 완전 자동화 가능.
 
+## Skill manifest 필수 필드 (v9 §0.4)
+
+Skill 제작·확장 판정 시 `docs/handoff/SKILL-MANIFEST.md` 계약에 따라 아래 5필드를 선언해야 한다.
+
+| 필드 | 필수 여부 | 의미 |
+| --- | --- | --- |
+| `skillType` | 필수 | `procedural | assisted | executable` 중 하나 |
+| `automationLevel` | 필수 | 자동화 수준. 저장소 계약은 0~10 정수 |
+| `humanApprovalPoints` | 필수 | 사람 확인·승인이 필요한 단계 목록 |
+| `sideEffectScope` | 필수 | Skill이 쓰거나 생성할 수 있는 경로 범위 |
+| `requiredCapabilities` | 필수 | 실행 주체가 가져야 하는 능력·권한 |
+
 ---
 
 ## HS-GATE 운영 등급 (v9 §0.4)
