@@ -11,3 +11,6 @@
 {"transitionId":"TEST-DI0001-2","result":"ok","exitCode":0,"at":"2026-07-12T12:13:32.3578014Z"}
 {"transitionId":"REVIEWER-RESTORE-001","result":"ok","exitCode":0,"at":"2026-07-12T12:14:16.1780254Z"}
 {"transitionId":"GUARD-01-REVIEW-001","result":"ok","exitCode":0,"at":"2026-07-12T12:56:35.9504898Z"}
+{"transitionId":"DI0001-INPROG","result":"ok","exitCode":0,"at":"2026-07-12T13:04:33.4678698Z"}
+{"transitionId":"DI0001-VERIFY","result":"ok","exitCode":0,"at":"2026-07-12T13:04:34.7591506Z"}
+{"transitionId":"DI0001-COMPLETED-2","result":"ok","exitCode":0,"at":"2026-07-12T13:04:53.4778133Z"}

@@ -3,14 +3,14 @@
 # HANDOFF — 인수인계 문서
 
 ## 현재 위치
-- **diId**: DI-00-01  **phaseId**: P00  **status**: waiting
+- **diId**: DI-00-01  **phaseId**: P00  **status**: completed
 - **갱신자**: reviewer  **갱신일**: 2026-07-12
 
 ## 변경 파일 (4개)
 - `server/OllamaExecutor.cs` [4eb15cee5726081c…] — ParseNoteResponse에 2차 대소문자 무시 대조(OrdinalIgnoreCase) 추가. TryGenerateNote/TryGenerateTuningNote에 NormalizedActualMetricId 반환. Generate/GenerateForTuning에 normalizedMetricIds 수집. ExecutorGenerateResult에 NormalizedMetricIds 추가.
 - `server/Program.cs` [7e29ecd56a5a6107…] — MetricIdNormalizedLogEntry 헬퍼 추가. ProposalGeneration에 NormalizationEntries 추가. GenerateProposalWithFallback/GenerateTuningProposalWithFallback 성공 경로에 normEntries 구성. 5개 콜러에서 NormalizationEntries 조건부 append.
 - `docs/verification/ledger04-metricid-normalization.md` [129c601ea657909d…] — LEDGER-04 작업 검증 문서 신규.
-- `docs/directives/LEDGER04-metricid-normalization.md` [e19a3389d600d03e…] — 지시서 보관본.
+- `docs/directives/LEDGER04-metricid-normalization.md` [fa6855c850db1c9f…] — 지시서 보관본.
 
 ## 완료 이력
 - **LEDGER-03**: 4개 파일
@@ -34,10 +34,7 @@
 - measureViolationsAfter: 0
 
 ## 다음 작업
-- GUARD-01 검수 PASS(검수자 22:0x): 반증 8개 전부 재현 — 미인식 명령 exit 2(웹서버 안 뜸) · state-transition --root/--dry-run(검수가 상태를 오염시키지 않는다) · run-executor BOM 수정으로 FILE-CLAIMS paths가 처음으로 9건 채워짐(P0-06 사전 차단이 이제야 작동) · RECOVERY.md 신설. 실행자가 NOT_VERIFIED로 신고한 발사중단 시험도 검수자가 실증(exit 1, 프로세스 미생성, claim 미등록)
-- 다음: CODEX-GATE-02(코덱스 큐 C-01) — GUARD-01 커밋 완료됐으니 착수 가능. handoff-integrity 멱등 대조 + di-completion-check CLI 계약 + GATE-MANIFEST 등재(scope-check/claim-check) + claim-check --untracked
-- 그 다음: DI-00-02(공통 검증 템플릿에 DI 유형별 완료 프로필) -> DI-00-04(phase-gates 템플릿 + HS-REVIEW-P00-R1)
-- 사람 결재 대기(HUMAN-INBOX): ADR-010 상태 · ADR-012(무모델 대조군) · LOCAL-DI-RUNNER-v3 §9 · LAUNCH-BUDGET(턴별 피크 134,528) · push 30건+
+- 검수자 반증 재현 완료(reviewer-log 21:2x) — verdict 첨부 후 completed
 
 ## 재개 전 검증
 ```bash

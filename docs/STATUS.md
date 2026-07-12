@@ -15,14 +15,11 @@
 | phaseId | P00 |
 | wpId | WP-00 |
 | diId | DI-00-01 |
-| status | waiting |
+| status | completed |
 | updatedAt | 2026-07-12 |
 
 ## 다음 작업
-- GUARD-01 검수 PASS(검수자 22:0x): 반증 8개 전부 재현 — 미인식 명령 exit 2(웹서버 안 뜸) · state-transition --root/--dry-run(검수가 상태를 오염시키지 않는다) · run-executor BOM 수정으로 FILE-CLAIMS paths가 처음으로 9건 채워짐(P0-06 사전 차단이 이제야 작동) · RECOVERY.md 신설. 실행자가 NOT_VERIFIED로 신고한 발사중단 시험도 검수자가 실증(exit 1, 프로세스 미생성, claim 미등록)
-- 다음: CODEX-GATE-02(코덱스 큐 C-01) — GUARD-01 커밋 완료됐으니 착수 가능. handoff-integrity 멱등 대조 + di-completion-check CLI 계약 + GATE-MANIFEST 등재(scope-check/claim-check) + claim-check --untracked
-- 그 다음: DI-00-02(공통 검증 템플릿에 DI 유형별 완료 프로필) -> DI-00-04(phase-gates 템플릿 + HS-REVIEW-P00-R1)
-- 사람 결재 대기(HUMAN-INBOX): ADR-010 상태 · ADR-012(무모델 대조군) · LOCAL-DI-RUNNER-v3 §9 · LAUNCH-BUDGET(턴별 피크 134,528) · push 30건+
+- 검수자 반증 재현 완료(reviewer-log 21:2x) — verdict 첨부 후 completed
 
 ## 상태 변경 규칙 (허용 전이 표)
 

@@ -3,7 +3,7 @@
   "phaseId": "P00",
   "wpId": "WP-00",
   "diId": "DI-00-01",
-  "status": "waiting",
+  "status": "completed",
   "blockers": [],
   "updatedBy": "reviewer",
   "updatedAt": "2026-07-12",
@@ -285,7 +285,7 @@
     {
       "path": "docs/directives/LEDGER04-metricid-normalization.md",
       "note": "지시서 보관본.",
-      "sha256": "e19a3389d600d03eced011df7be61921ee669bedd246eb90bf13aba6423a1643"
+      "sha256": "fa6855c850db1c9fec592d87ec348fb1fec8ee2e901d16e102f1a8a93868a0d5"
     }
   ],
   "tests": {
@@ -298,10 +298,7 @@
     "verifyBehaviorExit": 0
   },
   "nextActions": [
-    "GUARD-01 검수 PASS(검수자 22:0x): 반증 8개 전부 재현 — 미인식 명령 exit 2(웹서버 안 뜸) · state-transition --root/--dry-run(검수가 상태를 오염시키지 않는다) · run-executor BOM 수정으로 FILE-CLAIMS paths가 처음으로 9건 채워짐(P0-06 사전 차단이 이제야 작동) · RECOVERY.md 신설. 실행자가 NOT_VERIFIED로 신고한 발사중단 시험도 검수자가 실증(exit 1, 프로세스 미생성, claim 미등록)",
-    "다음: CODEX-GATE-02(코덱스 큐 C-01) — GUARD-01 커밋 완료됐으니 착수 가능. handoff-integrity 멱등 대조 + di-completion-check CLI 계약 + GATE-MANIFEST 등재(scope-check/claim-check) + claim-check --untracked",
-    "그 다음: DI-00-02(공통 검증 템플릿에 DI 유형별 완료 프로필) -> DI-00-04(phase-gates 템플릿 + HS-REVIEW-P00-R1)",
-    "사람 결재 대기(HUMAN-INBOX): ADR-010 상태 · ADR-012(무모델 대조군) · LOCAL-DI-RUNNER-v3 §9 · LAUNCH-BUDGET(턴별 피크 134,528) · push 30건+"
+    "검수자 반증 재현 완료(reviewer-log 21:2x) — verdict 첨부 후 completed"
   ],
   "notes": "canonical 좌표는 v9 축이다(ADR-013, 사람 승인 2026-07-12). 로컬 큐 별칭은 여기에만 남긴다: P0-01~P0-07(ALIGNMENT-v9 §4의 진짜 공백 6개) 대부분 완료 · LEDGER-01~04(ollama 토큰 계측) · STATE-01(WORKSTATE 단일 writer, 검수 PASS 2026-07-12) · TRANSPORT-01/ADR-010 · RULES-01 · DIET-01. 이 산출물들은 사라지지 않았고 적합성 행렬의 각 DI 칸에 증거로 매핑되어 있다.",
   "appliedTransitions": [
@@ -352,6 +349,18 @@
     {
       "id": "GUARD-01-REVIEW-001",
       "appliedAt": "2026-07-12T12:56:35.9242325Z"
+    },
+    {
+      "id": "DI0001-INPROG",
+      "appliedAt": "2026-07-12T13:04:33.4443931Z"
+    },
+    {
+      "id": "DI0001-VERIFY",
+      "appliedAt": "2026-07-12T13:04:34.7364950Z"
+    },
+    {
+      "id": "DI0001-COMPLETED-2",
+      "appliedAt": "2026-07-12T13:04:53.4534721Z"
     }
   ]
 }
