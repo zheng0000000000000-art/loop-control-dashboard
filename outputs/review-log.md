@@ -1871,3 +1871,20 @@
 - QUOTA_SIGNAL: 미감지.
 
 <run-summary>TRANSPORT-01/PROBE/PROBE2 sentinel 3건 처리: codex-054의 launch-check 하네스 교체(ACK 문자열→stdin transport receipt 해시 판정, ADR-010)를 build·verify-behavior·measure·doc-integrity·handoff-integrity·gate-clean 검증 후 레인 분리 로컬 커밋 2건(2a305e5 server, 9d1df90 docs). exit.json processed:true 갱신 3건. FILE-CLAIMS에 orphan active claim 2건 관찰만 기록(검수자 확인 필요). 발사 없음(#24 공석), push 대기 7건, HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
+
+## 조율자 19:14 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: lanes dirty(dashboard/data 런타임 8건 + docs/handoff/FILE-CLAIMS.json·HARNESSES.md 1건씩 + server/Harness/HarnessRegistry.cs 1건 + 신규 docs/handoff/GATE-MANIFEST.json·server/Harness/DiCompletionCheckCli.cs) + exit signal(processed:false) 1건: outputs/launch/PROBE-00.exit.json(exitCode0) -> 처리 진행.
+- 대상: BC-002(사람 choi 승인, 2026-07-12, BASELINE-CHANGES.md 확인) - Phase 0 신규 하네스 예산 2->3, di-completion-check 추가. server/Harness/DiCompletionCheckCli.cs(신규) + HarnessRegistry.cs 등록 + docs/handoff/GATE-MANIFEST.json(신규) + HARNESSES.md(emit-doc 재생성, 손편집 금지 문서로 전환).
+- 하네스: build(exe 잠금 PID 13020으로 --no-build/임시경로 우회, I-3) exit0(경고0/오류0) - doc-integrity exit0(INTACT 12/12) - handoff-integrity exit0(diId LEDGER-04, changedFiles4 해시일치, failureCount0) - verify-behavior true - measure dev-pack violationCount0(기준선0, 비악화) - gate-clean server: 커밋 전 FAIL(content-dirty 2, 예상된 상태). claim-check 스킵(코덱스 직접경로 변경, SONNET-QUEUE DI 아님 - LaunchCheckCli.cs 선례와 동일 사유).
+- 커밋(로컬만, push 안 함) 3건, 레인 분리: 6f6dcd3(server: HarnessRegistry.cs + DiCompletionCheckCli.cs), 9a978df(docs: GATE-MANIFEST.json + HARNESSES.md), b65b54b(docs: FILE-CLAIMS.json PROBE-00 청구 반영).
+- exit.json: PROBE-00.exit.json processed:false->true 갱신(로컬 파일만, outputs/launch/는 커밋 안 함 레인).
+- 관찰(주의, 확정 아님): server 커밋(6f6dcd3) 직후 재검사에서 server/Harness/DiCompletionCheckCli.cs가 다시 dirty로 관측됨(1줄 diff: 빈 컬렉션 리터럴 -> Enumerable.Empty<JsonObject>()). 동시 세션(추정 코덱스)이 커밋 직후에도 같은 파일을 계속 편집 중인 것으로 보임 - 주체는 git diff 내용으로만 확인, 프로세스 상관으로 단정하지 않음. 이번 회차에서 이 재변경분은 커밋하지 않았다 - 안정성 게이트(5초 2회 비교) 미통과, 다음 회차 대상.
+- 마찬가지로 docs/plan/INTENT-DIGEST.md에 "4-B. 로컬 AI 전제" 섹션(27줄, 사람 확인 표기)이 검수 도중 새로 관측됨 - 이번 회차 대상 아님(0-A 시점 이후 동시 세션 유입), 손대지 않고 다음 회차로 넘김.
+- 커밋 안 함(런타임): dashboard/data/dev-pack·ruined-lab 8종, outputs/ 스크래치 다수(주체 미상), outputs/launch/run-executor.ps1·usage-ledger.jsonl·RULES-01.exit.json(동시 세션 활동 추정), sonnet-active.pid(루트·outputs 둘 다).
+- HUMAN-INBOX: 신규 등재 없음(기존 미해결 항목은 검수자 몫으로 그대로 둠). BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 변경 없음. di-completion-check 예산 변경은 BC-002로 이미 사람 결재 확인됨(원장 대조 완료).
+- 발사(사람 게이트): SONNET-QUEUE #24 공석("추후 검수자가 추가") - 다음 대기 항목 없음, 발사 안 함.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 15건 -> 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>PROBE-00 sentinel 처리 + BC-002 승인된 di-completion-check 하네스(코덱스 산출물) 검수: build·doc-integrity·handoff-integrity·verify-behavior·measure 전부 PASS 확인 후 레인 분리 로컬 커밋 3건(6f6dcd3 server, 9a978df docs manifest+HARNESSES, b65b54b docs FILE-CLAIMS). PROBE-00.exit.json processed:true 갱신. 커밋 직후 DiCompletionCheckCli.cs와 INTENT-DIGEST.md에서 동시 세션의 후속 편집을 관측 - 이번 회차 대상 아니므로 손대지 않고 다음 회차로 넘김. 발사 없음(#24 공석), push 대기 15건, HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
