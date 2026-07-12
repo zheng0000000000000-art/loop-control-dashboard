@@ -146,3 +146,7 @@
 
 > **왜 지금인가**: 오늘 게이트가 **네 번** 거짓말했다. `state-transition` 배선이 통째로 사라졌는데 `di-completion-check POST-COMMIT`이 **5/5 PASS**를 줬고, WORKSTATE의 멱등이 깨졌는데 `handoff-integrity`가 **exit 0**을 줬다. **전부 기존 하네스 확장이다 — 신규 하네스 예산을 쓰지 않는다.**
 > **`server/Cli/**`·`server/Program.cs` 무접촉** — `GUARD-01`(실행자)이 같은 시간에 그 파일들을 고치고 있다.
+
+| C-02 | **CODEX-GATE-03**(대기 — `DI-00-04` 완료 후) — ①`skills/common/*.md` 5개에 **Skill manifest 헤더 적용**(`skillType`·`automationLevel`·`humanApprovalPoints`·`sideEffectScope`·`requiredCapabilities`. 계약은 DI-00-04가 `docs/handoff/SKILL-MANIFEST.md`에 정의한다) ②**HS-GATE 누락 탐지 검사**(v9 §DI-00-04 지시 4항 — Phase 종료 시 `HS-GATE-PXX.md`가 없으면 다음 Phase 진입 차단. `di-completion-check` 확장으로. **신규 하네스 아님**) ③`HS-REVIEW-P00-R1`의 판정이 `기존 항목 확장`이면 그대로 따르고, **판정에 없는 것을 만들지 마라** | v9 §0.4 · DI-00-04 산출물 | server/Harness/ + skills/ | 대기 |
+
+> **`skills/`는 코덱스 배타 영역(ADR-002)이라 실행자가 못 만진다.** DI-00-04는 **계약 문서만** 만들고, **적용은 코덱스 몫이다.**
