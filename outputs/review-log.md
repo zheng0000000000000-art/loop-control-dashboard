@@ -2119,3 +2119,21 @@
 - exit signal: 신규 processed:false 없음 - 갱신 대상 없음.
 
 <run-summary>STATE-01 배치(server/StateApplierCli.cs 등)는 claim-check MISMATCH(하네스 결함, untracked 파일 미검색)가 11회차째 동일 재현되어 이번 회차도 커밋 보류 유지. 사람이 ca99cea로 diId(DI-00-01)는 확정했으나 하네스 수정 승인·커밋 여부는 여전히 미응답(오버라이드 조건 미충족). 활성 sonnet 실행자 없음(조율자 자기 세션 제외, sonnet-active.pid 사망 확인). 조율자 신규 커밋 0건, 20:34 회차 대비 상태 변화 없음(push 대기 11건 동일). 발사 없음(#24 공석), HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
+
+
+## 조율자 20:50 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: lanes dirty(20:39 회차와 동일 내역: dashboard/data 런타임 8종[커밋 제외 대상] + server/Cli/CliRouter.cs·server/ProjectionCli.cs 수정 + server/StateApplierCli.cs 신규 + docs/handoff/WORKSTATE.json·docs/context/RUNTIME-INDEX.md·docs/handoff/HANDOFF.md 수정 + docs/handoff/WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md 신규) + exit signal(processed:false) 없음(LEDGER-04·PROBE-00·RESUME-01·RULES-01·SMOKE-01·STATE-01·TRANSPORT-01·TRANSPORT-PROBE·TRANSPORT-PROBE2 전부 processed:true) -> 처리 진행.
+- 안정성 게이트: lanes 파일(server 3종 + docs 5종) 해시 5초 간격 2회 비교 -> 전부 STABLE(회차 진입 시점 기준).
+- 하네스 재확인: gate-clean server exit1(FAIL, server 3파일 content-dirty - 미추적 파일 사유, 기대값) / doc-integrity exit0(INTACT 12/12) / claim-check STATE-01 exit1(MISMATCH claimCount7/mismatch2 - ApplyAndVerify·AppendApplierLog "코드에 없음" 오판정, 19:44에 규명된 하네스 결함(git grep -l이 --untracked 미지원) 12회차째 동일 재현) / handoff-integrity exit0(PASS, diId DI-00-01, changedFileCount4, failures0, warning1[queue-mention-missing, 정보성]).
+- 오버라이드 판단: 4조건(①review-log 실체입증 ②사람 승인 ③하네스 수정 과제 큐 등재 ④전부 충족) 중 ①만 충족. HUMAN-INBOX 재확인 -> claim-check 하네스 결함 항목의 "1.하네스 수정 승인 2.수정 후 커밋 여부" 두 건은 여전히 사람 응답 없음(② 미충족). docs/handoff/queue/ 재확인 -> claim-check untracked 검색 결함 수정 지시서 없음(③ 미충족). -> override 불가. STATE-01 배치(server 3파일 + WORKSTATE.json·RUNTIME-INDEX.md·HANDOFF.md·WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md) 이번 회차도 미커밋 보류(12회 연속: 19:44/19:56/19:59/20:03/20:07/20:14/20:19/20:25/20:28/20:34/20:39/20:50).
+- **신규 관측(중요): 활성 sonnet 실행자 발견 - PID 32968(taskId DI-00-01), 20:44:36 발사(사람 승인, 검수자 실행), claimedAt/status=active(FILE-CLAIMS.json), 만료 22:44:36.** 지시서 docs/handoff/queue/directive-DI-00-01-worktracking.md(검수자 작성, 커밋 8f776e3). 작업 대상이 WP 등록·상태 전이·STATUS.md projection 생성으로, 현재 dirty 상태인 server/StateApplierCli.cs·server/ProjectionCli.cs·docs/handoff/WORKSTATE.json과 **영역이 겹칠 가능성이 높다.** 이번 회차는 이 사유로도 커밋을 보류한다(활성 실행자 작업 파일 위에 조율자가 커밋하는 것은 금지 대상 패턴).
+- 신규 관측(조율자 권한 밖, 사실만 기록): 검수자(opus)가 P0-06 결함 근본원인을 실측했다 - outputs/launch/run-executor.ps1이 BOM 없는 UTF-8이라 PowerShell 5.1이 ANSI(CP949)로 오파싱, 스크립트 내 한글 리터럴 정규식이 깨져 FILE-CLAIMS의 allowlist paths가 항상 0으로 기록되는 구조적 결함(파일 인코딩이 범인, 지시서·정규식 무죄). 후속 지시서 목록(4번, BOM 추가 + Get-Allowlist 빈 배열 시 fail-closed)으로 큐잉됨(커밋 8f776e3, reviewer-log.md). HUMAN-INBOX 신규 결정 요청 항목은 아님(엔지니어링 근본원인 기록).
+- 커밋(로컬만, push 안 함): 이번 회차 신규 커밋 없음(활성 실행자 작업 중 + STATE-01 배치 override 조건 미충족, dashboard/data 런타임 8종은 레인 제외 대상).
+- HUMAN-INBOX: 신규 등재 없음(기존 항목 재확인만, 중복 방지). BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 변경 없음.
+- 발사(사람 게이트): 조율자는 발사하지 않음(규칙대로). DI-00-01은 검수자가 사람 승인 하에 직접 발사한 것으로 활성 상태 관측만 함.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 13건(8f776e3 최신, 검수자 직접커밋 2건[2f085c8·8f776e3] + 사람 커밋 1건[ca99cea] 추가 반영) -> 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+- exit signal: 신규 processed:false 없음 - 갱신 대상 없음(DI-00-01은 아직 실행 중이라 exit.json 미생성, 정상).
+
+<run-summary>STATE-01 배치는 claim-check MISMATCH(하네스 결함)가 12회차째 재현되어 커밋 보류 유지. 이번 회차 핵심 변화: 검수자가 사람 승인 하에 새 실행자를 발사함(PID 32968, taskId DI-00-01, WP 등록·상태전이·STATUS.md projection 작업, 20:44:36 시작, 아직 활성) - 작업 대상이 현재 dirty한 StateApplierCli.cs·ProjectionCli.cs·WORKSTATE.json과 겹칠 가능성이 높아 조율자는 커밋을 추가로 보류함. 검수자가 P0-06(FILE-CLAIMS paths 항상 0) 근본원인을 BOM 없는 run-executor.ps1의 인코딩 오파싱으로 실측·기록함(HUMAN-INBOX 결정 요청 아님, 큐 4번 항목으로 등재). push 대기 11->13건(검수자 2건 추가). HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
