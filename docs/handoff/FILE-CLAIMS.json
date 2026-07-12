@@ -366,6 +366,26 @@
                        "expiresAt":  "2026-07-12T23:55:30.6601203+09:00",
                        "status":  "active",
                        "exitCode":  null
+                   },
+                   {
+                       "claimId":  "GUARD-02-18332",
+                       "actor":  "sonnet",
+                       "taskId":  "GUARD-02",
+                       "paths":  [
+                                     "server/StateApplierCli.cs",
+                                     "docs/verification/guard02-di-boundary.md",
+                                     "docs/handoff/queue/directive-GUARD-02-di-boundary.md",
+                                     "docs/handoff/WORKSTATE.json",
+                                     "docs/context/RUNTIME-INDEX.md",
+                                     "docs/handoff/HANDOFF.md",
+                                     "docs/STATUS.md"
+                                 ],
+                       "allowlistSource":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\docs\\handoff\\queue\\directive-GUARD-02-di-boundary.md",
+                       "pid":  18332,
+                       "claimedAt":  "2026-07-12T22:12:27.4104311+09:00",
+                       "expiresAt":  "2026-07-13T00:12:27.4104311+09:00",
+                       "status":  "released",
+                       "exitCode":  0
                    }
                ]
 }
