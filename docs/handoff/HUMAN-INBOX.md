@@ -352,3 +352,13 @@
 | (다) | `DI-00-01a` 같은 새 ID 발급 | v9가 금지한 "새 canonical ID 체계" |
 
 **검수자 권고는 (가)**: (나)·(다)는 **판정이 불편해서 기준을 옮기는 모양**이 된다 — `CLAUDE.md` 금지사항 1번이 막는 바로 그 행동이다. **`DI-00-01`은 후퇴가 아니라 좌표다.** 닫아야 할 공백 7개는 전부 작고 5개는 문서다(행렬 §3).
+
+## 조율자 21:17 등재: DI-00-01 산출물 중 allowlist 밖 파일 quarantine+revert (2026-07-12)
+
+**대상**: server/Cli/CliRouter.cs(state-transition 라우팅 4줄 추가), docs/verification/state01-applier.md(신규 문서, STATE-01 관련이나 DI-00-01 세션 중 생성).
+
+- 실행자 PID 32968(DI-00-01, 20:44:36~21:10:46) 산출물이나, 지시서(docs/handoff/queue/directive-DI-00-01-worktracking.md) ## 허용 파일 (allowlist) 목록에 없음(허용: StateApplierCli.cs·ProjectionCli.cs·WP-REGISTRY.json·STATUS.md·WORKSTATE.json·RUNTIME-INDEX.md·HANDOFF.md·di0001-worktracking.md·directive 자체).
+- 4개 회차(20:53~21:08)에 걸쳐 "실행자 종료 후 재검토" 대상으로 관측만 해오다, 이번 회차(21:10 종료 확인 후)에 처리.
+- 처리: outputs/quarantine/CliRouter.cs.DI-00-01.20260712-211719.bak, outputs/quarantine/state01-applier.md.DI-00-01.20260712-211719.bak로 원본 보존 후, CliRouter.cs는 git checkout --으로 되돌리고 state01-applier.md(untracked)는 삭제. 되돌린 뒤 build-verify·verify-behavior·measure dev-pack·handoff-integrity·claim-check DI-00-01 전부 재확인 exit0/PASS/MATCH 확인 후 나머지 allowlist 파일만 커밋(0b556a2, 5a6bb07, 9712c0b).
+- **CliRouter.cs 변경 내용은 기능상 필요해 보임**: state-transition 서브커맨드가 없으면 새로 만든 StateApplierCli가 CLI로 호출 불가(죽은 코드). 다만 allowlist 밖이라 조율자가 임의로 승인 불가. **사람 결정 필요**: (가) CliRouter.cs 변경을 승인해 다음 회차에 커밋 반영, 또는 (나) 별도 지시서로 정식 등재 후 재작업.
+- **참고 판단(이견 있으면 조정 요망)**: 같은 배치의 docs/handoff/FILE-CLAIMS.json(claim 해제 기록 추가분)·docs/handoff/WORKSTATE.applier-log.jsonl(StateApplierCli 실행 로그, 신규)도 scope-check상 allowlist 밖으로 잡혔으나, 코드가 아닌 시스템 기계적 부기(전자는 launch wrapper의 claim 해제, 후자는 allowed 파일 StateApplierCli.cs의 자체 실행 로그)로 판단해 문서 레인(doc-integrity exit0 확인)으로 커밋함(9712c0b). CliRouter.cs·state01-applier.md와 달리 실행자가 의도적으로 작성한 콘텐츠가 아니라는 점에서 구분함.
