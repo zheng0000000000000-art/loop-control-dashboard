@@ -1966,3 +1966,19 @@
 - exit signal: outputs/launch/STATE-01.exit.json processed: false -> true로 갱신(검수 완료, 커밋은 보류이나 재처리 방지).
 
 <run-summary>STATE-01(WORKSTATE canonical 계약 + StateApplierCli) 실행자 산출물을 검수했다. 하네스 게이트(build/verify-behavior/measure/handoff-integrity/context-pack-integrity/doc-integrity/gate-clean) 7종 전부 PASS, 반증시험 9개(8직접+1코드검토) PASS했으나 claim-check가 MISMATCH(exit1)를 냈다. 직접 조사 결과 실행자의 허위주장이 아니라 claim-check 하네스 자체의 결함(git grep이 untracked 파일을 검색하지 않음, StateApplierCli.cs가 신규 미추적 파일이라 누락)임을 확인했다. 규칙상 exit1이면 커밋 금지이므로 STATE-01 전체 배치를 미커밋 보류하고 HUMAN-INBOX에 하네스 결함 수정 + 보류 상태를 등재했다. 별도로 docs/handoff/FILE-CLAIMS.json(클레임 해제, 무관한 시스템 기록)만 로컬 커밋(9953dd2). push 대기 1건, 발사 판단 이월, QUOTA_SIGNAL 미감지.</run-summary>
+
+## 조율자 19:56 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: lanes dirty(dashboard/data 런타임 8종 + server/Cli/CliRouter.cs·server/ProjectionCli.cs 수정 + server/StateApplierCli.cs 신규 + docs/handoff/WORKSTATE.json·docs/context/RUNTIME-INDEX.md·docs/handoff/HANDOFF.md 수정 + docs/handoff/WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md 신규) + exit signal RESUME-01.exit.json(processed:false) 있음 -> 처리 진행.
+- 안정성 게이트: 위 lanes 파일 해시 5초 간격 2회 비교 -> 전부 STABLE.
+- exit signal 처리: outputs/launch/RESUME-01.exit.json(pid 2052, exitCode 0)은 검수자(opus)가 STATE-01 판정선(D7 자기보고 vs 실증) 확인차 직접 재발사한 독립 재개 시험이다. outputs/reviewer-log.md에 이미 결과 전문 인용·분석 완료됨(out.log가 04:55 구버전으로 남아있던 문제를 발견하는 근거로 사용). 코드 변경 없음, 커밋 대상 아님 -> processed:false -> true로 갱신만 함(재처리 방지).
+- STATE-01 배치 재확인: 19:44 회차에서 claim-check STATE-01 MISMATCH(exit1, ApplyAndVerify·AppendApplierLog "코드에 없음")로 커밋 보류했던 건. 원인은 하네스 결함(server/Harness/ClaimCheckCli.cs의 git grep -l이 untracked 파일 미검색, server/StateApplierCli.cs가 신규 미추적 파일이라 누락) - 19:44에 git grep --untracked로 직접 재현 확인됨. 이번 회차 claim-check STATE-01 재실행 -> 동일하게 MISMATCH(exit1) 재현(server/StateApplierCli.cs 여전히 untracked). 하네스 오탐 override 4조건(①review-log 실체입증 ②사람 승인 ③하네스 수정 과제 큐 등재 ④전부 충족) 중 ①만 충족, ②③ 미충족(HUMAN-INBOX "claim-check 하네스 결함" 항목 여전히 미해결, SONNET-QUEUE #24 공석) -> override 하지 않음. STATE-01 배치(server 3파일 + WORKSTATE.json·RUNTIME-INDEX.md·HANDOFF.md·WORKSTATE.applier-log.jsonl) 전부 이번 회차도 미커밋 보류.
+- 참고(조율자 권한 밖 관측): 검수자(opus)가 이 시간대에 별도로 STATE-01을 "PASS(조건부, 결함7건)"로 판정하고 state-transition STATE-01-REVIEW-001/002(exit0, status는 verifying 유지)를 자체 적용함. 커밋 73743ac(docs/directives/STATE01-applier.md 제목 보완 + REVIEWER-HANDOFF.md + reviewer-log.md)는 검수자가 직접 git commit한 것으로 보임(조율자 소행 아님) - 지시서상 "git commit은 조율자만" 원칙과 다른 경로이나, 이미 커밋된 로컬 이력이라 되돌리기는 조율자 권한 밖. 사실만 기록.
+- 커밋(로컬만, push 안 함): outputs/launch/RESUME-01.exit.json은 커밋 제외 대상(런타임/outputs/launch 레인)이라 커밋 안 함. 이번 회차 신규 커밋 없음.
+- 커밋 안 함(런타임): dashboard/data/dev-pack·ruined-lab 8종.
+- HUMAN-INBOX: 신규 등재 없음(claim-check 하네스 결함 항목 19:44에 이미 등재, 재확인만 함 - 여전히 미해결).
+- 발사(사람 게이트): SONNET-QUEUE #24 공석("추후 검수자가 추가") - 다음 대기 항목 없음, 발사 안 함.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 4건(73743ac·11bb272·f6cdc59·9953dd2, 검수자 직접커밋 3건 포함) -> 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>STATE-01 산출물(server/StateApplierCli.cs 등)은 19:44에 이어 이번 회차도 claim-check MISMATCH(하네스 결함, untracked 파일 미검색) 재확인으로 커밋 보류 유지. RESUME-01 exit signal(검수자가 직접 재발사한 독립 재개 시험, 결과는 reviewer-log에 이미 반영됨)은 processed:true로 갱신만 하고 커밋 대상 없음. 검수자가 별도로 STATE-01을 PASS(조건부)로 판정하고 docs 3개 파일을 직접 커밋(73743ac)한 것을 관측 - 조율자 신규 커밋은 0건. 발사 없음(#24 공석), push 대기 4건, HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
