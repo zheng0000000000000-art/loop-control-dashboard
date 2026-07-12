@@ -30,17 +30,31 @@
 
 ## 2. 지금 돌고 있는 것
 
-> ### ▶ 2026-07-12 19:3x — **세션 이사. 가동 중.**
+> ### ▶ 2026-07-12 19:5x — **STATE-01 검수 완료(PASS). 가동 중.**
 >
 > | 주체 | 상태 |
 > | --- | --- |
-> | **조율자** | **▶ 가동**(사건 기반. sentinel 처리 확인됨) |
-> | **코덱스** | ▶ 가동. `di-completion-check` 제작 완료(세션 054·055). **개정된 gate-manifest 프롬프트 재투입 대기** — 게이트 2개 분리(`POST-EXECUTOR`/`POST-COMMIT`)·`triggeredBy`·`gateVerdict`가 아직 없다 |
-> | **실행자** | **▶ STATE-01 실행 중**(PID 11396). `server/StateApplierCli.cs` 생성 중 |
-> | 하네스 | `handoff-integrity` **exit 0** · `context-pack-integrity` **exit 0** |
-> | 미푸시 | **7건** |
+> | **조율자** | **▶ 가동**(5분 주기. 지금도 커밋 중 — 미푸시 수치가 계속 움직인다. **문서에서 읽지 말고 `git log origin/main..HEAD`로 세어라**) |
+> | **코덱스** | ▶ 가동. `di-completion-check` 제작 완료(세션 054·055) + `GATE-MANIFEST` 게이트 2개 분리 **반영됨**(POST-EXECUTOR/POST-COMMIT·`triggeredBy`·`gateVerdict` 확인). |
+> | **실행자** | **⏹ STATE-01 종료**(PID 11396, 19:41:31, exit 0, 77턴, $3.58). **검수 PASS** — 아래 §4-0-B |
+> | 하네스 | `di-completion-check --gate POST-EXECUTOR --task STATE-01` **exit 0 / PASS 7-of-7**(검수자 직접 재실행). 증거 `outputs/gates/STATE-01.gate.json` |
+> | 미푸시 | **실측하라**(19:5x 기준 1~2건. 사람이 그 사이 push했다) |
 >
 > **아래 표들은 이전 스냅샷이다. 위가 최신이다.**
+
+## 4-0-B. ★ 2026-07-12 19:5x — STATE-01 검수 결과 (검수자, 직접 재실행 근거)
+
+**판정: PASS(조건부).** `diId`를 `DI-00-07`로 올리지 않았다 → 반려 사유 없음. 상세·결함 7건은 **`outputs/reviewer-log.md` 맨 끝**.
+
+**판정선 통과 근거(자기보고 아님)**: 검수자가 사람 승인 후 `RESUME-01`을 **실제로 재발사**(PID 2052, 19:46, $0.055). 답: `PHASE=P00 / DI=LEDGER-04 / STATUS=verifying / NEXT=…`. **다섯 필드를 지어내지 않고 답했다.** 04:55 FAIL판의 `PHASE=P0-04` 오답이 사라졌다.
+
+**⚠️ 다음 검수자가 반드시 알아야 할 함정 3개**
+
+1. **`outputs/sonnet-<TASK>.out.log`를 믿지 마라.** `run-executor.ps1`이 재발사 때 **이 파일을 갱신하지 않는다.** 19:46 재발사 후에도 04:55 FAIL 답이 그대로 들어 있었다. **정본은 `.out.jsonl`의 `result` 이벤트다.**
+2. **`state-transition --verdict`는 아직 형식적이다.** 아무 경로의 아무 JSON이나 `{"verificationPassed":true,"exitCode":0}`면 통과한다 → **생산자가 자기 완료를 결재할 수 있다.** `outputs/gates/<task>.gate.json`에 결속하기 전까지 `completed` 전이를 신뢰하지 마라.
+3. **`scope-check`는 지시서 제목에 문자열 `allowlist`가 없으면 exit 2로 죽는다**(= 검사가 안 돈 것). `## 허용 파일 (allowlist)` 형식을 지켜라.
+
+**다음 지시서 3건(위 함정을 코드로 닫는다)**: (1) `run-executor.ps1` out.log 갱신 (2) `--verdict`를 `gate.json`에 결속 + `--root`/`--dry-run`(반증 8이 아직 실측 불가) (3) `scope-check`·`claim-check`를 `GATE-MANIFEST`에 등재(현재 `unlisted` 경고 10건).
 
 > ### ⛔ (이전) 2026-07-12 05:0x — 전부 정지
 > **Phase 0의 DI 6개가 전부 끝났다. `HS-GATE-P00`만 남았고, 그 독립 재개 시험이 FAIL했다** — §4를 보라.
@@ -123,7 +137,7 @@
 
 ### 다음 다섯 수 (순서대로)
 
-1. **STATE-01 검수**(실행 중, PID 11396) — 판정선: **정상 전이 1회 후 `RESUME-01`을 다시 돌려 L0만으로 Phase·DI·status·blockers·nextActions를 답할 수 있는가.** ⚠️ **`diId`를 `DI-00-07`로 올렸으면 반려다** — 그건 "DI-00-01~06이 끝났다"는 경계 주장이고 **적합성 행렬이 증명해야 한다.**
+1. ~~**STATE-01 검수**~~ → **✅ 완료(PASS). §4-0-B 참조.** 후속 지시서 3건이 여기서 나왔다.
 2. **코덱스 재투입** — `outputs/launch/CODEX-GATE-MANIFEST.prompt.txt`(개정판). 게이트 2개 분리 + `triggeredBy` + `gateVerdict` + `outputs/gates/<task>.gate.json`.
 3. **v9 `DI-00-01~06` 적합성 행렬**(검수자 몫, **미착수**) — PASS/PARTIAL/MISSING/NOT_VERIFIED + 증거 경로. **`HS-GATE-P00.md` 안에 넣는다.** 예측: **`DI-00-06`은 PARTIAL**(Context Receipt·Context Budget·L1~L3 계층 없음).
 4. **Local DI Runner v2 §9 결재**(`docs/plan/LOCAL-DI-RUNNER-DRAFT-v2.md`) — 사람이 갈래·모델·첫 과제를 정한다.

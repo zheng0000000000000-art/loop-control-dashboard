@@ -786,3 +786,41 @@ qwen3:14b는 `ADR-003`은 맞게(기록 파일 단일 기록자), **`ADR-005`는
 1. **로컬 에이전트 루프**(도구 호출) — 없으면 DI 완수 시뮬레이션 자체가 불가능하다.
 2. **verification 문서의 하네스 결과를 프로그램이 채운다** — `gate.json`을 정본으로.
 3. 위 두 시험을 **하네스로 굳힌다**(기존 `e2e-usage` 확장. 신규 하네스 아님).
+
+## 검수자 2026-07-12 19:5x — STATE-01 (PID 11396) 검수: **PASS (조건부)**
+
+**주체**: 검수자(claude-opus, 대화 세션). 실행자는 sonnet PID 11396(19:21:03~19:41:31, exit 0, numTurns 77, $3.58).
+
+### 판정: PASS — 반려 조건에 걸리지 않았다
+
+- **diId를 DI-00-07로 올리지 않았다**(현재 `LEDGER-04` 유지). 경계 주장 없음 → 반려 사유 아님.
+- **판정선(RESUME-01 재실행)**: 검수자가 사람 승인 후 **직접 재발사**(PID 2052, 19:46, exit 0, $0.055). 실제 답:
+  `PHASE=P00 (WP-00) / DI=LEDGER-04 / STATUS=verifying / NEXT=부족: … 반증 9개의 내용과 검수 기준 세부는 이 파일에 없다`
+  → **Phase·DI·status·blockers·nextActions 다섯 필드를 지어내지 않고 답했다.** 04:55 FAIL판("PHASE=P0-04" 오답 + "무엇을 검증 중인지 알 수 없다")과 비교해 **Phase 오답이 사라지고 다음 할 일이 L0에 실렸다.** 남은 '부족'은 nextActions가 가리키는 대상의 **경로가 없다**는 것(내용 문제, 기구 문제 아님) → 이번 검수 전이에서 경로를 넣어 보강했다.
+
+### 내가 직접 재실행한 하네스 (자기보고 대조 — 전부 일치)
+
+- `di-completion-check --gate POST-EXECUTOR --task STATE-01` → **exit 0, gateVerdict=PASS, 7/7 기대exit 일치**(gate-clean은 기대 1/실제 1). 증거: `outputs/gates/STATE-01.gate.json`
+- `dotnet build server -c Release` → exit 0, warning 0
+- `hs-scan` → **exit 1 (기대 1)**
+- 반증 시험 **1·2·3·4·5·6·7을 검수자가 직접 재현**: 각각 exit 1/0/1/1/1/1/1, **WORKSTATE sha256 불변**(63814e74…, 7건 전후 동일), applier-log 1줄 유지. 실행자 자기보고와 일치.
+- `scope-check` → 아래 결함 D2 때문에 **처음엔 exit 2(실행 불가)**. 제목 고친 뒤 exit 1(dirty tree 92건은 전부 타 세션 스크래치·런타임). **실행자 창(19:21~19:42) 안에서 바뀐 파일은 allowlist 안**이다. 예외 1건: `docs/handoff/WORKSTATE.applier-log.jsonl`(allowlist 밖 신규 런타임 로그, 실행자 자진 신고함).
+
+### 결함 (전부 실체 확인. PASS를 막지는 않지만 지시서로 닫아야 한다)
+
+1. **D1 — `run-executor.ps1`이 `out.log`를 갱신하지 않는다.** RESUME-01 재발사(19:46) 후 `outputs/sonnet-RESUME-01.out.jsonl`은 19:46인데 **`.out.log`는 04:55 그대로**였다. 사람이 읽는 파일이 옛 FAIL 답을 그대로 보여준다 — **검수자가 이걸로 오판할 뻔했다.** 증거 함정. 최우선.
+2. **D2 — STATE-01 보관 지시서 제목이 `## 허용 파일`이어서 `scope-check`가 죽었다**(`ScopeCheckCli.ParseAllowlist`는 제목에 문자열 `allowlist`가 있어야 절을 연다. 다른 지시서 11개는 전부 `## 허용 파일 (allowlist)`). exit 2 = 실패가 아니라 **검사 자체가 안 돈 것**. 검수자가 제목을 고쳐 되살렸다(직접 경로: docs/ 예외).
+3. **D3 — `--verdict`가 형식적이다.** `StateApplierCli.ValidateVerdict`는 **임의 경로의 아무 JSON이나** `{"verificationPassed":true,"exitCode":0}`이면 통과시킨다. 생산자가 자기 verdict를 써도 막지 못한다 → **"완료에는 독립 검증이 필요하다"는 규칙이 코드로 강제되지 않는다.** `outputs/gates/<taskId>.gate.json`(di-completion-check 산출)에 **결속**해야 한다. `--human-decision`(`approved:true`)도 동일.
+4. **D4 — canonical 불변식이 delta에만 걸린다.** `ValidateRequest`는 요청에 실린 ID만 검사하고 `ValidateCandidate`는 ID 패턴을 **안 본다.** 그래서 지금 WORKSTATE는 **비canonical `diId=LEDGER-04`를 가진 채 유효**하다. 정지 상태(at rest)가 계약을 어긴다.
+5. **D5 — 반증 8(projection 실패)은 실측되지 않았다**(실행자 자진 신고). 원인은 설계다: `StateApplierCli`가 항상 `GitTools.FindRepoRoot()`로 실 WORKSTATE를 잡아 **사본 시험이 불가능**하다. `--root`/`--dry-run`이 필요하다.
+6. **D6 — `scope-check`·`claim-check`가 `GATE-MANIFEST`에 없다**(di-completion-check가 `unlisted` 경고로 10개를 뱉는다). 등재되지 않은 하네스는 **아무도 안 돌린다.**
+7. **D7 — 자기보고를 증거로 제출했다.** verification 문서 자가점검표는 "3. 정상 전이 1회 + RESUME-01 L0 답 가능 = PASS"라고 적었지만 **RESUME-01을 실제로 돌리지 않았다**(산문 시연). 결과적으로 주장은 참이었으나 **증거는 없었다.** 발사가 사람 게이트라 실행자가 못 돌린 것이므로 정상 참작하되, **"코드 검토로 갈음"과 달리 이건 ADR-005 절에 신고하지 않았다.**
+
+### 검수자가 한 쓰기
+
+- `state-transition` **STATE-01-REVIEW-001 / -002** (exit 0). status는 `verifying` 유지, nextActions를 경로가 있는 문장으로 교체. **completed로 올리지 않았다** — 적합성 행렬 전에 완료를 선언하는 것은 경계 주장이다.
+- `docs/directives/STATE01-applier.md` 제목에 `(allowlist)` 추가(D2 복구).
+
+### 내가 틀렸던 것 (이번 세션)
+
+- nextActions에 **"push 8건"**이라고 썼다 — **인수인계 문서의 7건을 그대로 반올림한 추측**이었다. 실측하니 그 사이 사람이 push했고 `origin/main..HEAD`는 **1~2건**이었다(조율자가 계속 커밋 중이라 값이 움직인다). REVIEW-002로 정정했다. **문서를 읽고 숫자를 옮기지 마라 — 세어라.**
