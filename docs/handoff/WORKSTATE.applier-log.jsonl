@@ -17,3 +17,4 @@
 {"transitionId":"DI-BOUNDARY-01-TO-04","result":"ok","exitCode":0,"at":"2026-07-12T13:35:27.2022756Z"}
 {"transitionId":"DI-00-04-INPROG-001","result":"ok","exitCode":0,"at":"2026-07-12T13:55:33.1143239Z"}
 {"transitionId":"DI-00-04-VERIFY-001","result":"ok","exitCode":0,"at":"2026-07-12T13:55:51.6786424Z"}
+{"transitionId":"DI0004-BLOCKED-CODEX","result":"handoff-integrity-failed exit=1","exitCode":1,"at":"2026-07-12T14:02:29.9626015Z"}

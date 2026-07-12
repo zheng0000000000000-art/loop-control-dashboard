@@ -3,8 +3,11 @@
 # HANDOFF — 인수인계 문서
 
 ## 현재 위치
-- **diId**: DI-00-04  **phaseId**: P00  **status**: verifying
-- **갱신자**: sonnet-DI-00-04  **갱신일**: 2026-07-12
+- **diId**: DI-00-04  **phaseId**: P00  **status**: blocked
+- **갱신자**: reviewer  **갱신일**: 2026-07-12
+
+## 블로커
+- DI-00-04의 '즉시 제작 필수' 2건이 코덱스 배타 영역이라 실행자가 못 만든다: ①H-4 HS-GATE 누락 탐지(di-completion-check 확장으로 정정 — 검수자 판단. 예산 결재 불필요) ②S-2 prepare-model-handoff Skill(skills/는 ADR-002상 코덱스 소유). 코덱스가 CODEX-GATE-02(C-01) -> CODEX-GATE-03(C-02)을 끝내야 DI-00-04가 닫힌다
 
 ## 변경 파일 (4개)
 - `server/OllamaExecutor.cs` [4eb15cee5726081c…] — ParseNoteResponse에 2차 대소문자 무시 대조(OrdinalIgnoreCase) 추가. TryGenerateNote/TryGenerateTuningNote에 NormalizedActualMetricId 반환. Generate/GenerateForTuning에 normalizedMetricIds 수집. ExecutorGenerateResult에 NormalizedMetricIds 추가.
@@ -34,10 +37,10 @@
 - measureViolationsAfter: 0
 
 ## 다음 작업
-- 검수자: docs/verification/di0004-hs-gate-base.md 확인 → _template.md·HS-REVIEW-P00-R1·SKILL-MANIFEST 3파일 검수
-- 코덱스 대기: CODEX-GATE-02(큐 C-01) — handoff-integrity 멱등 대조 + di-completion-check CLI 계약 + GATE-MANIFEST 등재 + claim-check --untracked
-- 사람 결재(HUMAN-INBOX): ADR-010 상태 · ADR-012 · LOCAL-DI-RUNNER-v3 §9 · LAUNCH-BUDGET(턴별 피크 134,528) · push 43건+
-- H-4(HS-GATE 누락 탐지) 즉시 제작 필수 — 예산 예외 적용 사람 결재 필요. S-2(prepare-model-handoff) 즉시 제작 필수
+- 코덱스: outputs/launch/CODEX-GATE-02.prompt.txt(재작성됨) 투입 -> C-01(멱등 대조·CLI 계약·GATE-MANIFEST 등재·claim-check --untracked) -> C-02(Skill manifest 적용·HS-GATE 누락 탐지·prepare-model-handoff)
+- 검수자: 코덱스 산출물 반증 재현 후 DI-00-04 completed 전이(verdict는 outputs/gates/DI-00-04.gate.json — 손으로 쓴 JSON은 GUARD-02가 거부한다)
+- 그 다음 DI-00-05(CONTEXT-MANIFEST·sessions 템플릿) -> DI-00-06(Context Receipt·Budget·L1~L3·schema) -> DI-00-07(HS-GATE-P00, 사람 판정)
+- 사람 결재(HUMAN-INBOX): ADR-010 상태 · ADR-012 · LOCAL-DI-RUNNER-v3 §9 · LAUNCH-BUDGET(턴별 피크 134,528) · push 48건+
 
 ## 재개 전 검증
 ```bash
