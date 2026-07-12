@@ -1,0 +1,24 @@
+﻿{
+    "schemaVersion":  2,
+    "taskId":  "RULES-01",
+    "pid":  8816,
+    "exitCode":  0,
+    "startedAt":  "2026-07-12T17:18:11.9842895+09:00",
+    "exitedAt":  "2026-07-12T17:18:29.1437937+09:00",
+    "outLog":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-RULES-01.out.log",
+    "outJson":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-RULES-01.out.json",
+    "processed":  false,
+    "argLength":  440,
+    "usage":  {
+                  "inputTokens":  3,
+                  "outputTokens":  662,
+                  "cacheCreationTokens":  9912,
+                  "cacheReadTokens":  13347,
+                  "totalCostUsd":  0.0517731,
+                  "numTurns":  1,
+                  "durationMs":  13727,
+                  "isError":  false,
+                  "stopReason":  "end_turn",
+                  "sessionId":  "cddbfe99-1218-4976-8310-5a6367012f2e"
+              }
+}

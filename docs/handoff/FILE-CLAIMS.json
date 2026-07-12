@@ -134,6 +134,20 @@
                        "expiresAt":  "2026-07-12T06:55:36.9994878+09:00",
                        "status":  "released",
                        "exitCode":  0
+                   },
+                   {
+                       "claimId":  "RULES-01-8816",
+                       "actor":  "sonnet",
+                       "taskId":  "RULES-01",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  8816,
+                       "claimedAt":  "2026-07-12T17:18:11.9842895+09:00",
+                       "expiresAt":  "2026-07-12T19:18:11.9842895+09:00",
+                       "status":  "released",
+                       "exitCode":  0
                    }
                ]
 }
