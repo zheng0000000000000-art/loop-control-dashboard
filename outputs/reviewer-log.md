@@ -1023,3 +1023,43 @@ WORKSTATE: `P00 / WP-00 / DI-00-01 / waiting`, `appliedTransitions`(11) == `appl
 ### 지시서 작성자 규칙 (내가 어긴 것)
 
 **미커밋 변경이 남아 있는 파일은 다음 지시서의 allowlist에 넣거나, 발사 전에 커밋해 트리를 비운다.** 둘 다 안 하면 조율자가 규칙대로 지운다.
+
+## 검수자 2026-07-12 22:0x — GUARD-01 검수: **PASS** (반증 8개 전부 직접 재현)
+
+**주체**: 실행자 sonnet PID 4396(21:32~21:50, exit 0). 검수는 검수자(claude-opus).
+
+### 반증 시험 — 검수자가 전부 재실행 (자기보고 대조)
+
+| # | 시험 | 기대 | 검수자 실측 |
+| --- | --- | --- | --- |
+| 1 | 미인식 명령 | exit 2 + 즉시 종료 | **exit 2**, stderr에 known 26개, **웹서버 안 뜸** |
+| 2 | 인자 없음 | 웹서버 기동(동작 보존) | **`Now listening on: http://localhost:5173`** |
+| 3 | `--root <사본>` | 사본만 변경, 실 WORKSTATE 불변 | **exit 0 / 사본 변경 True / 실 WORKSTATE 불변 True** |
+| 4 | `--dry-run` 정상 전이 | exit 0, 무변경 | **exit 0**, WORKSTATE·applier-log **둘 다 불변** |
+| 5 | `--dry-run` 잘못된 전이 | exit 1, 무변경 | **exit 1**, 불변 |
+| 6 | allowlist 없는 지시서로 발사 | 발사 중단 | **exit 1 · claude 프로세스 미증가(15→15) · claim 미등록** |
+| 7 | `run-executor.ps1` BOM | allowlist 9개 추출 | **first3 = 239,187,191** · **FILE-CLAIMS `paths`=9** |
+| 8 | 기존 명령 인식 | 각각 기대 exit | `handoff-integrity` 0 · `hs-scan` **1**(기대 1) · `verify-behavior` 0 |
+
+`di-completion-check --gate POST-EXECUTOR --task GUARD-01` → **7/7 PASS** · `gate-clean server` **0**.
+
+### ★ 오늘 처음으로 P0-06이 실제로 작동한다
+
+`FILE-CLAIMS`의 `paths`가 **9건**으로 채워졌다. **BOM 수정 전에는 언제나 0이었다.** 예약 파일 목록이 비어 있었으니 충돌 검출이 원리적으로 불가능했고, `scope-check`의 `claimConflictCount=0`은 **평화가 아니라 빈 배열끼리의 비교**였다. 이제 실제 데이터가 있다.
+
+### 실행자의 자진 신고 3건 — 전부 정직했고, 그중 하나는 내가 실증했다
+
+1. **"시험 6을 실측하지 못했다"**(셋업 복잡도) → **검수자가 실증했다. PASS.** *신고하고 갈음하지 않은 것이 옳았다.*
+2. `scope-check` FAIL(103건)은 **기존 dirty 트리** 때문이고 자기 변경 5개는 allowlist 안 — 실측 확인함.
+3. `--root` 사용 시 projection·handoff-integrity를 건너뛴다(사본에는 의미 없으므로) — 설계 판단으로 수용. **검수 사본 용도에는 충분하다.**
+
+### 검수자가 틀렸던 것 (기록)
+
+- **R2(웹서버)를 세 번 잘못 쟀다.** exe를 직접 실행하고 `Start-Process`/`Start-Job`으로 cwd를 넘기려 했는데, **PowerShell의 `Set-Location`은 .NET `CurrentDirectory`를 바꾸지 않는다.** 서버가 저장소 루트의 **부모**(`C:\Users\1\Documents\dashboard\data`)를 보고 죽었다. **회귀라고 단정할 뻔했다.** `dotnet run`으로 돌리니 정상이었다.
+  → **부수 관찰(범위 밖)**: **exe를 직접 실행하면 root 계산이 부모 폴더를 본다.** 이건 GUARD-01의 회귀가 아니라 기존 특성이지만, **함정이다.** 언젠가 하네스가 exe를 직접 부르면 조용히 다른 저장소를 읽는다.
+
+### 남은 것
+
+- `outputs/quarantine/*.bak` 2건(조율자 격리분) 유지 — 증거.
+- **DI-00-01 claim이 stale로 남았다**(R7 실증용 발사를 즉시 kill했다). `scope-check`가 `pid-dead`로 검출한다 — 다음 발사에 지장 없음.
+- 다음: **CODEX-GATE-02**(코덱스 큐 C-01) — GUARD-01이 커밋됐으니 착수 가능.

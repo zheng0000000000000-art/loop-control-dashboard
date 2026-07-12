@@ -10,3 +10,4 @@
 {"transitionId":"TEST-DI0001-RESTORE","result":"ok","exitCode":0,"at":"2026-07-12T12:04:49.5826160Z"}
 {"transitionId":"TEST-DI0001-2","result":"ok","exitCode":0,"at":"2026-07-12T12:13:32.3578014Z"}
 {"transitionId":"REVIEWER-RESTORE-001","result":"ok","exitCode":0,"at":"2026-07-12T12:14:16.1780254Z"}
+{"transitionId":"GUARD-01-REVIEW-001","result":"ok","exitCode":0,"at":"2026-07-12T12:56:35.9504898Z"}
