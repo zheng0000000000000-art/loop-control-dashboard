@@ -296,3 +296,17 @@
 - 참고: 이 결정이 나야 LEDGER-02(실행자 토큰 배선)도 검증 가능해진다 — ollama 제안 경로가 살아나야 `proposal.generated`의 `cost.inputTokens > 0`을 확인할 수 있음(현재 미검증).
 - 조치: 사람의 선택(1/2/3) 필요. 조율자는 결재를 대행하지 않음.
 - 확인 시각: 2026-07-12 01:56 (조율자, recursion1-result-check).
+
+
+## 결정 필요: claim-check 하네스 결함(untracked 파일 미검색) + STATE-01 커밋 보류 (2026-07-12 19:44, 조율자)
+
+- 실행자(STATE-01, PID 11396, 완료)가 WORKSTATE canonical 계약 + StateApplierCli를 신설했다. build/verify-behavior/measure/handoff-integrity/context-pack-integrity/doc-integrity/gate-clean 7종 하네스(di-completion-check --gate POST-EXECUTOR) 전부 PASS, 반증시험 9개(8직접+1코드검토) PASS.
+- 그러나 claim-check STATE-01이 MISMATCH(exit1)를 냈다: 검증문서가 언급한 ApplyAndVerify·AppendApplierLog 심볼이 "코드에 없음"으로 판정됨.
+- **직접 확인 결과 실행자의 허위 주장이 아니다.** 두 심볼 다 server/StateApplierCli.cs(:86, :335)에 실재한다(Select-String으로 확인). 원인은 하네스 자체 결함: server/Harness/ClaimCheckCli.cs의 심볼 검색이 git grep -l {sym} -- server를 쓰는데, 이 명령은 **untracked 파일을 검색하지 않는다**(--untracked 플래그 없음). StateApplierCli.cs는 이번 회차 신규 미추적 파일이라 검색에서 누락됐다. git grep --untracked -l ApplyAndVerify -- server로 직접 재현·확인함(매치됨).
+- 하네스 규칙("claim-check exit1 -> 커밋 금지")에 따라 STATE-01 배치 전체(server/StateApplierCli.cs 신규·server/ProjectionCli.cs·server/Cli/CliRouter.cs 수정, docs/handoff/WORKSTATE.json·docs/context/RUNTIME-INDEX.md·docs/handoff/HANDOFF.md·docs/handoff/WORKSTATE.applier-log.jsonl, docs/directives/STATE01-applier.md·docs/verification/state01-applier.md)를 **미커밋 상태로 보류**했다. 조율자는 override 조건(사람 승인 + 하네스 수정 과제 큐 등재)이 아직 없어 임의로 override하지 않았다.
+- 검증문서(docs/verification/state01-applier.md)가 스스로 명기한 잔여 한계 참고: ①TEST 8(projection 실패 경로)은 직접 시뮬레이션 못하고 코드 검토로 대체 ②WORKSTATE.json의 diId가 여전히 비canonical('LEDGER-04') - canonical 확정은 이번 작업 범위에서 검수자·사람 몫으로 명시적으로 남겨짐 ③WORKSTATE.applier-log.jsonl이 dev-pack 측정 제외 대상인지 미확인.
+- **사람 판단 필요**:
+  1. ClaimCheckCli.cs의 git grep -l {sym} -- server에 --untracked 플래그를 추가하는 하네스 수정을 승인·큐에 등재할지 (수정 전까지 매 회차 신규 파일 포함 검증마다 같은 오탐이 재발한다).
+  2. 위 하네스 수정이 반영/승인되면 STATE-01 배치를 재검수 없이 바로 커밋해도 되는지, 아니면 재검수를 거칠지.
+  3. WORKSTATE.json의 diId(LEDGER-04, 비canonical) 확정 - STATE-01 지시서가 이 결정을 검수자·사람 몫으로 명시했다.
+- 확인 시각: 2026-07-12 19:44 (조율자, recursion1-result-check).
