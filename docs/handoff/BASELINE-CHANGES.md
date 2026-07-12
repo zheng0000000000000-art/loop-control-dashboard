@@ -34,3 +34,16 @@
 - ③ 되돌리는 법:
 - 바꾸지 않은 것:
 ```
+
+## BC-002 — Phase 0 신규 하네스 예산 2 → 3 (di-completion-check 추가)
+
+- **주체**: 사람(choi) 승인, 2026-07-12. 제안: 검수자 세션.
+- **무엇을 바꿨나**: docs/plan/ALIGNMENT-v9.md §4가 정한 "Phase 0 신규 하네스 2개(handoff-integrity·context-pack-integrity)" 상한을 **3개로 늘린다.** 추가분: **`di-completion-check`**.
+- **근거(실측)**: v9 **DI-00-04가 이름으로 요구하는 하네스**다.
+  > "7. 공통 완료 조건을 검사하는 Harness 후보를 평가하고, 기준을 충족하면 **di-completion-check Harness의 최소 버전을 제작**한다."
+  > "3. **Harness manifest와 Skill manifest의 최소 schema 또는 문서 계약**을 정의한다."
+  > "4. Phase 종료 시 **HS-GATE 누락을 탐지하는 검사**를 추가한다."
+  **우리는 예산 2칸을 v9가 이름으로 지정하지 않은 하네스에 쓰고, v9가 이름으로 지정한 것은 건너뛰었다.**
+  즉 이것은 **예산 초과가 아니라 예산 오배분의 정정**에 가깝다. 그래도 상한을 바꾸는 것이므로 **사람 결재로 처리한다.**
+- **되돌리는 법**: di-completion-check를 HarnessRegistry에서 제거하고 server/Harness/DiCompletionCheckCli.cs를 삭제하면 원복된다. manifest(docs/handoff/GATE-MANIFEST.json)는 데이터라 남겨도 무해하다.
+- **부작용 주의**: 이 하네스는 **다른 하네스를 실행한다.** measure처럼 **부작용이 있는 검사**(run-log·proposal 생성)를 포함하므로, manifest에 mutatesState를 표기하고 **게이트 재실행이 증거를 오염시킨다는 사실을 드러내야 한다.** (근본 해결은 별도 과제 — 검수자가 재실행할 때마다 run-log가 늘어나는 문제가 이미 실측됐다: 1075 → 1076.)
