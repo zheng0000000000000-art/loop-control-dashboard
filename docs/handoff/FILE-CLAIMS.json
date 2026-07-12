@@ -148,6 +148,132 @@
                        "expiresAt":  "2026-07-12T19:18:11.9842895+09:00",
                        "status":  "released",
                        "exitCode":  0
+                   },
+                   {
+                       "claimId":  "TRANSPORT-PROBE-31128",
+                       "actor":  "sonnet",
+                       "taskId":  "TRANSPORT-PROBE",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  31128,
+                       "claimedAt":  "2026-07-12T17:56:16.0443926+09:00",
+                       "expiresAt":  "2026-07-12T19:56:16.0443926+09:00",
+                       "status":  "released",
+                       "exitCode":  0
+                   },
+                   {
+                       "claimId":  "TRANSPORT-PROBE-9552",
+                       "actor":  "sonnet",
+                       "taskId":  "TRANSPORT-PROBE",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  9552,
+                       "claimedAt":  "2026-07-12T18:01:10.5838864+09:00",
+                       "expiresAt":  "2026-07-12T20:01:10.5838864+09:00",
+                       "status":  "active",
+                       "exitCode":  null
+                   },
+                   {
+                       "claimId":  "TRANSPORT-PROBE-18772",
+                       "actor":  "sonnet",
+                       "taskId":  "TRANSPORT-PROBE",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  18772,
+                       "claimedAt":  "2026-07-12T18:01:22.6985687+09:00",
+                       "expiresAt":  "2026-07-12T20:01:22.6985687+09:00",
+                       "status":  "released",
+                       "exitCode":  0
+                   },
+                   {
+                       "claimId":  "TRANSPORT-PROBE2-31240",
+                       "actor":  "sonnet",
+                       "taskId":  "TRANSPORT-PROBE2",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  31240,
+                       "claimedAt":  "2026-07-12T18:03:00.0163775+09:00",
+                       "expiresAt":  "2026-07-12T20:03:00.0163775+09:00",
+                       "status":  "active",
+                       "exitCode":  null
+                   },
+                   {
+                       "claimId":  "TRANSPORT-PROBE2-4124",
+                       "actor":  "sonnet",
+                       "taskId":  "TRANSPORT-PROBE2",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  4124,
+                       "claimedAt":  "2026-07-12T18:03:43.1138538+09:00",
+                       "expiresAt":  "2026-07-12T20:03:43.1138538+09:00",
+                       "status":  "released",
+                       "exitCode":  1
+                   },
+                   {
+                       "claimId":  "TRANSPORT-PROBE2-19004",
+                       "actor":  "sonnet",
+                       "taskId":  "TRANSPORT-PROBE2",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  19004,
+                       "claimedAt":  "2026-07-12T18:02:28.8114061+09:00",
+                       "expiresAt":  "2026-07-12T20:02:28.8114061+09:00",
+                       "status":  "released",
+                       "exitCode":  0
+                   },
+                   {
+                       "claimId":  "TRANSPORT-PROBE-15224",
+                       "actor":  "sonnet",
+                       "taskId":  "TRANSPORT-PROBE",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  15224,
+                       "claimedAt":  "2026-07-12T18:06:29.7832473+09:00",
+                       "expiresAt":  "2026-07-12T20:06:29.7832473+09:00",
+                       "status":  "released",
+                       "exitCode":  0
+                   },
+                   {
+                       "claimId":  "TRANSPORT-PROBE2-32752",
+                       "actor":  "sonnet",
+                       "taskId":  "TRANSPORT-PROBE2",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  32752,
+                       "claimedAt":  "2026-07-12T18:03:20.5392583+09:00",
+                       "expiresAt":  "2026-07-12T20:03:20.5392583+09:00",
+                       "status":  "released",
+                       "exitCode":  0
+                   },
+                   {
+                       "claimId":  "TRANSPORT-01-7784",
+                       "actor":  "sonnet",
+                       "taskId":  "TRANSPORT-01",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  null,
+                       "pid":  7784,
+                       "claimedAt":  "2026-07-12T17:42:03.2641784+09:00",
+                       "expiresAt":  "2026-07-12T19:42:03.2641784+09:00",
+                       "status":  "released",
+                       "exitCode":  0
                    }
                ]
 }
