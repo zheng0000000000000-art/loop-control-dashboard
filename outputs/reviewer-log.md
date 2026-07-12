@@ -891,3 +891,19 @@ qwen3:14b는 `ADR-003`은 맞게(기록 파일 단일 기록자), **`ADR-005`는
 - **등가물 인정은 내 판단이다**(`harnesses/` ↔ `server/Harness/`, `GATE-MANIFEST.json` ↔ Harness manifest). 사람이 등가를 인정하지 않으면 **DI-00-04는 더 내려간다.**
 - **`DI-00-03`을 PASS로 줬지만 마지막 1항(verification 템플릿의 실패사례 참조 필수화)은 미충족이다.** 엄격히는 PARTIAL이다.
 - **`phase-gates/` 디렉터리를 내가 만들었다** — 원래 `DI-00-04`의 산출물이다. **선취했다.**
+
+## 검수자 2026-07-12 20:2x — 사람 결재 (가) 반영: canonical diId = DI-00-01
+
+**주체**: 결재는 **사람(choi)**, 반영은 검수자. 근거 `ADR-013`(승인됨) + 적합성 행렬 §4.
+
+- 전이 `ADR013-DIID-COORD-001` (exit 0). 사람 결정 파일 `outputs/decisions-diId-2026-07-12.json`을 `--human-decision`으로 붙였다(phaseId 변경이 아니라 필수는 아니었지만, **결재의 증거를 전이에 결속**시켰다).
+- **WORKSTATE가 오늘 처음으로 전부 canonical이다**: `phaseId=P00 / wpId=WP-00 / diId=DI-00-01 / status=waiting / blockers=[]`.
+- 로컬 큐 별칭(P0-01~07 · LEDGER-01~04 · STATE-01 · TRANSPORT-01 · RULES-01 · DIET-01)은 **`notes`로 이동**했다. **성과는 사라지지 않았다** — 적합성 행렬의 각 DI 칸에 증거로 매핑돼 있다.
+- `blockers`가 비었다(결재로 해소). 이전 전이 `CONFORMANCE-P00-001`이 넣었던 blocker가 **정상적으로 소거**됐다 — 죽은 경로가 아니라 **양방향으로 동작한다**는 뜻이다.
+
+### 다음 수 (DI-00-01 지시서 1건으로 묶인다)
+
+1. **WP 등록표 신설** — WP 목록의 정본이 저장소·v9 어디에도 없다.
+2. **상태 전이 그래프**(역방향 차단) — `StateApplierCli`는 지금 `completed → in_progress`를 통과시킨다.
+3. **STATUS.md를 projection이 생성** — 지금은 손편집이라 2026-07-11자로 낡았고, 이미 한 번 사고를 냈다(`cfbfce4`).
+4. (합침) **검수자 결함 D4** — canonical 패턴 검사를 request delta뿐 아니라 **candidate(정지 상태)**에도 건다.
