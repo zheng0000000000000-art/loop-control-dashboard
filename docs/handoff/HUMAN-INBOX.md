@@ -379,3 +379,11 @@
 - **조율자에게**: 지금 `handoff-integrity` FAIL은 **하네스 결함이지 상태 손상이 아니다.** 커밋 보류 사유로 삼지 말고, 이 항목을 근거로 override를 판단하라.
 - **수정 주체**: 코덱스(`server/Harness/**`는 ADR-002상 배타 영역). `outputs/launch/CODEX-GATE-02.prompt.txt`에 **0순위**로 넣었다.
 - **사람 판단 필요**: 코덱스가 돌 때까지 게이트가 잠긴 채로 둘 것인가, 아니면 예외적으로 검수자가 하네스를 고칠 것인가(ADR-002 위반 — 권장하지 않는다).
+
+## 결정 필요: GUARD-03 실행자 사망 - 고아 클레임 + DI 미완료 (2026-07-12 23:21, 조율자)
+
+- 실체: PID 15956(GUARD-03, HandoffIntegrityCli.cs의 CheckBlockerConsistency 수정)가 코드 변경은 지시서대로 정확히 완료(handoff-integrity exit0으로 게이트 잠김 해제 확인)했으나, 이후 사망. docs/verification/guard03-blockers-unlock.md 등 나머지 완료조건(반증 7개·di-completion-check·projection)은 이행되지 않음.
+- 고아 클레임: docs/handoff/FILE-CLAIMS.json에 claimId GUARD-03-15956이 status=active/exitCode=null로 남아 있음(프로세스는 이미 사망). 해제되지 않으면 이후 실행자가 같은 파일을 다시 클레임하기 애매해질 수 있음.
+- 사망 원인 불명: outputs/launch/GUARD-03.prompt.txt만 존재하고 .exit.json/.out.log/.err.log가 전무해 QUOTA_SIGNAL 등 원인 판단 근거가 없음. 추측하지 않음.
+- 조율자 조치: 코드는 안정적으로 확인됐으나 claim-check(exit2, 검증문서 없음) 실패로 커밋하지 않았음. FILE-CLAIMS.json도 고아 상태 그대로 커밋 안 함.
+- 사람 결정 필요: (가) 동일 지시서(GUARD-03)로 재발사해 검증 문서·반증시험·projection을 완결시킬지, (나) 검수자가 직접 반증 7개를 재현하고 문서만 작성해 완결할지, (다) 고아 클레임(GUARD-03-15956)을 수동으로 released 처리할지. 조율자는 발사·결재를 대행하지 않음.

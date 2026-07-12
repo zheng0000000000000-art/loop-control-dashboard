@@ -2393,3 +2393,19 @@
 - QUOTA_SIGNAL: 미감지.
 
 <run-summary>코덱스가 DI-00-04 검증문서 3건을 재수정(H-4를 기존 확장으로 재판정, BC-002 예산 정정 반영)한 상태를 확인 — 검수자 사전 분석과 합치함을 대조 후 로컬 커밋 1건(2ed316f)으로 반영. doc-integrity PASS, 코드 미혼입 확인. handoff-integrity는 기존에 알려진 blockers[] 스키마 불일치로 exit 1이나 이번 커밋 레인과 무관. push 대기 54건, 발사 없음.</run-summary>
+
+## 조율자 2026-07-12 23:21 회차 (review-log)
+
+- 0-A: $lanes에 server/Harness/HandoffIntegrityCli.cs(M)·docs/handoff/FILE-CLAIMS.json(M) 실질 처리 대상. dashboard/data 런타임 json 8건은 항상 dirty이므로 제외. docs/handoff/decisions/ADR-014-adr002-exception-blockers.md·docs/handoff/queue/directive-GUARD-03-blockers-unlock.md는 이미 a41043d로 커밋 완료(사람) - 신규 작업 아님. $done(processed:false) 신호 없음.
+- 안정성 게이트: 두 파일 SHA256 5초 간격 2회 동일 확인.
+- root sonnet-active.pid=15956 프로세스 확인 결과 이미 사망(Get-Process 무응답). FILE-CLAIMS.json에는 claim GUARD-03-15956이 status=active/exitCode=null로 미해제 상태로 남아 있음 - 고아 클레임.
+- GUARD-03 관련 로그·신호 부재: outputs/launch/GUARD-03.prompt.txt만 존재, .exit.json/.transport.json/.out.log/.err.log 전무 - 래퍼 없이 발사된 것으로 보이며 사망 원인·CHANGED/NEXT 인계 정보 없음(추측하지 않음).
+- HandoffIntegrityCli.cs 변경 내용 실측: CheckBlockerConsistency가 단수 blocker 대신 blockers[] 배열을 읽도록 수정됨. GUARD-03 지시서 요구사항과 정확히 일치(실패 메시지 문구까지 동일), 허용 파일 범위(단일 파일·단일 함수) 준수 확인 - 다른 검사 미변경.
+- 게이트 실측: build(dotnet build server -c Release) exit 0/경고 0. verify-behavior behaviorEqual=true/exit 0. measure dev-pack violationCount 0/exit 0. handoff-integrity exit 0(PASS, status=blocked+blockers 1건 정합) - ADR-014/GUARD-03이 노린 게이트 잠김 해제 확인됨. claim-check GUARD-03은 exit 2: "검증 문서를 찾지 못함" - docs/verification/guard03-blockers-unlock.md 미작성, state-transition 반증 7종·di-completion-check gateVerdict·projection 등 지시서 완료조건(항목 4/6/7) 전부 미이행.
+- 판정: 코드 수정 자체는 유효·안정적이나 DI 완료 조건 미충족이라 claim-check가 실패한다. 검증 문서 없이 커밋하면 반증 7개 재현 없이 완료 처리하는 셈이라 커밋하지 않는다. 허용 파일 범위 안이므로 격리 대상은 아니고 재개 대상으로 둔다.
+- FILE-CLAIMS.json도 커밋하지 않음(고아 claim이 active로 남아 실체와 불일치 - 그대로 커밋하면 잘못된 상태를 고정시킴).
+- 발사: 없음. push 대기: 56건(사람 배치 승인 필요).
+- HUMAN-INBOX: GUARD-03 고아 클레임·미완료 건 신규 등재.
+- QUOTA_SIGNAL: 로그 자체가 없어 감지 여부 판단 불가로 기록(단정하지 않음).
+
+<run-summary>PID 15956(GUARD-03 실행자)이 HandoffIntegrityCli.cs의 CheckBlockerConsistency를 지시서대로 정확히 고쳐 handoff-integrity 게이트 잠김을 해제했으나(exit0 확인), 검증 문서·반증시험·projection 등 나머지 완료 조건을 마치지 못한 채 사망(원인 미상, 로그 없음). FILE-CLAIMS.json에 고아 claim(active)이 남음. claim-check exit2로 커밋 보류, HUMAN-INBOX에 재개 여부 등재. push 대기 56건, 발사 없음.</run-summary>
