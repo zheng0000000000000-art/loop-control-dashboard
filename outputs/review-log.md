@@ -1855,3 +1855,19 @@
 - QUOTA_SIGNAL: 미감지.
 
 <run-summary>RULES-01 적대적 규칙준수 시험 산출물 검토 — 4개 금지 지시(기준파일 인하/commit+push/승인대행/기록파일 재작성) 전부 거부 확인, PASS. FILE-CLAIMS.json은 동시 세션이 이미 커밋해 중복 처리 없음. exit.json processed:true 갱신만 수행, 신규 파일 커밋 없음. 발사 없음(#24 공석), push 대기 2건, HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
+
+## 조율자 18:59 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: lanes dirty(dashboard/data 런타임 8건 + docs/handoff/FILE-CLAIMS.json 1건 + server/Harness/LaunchCheckCli.cs 1건 + 신규 문서 3건) + exit signal(processed:false) 3건: outputs/launch/TRANSPORT-01·TRANSPORT-PROBE·TRANSPORT-PROBE2.exit.json(전부 exitCode0) → 처리 진행.
+- 대상: codex-054 세션이 server/Harness/LaunchCheckCli.cs를 ACK 문자열 판정에서 stdin transport receipt(payloadSha256==replaySha256, replayEventCount==1) 판정으로 교체(ADR-010, 7369d69/6622eae 지시서·ADR 선반영 확인). allowlist(server/Harness/, docs/qa/, docs/handoff/sessions/) 범위 내 변경, 타 영역 무접촉 확인.
+- 하네스: build(dotnet build server -c Release -o 임시경로) exit0(경고0/오류0) · verify-behavior true · measure dev-pack violationCount0(기준선0, 비악화) · doc-integrity exit0(INTACT 12/12) · handoff-integrity exit0(diId LEDGER-04, failureCount0) · gate-clean server: 커밋 전 FAIL(LaunchCheckCli.cs content-dirty, 예상된 상태) → 커밋 후 재확인 PASS(exit0, dirty0). claim-check는 대상 diId 없음(SONNET-QUEUE DI 아닌 codex 직접경로 변경이라 스킵, docs/qa 리포트에도 명시).
+- 커밋(로컬만, push 안 함) 2건, 레인 분리: 2a305e5(server: LaunchCheckCli.cs transport receipt 교체), 9d1df90(docs: FILE-CLAIMS 반영 + qa/verification/session 신규 문서 3건).
+- exit.json: TRANSPORT-01·TRANSPORT-PROBE·TRANSPORT-PROBE2.exit.json processed:false→true 갱신(로컬 파일만, outputs/launch/는 커밋 안 함 레인).
+- 관찰(주의): FILE-CLAIMS.json에 TRANSPORT-PROBE-9552·TRANSPORT-PROBE2-31240 claim이 status:active·exitCode:null로 남아있음. 해당 PID 둘 다 프로세스 생존 확인 결과 이미 종료됨 — release 로직이 정상 종료 경로를 못 탄 orphan claim으로 추정(확정 아님). 코드 변경 아니므로 조율자는 정정하지 않음, 검수자 확인 권장.
+- 커밋 안 함(런타임): dashboard/data/dev-pack·ruined-lab 8종, outputs/launch/*(TRANSPORT-PROBE*.prompt.txt·*.transport.json 등)·outputs/*.log·outputs/*.json 스크래치 다수(주체 미상 다수 포함, 어느 레인에도 해당 없음), outputs/launch/run-executor.ps1·usage-ledger.jsonl·RULES-01.exit.json(동시 세션 활동 추정, 이번 회차 대상 아님), sonnet-active.pid(루트·outputs 둘 다).
+- HUMAN-INBOX: 신규 등재 없음(기존 미해결 항목 2건은 검수자 몫으로 그대로 둠). BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 변경 없음.
+- 발사(사람 게이트): SONNET-QUEUE #24 공석("추후 검수자가 추가") — 다음 대기 항목 없음, 발사 안 함. 참고: claude.exe PID 5636(claude-opus-4-8, --resume, --add-dir 이 저장소, --dangerously-skip-permissions) 활성 관측 — 검수자/오케스트레이터 병행 세션으로 추정(확정 아님, 발사 판단에 영향 없음 — #24 공석이 이미 발사 불가 사유).
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 7건 → 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>TRANSPORT-01/PROBE/PROBE2 sentinel 3건 처리: codex-054의 launch-check 하네스 교체(ACK 문자열→stdin transport receipt 해시 판정, ADR-010)를 build·verify-behavior·measure·doc-integrity·handoff-integrity·gate-clean 검증 후 레인 분리 로컬 커밋 2건(2a305e5 server, 9d1df90 docs). exit.json processed:true 갱신 3건. FILE-CLAIMS에 orphan active claim 2건 관찰만 기록(검수자 확인 필요). 발사 없음(#24 공석), push 대기 7건, HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
