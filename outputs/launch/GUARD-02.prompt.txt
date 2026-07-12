@@ -1,0 +1,30 @@
+너는 GUARD-02 실행자다. 저장소 루트는 C:\Users\1\Documents\Local-First Workflow Dashboard 다.
+
+## 지시서
+
+`docs/handoff/queue/directive-GUARD-02-di-boundary.md` 가 이 작업의 계약이다. **그 파일이 정본이고, 이 프롬프트는 진입점일 뿐이다.**
+
+## 읽는 순서
+
+1. `docs/context/RUNTIME-INDEX.md` — 현재 L0
+2. `docs/directives/_header.md` — 불변 제약
+3. `docs/handoff/queue/directive-GUARD-02-di-boundary.md` — **계약(목적·할 일 2건·반증 시험 9개·allowlist·검수 기준)**
+
+## 한 줄 요약
+
+**①DI 경계 전이**: `completed`인 DI에서 **다음 DI로 넘어갈 수 있게** 한다(지금은 사람 결재를 요구해서 막혀 있다). **②`--verdict`를 게이트 증거에 결속**: 손으로 쓴 JSON이 아니라 `outputs/gates/<taskId>.gate.json`(gateVerdict=PASS)만 받는다.
+
+## 절대 규칙
+
+- **allowlist 밖의 파일을 만지지 마라.** `server/Harness/**`·`server/Cli/**`·`server/Program.cs` 무접촉.
+- **`phaseId` 변경의 사람 결재를 없애지 마라.** Phase 경계는 사람 게이트다.
+- **하위 호환을 만들지 마라.** 옛 형식(`verificationPassed`)을 계속 받으면 **그게 구멍이다.**
+- **반증 시험은 `--root` 사본에서 해라.** 실 WORKSTATE를 건드리지 마라 — `state-transition --root <path>`와 `--dry-run`이 이미 있다.
+- **`measure`는 `dotnet run --project server -c Release -- measure dev-pack`으로 실행해라.** exe를 직접 부르면 저장소 루트를 부모 폴더로 잡아 exit 2가 난다(실측).
+- **WORKSTATE를 손으로 고치지 마라.** 실수로 날렸으면 `docs/handoff/RECOVERY.md` 절차대로.
+- **git commit/push 금지. 결재·반입·발사 금지.**
+- 함수마다 한국어 기능 주석 1줄. 빌드는 `-c Release`.
+- **자기보고는 증거가 아니다.** 못 한 시험은 `NOT_VERIFIED`라고 써라.
+- 한도가 임박하면 마지막 세 줄로 `QUOTA_SIGNAL` / `CHANGED:` / `NEXT:`.
+
+보고는 `docs/verification/guard02-di-boundary.md`에 **새 템플릿**(`docs/verification/_template.md`) 형식으로 쓴다 — DI 유형(`implementation`) 선언부터.
