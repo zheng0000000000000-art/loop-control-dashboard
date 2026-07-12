@@ -2198,3 +2198,18 @@
 - exit signal: 신규 processed:false 없음.
 
 <run-summary>변경 없음에 가까움 - 활성 실행자(PID 32968, DI-00-01)가 계속 작업 지속 중(21:06:49까지 파일 갱신 확인), claim-check MISMATCH 16회차째 재현, 커밋 보류 유지. HUMAN-INBOX·SONNET-QUEUE·BASELINE-CHANGES·reviewer-log 전부 이전 회차 이후 변경 없음. push 대기 16->17건(직전 회차 자기 기록 커밋 반영). QUOTA_SIGNAL 미감지, 발사 없음.</run-summary>
+## 조율자 21:19 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: lanes dirty(server/Cli/CliRouter.cs·server/ProjectionCli.cs 수정, server/StateApplierCli.cs 신규, docs/handoff 4종 수정, docs/handoff/WP-REGISTRY.json·WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md 신규, dashboard/data 런타임 8종[레인 제외]) + exit signal 신규 1건(outputs/launch/DI-00-01.exit.json, processed:false, exitCode:0, exitedAt 21:10:46) -> 처리 진행.
+- 실행자 종료 확인: PID 32968(DI-00-01) Get-Process 결과 생존 프로세스 없음(정상 종료). HUMAN-INBOX·SONNET-QUEUE·BASELINE-CHANGES·reviewer-log 전부 이전 회차(21:08) 이후 변경 없음(override 조건 미충족 유지).
+- 하네스 전체 재실행: gate-clean server exit1(기대값, content-dirty 3건) / doc-integrity exit0(INTACT, 12파일) / claim-check DI-00-01 exit0(MATCH, mismatchCount 0 — 문서를 di0001-worktracking.md로 정확히 지정해 재확인. STATE-01 문서 대상 claim-check는 여전히 MISMATCH 2건이나 그 문서는 allowlist 밖이라 커밋 대상 아님) / handoff-integrity exit0(PASS, warning1 동일) / scope-check DI-00-01 FAIL(outOfScopeCount 103, 대부분 outputs/*·dashboard/data 런타임. 커밋 후보 중 out-of-scope 4건: server/Cli/CliRouter.cs, docs/verification/state01-applier.md, docs/handoff/FILE-CLAIMS.json, docs/handoff/WORKSTATE.applier-log.jsonl) / di-completion-check --gate POST-EXECUTOR --task DI-00-01 gateVerdict PASS(7/7, build-verify·verify-behavior·measure·handoff-integrity·context-pack-integrity·doc-integrity·gate-clean 전부 기대값대로).
+- 산출물 범위 대조 및 조치: server/Cli/CliRouter.cs(state-transition 라우팅 4줄)와 docs/verification/state01-applier.md(신규, claim-check상 실체 불일치 2건 포함)는 DI-00-01 지시서 allowlist 밖으로 확인 -> outputs/quarantine/에 원본 백업 후 CliRouter.cs는 git checkout으로 되돌리고 state01-applier.md는 삭제. 되돌린 뒤 build-verify·verify-behavior·measure dev-pack·handoff-integrity·claim-check DI-00-01 재확인 전부 통과. HUMAN-INBOX 등재(사람 결정 필요: CliRouter.cs 라우팅 변경 승인 여부 — 없으면 StateApplierCli가 CLI에서 호출 불가한 죽은 코드로 남음).
+- docs/handoff/FILE-CLAIMS.json(claim 해제 기록 추가분)·docs/handoff/WORKSTATE.applier-log.jsonl(StateApplierCli 자체 실행 로그, 신규)도 scope-check상 allowlist 밖이나, 코드가 아닌 시스템 기계적 부기로 판단해 문서 레인(doc-integrity exit0)으로 커밋 처리. 판단 근거와 이견 시 조정 요청을 HUMAN-INBOX에 함께 기록.
+- 커밋(로컬만, 레인 분리): 0b556a2(server 코드: StateApplierCli.cs 신설·ProjectionCli.cs), 5a6bb07(상태: WORKSTATE.json·RUNTIME-INDEX.md·HANDOFF.md·STATUS.md), 9712c0b(문서: WP-REGISTRY.json·di0001-worktracking.md·FILE-CLAIMS.json·WORKSTATE.applier-log.jsonl), 59cb82a(HUMAN-INBOX 등재). 전부 로컬 커밋만, push 없음.
+- exit signal 처리: outputs/launch/DI-00-01.exit.json processed:false -> true로 갱신 완료.
+- HUMAN-INBOX: 신규 1건 등재(CliRouter.cs/state01-applier.md quarantine + FILE-CLAIMS/applier-log 판단 근거). BASELINE-CHANGES 대상 파일(blueprint.json·workflow-definition.json) 변경 없음.
+- 발사(사람 게이트): 조율자는 발사하지 않음. DI-00-01(PID 32968)은 정상 종료 확인, 신규 발사 없음. SONNET-QUEUE 공석 상태 재확인 필요(다음 회차).
+- push(사람 배치 게이트): git rev-list origin/main..HEAD --count = 23건(본 회차 커밋 4건 포함) -> 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+
+<run-summary>DI-00-01 실행자(PID 32968)가 21:10:46 정상 종료(exitCode 0)한 것을 확인하고 산출물을 검수, 로컬 커밋 4건(server 코드/상태/문서/HUMAN-INBOX 레인 분리) 완료. StateApplierCli.cs·ProjectionCli.cs·WORKSTATE 관련 상태 파일은 모든 하네스 통과 후 커밋했으나, server/Cli/CliRouter.cs와 docs/verification/state01-applier.md는 지시서 allowlist 밖으로 확인돼 quarantine 후 되돌리고 HUMAN-INBOX에 사람 결정 요청으로 등재(CliRouter.cs 라우팅 승인 여부 미정 — 현재 StateApplierCli는 CLI에서 호출 불가 상태). FILE-CLAIMS.json·WORKSTATE.applier-log.jsonl은 시스템 기계적 부기로 판단해 문서 레인 커밋(이견 시 조정 요청 병기). push 대기 17->23건, 사람 배치 승인 필요. QUOTA_SIGNAL 미감지, 발사 없음.</run-summary>
