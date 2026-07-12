@@ -1,0 +1,16 @@
+{
+  "_note": "WP 추가는 사람 결재다. 이 파일이 WP 목록의 정본(source of truth)이다. WORKSTATE.wpId가 이 파일에 없는 WP를 가리키면 state-transition이 exit 1로 거부한다.",
+  "schemaVersion": 1,
+  "wps": [
+    {
+      "wpId": "WP-00",
+      "phaseId": "P00",
+      "title": "Phase 0 — 작업 착수와 공통 기반",
+      "status": "진행",
+      "branch": "main",
+      "owner": "다중 주체(실행자·코덱스·조율자·검수자)",
+      "startedAt": "2026-07-11",
+      "verificationDoc": "docs/verification/phase-gates/CONFORMANCE-P00-DI-00-01~06.md"
+    }
+  ]
+}

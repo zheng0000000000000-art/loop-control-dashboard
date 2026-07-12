@@ -316,6 +316,20 @@
                        "expiresAt":  "2026-07-12T21:46:07.4891623+09:00",
                        "status":  "released",
                        "exitCode":  0
+                   },
+                   {
+                       "claimId":  "DI-00-01-32968",
+                       "actor":  "sonnet",
+                       "taskId":  "DI-00-01",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\docs\\handoff\\queue\\directive-DI-00-01-worktracking.md",
+                       "pid":  32968,
+                       "claimedAt":  "2026-07-12T20:44:36.6970438+09:00",
+                       "expiresAt":  "2026-07-12T22:44:36.6970438+09:00",
+                       "status":  "released",
+                       "exitCode":  0
                    }
                ]
 }
