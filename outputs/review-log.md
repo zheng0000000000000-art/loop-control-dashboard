@@ -2137,3 +2137,18 @@
 - exit signal: 신규 processed:false 없음 - 갱신 대상 없음(DI-00-01은 아직 실행 중이라 exit.json 미생성, 정상).
 
 <run-summary>STATE-01 배치는 claim-check MISMATCH(하네스 결함)가 12회차째 재현되어 커밋 보류 유지. 이번 회차 핵심 변화: 검수자가 사람 승인 하에 새 실행자를 발사함(PID 32968, taskId DI-00-01, WP 등록·상태전이·STATUS.md projection 작업, 20:44:36 시작, 아직 활성) - 작업 대상이 현재 dirty한 StateApplierCli.cs·ProjectionCli.cs·WORKSTATE.json과 겹칠 가능성이 높아 조율자는 커밋을 추가로 보류함. 검수자가 P0-06(FILE-CLAIMS paths 항상 0) 근본원인을 BOM 없는 run-executor.ps1의 인코딩 오파싱으로 실측·기록함(HUMAN-INBOX 결정 요청 아님, 큐 4번 항목으로 등재). push 대기 11->13건(검수자 2건 추가). HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
+
+- 조율자 20:53 회차 (자동 스케줄 실행). 0-A 선게이트: lanes dirty(server/Cli/CliRouter.cs·server/ProjectionCli.cs 수정, server/StateApplierCli.cs 신규, docs/handoff/WORKSTATE.json·docs/context/RUNTIME-INDEX.md·docs/handoff/HANDOFF.md·docs/handoff/FILE-CLAIMS.json 수정, docs/handoff/WP-REGISTRY.json·docs/handoff/WORKSTATE.applier-log.jsonl·docs/verification/state01-applier.md 신규, dashboard/data 런타임 8종[커밋 제외 대상]) + exit signal 신규 없음(9종 전부 processed:true) -> 처리 진행.
+- 안정성 게이트: 대상 파일 해시 5초 간격 2회 비교 -> 전부 STABLE(진입 시점 기준 스냅샷).
+- 활성 실행자 재확인: PID 32968(taskId DI-00-01, 20:44:36 claim, 만료 22:44:36) 여전히 생존. 파일 LastWriteTime 대조 결과 server/ProjectionCli.cs 20:50:23·server/StateApplierCli.cs 20:49:35·docs/handoff/WP-REGISTRY.json 20:48:31로 claim 시각(20:44:36) 이후에도 계속 쓰기 발생 -> 명백히 진행 중. 전회차(20:50) 대비 3분 경과, 여전히 활성.
+- 범위 대조: server/Cli/CliRouter.cs(19:33:48 최종수정, claim 이전)와 docs/verification/state01-applier.md(19:40:06)는 DI-00-01 지시서(docs/handoff/queue/directive-DI-00-01-worktracking.md) 허용 파일(allowlist) 목록에 없음(허용: StateApplierCli.cs·ProjectionCli.cs·WP-REGISTRY.json·STATUS.md·WORKSTATE.json·RUNTIME-INDEX.md·HANDOFF.md·docs/verification/di0001-worktracking.md·directive 자체). CliRouter.cs 변경 내용은 state-transition 라우팅 4줄 추가(StateApplierCli.Run 연결) - 기능상 필요해 보이나 allowlist 문서화 밖. 실행자가 아직 활성 상태라 최종 산출물로 확정하기 이르므로 이번 회차는 HUMAN-INBOX 등재 보류, 다음 회차(실행자 종료 후)에 재확인 필요 항목으로 기록만 함.
+- 하네스 재확인: gate-clean server exit1(FAIL, server 2파일 content-dirty - 기대값) / doc-integrity exit0(intact) / claim-check STATE-01 exit1(MISMATCH - 기존에 규명된 하네스 결함 재현, 13회차째 동일) / handoff-integrity exit0(PASS, warning1 queue-mention-missing 정보성, 동일).
+- 오버라이드 판단: ①review-log 실체입증만 충족, ②사람 승인·③하네스 수정 지시서 큐 등재 미충족 -> override 불가. STATE-01/DI-00-01 관련 배치 전체 미커밋 보류(13회 연속).
+- 커밋(로컬만): 이번 회차 신규 커밋 없음(활성 실행자 작업 중 + override 조건 미충족 + CliRouter.cs 범위 외 변경 확인 필요).
+- HUMAN-INBOX: 신규 등재 없음(CliRouter.cs 범위 외 변경은 실행자 종료 확인 후 등재 예정, 현재는 관측만). BASELINE-CHANGES 대상 파일 변경 없음.
+- 발사: 조율자는 발사하지 않음. 사람이 이미 승인한 DI-00-01 실행자(PID 32968)만 활성 관측.
+- push(사람 배치 게이트): git rev-list origin/main..HEAD --count = 14건 -> 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+- exit signal: 신규 processed:false 없음.
+
+<run-summary>변경 없음에 가까움 - 전회차(20:50)와 동일한 활성 실행자(PID 32968, DI-00-01) 여전히 작업 중(3분간 파일 추가 작성 확인), claim-check MISMATCH 13회차째 재현, 커밋 보류 유지. 새로 확인한 사항: server/Cli/CliRouter.cs와 docs/verification/state01-applier.md가 DI-00-01 allowlist 밖 파일로 확인됨 - 실행자 종료 후 재검토 필요 항목으로 기록(현재는 활성 중이라 HUMAN-INBOX 등재는 보류). push 대기 13->14건. HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
