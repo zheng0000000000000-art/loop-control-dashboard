@@ -1,0 +1,90 @@
+너는 코덱스다. 저장소는 C:\Users\1\Documents\Local-First Workflow Dashboard 다.
+이번 작업은 **하나다: 게이트가 "사라진 것"을 보게 만든다.** 정본 계약은 `docs/handoff/queue/directive-CODEX-GATE-02-cli-contract.md` 이고, 이 프롬프트는 진입점이다.
+
+## 먼저 읽어라 (이 순서로. 저장소를 헤매지 마라)
+
+1. `docs/context/RUNTIME-INDEX.md` — 현재 위치(L0). **지금 `P00 / WP-00 / DI-00-04`다.**
+2. `docs/handoff/queue/directive-CODEX-GATE-02-cli-contract.md` — **이 작업의 계약(정본)**
+3. `skills/common/hs-gate.md` 2항 — "이 하네스가 볼 데이터가 실제로 존재하는가"
+4. `skills/common/root-cause-diagnosis.md` — **프록시로 원인을 단정하지 마라**
+5. `docs/verification/_template.md` — **오늘 바뀌었다.** DI 유형 선언·유형별 필수 검증·공통 완료 조건·실패 분류가 새로 들어갔다. 보고는 이 형식으로 쓴다.
+
+## 왜 하는가 — 오늘 게이트가 네 번 거짓말했다 (전부 실측)
+
+| 사고 | 게이트 반응 |
+| --- | --- |
+| `state-transition` **CLI 배선이 통째로 사라졌다**(조율자가 allowlist 밖이라 격리) | `build` 0 · `gate-clean` 0 · `di-completion-check POST-COMMIT` **5/5 PASS** |
+| DI-00-01 실행자가 WORKSTATE를 손복구 → `appliedTransitions`에서 전이 1건 누락 → **멱등이 실제로 깨졌다**(같은 id 재적용이 exit 0으로 통과, 검수자가 실증) | `handoff-integrity` **exit 0** (changedFiles 해시만 본다) |
+| `run-executor.ps1`이 BOM 없는 UTF-8이라 PS 5.1이 한글 리터럴을 깨뜨려 **`FILE-CLAIMS.paths`가 항상 0**이었다 | `claim-check`는 **untracked를 못 봐서** 16회 연속 오탐만 냈다 |
+| `scope-check`가 지시서 제목 하나 때문에 **exit 2로 죽어 있었다** | **어느 게이트에도 등재돼 있지 않아 아무도 몰랐다** |
+
+**공통점: 검사는 있는데, 없어진 것을 보는 검사가 없다.**
+
+> **hs-gate 2항 사전 확인 (네가 다시 검증하라)**: 이 하네스들이 볼 데이터는 **전부 실재한다** —
+> `docs/handoff/WORKSTATE.applier-log.jsonl`(전이 로그) · `server/Cli/CliRouter.cs` + `server/Harness/HarnessRegistry.cs`(배선) · `docs/handoff/FILE-CLAIMS.json`(claim, **이제 paths가 실제로 채워진다**).
+> **없는 데이터 위에 하네스를 세우지 않는다.**
+
+## 할 일 (넷 다 **기존 하네스 확장**이다 — 신규 하네스 예산을 쓰지 않는다)
+
+계약서(§1~§4)를 그대로 따르되, 핵심만 다시 적는다:
+
+1. **`handoff-integrity` 멱등 대조** — `WORKSTATE.appliedTransitions[].id` ↔ `WORKSTATE.applier-log.jsonl`(`result:"ok"`) 집합 대조. 한쪽에만 있으면 **failure → exit 1**.
+2. **`di-completion-check` CLI 계약 대조** — `docs/handoff/CLI-CONTRACT.json` 신설(**현재 실재 배선에서 열거해 생성**. 손으로 적지 마라). 계약에 있는데 배선에 없으면 **exit 1**, 배선에 있는데 계약에 없으면 **warning**.
+3. **`GATE-MANIFEST.json`에 `scope-check`·`claim-check` 등재** — 등재되지 않은 하네스는 **아무도 돌리지 않는다.** 단 **판정할 수 없는 검사는 넣지 마라**(dirty 트리에서 늘 1이 나오는 성질을 감안하고, 넣지 않기로 했으면 **이유를 적어라**).
+4. **`claim-check`에 `--untracked`** — `git grep -l {sym} -- server`는 untracked를 검색하지 않는다. 고치고 **오탐이 사라지는지 실측하라.**
+
+## 절대 규칙
+
+- **`server/Cli/**`·`server/Program.cs` 무접촉.** 실행자(GUARD-01/02) 영역이다. **읽기만 해라.**
+- **신규 하네스를 만들지 마라.** 필요하다고 판단되면 **만들지 말고 근거와 함께 `docs/handoff/CODEX-QUEUE.md`에 올려라.**
+- **반증 시험은 사본에서 해라.** 이제 도구가 있다: **`state-transition --root <path>`** 와 **`--dry-run`**(GUARD-01이 만들었다). **실 WORKSTATE를 건드리지 마라.**
+- **`measure`는 `dotnet run --project server -c Release -- measure dev-pack`으로 실행해라.** exe를 직접 부르면 저장소 루트를 **부모 폴더**로 잡아 exit 2가 난다(검수자가 실측으로 당했다).
+- **판정은 exit code로.** "모두 0"이 아니라 **"명령별 기대 exit == 실제 exit"**다(`hs-scan`은 기대 1).
+- 기준 파일(`blueprint.json`·`workflow-definition.json`·`docs/behavior-snapshot.json`) 수정 금지. **push·결재·반입·발사 금지.**
+- 함수마다 한국어 기능 주석 1줄.
+
+## 필수 반증 시험 (셋 다 실측. **코드 검토로 갈음하지 마라**)
+
+| # | 시험 | 기대 |
+| --- | --- | --- |
+| 1 | `appliedTransitions`에서 항목 하나를 지운 **사본** → `handoff-integrity` | **exit 1**. 원복하면 **exit 0** |
+| 2 | `CLI-CONTRACT.json`에 없는 명령(`ghost-command`, critical) 추가 → `di-completion-check` | **exit 1**. 빼면 **exit 0** |
+| 3 | 새 untracked 파일로 `claim-check` | **오탐 없음**(고치기 전에는 MISMATCH가 났다 — 그걸 먼저 재현해 보여라) |
+
+**통과를 믿기 전에 실패시킬 수 있음을 먼저 증명해라.**
+
+## 검수 기준
+
+1. `build-verify` **exit 0**, warning 0
+2. `verify-behavior` **exit 0**
+3. `measure dev-pack` **violationCount 0**
+4. 반증 시험 3개 — **전부 실측**
+5. `handoff-integrity` **exit 0**(정상 상태에서) · `di-completion-check --gate POST-EXECUTOR --task CODEX-GATE-02` **gateVerdict PASS**
+6. **목적 기준**: 위 「오늘 게이트가 네 번 거짓말했다」의 **네 사고가 전부 게이트에서 소리를 내는가.** 하나라도 조용하면 **미달로 신고하라.**
+
+## 허용 파일 (allowlist)
+
+- server/Harness/HandoffIntegrityCli.cs
+- server/Harness/DiCompletionCheckCli.cs
+- server/Harness/ClaimCheckCli.cs
+- docs/handoff/CLI-CONTRACT.json
+- docs/handoff/GATE-MANIFEST.json
+- docs/qa/codex-gate-02.md
+- docs/handoff/sessions/SESSION-2026-07-12-codex-056.md
+- docs/verification/codex-gate-02.md
+- docs/handoff/queue/directive-CODEX-GATE-02-cli-contract.md
+
+## 보고
+
+`docs/verification/codex-gate-02.md` — **`docs/verification/_template.md` 형식 그대로**(오늘 바뀌었다):
+**DI 유형(`harness`) 선언** · **유형별 필수 검증(harness = positive·negative·결정성·격리)** · 주체 · **하네스별 기대 exit vs 실제 exit** · 참조 스킬 · 공통 완료 조건 6개 · **실패 분류**(v9 §0.3) · 반증 시험 표 · 잔여 위험 · **`## 지표는 만족했으나 목적은 미달인 부분`**.
+세션 로그는 `docs/handoff/sessions/SESSION-2026-07-12-codex-056.md`에 남긴다.
+
+- **자기보고는 증거가 아니다.** 검수자가 반증 시험을 **직접 재실행해 대조한다.**
+- **못 한 시험은 "코드 검토로 갈음"이라고 쓰지 말고 `NOT_VERIFIED`라고 써라.** 신고하면 감점이 아니다. **숨기면 반려다.**
+- 커밋은 해도 된다(코덱스 관례). **push는 사람 게이트다.**
+
+## 다음 작업 (이번엔 하지 마라 — 큐 `C-02`에 있다)
+
+`CODEX-GATE-03`: ①`skills/common/*.md`에 **Skill manifest 헤더 적용**(계약은 `DI-00-04`가 `docs/handoff/SKILL-MANIFEST.md`에 정의했다) ②**HS-GATE 누락 탐지 검사**(v9 §DI-00-04 지시 4항).
+**`DI-00-04`가 커밋된 뒤에 착수한다.** 지금은 이 프롬프트의 4가지만 한다.
