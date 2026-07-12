@@ -3,8 +3,8 @@
 # HANDOFF — 인수인계 문서
 
 ## 현재 위치
-- **diId**: LEDGER-04  **phaseId**: P0-04  **status**: verifying
-- **갱신자**: claude-sonnet-4-6  **갱신일**: 2026-07-12
+- **diId**: DI-00-01  **phaseId**: P00  **status**: waiting
+- **갱신자**: reviewer  **갱신일**: 2026-07-12
 
 ## 변경 파일 (4개)
 - `server/OllamaExecutor.cs` [4eb15cee5726081c…] — ParseNoteResponse에 2차 대소문자 무시 대조(OrdinalIgnoreCase) 추가. TryGenerateNote/TryGenerateTuningNote에 NormalizedActualMetricId 반환. Generate/GenerateForTuning에 normalizedMetricIds 수집. ExecutorGenerateResult에 NormalizedMetricIds 추가.
@@ -33,6 +33,13 @@
 - buildVerifyVerdict: PASS
 - measureViolationsAfter: 0
 
+## 다음 작업
+- DI-00-01 검수 결과(검수자 21:2x): 구현 4건은 반증 재현으로 확인(전이 그래프·WP-REGISTRY 검증·candidate canonical·STATUS.md 생성). 그러나 실행자가 git checkout 실수 후 WORKSTATE를 Write로 손복구해 appliedTransitions에서 TEST-DI0001-2가 누락 -> 멱등이 실제로 깨졌다(검수자가 재적용 exit 0으로 실증). 이 전이(REVIEWER-RESTORE-001)로 상태를 되돌렸다
+- ★ 후속 지시서 5(신규·최우선, 코덱스): handoff-integrity가 WORKSTATE.appliedTransitions와 docs/handoff/WORKSTATE.applier-log.jsonl을 대조하게 하라. 지금은 둘이 어긋나도 아무 하네스도 못 잡는다 — di-completion-check POST-EXECUTOR가 7/7 PASS를 줬는데 상태는 손상돼 있었다
+- ★ 후속 지시서 6(신규): git checkout이 단일 writer의 뒷문이다. state-transition을 만들어도 git이 WORKSTATE를 되돌린다 — 복구 절차를 문서·코드로 정의하라(손 Write 금지)
+- 후속 지시서 1~4: run-executor out.log stale · --verdict를 gate.json에 결속 · scope-check/claim-check를 GATE-MANIFEST 등재(+--untracked) · run-executor.ps1 BOM(FILE-CLAIMS paths가 항상 0이다)
+- 다음 DI: DI-00-02(DI 유형별 완료 프로필) -> DI-00-04(phase-gates 템플릿 + HS-REVIEW-P00-R1)
+
 ## 재개 전 검증
 ```bash
 dotnet run --project server -c Release -- handoff-integrity
@@ -42,4 +49,4 @@ dotnet run --project server -c Release -- verify-behavior
 ```
 
 ## 노트
-LEDGER-04: ParseNoteResponse에 대소문자 무시 2차 대조 추가. qwen3:8b가 functionsWithOutComment(대문자 O) 반환 시 정규화 수용 + warn 이벤트 기록. LEDGER-02 토큰 배선(040d017) 첫 실행 확인: proposal.generated provider=ollama, inputTokens=351, outputTokens=95.
+canonical 좌표는 v9 축이다(ADR-013, 사람 승인 2026-07-12). 로컬 큐 별칭은 여기에만 남긴다: P0-01~P0-07(ALIGNMENT-v9 §4의 진짜 공백 6개) 대부분 완료 · LEDGER-01~04(ollama 토큰 계측) · STATE-01(WORKSTATE 단일 writer, 검수 PASS 2026-07-12) · TRANSPORT-01/ADR-010 · RULES-01 · DIET-01. 이 산출물들은 사라지지 않았고 적합성 행렬의 각 DI 칸에 증거로 매핑되어 있다.

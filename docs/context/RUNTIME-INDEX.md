@@ -4,8 +4,10 @@
 
 | 항목 | 값 |
 | --- | --- |
-| phaseId | P0-04 |
-| wpId | LEDGER-04 |
-| diId | LEDGER-04 |
-| status | verifying |
+| phaseId | P00 |
+| wpId | WP-00 |
+| diId | DI-00-01 |
+| status | waiting |
+| blockers | — |
+| nextActions | DI-00-01 검수 결과(검수자 21:2x): 구현 4건은 반증 재현으로 확인(전이 그래프·WP-REGISTRY 검증·candidate canonical·STATUS.md 생성). 그러나 실행자가 git checkout 실수 후 WORKSTATE를 Write로 손복구해 appliedTransitions에서 TEST-DI0001-2가 누락 -> 멱등이 실제로 깨졌다(검수자가 재적용 exit 0으로 실증). 이 전이(REVIEWER-RESTORE-001)로 상태를 되돌렸다; ★ 후속 지시서 5(신규·최우선, 코덱스): handoff-integrity가 WORKSTATE.appliedTransitions와 docs/handoff/WORKSTATE.applier-log.jsonl을 대조하게 하라. 지금은 둘이 어긋나도 아무 하네스도 못 잡는다 — di-completion-check POST-EXECUTOR가 7/7 PASS를 줬는데 상태는 손상돼 있었다; ★ 후속 지시서 6(신규): git checkout이 단일 writer의 뒷문이다. state-transition을 만들어도 git이 WORKSTATE를 되돌린다 — 복구 절차를 문서·코드로 정의하라(손 Write 금지); 후속 지시서 1~4: run-executor out.log stale · --verdict를 gate.json에 결속 · scope-check/claim-check를 GATE-MANIFEST 등재(+--untracked) · run-executor.ps1 BOM(FILE-CLAIMS paths가 항상 0이다); 다음 DI: DI-00-02(DI 유형별 완료 프로필) -> DI-00-04(phase-gates 템플릿 + HS-REVIEW-P00-R1) |
 | updatedAt | 2026-07-12 |
