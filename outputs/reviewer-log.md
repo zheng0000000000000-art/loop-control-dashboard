@@ -668,3 +668,47 @@ DIET-01의 **유일한 미검증 항목**: `CLAUDE.md`를 8,612자 → 5,621자(
 ### 코덱스
 
 프로세스 **없음**. 내 통제 밖(별도 CLI)이라 **사람이 깨워야 한다.** 마지막 세션은 `codex-053`(P0-06 완료).
+
+## 2026-07-12 19:0x — TRANSPORT-01 PASS: **FAIL-2026-013이 이번엔 진짜로 구조적으로 제거됐다**
+
+아침에 검수자가 *"프롬프트를 파일로 전달해 인자 잘림 사고를 구조적으로 제거했다"*고 적었다. **거짓이었다** — 파일은 원본일 뿐이고 전달은 여전히 명령행 인자였다. 외부 검수 보고서가 그걸 잡았고, 검수자가 실측으로 확인했다. **저녁에 진짜로 만들었다.**
+
+### 코덱스(세션 054) → 실행자(TRANSPORT-01) 순서로, 역할을 갈라서
+
+| 레인 | 무엇 | 결과 |
+| --- | --- | --- |
+| **코덱스**(`server/Harness/`) | `launch-check`를 ACK 기반 → **Transport Receipt 기반**으로 교체 | ✅ 검수자 반증 시험 **5/5** |
+| **실행자**(`outputs/launch/`) | 래퍼를 **stdin + replay + evidence 생산**으로 교체 | ✅ |
+
+**test-first가 작동했다**: 코덱스가 하네스를 먼저 바꾸자 **evidence가 없는 상태에서 exit 1**이 됐고, 실행자가 래퍼를 고치자 **exit 0으로 뒤집혔다.** 검사자가 생산 코드를 만들지 않고, 생산자가 검사 규칙을 만들지 않았다(ADR-002).
+
+### 실체 (검수자 직접 재실행)
+
+```json
+"sourceSha256":  "99e20dbab68c3335...",
+"payloadSha256": "99e20dbab68c3335...",   ← 셋이 완전히 같다
+"replaySha256":  "99e20dbab68c3335...",
+"sourceByteLength": 662, "payloadByteLength": 662, "replayByteLength": 662,
+"replayEventCount": 1, "cliVersion": "2.1.114 (Claude Code)",
+"verdict": "TRANSPORT_VALID"
+```
+
+| 검사 | 결과 |
+| --- | --- |
+| CLI 인자에 **프롬프트 본문** | **없음.** 플래그뿐(`-p --verbose --input-format stream-json --output-format stream-json --replay-user-messages`) |
+| `argline`(명령행 조립) 잔존 | **0회** — 완전 제거 |
+| stdin **UTF-8 바이트 직접 쓰기** | ✅ `BaseStream.Write`. 주석에 ADR-010 §6 인용 |
+| `launch-check` | **exit 1 → 0** ← **이 작업의 판정선** |
+| 반증: replay 해시 변조 | **exit 1** |
+
+### 무엇이 달라졌나
+
+- **명령행 길이·quote 경계·구조 손실 위험이 원천 제거됐다.** 프롬프트는 stdin으로만 간다.
+- **"내가 보낸 바이트 = CLI가 받은 바이트"를 기계가 증명한다.** 모델은 관여하지 않는다.
+- **권위 범위는 지켰다**: 하네스 출력에 `"This verdict proves only byte-level transport integrity"`가 박혀 있다. `MODEL_RECEIVED`·`ACK_VALID` 같은 표현 없음.
+
+### 다음 (사람 게이트)
+
+- **조율자 재가동** — 정지 중이라 미커밋이 쌓인다(코덱스 세션 054 산출물 + 실행자 산출물).
+- **`di-completion-check`**(BC-002 승인) — 코덱스 대기. **게이트를 시점별로 둘로 나눴다**(`POST-EXECUTOR` / `POST-COMMIT`) — 사람이 "언제 돌리는지 안 적혀 있다"고 지적해서 발견했다. `gate-clean`의 기대 exit가 **실행자 직후 1 / 커밋 후 0**으로 다르다. 하나로 두면 실행자 직후 게이트가 항상 FAIL한다.
+- **State Applier + 적합성 행렬** — `HS-GATE-P00`의 나머지.
