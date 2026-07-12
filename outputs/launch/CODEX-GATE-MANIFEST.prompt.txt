@@ -31,28 +31,53 @@ v9 `DI-00-04`:
 
 ### A. `docs/handoff/GATE-MANIFEST.json` — 게이트 계약(데이터 정본)
 
+**★ 게이트는 하나가 아니다. 시점에 따라 기대 exit가 달라진다.**
+
+**실행자가 막 끝난 직후**에는 워크트리가 그 실행자의 변경으로 **더럽다** → `gate-clean`은 **exit 1이 정상**이다.
+**조율자가 커밋한 뒤**에는 깨끗하다 → `gate-clean`은 **exit 0이 정상**이다.
+
+**같은 명령의 기대값이 시점마다 다르다. 그래서 게이트를 둘로 나눈다.** (검수자가 트리거를 설계하다가 발견했다. 하나로 두면 실행자 직후 게이트가 **항상 FAIL**한다.)
+
 ```json
 {
   "schemaVersion": 1,
   "gates": [
     {
-      "gateId": "DI-COMPLETION",
-      "description": "DI 하나가 끝날 때마다 도는 공통 완료 조건",
+      "gateId": "POST-EXECUTOR",
+      "description": "실행자 종료 직후. 워크트리는 그 실행자의 변경으로 더럽다.",
+      "triggeredBy": "outputs/launch/run-executor.ps1 (실행자 종료 직후 자동)",
       "checks": [
-        { "order": 1, "command": "build-verify",           "args": [],            "expectedExit": 0, "mutatesState": false, "evidence": "stdout" },
-        { "order": 2, "command": "verify-behavior",        "args": [],            "expectedExit": 0, "mutatesState": false, "evidence": "stdout" },
-        { "order": 3, "command": "measure",                "args": ["dev-pack"],  "expectedExit": 0, "mutatesState": true,  "evidence": "stdout" },
-        { "order": 4, "command": "gate-clean",             "args": ["server"],    "expectedExit": 0, "mutatesState": false, "evidence": "stdout" },
-        { "order": 5, "command": "handoff-integrity",      "args": [],            "expectedExit": 0, "mutatesState": false, "evidence": "stdout" },
-        { "order": 6, "command": "context-pack-integrity", "args": [],            "expectedExit": 0, "mutatesState": false, "evidence": "stdout" },
-        { "order": 7, "command": "doc-integrity",          "args": [],            "expectedExit": 0, "mutatesState": false, "evidence": "stdout" },
-        { "order": 8, "command": "hs-scan",                "args": [],            "expectedExit": 1, "mutatesState": false, "evidence": "stdout",
+        { "order": 1, "command": "build-verify",           "args": [],           "expectedExit": 0, "mutatesState": false },
+        { "order": 2, "command": "verify-behavior",        "args": [],           "expectedExit": 0, "mutatesState": false },
+        { "order": 3, "command": "measure",                "args": ["dev-pack"], "expectedExit": 0, "mutatesState": true  },
+        { "order": 4, "command": "handoff-integrity",      "args": [],           "expectedExit": 0, "mutatesState": false },
+        { "order": 5, "command": "context-pack-integrity", "args": [],           "expectedExit": 0, "mutatesState": false },
+        { "order": 6, "command": "doc-integrity",          "args": [],           "expectedExit": 0, "mutatesState": false },
+        { "order": 7, "command": "gate-clean",             "args": ["server"],   "expectedExit": 1, "mutatesState": false,
+          "note": "실행자 직후에는 더러운 것이 정상이다. exit 1이 기대값이다." }
+      ]
+    },
+    {
+      "gateId": "POST-COMMIT",
+      "description": "조율자가 커밋한 뒤. 워크트리가 깨끗해야 한다.",
+      "triggeredBy": "조율자 (커밋 직후)",
+      "checks": [
+        { "order": 1, "command": "gate-clean",             "args": ["server"],   "expectedExit": 0, "mutatesState": false },
+        { "order": 2, "command": "handoff-integrity",      "args": [],           "expectedExit": 0, "mutatesState": false },
+        { "order": 3, "command": "context-pack-integrity", "args": [],           "expectedExit": 0, "mutatesState": false },
+        { "order": 4, "command": "doc-integrity",          "args": [],           "expectedExit": 0, "mutatesState": false },
+        { "order": 5, "command": "hs-scan",                "args": [],           "expectedExit": 1, "mutatesState": false,
           "note": "exit 1은 실패가 아니라 승격 심사 후보가 있다는 뜻이다. 기대값이다." }
       ]
     }
   ]
 }
 ```
+
+**`triggeredBy`는 문서가 아니라 계약이다.** manifest를 보면 **누가 언제 돌리는지 알 수 있어야 한다.**
+
+**위 `expectedExit` 값들은 검수자가 실측한 것이다. 다르다고 판단되면 바꾸지 말고 보고해라.**
+(단 `POST-EXECUTOR`의 `gate-clean: 1`은 **아직 실측 전이다.** 네가 실제로 돌려서 확인하고, 다르면 **그 사실을 보고해라.**)
 
 - **`expectedExit`가 핵심이다.** `hs-scan`처럼 **정상이 nonzero인 검사**를 표현할 수 있어야 한다.
 - **`mutatesState`**: 그 검사가 시스템 상태를 바꾸는가. **`measure`는 `true`다** — 검수자가 실측했다: `measure` 1회에 run-log **1075 → 1076**, 더러운 파일 5개. **검증 도구가 검증 대상을 바꾼다.**
@@ -70,7 +95,27 @@ v9 `DI-00-04`:
 - **증거**: `outputs/gates/<taskId|timestamp>.gate.json` 에 남긴다 — 명령·기대·실제·소요·판정.
   **"작업이 끝날 때마다 볼 수 있어야 한다"가 이 하네스의 존재 이유다.**
 
-### C. `HARNESSES.md`를 manifest에서 **생성**해라 (손으로 쓰지 마라)
+### C. ★ 트리거 — **누가 언제 돌리는가** (이게 없으면 하네스는 아무도 안 돌린다)
+
+**`launch-check`가 그렇게 죽었다.** Registry에 등록만 되고 **어떤 경로에도 배선되지 않아** 아무도 안 돌렸다. **같은 실수를 반복하지 마라.**
+
+| 시점 | 누가 | 무엇 |
+| --- | --- | --- |
+| 실행자 종료 **직후** | **발사 래퍼**(`run-executor.ps1`) | `di-completion-check --gate POST-EXECUTOR --task <TaskId>` |
+| 조율자 커밋 **후** | **조율자** | `di-completion-check --gate POST-COMMIT` |
+| 아무 때나 | 검수자 | 독립 재실행으로 대조 |
+
+**래퍼가 자동으로 돌리는 이유**: 조율자 프롬프트에만 적으면 그건 **"말"**이고, **말은 안 지켜진다**(ACK 규약 5/5 실패). **래퍼가 기계적으로 돌려 sentinel에 결과를 박으면 잊을 수가 없다.**
+
+**너는 래퍼를 고치지 마라**(실행자 레인, ADR-002). **대신 래퍼가 부를 수 있도록 인터페이스를 확정해라:**
+
+1. **exit code**: 전부 일치 → 0 / 하나라도 불일치 → 1 / manifest·command 오류 → 1(fail-closed)
+2. **증거 파일**: `outputs/gates/<TaskId>.gate.json` — 명령·기대·실제·소요·판정. **`--task`가 없으면 타임스탬프로.**
+3. **sentinel 연동 필드**: 증거 JSON 최상위에 **`gateVerdict`**(`"PASS"` | `"FAIL"`)를 둬라. 래퍼가 그 값을 sentinel(`<TaskId>.exit.json`)에 복사할 것이다.
+
+**조율자 규칙(검수자가 프롬프트에 넣는다. 참고용)**: `gateVerdict != "PASS"` → **커밋 금지 + HUMAN-INBOX**.
+
+### D. `HARNESSES.md`를 manifest에서 **생성**해라 (손으로 쓰지 마라)
 
 문서가 코드와 갈라지는 병을 **또** 만들지 마라. **manifest가 정본**이고 표는 생성물이다.
 (생성 기능을 하네스에 넣지 말고 별도 `--emit-doc` 플래그나 QA 문서로 처리해도 된다. **네 판단으로 하되 근거를 적어라.**)
