@@ -1946,3 +1946,23 @@
 - QUOTA_SIGNAL: 미감지.
 
 <run-summary>STATE-01 실행자(PID 11396)가 여전히 생존 중 - server/Cli/CliRouter.cs(새로 dirty 관측)·ProjectionCli.cs·StateApplierCli.cs(신규)·WORKSTATE.json·RUNTIME-INDEX.md·HANDOFF.md는 해시상 순간 안정이지만 활성 실행자 작업물이라 동시쓰기 위험 회피를 위해 이번 회차도 커밋 보류. 조율자 전용 파일인 outputs/review-log.md만 커밋(19:35분 미커밋분 포함). 발사 없음, push 대기 7건(직전과 동일), HUMAN-INBOX 신규 없음, QUOTA_SIGNAL 미감지.</run-summary>
+
+
+## 조율자 19:44 회차 (scheduled recursion1-result-check)
+
+- 0-A 선게이트: exit signal 있음 - outputs/launch/STATE-01.exit.json(processed:false, exitCode:0, pid 11396). PID 11396 프로세스 확인 결과 이미 종료(사망, exitedAt 19:41:31) - 실행자 완료. 처리 진행.
+- 안정성 게이트: lanes(server/Cli/CliRouter.cs·server/ProjectionCli.cs 수정 + server/StateApplierCli.cs 신규, docs/handoff/WORKSTATE.json·docs/context/RUNTIME-INDEX.md·docs/handoff/HANDOFF.md 수정, docs/directives/STATE01-applier.md·docs/verification/state01-applier.md·docs/handoff/WORKSTATE.applier-log.jsonl 신규) 5초 간격 2회 해시 비교 STABLE.
+- 지시서 대조: docs/directives/STATE01-applier.md 허용 파일 8개와 실제 변경분 대조 - 전부 allowlist 안. docs/handoff/FILE-CLAIMS.json(claim 해제, 발사 래퍼 자동기록)·WORKSTATE.applier-log.jsonl(신규 StateApplierCli의 append-only 감사로그, 검수기준 #3 '정상 전이 1회'의 증거 자체)은 allowlist 밖이나 범위 위반으로 보지 않음.
+- 하네스: di-completion-check --gate POST-EXECUTOR --task STATE-01 실행 -> gateVerdict PASS(7/7): build-verify exit0(warning0,error0) / verify-behavior exit0(behaviorEqual:true) / measure dev-pack exit0(violationCount0) / handoff-integrity exit0(diId=LEDGER-04 기준, failureCount0) / context-pack-integrity exit0 / doc-integrity exit0(12/12 INTACT) / gate-clean server exit1(실행자 직후 기대값).
+- 반증 시험: 검증문서 자체 보고 9개 중 8개 직접 실행 PASS + 1개(TEST 8, projection 실패 경로 직접 시뮬레이션 불가)는 코드 검토로 대체 - 실행자가 스스로 한계로 명기(은폐 아님).
+- **claim-check STATE-01 실행 결과 MISMATCH(exit1)**: ApplyAndVerify·AppendApplierLog 심볼이 "코드에 없음"으로 판정됨. 직접 대조 결과 실제로는 존재(server/StateApplierCli.cs:86, :335, Select-String으로 확인). 원인 규명: server/Harness/ClaimCheckCli.cs가 심볼 검색에 git grep -l {sym} -- server를 쓰는데 untracked 파일을 검색 대상에서 제외한다(--untracked 플래그 누락). StateApplierCli.cs가 이번 회차 신규 미추적 파일이라 검색에서 빠짐 - git grep --untracked -l ApplyAndVerify -- server 직접 실행으로 재현 확인(매치됨). 나머지 5개 주장(파일 존재 3건 + IsGeneratedOrRuntimePath·EnumerateCodeFiles 심볼 2건, 기존 추적 파일 소재)은 전부 match.
+- 판단: 규칙(claim-check exit1 -> 커밋 금지)에 따름. 하네스 오탐 override 4조건(review-log 실체 입증 + 사람 승인 + 하네스 수정 과제 큐 등재 + 전부 충족) 중 사람 승인·큐 등재가 미충족이므로 override 하지 않음. STATE-01 배치(server 3파일 + WORKSTATE.json·RUNTIME-INDEX.md·HANDOFF.md·applier-log.jsonl·directives·verification 문서, 서로 강하게 결합돼 분리 커밋 시 불일치 위험) 전부 이번 회차 미커밋 보류. ACTOR-01(2026-07-11 19:47 항목)과 동일 패턴이되, 이번엔 허위 완료주장이 아니라 하네스 자체의 결함(untracked 파일 미검색)임을 직접 증거로 확인했다는 점이 다름.
+- 커밋(로컬만, push 안 함): docs/handoff/FILE-CLAIMS.json만(9953dd2, STATE-01 클레임 해제 반영 - 내용상 STATE-01 산출물과 무관한 시스템 부수기록).
+- 커밋 안 함(런타임): dashboard/data/dev-pack·ruined-lab 8종.
+- HUMAN-INBOX: 신규 등재 1건(claim-check 하네스 결함 + STATE-01 커밋 보류 상태) - 아래 참조.
+- 발사(사람 게이트): 이번 회차는 STATE-01 검수에 집중 - SONNET-QUEUE 신규 발사 판단은 다음 회차로 이월.
+- push(사람 배치 게이트): git log origin/main..HEAD --oneline = 1건(9953dd2) -> 사람 배치 승인 필요.
+- QUOTA_SIGNAL: 미감지.
+- exit signal: outputs/launch/STATE-01.exit.json processed: false -> true로 갱신(검수 완료, 커밋은 보류이나 재처리 방지).
+
+<run-summary>STATE-01(WORKSTATE canonical 계약 + StateApplierCli) 실행자 산출물을 검수했다. 하네스 게이트(build/verify-behavior/measure/handoff-integrity/context-pack-integrity/doc-integrity/gate-clean) 7종 전부 PASS, 반증시험 9개(8직접+1코드검토) PASS했으나 claim-check가 MISMATCH(exit1)를 냈다. 직접 조사 결과 실행자의 허위주장이 아니라 claim-check 하네스 자체의 결함(git grep이 untracked 파일을 검색하지 않음, StateApplierCli.cs가 신규 미추적 파일이라 누락)임을 확인했다. 규칙상 exit1이면 커밋 금지이므로 STATE-01 전체 배치를 미커밋 보류하고 HUMAN-INBOX에 하네스 결함 수정 + 보류 상태를 등재했다. 별도로 docs/handoff/FILE-CLAIMS.json(클레임 해제, 무관한 시스템 기록)만 로컬 커밋(9953dd2). push 대기 1건, 발사 판단 이월, QUOTA_SIGNAL 미감지.</run-summary>
