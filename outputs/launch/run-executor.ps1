@@ -1,33 +1,24 @@
 ﻿# 실행자를 발사하고 종료를 기다린 뒤 완료 신호(sentinel)를 남긴다.
 # 왜: 조율자가 5분마다 무조건 LLM 세션을 태우는 대신, 실행자가 끝났을 때만 검수하게 하기 위함(할당량 절감).
 # 사용: powershell -NoProfile -File run-executor.ps1 -TaskId LEDGER-04
-# 프롬프트는 파일로 전달한다 — 인자 경계에서 잘리는 사고(FAIL-2026-013)를 구조적으로 없앤다.
+# 프롬프트는 stdin으로 전달한다 — 인자 경계 사고(FAIL-2026-013)와 transport receipt(ADR-010)를 위함.
 param(
   [Parameter(Mandatory = $true)][string]$TaskId
 )
 
-$root      = 'C:\Users\1\Documents\Local-First Workflow Dashboard'
-$launchDir = Join-Path $root 'outputs\launch'
-$promptFile= Join-Path $launchDir "$TaskId.prompt.txt"
-$outJson   = Join-Path $root "outputs\sonnet-$TaskId.out.json"   # claude -p --output-format json 원문
-$outLog    = Join-Path $root "outputs\sonnet-$TaskId.out.log"    # 사람이 읽는 보고문(원문에서 .result만 추출)
-$errLog    = Join-Path $root "outputs\sonnet-$TaskId.err.log"
-$sentinel  = Join-Path $launchDir "$TaskId.exit.json"
-$usageLog  = Join-Path $launchDir 'usage-ledger.jsonl'           # 상위 모델 토큰 원장(append만)
+$root        = 'C:\Users\1\Documents\Local-First Workflow Dashboard'
+$launchDir   = Join-Path $root 'outputs\launch'
+$promptFile  = Join-Path $launchDir "$TaskId.prompt.txt"
+$outJsonl    = Join-Path $root "outputs\sonnet-$TaskId.out.jsonl"  # stream-json 원문 JSONL
+$outLog      = Join-Path $root "outputs\sonnet-$TaskId.out.log"    # 사람이 읽는 보고문
+$errLog      = Join-Path $root "outputs\sonnet-$TaskId.err.log"
+$sentinel    = Join-Path $launchDir "$TaskId.exit.json"
+$usageLog    = Join-Path $launchDir 'usage-ledger.jsonl'
+$evidenceOut = Join-Path $launchDir "$TaskId.transport.json"
 
 if (-not (Test-Path $promptFile)) { throw "프롬프트 파일이 없다: $promptFile" }
 
-# 프롬프트를 파일에서 읽어 한 줄 인자로 만든다(줄바꿈은 공백으로 접는다).
-$prompt  = (Get-Content $promptFile -Raw -Encoding UTF8) -replace "`r?`n", ' '
-# --output-format json: 상위 모델의 usage(토큰·캐시·비용)를 받기 위함(LEDGER-05).
-# 재지 않으면 "로컬로 내릴 수 있는가"를 영원히 감으로 답하게 된다.
-$argline = '-p "' + $prompt.Replace('"', '\"') + '" --output-format json --dangerously-skip-permissions'
-
-# 이전 회차의 신호가 남아 있으면 지운다(낡은 신호로 조율자가 오판하는 것을 막는다).
-if (Test-Path $sentinel) { Remove-Item $sentinel -Force }
-
 # 지시서의 '## 허용 파일 (allowlist)' 목록을 읽는다 — FILE-CLAIMS의 입력이다(P0-06).
-# 주의: `return @()` 는 PowerShell이 $null로 접는다. 쉼표 연산자(,)로 빈 배열을 보존한다.
 function Get-Allowlist([string]$directivePath) {
   if ([string]::IsNullOrWhiteSpace($directivePath) -or -not (Test-Path $directivePath)) { return ,@() }
   $lines = Get-Content $directivePath -Encoding UTF8
@@ -35,18 +26,16 @@ function Get-Allowlist([string]$directivePath) {
   $paths = @()
   foreach ($l in $lines) {
     if ($l -match '^##\s+허용 파일') { $inSection = $true; continue }
-    if ($inSection -and $l -match '^##\s') { break }          # 다음 절에서 멈춘다
+    if ($inSection -and $l -match '^##\s') { break }
     if ($inSection -and $l -match '^\s*-\s+(\S+)') {
       $p = $matches[1].Trim('`')
-      if ($p -notmatch '^\(') { $paths += $p }                # '(실행 산출물)' 같은 주석 줄은 뺀다
+      if ($p -notmatch '^\(') { $paths += $p }
     }
   }
   return ,$paths
 }
 
-# 파일 소유권 claim을 등록/해제한다(P0-06). 사후 검출(allowlist)을 실행 중 예약으로 확장한다.
-# allowlistSource: 어느 지시서에서 뽑았는가. null이면 "allowlist를 모른다" — 빈 목록과 다르다.
-# 모르는 것을 '비어 있음'으로 적으면 하네스가 "아무 파일도 안 잡았다"로 오판한다.
+# 파일 소유권 claim을 등록/해제한다(P0-06).
 function Set-Claim([string]$status, [int]$pid_, $paths, $allowlistSource, $exitCode) {
   $claimsFile = Join-Path $root 'docs\handoff\FILE-CLAIMS.json'
   if (Test-Path $claimsFile) {
@@ -54,82 +43,235 @@ function Set-Claim([string]$status, [int]$pid_, $paths, $allowlistSource, $exitC
   } else {
     $doc = [pscustomobject]@{ schemaVersion = 2; claims = @() }
   }
-  $claims = @($doc.claims | Where-Object { $_.claimId -ne "$TaskId-$pid_" })   # 같은 claim은 갱신
+  $claims = @($doc.claims | Where-Object { $_.claimId -ne "$TaskId-$pid_" })
   $claims += [pscustomobject]@{
     claimId         = "$TaskId-$pid_"
     actor           = 'sonnet'
     taskId          = $TaskId
-    paths           = @($paths)          # 항상 배열. 비어 있으면 [] 로 남는다
-    allowlistSource = $allowlistSource   # null = 지시서를 못 찾음(= allowlist 미상)
+    paths           = @($paths)
+    allowlistSource = $allowlistSource
     pid             = $pid_
     claimedAt       = $started
-    expiresAt       = ([datetime]$started).AddHours(2).ToString('o')   # 2시간 뒤 만료 후보(보조 근거)
-    status          = $status                                          # active | released
+    expiresAt       = ([datetime]$started).AddHours(2).ToString('o')
+    status          = $status
     exitCode        = $exitCode
   }
   $out = [pscustomobject]@{ schemaVersion = 2; claims = $claims } | ConvertTo-Json -Depth 6
-  # ConvertTo-Json은 항목이 1개인 배열을 객체로 접는다 — claims는 항상 배열이어야 한다.
   if ($claims.Count -eq 1 -and $out -notmatch '"claims":\s*\[') {
     $out = $out -replace '("claims":\s*)(\{)', '$1[$2' -replace '(\})(\s*\})\s*$', '$1]$2'
   }
   $out | Set-Content $claimsFile -Encoding UTF8
 }
 
+# sha256을 바이트 배열로 계산해 소문자 64자리 hex로 반환한다.
+function Get-Sha256Hex([byte[]]$bytes) {
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  $hash = $sha.ComputeHash($bytes)
+  $sha.Dispose()
+  return ($hash | ForEach-Object { $_.ToString('x2') }) -join ''
+}
+
+# stdout JSONL에서 첫 번째 사용자 프롬프트 replay 이벤트만 찾아 반환한다.
+# tool_result user 이벤트(content가 배열)는 제외한다 — content가 문자열인 것만 카운트.
+# StringReader로 줄 단위 읽기 — 대형 배열 분기 없이 안전하게.
+function Get-ReplayEvents([string]$text) {
+  $found = [System.Collections.Generic.List[object]]::new()
+  $reader = [System.IO.StringReader]::new($text)
+  try {
+    $ln = $reader.ReadLine()
+    while ($null -ne $ln) {
+      $ln = $ln.Trim()
+      if ($ln.Length -gt 0 -and $ln[0] -eq '{') {
+        try {
+          $obj = ConvertFrom-Json -InputObject $ln
+          # type=user 이고 content가 문자열인 이벤트만 — tool_result 배열은 제외
+          if ($obj -and $obj.type -eq 'user' -and $obj.message.content -is [string]) {
+            $found.Add($obj)
+          }
+        } catch { }
+      }
+      $ln = $reader.ReadLine()
+    }
+  } finally {
+    $reader.Dispose()
+  }
+  return ,$found
+}
+
+# replay 이벤트에서 content 텍스트를 추출한다 — 문자열이면 그대로, 블록 배열이면 text 필드를 이어붙인다.
+function Get-ContentText($contentField) {
+  if ($contentField -is [string]) { return $contentField }
+  if ($contentField -is [System.Array]) {
+    return ($contentField | ForEach-Object {
+      if ($_ -is [string]) { $_ }
+      elseif ($_.type -eq 'text') { $_.text }
+      else { '' }
+    }) -join ''
+  }
+  return ''
+}
+
 $directive = Join-Path $root "docs\handoff\queue\directive-$TaskId*.md"
 $dPath     = (Get-ChildItem $directive -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
-$allow     = Get-Allowlist $dPath
-if (-not $dPath) { Write-Warning "지시서를 못 찾았다($TaskId). allowlistSource=null 로 남긴다 — 빈 allowlist가 아니라 '미상'이다." }
+if (-not $dPath) {
+    throw "발사 중단: 지시서를 못 찾았다 — 패턴: $directive (TaskId=$TaskId 를 확인하라)"
+}
+$allow = Get-Allowlist $dPath
+if ($allow.Count -eq 0) {
+    throw "발사 중단: Get-Allowlist가 빈 배열을 반환했다 — 지시서: $dPath ('^## 허용 파일' 섹션이 있는지, BOM 인코딩인지 확인하라)"
+}
+
+# 이전 sentinel 제거
+if (Test-Path $sentinel) { Remove-Item $sentinel -Force }
+
+# --- 프롬프트 준비 ---
+# sourceSha256: 파일 원본 바이트의 해시
+$sourceBytes = [System.IO.File]::ReadAllBytes($promptFile)
+$sourceSha256 = Get-Sha256Hex $sourceBytes
+$sourceByteLength = $sourceBytes.Length
+
+# 프롬프트 본문(UTF-8 문자열). 파일 원본 그대로(BOM 제거).
+$promptText = [System.Text.Encoding]::UTF8.GetString($sourceBytes).TrimStart([char]0xFEFF)
+
+# stdin payload: stream-json 한 줄. content는 JSON 문자열로 직렬화해 삽입한다.
+$contentJson = $promptText | ConvertTo-Json -Compress
+$payloadLine = '{"type":"user","message":{"role":"user","content":' + $contentJson + '}}'
+
+# payloadSha256: stdin으로 실제 보내는 바이트(개행 포함)의 해시
+$payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($payloadLine + "`n")
+$payloadSha256 = Get-Sha256Hex $payloadBytes
+$payloadByteLength = $payloadBytes.Length
 
 $started = (Get-Date).ToString('o')
-$proc = Start-Process claude.exe -ArgumentList $argline `
-          -RedirectStandardOutput $outJson -RedirectStandardError $errLog `
-          -PassThru -WorkingDirectory $root
 
-# 핸들을 미리 캐시한다 — 이걸 안 하면 종료 후 ExitCode가 null이 된다(.NET 동작).
-# 조율자가 exitCode로 커밋 여부를 판단하므로 null이면 오판한다. 실제로 LEDGER-04에서 null이 나왔다.
-$null = $proc.Handle
+# --- claude 프로세스 시작 ---
+$psi = [System.Diagnostics.ProcessStartInfo]::new('claude.exe')
+$psi.Arguments = '-p --verbose --input-format stream-json --output-format stream-json --replay-user-messages --dangerously-skip-permissions'
+$psi.WorkingDirectory = $root
+$psi.RedirectStandardInput  = $true
+$psi.RedirectStandardOutput = $true
+$psi.RedirectStandardError  = $true
+$psi.UseShellExecute        = $false
+$psi.StandardOutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$psi.StandardErrorEncoding  = [System.Text.UTF8Encoding]::new($false)
 
-# PID를 즉시 남긴다 — 대기 중 세션이 죽어도 사람이 추적할 수 있게.
+$proc = [System.Diagnostics.Process]::new()
+$proc.StartInfo = $psi
+$null = $proc.Start()
+$null = $proc.Handle   # 핸들 캐시 — 종료 후 ExitCode null 방지
+
+# 핸들을 캐시한 직후 PID를 기록한다.
 $proc.Id | Out-File (Join-Path $root 'outputs\sonnet-active.pid') -Encoding ascii
 
-# claim 등록: "이 파일들은 지금 이 PID가 잡고 있다". 실행 중 다른 주체가 만지면 scope-check가 검출한다.
 Set-Claim -status 'active' -pid_ $proc.Id -paths $allow -allowlistSource $dPath -exitCode $null
+
+# stdout/stderr 비동기 읽기를 stdin 쓰기 전에 시작한다 — 먼저 시작해야 stdout 버퍼 교착을 막는다.
+$stdoutTask = $proc.StandardOutput.ReadToEndAsync()
+$stderrTask = $proc.StandardError.ReadToEndAsync()
+
+# ★ UTF-8 바이트를 BaseStream에 직접 쓴다 — PowerShell 5.1 기본 writer는 한글을 깨뜨린다(ADR-010 §6).
+$proc.StandardInput.BaseStream.Write($payloadBytes, 0, $payloadBytes.Length)
+$proc.StandardInput.BaseStream.Flush()
+$proc.StandardInput.Close()
 
 $proc.WaitForExit()
 $exitCode = $proc.ExitCode
-# 그래도 null이면 -1로 적는다. 모르는 것을 0(성공)으로 적지 않는다.
 if ($null -eq $exitCode) { $exitCode = -1 }
 
-# claim 해제. 지우지 않고 released로 남긴다 — 누가 언제 무엇을 잡았는지가 이력이다(고아 코드 109줄 사건).
-Set-Claim -status 'released' -pid_ $proc.Id -paths $allow -allowlistSource $dPath -exitCode $exitCode
+$stdoutAll = $stdoutTask.Result
+$stderrAll = $stderrTask.Result
 
-# 상위 모델 usage를 뽑는다(LEDGER-05). 파싱 실패는 조용히 넘기지 않고 null로 남긴다 — 모르는 것을 0으로 적지 않는다.
-$usage = $null; $report = $null
-if (Test-Path $outJson) {
-  try {
-    $j = Get-Content $outJson -Raw -Encoding UTF8 | ConvertFrom-Json
-    $report = $j.result
-    $usage = [ordered]@{
-      inputTokens         = $j.usage.input_tokens
-      outputTokens        = $j.usage.output_tokens
-      cacheCreationTokens = $j.usage.cache_creation_input_tokens   # 진짜 비용은 여기 있다
-      cacheReadTokens     = $j.usage.cache_read_input_tokens
-      totalCostUsd        = $j.total_cost_usd
-      numTurns            = $j.num_turns
-      durationMs          = $j.duration_ms
-      isError             = $j.is_error
-      stopReason          = $j.stop_reason
-      sessionId           = $j.session_id
-    }
-  } catch {
-    $usage = [ordered]@{ parseError = $_.Exception.Message }      # 실패를 감추지 않는다
-  }
+# stderr를 errLog에 쓴다.
+if ($stderrAll) { $stderrAll | Set-Content $errLog -Encoding UTF8 }
+
+# stdout JSONL을 파일로 보관한다.
+if ($stdoutAll) { $stdoutAll | Set-Content $outJsonl -Encoding UTF8 }
+
+# --- transport receipt 계산 ---
+$replayEvents = Get-ReplayEvents $stdoutAll
+
+$transportVerdict  = 'TRANSPORT_INVALID'
+$replaySha256      = ''
+$replayByteLength  = 0
+$replayEventCount  = $replayEvents.Count
+
+if ($replayEventCount -eq 1) {
+  $replayText   = Get-ContentText $replayEvents[0].message.content
+  $replayBytes  = [System.Text.Encoding]::UTF8.GetBytes($replayText)
+  $replaySha256 = Get-Sha256Hex $replayBytes
+  $replayByteLength = $replayBytes.Length
+
+  $payloadContentSha = Get-Sha256Hex ([System.Text.Encoding]::UTF8.GetBytes($promptText))
+  if ($replaySha256 -eq $payloadContentSha) { $transportVerdict = 'TRANSPORT_VALID' }
+} elseif ($replayEventCount -eq 0) {
+  Write-Warning "replay 이벤트 없음 — TRANSPORT_INVALID"
+} else {
+  Write-Warning "replay 이벤트 $replayEventCount 개 (1개여야 한다) — TRANSPORT_INVALID"
 }
 
-# 사람이 읽는 보고문을 따로 남긴다 — 기존 소비자(조율자·검수자)가 그대로 읽게.
+# CLI 버전 수집
+$cliVersion = & claude.exe --version 2>&1 | Select-Object -First 1
+if (-not $cliVersion) { $cliVersion = 'unknown' }
+
+# transport evidence 파일을 남긴다.
+$evidence = [ordered]@{
+  schemaVersion    = 1
+  taskId           = $TaskId
+  cliVersion       = "$cliVersion"
+  sourceSha256     = $sourceSha256
+  payloadSha256    = (Get-Sha256Hex ([System.Text.Encoding]::UTF8.GetBytes($promptText)))
+  replaySha256     = $replaySha256
+  sourceByteLength = $sourceByteLength
+  payloadByteLength = ([System.Text.Encoding]::UTF8.GetBytes($promptText)).Length
+  replayByteLength = $replayByteLength
+  replayEventCount = $replayEventCount
+  pid              = $proc.Id
+  startedAt        = $started
+  exitedAt         = (Get-Date).ToString('o')
+  verdict          = $transportVerdict
+}
+$evidence | ConvertTo-Json -Depth 4 | Set-Content $evidenceOut -Encoding UTF8
+
+$transportValid = ($transportVerdict -eq 'TRANSPORT_VALID')
+
+# --- usage 추출 (stream-json JSONL에서) ---
+$usage  = $null
+$report = $null
+$_usageReader = [System.IO.StringReader]::new($stdoutAll)
+try {
+  $_ln = $_usageReader.ReadLine()
+  while ($null -ne $_ln) {
+    $_ln = $_ln.Trim()
+    if ($_ln.Length -gt 0 -and $_ln[0] -eq '{') {
+      try {
+        $obj = ConvertFrom-Json -InputObject $_ln
+        if ($obj -and $obj.type -eq 'result') {
+          $report = $obj.result
+          $usage = [ordered]@{
+            inputTokens         = $obj.usage.input_tokens
+            outputTokens        = $obj.usage.output_tokens
+            cacheCreationTokens = $obj.usage.cache_creation_input_tokens
+            cacheReadTokens     = $obj.usage.cache_read_input_tokens
+            totalCostUsd        = $obj.total_cost_usd
+            numTurns            = $obj.num_turns
+            durationMs          = $obj.duration_ms
+            isError             = $obj.is_error
+            stopReason          = $obj.stop_reason
+            sessionId           = $obj.session_id
+          }
+        }
+      } catch { }
+    }
+    $_ln = $_usageReader.ReadLine()
+  }
+} finally { $_usageReader.Dispose() }
+
+# 사람이 읽는 보고문
 if ($report) { $report | Set-Content $outLog -Encoding UTF8 }
 
-# 상위 모델 토큰 원장에 append. 통째로 다시 쓰지 않는다(CLAUDE.md 기록 파일 규칙).
+Set-Claim -status 'released' -pid_ $proc.Id -paths $allow -allowlistSource $dPath -exitCode $exitCode
+
+# 토큰 원장 append
 $ledgerLine = [ordered]@{
   taskId = $TaskId; actor = 'sonnet'; pid = $proc.Id
   startedAt = $started; exitedAt = (Get-Date).ToString('o')
@@ -137,18 +279,19 @@ $ledgerLine = [ordered]@{
 } | ConvertTo-Json -Depth 6 -Compress
 Add-Content -Path $usageLog -Value $ledgerLine -Encoding UTF8
 
-# 완료 신호. 조율자는 이 파일이 생겼을 때만 검수한다.
+# 완료 sentinel
 $payload = [ordered]@{
-  schemaVersion = 2
-  taskId        = $TaskId
-  pid           = $proc.Id
-  exitCode      = $exitCode
-  startedAt     = $started
-  exitedAt      = (Get-Date).ToString('o')
-  outLog        = $outLog
-  outJson       = $outJson
-  processed     = $false          # 조율자가 검수 후 true로 바꾼다
-  argLength     = $argline.Length # 프롬프트가 잘리지 않고 도착했는지 확인용
-  usage         = $usage          # 상위 모델 토큰·비용(LEDGER-05)
+  schemaVersion    = 2
+  taskId           = $TaskId
+  pid              = $proc.Id
+  exitCode         = $exitCode
+  startedAt        = $started
+  exitedAt         = (Get-Date).ToString('o')
+  outLog           = $outLog
+  outJson          = $outJsonl
+  processed        = $false
+  transportValid   = $transportValid
+  transportEvidence = $evidenceOut
+  usage            = $usage
 }
 $payload | ConvertTo-Json -Depth 6 | Set-Content $sentinel -Encoding UTF8

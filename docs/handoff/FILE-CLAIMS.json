@@ -344,6 +344,28 @@
                        "expiresAt":  "2026-07-12T23:30:56.4121559+09:00",
                        "status":  "released",
                        "exitCode":  0
+                   },
+                   {
+                       "claimId":  "DI-00-01-30728",
+                       "actor":  "sonnet",
+                       "taskId":  "DI-00-01",
+                       "paths":  [
+                                     "server/StateApplierCli.cs",
+                                     "server/ProjectionCli.cs",
+                                     "docs/handoff/WP-REGISTRY.json",
+                                     "docs/STATUS.md",
+                                     "docs/handoff/WORKSTATE.json",
+                                     "docs/context/RUNTIME-INDEX.md",
+                                     "docs/handoff/HANDOFF.md",
+                                     "docs/verification/di0001-worktracking.md",
+                                     "docs/handoff/queue/directive-DI-00-01-worktracking.md"
+                                 ],
+                       "allowlistSource":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\docs\\handoff\\queue\\directive-DI-00-01-worktracking.md",
+                       "pid":  30728,
+                       "claimedAt":  "2026-07-12T21:55:30.6601203+09:00",
+                       "expiresAt":  "2026-07-12T23:55:30.6601203+09:00",
+                       "status":  "active",
+                       "exitCode":  null
                    }
                ]
 }
