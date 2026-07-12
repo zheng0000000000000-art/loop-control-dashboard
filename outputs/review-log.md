@@ -2308,3 +2308,23 @@
 - 이번 커밋은 outputs/review-log.md(기록 레인)만 대상, 별도 게이트 불요.
 
 <run-summary>이번 회차는 5분 전 미커밋 초안(주체 미상)을 재검증만 하고 그대로 확정 커밋함 — gate-clean/doc-integrity/handoff-integrity/push count/PID 18332 생존 전부 재확인 일치. server/StateApplierCli.cs·FILE-CLAIMS.json은 활성 실행자(GUARD-02, PID 18332) 작업물이라 커밋 제외 유지. 신규 커밋 없음, 발사 없음, push 대기 40건(승인 필요). 이전 회차 이후 실질 변화 없음.</run-summary>
+
+## 조율자 2026-07-12 22:31 회차 (review-log)
+
+- 0-A 선게이트: $lanes 비어있지 않음(server/StateApplierCli.cs·docs/handoff/FILE-CLAIMS.json dirty, docs/verification/guard02-di-boundary.md 신규) + `outputs/launch/GUARD-02.exit.json` processed:false(exitCode0, PID18332, exitedAt 22:26:34) → 검수 진행.
+- GUARD-02(DI 경계 전이 + verdict를 gate.json 증거에 결속) 지시서(`docs/handoff/queue/directive-GUARD-02-di-boundary.md`) 대조 검수:
+  - allowlist 준수 확인: 실제 변경 `server/StateApplierCli.cs`·`docs/verification/guard02-di-boundary.md`만(둘 다 allowlist 내). `docs/handoff/FILE-CLAIMS.json`은 실행자가 아니라 `run-executor.ps1` 래퍼가 자동 기록(claim released, exitCode0) — allowlist 위반 아님.
+  - 하네스 직접 재실행(자기보고 재현): `build-verify` exit0(경고0·오류0) / `verify-behavior` exit0(behaviorEqual=true) / `measure dev-pack` exit0(violationCount=0, 기준선0 대비 비악화) / `claim-check GUARD-02` exit0(claimCount4·mismatch0) / `handoff-integrity` exit0(failures0) / `doc-integrity` exit0(INTACT, checked12·broken0) / `di-completion-check --gate POST-EXECUTOR --task GUARD-02` 재실행 exit0(gateVerdict=PASS, checkCount7·failureCount0) — `outputs/gates/GUARD-02.gate.json` 실체 확인. gate-clean server는 커밋 전 exit1(server/StateApplierCli.cs content-dirty, 기대값 그대로).
+  - 자가검증 문서(verification)의 모든 수치가 재현됨 — 불일치 없음.
+- 로컬 커밋 2건(레인 분리):
+  - `ed35823` server 코드: server/StateApplierCli.cs
+  - `26a513b` 문서·큐·정책: docs/verification/guard02-di-boundary.md + docs/handoff/FILE-CLAIMS.json
+  - POST-COMMIT 재검증: `gate-clean server` exit0(PASS, dirty 0) 확인.
+- sentinel 갱신: `outputs/launch/GUARD-02.exit.json`의 `processed`를 `false`→`true`로 변경.
+- projection 미실행 확인(자가검증 문서에 명시됨, WORKSTATE/STATUS/RUNTIME-INDEX/HANDOFF 미변경) — 조율자는 하네스 아닌 쓰기 액션이라 대행하지 않음. 다음 회차나 검수자 판단 필요 항목으로 남김.
+- 프로세스 점검: PID 32744는 CommandLine 확인 결과 이 조율자 세션 자신(Cowork 프로세스, Scheduled\\recursion1-result-check 경로 포함) — 활성 실행자 오인 아님. FILE-CLAIMS의 TRANSPORT-PROBE(9552)·TRANSPORT-PROBE2(31240)·DI-00-01(30728) active 클레임 3건은 Get-Process로 전부 사망 확인 — stale(release 미처리). 정정은 조율자 권한 밖(FILE-CLAIMS는 wrapper 전용 쓰기) — 기록만 남김.
+- push 대기: `git rev-list origin/main..HEAD --count` = 43건(사람 배치 승인 필요, push 안 함).
+- 발사: 하지 않음(정책상 절대 금지). SONNET-QUEUE.md 상 대기 항목(FEAT-01, FIX-04)은 있으나 WORKSTATE는 DI-플로우(DI-00-01 completed)로 이미 별도 진행 중 — 다음 발사 판단은 사람/검수자 몫.
+- QUOTA_SIGNAL: 미감지. HUMAN-INBOX: 신규 항목 없음(FILE-CLAIMS stale 클레임 3건은 사람 결재 사안 아니고 단순 정리 대상이라 미등재).
+
+<run-summary>GUARD-02(DI 경계 전이 + verdict-게이트증거 결속) 실행자 산출물을 하네스 7종 전부 재실행해 자가보고와 일치 확인 후 로컬 커밋 2건(server 코드/문서, ed35823·26a513b) 완료, sentinel processed=true 갱신. gate-clean server POST-COMMIT PASS. projection 미실행 상태로 남음(WORKSTATE 갱신 없음). push 대기 43건, 발사 없음, QUOTA_SIGNAL 없음.</run-summary>
