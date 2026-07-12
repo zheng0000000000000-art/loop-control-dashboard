@@ -1,4 +1,4 @@
-// WORKSTATE sha256 스탬핑 및 Projection 파일(RUNTIME-INDEX.md, HANDOFF.md) 생성기.
+// WORKSTATE sha256 스탬핑 및 Projection 파일(RUNTIME-INDEX.md, HANDOFF.md, STATUS.md) 생성기.
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -21,6 +21,7 @@ internal static class ProjectionCli
     {
         "docs/context/RUNTIME-INDEX.md",
         "docs/handoff/HANDOFF.md",
+        "docs/STATUS.md",
     };
 
     // 진입점: WORKSTATE sha256 스탬핑 후 RUNTIME-INDEX.md, HANDOFF.md를 생성한다. exit 0=성공, 2=치명 오류.
@@ -54,6 +55,9 @@ internal static class ProjectionCli
             var handoffPath = Path.Combine(root, "docs", "handoff", "HANDOFF.md");
             File.WriteAllText(handoffPath, GenerateHandoff(root, workstate), new UTF8Encoding(false));
 
+            var statusPath = Path.Combine(root, "docs", "STATUS.md");
+            File.WriteAllText(statusPath, GenerateStatusMd(root, workstate), new UTF8Encoding(false));
+
             var result = new JsonObject
             {
                 ["ok"] = true,
@@ -61,6 +65,7 @@ internal static class ProjectionCli
                 ["missingFiles"] = CountMissing(workstate),
                 ["runtimeIndex"] = "docs/context/RUNTIME-INDEX.md",
                 ["handoff"] = "docs/handoff/HANDOFF.md",
+                ["status"] = "docs/STATUS.md",
             };
             Console.WriteLine(result.ToJsonString(WriteOptions));
             return 0;
@@ -122,7 +127,7 @@ internal static class ProjectionCli
         return changed?.OfType<JsonObject>().Count(o => o["missing"]?.GetValue<bool>() == true) ?? 0;
     }
 
-    // RUNTIME-INDEX.md 내용을 생성한다(L0 최소 상태, 20줄 이내).
+    // RUNTIME-INDEX.md 내용을 생성한다(L0 최소 상태, 20줄 이내). Phase·WP·DI·status·blockers·nextActions 필수.
     private static string GenerateRuntimeIndex(JsonObject workstate)
     {
         var sb = new StringBuilder();
@@ -136,7 +141,7 @@ internal static class ProjectionCli
         var diId = workstate["diId"]?.ToString() ?? "—";
         var status = workstate["status"]?.ToString() ?? "—";
         var updatedAt = workstate["updatedAt"]?.ToString() ?? "—";
-        var blocker = workstate["blocker"]?.ToString();
+        var blockers = workstate["blockers"] as JsonArray;
         var nextActions = workstate["nextActions"] as JsonArray;
 
         sb.AppendLine($"| 항목 | 값 |");
@@ -145,23 +150,108 @@ internal static class ProjectionCli
         sb.AppendLine($"| wpId | {wpId} |");
         sb.AppendLine($"| diId | {diId} |");
         sb.AppendLine($"| status | {status} |");
+        sb.AppendLine($"| blockers | {InlineList(blockers)} |");
+        sb.AppendLine($"| nextActions | {InlineList(nextActions)} |");
         sb.AppendLine($"| updatedAt | {updatedAt} |");
 
-        if (!string.IsNullOrWhiteSpace(blocker))
+        return sb.ToString();
+    }
+
+    // JsonArray 요소를 세미콜론으로 이어 한 줄로 만든다. 비어 있으면 "—" 반환.
+    private static string InlineList(JsonArray? arr)
+    {
+        if (arr is null || arr.Count == 0) return "—";
+        return string.Join("; ", arr.OfType<JsonValue>().Select(v => v.ToString()));
+    }
+
+    // WORKSTATE + WP-REGISTRY에서 STATUS.md를 생성한다(WP 등록표·현재 위치·허용 전이 표 포함).
+    private static string GenerateStatusMd(string root, JsonObject workstate)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine(GeneratedWarning);
+        sb.AppendLine();
+        sb.AppendLine("# STATUS — 현재 상태");
+        sb.AppendLine();
+
+        AppendStatusWpTable(root, sb);
+
+        var phaseId = workstate["phaseId"]?.ToString() ?? "—";
+        var wpId2 = workstate["wpId"]?.ToString() ?? "—";
+        var diId = workstate["diId"]?.ToString() ?? "—";
+        var status = workstate["status"]?.ToString() ?? "—";
+        var updatedAt = workstate["updatedAt"]?.ToString() ?? "—";
+
+        sb.AppendLine("## 현재 위치");
+        sb.AppendLine();
+        sb.AppendLine("| 항목 | 값 |");
+        sb.AppendLine("| --- | --- |");
+        sb.AppendLine($"| phaseId | {phaseId} |");
+        sb.AppendLine($"| wpId | {wpId2} |");
+        sb.AppendLine($"| diId | {diId} |");
+        sb.AppendLine($"| status | {status} |");
+        sb.AppendLine($"| updatedAt | {updatedAt} |");
+        sb.AppendLine();
+
+        var blockers = workstate["blockers"] as JsonArray;
+        if (blockers is { Count: > 0 })
         {
+            sb.AppendLine("## 블로커");
+            foreach (var b in blockers.OfType<JsonValue>())
+                sb.AppendLine($"- {b}");
             sb.AppendLine();
-            sb.AppendLine($"**블로커:** {blocker}");
         }
 
+        var nextActions = workstate["nextActions"] as JsonArray;
         if (nextActions is { Count: > 0 })
         {
+            sb.AppendLine("## 다음 작업");
+            foreach (var a in nextActions.OfType<JsonValue>())
+                sb.AppendLine($"- {a}");
             sb.AppendLine();
-            sb.AppendLine("**다음 작업:**");
-            foreach (var action in nextActions.OfType<JsonValue>())
-                sb.AppendLine($"- {action}");
         }
 
+        sb.AppendLine("## 상태 변경 규칙 (허용 전이 표)");
+        sb.AppendLine();
+        sb.AppendLine("| from | 허용되는 to |");
+        sb.AppendLine("| --- | --- |");
+        sb.AppendLine("| `waiting` | `in_progress`, `blocked` |");
+        sb.AppendLine("| `in_progress` | `verifying`, `blocked`, `waiting` |");
+        sb.AppendLine("| `verifying` | `completed`, `in_progress`, `blocked` |");
+        sb.AppendLine("| `blocked` | `waiting`, `in_progress`, `verifying` |");
+        sb.AppendLine("| `completed` | 없음 (terminal — 사람 결재로만 되돌림 가능) |");
+        sb.AppendLine("| 같은 status | 허용 (nextActions·blockers 갱신) |");
+        sb.AppendLine();
+        sb.AppendLine("> `state-transition`은 이 표 밖의 전이를 exit 1로 거부한다.");
+
         return sb.ToString();
+    }
+
+    // WP-REGISTRY.json에서 WP 등록표 마크다운을 sb에 추가한다.
+    private static void AppendStatusWpTable(string root, StringBuilder sb)
+    {
+        var registryPath = Path.Combine(root, "docs", "handoff", "WP-REGISTRY.json");
+        if (!File.Exists(registryPath)) return;
+
+        var reg = JsonNode.Parse(File.ReadAllText(registryPath))?.AsObject();
+        var wps = reg?["wps"] as JsonArray;
+        if (wps is not { Count: > 0 }) return;
+
+        sb.AppendLine("## WP 등록표");
+        sb.AppendLine();
+        sb.AppendLine("| wpId | title | status | branch | owner | startedAt | verificationDoc |");
+        sb.AppendLine("| --- | --- | --- | --- | --- | --- | --- |");
+        foreach (var wp in wps.OfType<JsonObject>())
+        {
+            var wpId = wp["wpId"]?.ToString() ?? "—";
+            var title = wp["title"]?.ToString() ?? "—";
+            var wpStatus = wp["status"]?.ToString() ?? "—";
+            var branch = wp["branch"]?.ToString() ?? "—";
+            var owner = wp["owner"]?.ToString() ?? "—";
+            var startedAt = wp["startedAt"]?.ToString() ?? "—";
+            var verDoc = wp["verificationDoc"]?.ToString() ?? "—";
+            sb.AppendLine($"| {wpId} | {title} | {wpStatus} | {branch} | {owner} | {startedAt} | {verDoc} |");
+        }
+        sb.AppendLine();
     }
 
     // HANDOFF.md 내용을 생성한다(사람용 인수인계 Projection).
@@ -179,7 +269,7 @@ internal static class ProjectionCli
         return sb.ToString();
     }
 
-    // 현재 위치·블로커 절을 추가한다.
+    // 현재 위치·blockers[] 절을 추가한다.
     private static void AppendHandoffHeader(StringBuilder sb, JsonObject workstate)
     {
         var diId = workstate["diId"]?.ToString() ?? "—";
@@ -187,17 +277,18 @@ internal static class ProjectionCli
         var phaseId = workstate["phaseId"]?.ToString() ?? "—";
         var updatedAt = workstate["updatedAt"]?.ToString() ?? "—";
         var updatedBy = workstate["updatedBy"]?.ToString() ?? "—";
-        var blocker = workstate["blocker"]?.ToString();
+        var blockers = workstate["blockers"] as JsonArray;
 
         sb.AppendLine("## 현재 위치");
         sb.AppendLine($"- **diId**: {diId}  **phaseId**: {phaseId}  **status**: {status}");
         sb.AppendLine($"- **갱신자**: {updatedBy}  **갱신일**: {updatedAt}");
         sb.AppendLine();
 
-        if (!string.IsNullOrWhiteSpace(blocker))
+        if (blockers is { Count: > 0 })
         {
             sb.AppendLine("## 블로커");
-            sb.AppendLine($"- {blocker}");
+            foreach (var b in blockers.OfType<JsonValue>())
+                sb.AppendLine($"- {b}");
             sb.AppendLine();
         }
     }
