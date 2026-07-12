@@ -330,6 +330,20 @@
                        "expiresAt":  "2026-07-12T22:44:36.6970438+09:00",
                        "status":  "released",
                        "exitCode":  0
+                   },
+                   {
+                       "claimId":  "GUARD-01-4396",
+                       "actor":  "sonnet",
+                       "taskId":  "GUARD-01",
+                       "paths":  [
+
+                                 ],
+                       "allowlistSource":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\docs\\handoff\\queue\\directive-GUARD-01-failclosed.md",
+                       "pid":  4396,
+                       "claimedAt":  "2026-07-12T21:30:56.4121559+09:00",
+                       "expiresAt":  "2026-07-12T23:30:56.4121559+09:00",
+                       "status":  "released",
+                       "exitCode":  0
                    }
                ]
 }
