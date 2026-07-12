@@ -907,3 +907,33 @@ qwen3:14b는 `ADR-003`은 맞게(기록 파일 단일 기록자), **`ADR-005`는
 2. **상태 전이 그래프**(역방향 차단) — `StateApplierCli`는 지금 `completed → in_progress`를 통과시킨다.
 3. **STATUS.md를 projection이 생성** — 지금은 손편집이라 2026-07-11자로 낡았고, 이미 한 번 사고를 냈다(`cfbfce4`).
 4. (합침) **검수자 결함 D4** — canonical 패턴 검사를 request delta뿐 아니라 **candidate(정지 상태)**에도 건다.
+
+## 검수자 2026-07-12 20:4x — DI-00-01 발사 (사람 승인) + ★ P0-06이 실은 작동한 적이 없다
+
+**발사**: `DI-00-01`(PID 32968, 20:44:36). 지시서 `docs/handoff/queue/directive-DI-00-01-worktracking.md`(검수자 작성, `context-pack-integrity` exit 0 / requiredInputs 4/4 ok).
+**주체**: 발사 승인은 **사람(choi)**, 지시서·발사 실행은 검수자.
+
+### ★ 발사 직후 실체로 잡은 결함 — `FILE-CLAIMS`의 `paths`가 **항상 0**이다
+
+발사 후 claim을 확인했더니 `allowlistSource`는 붙었는데 **`paths=0`**이었다. STATE-01 때도 같았다(`scope-check` 출력의 `unknownAllowlistClaims`에 `allowlistSource: null`로 20건).
+
+**원인(추정이 아니라 실측)**:
+
+- `outputs/launch/run-executor.ps1`의 첫 3바이트 = `35 32 236` → **BOM 없는 UTF-8**.
+- **PowerShell 5.1은 BOM 없는 `.ps1`을 ANSI(CP949)로 파싱한다.** 스크립트 안의 한글 리터럴 `'^##\s+허용 파일'`이 **깨진 채로 컴파일**된다.
+- **결정적 시험**(같은 코드, BOM만 다르게):
+  - BOM 없는 `.ps1` → `NO-MATCH`
+  - BOM 있는 `.ps1` → `MATCH`
+- 반면 **같은 정규식을 이 세션(UTF-8 해석)에서 돌리면 allowlist 9개가 정상 추출된다.** → 지시서·정규식은 무죄. **파일 인코딩이 범인이다.**
+
+### 이것이 뒤집는 것
+
+**`P0-06`(파일 소유권 claim = 사전 차단)은 발사 경로에서 한 번도 작동한 적이 없다.**
+claim은 등록되지만 **예약된 파일 목록이 비어 있어** 충돌을 검출할 수 없다. `scope-check`의 `claimConflictCount`가 늘 0이었던 것은 **평화가 아니라 빈 배열끼리의 비교**였다.
+반증 시험("충돌 주입 exit 1")은 **claims 파일에 손으로 paths를 넣고** 통과했을 것이다 — **하네스는 맞았고, 그 하네스에 데이터를 넣는 경로가 죽어 있었다.**
+
+**이건 STATE-01 검수에서 내가 찾은 D2(`scope-check`가 지시서 제목 때문에 exit 2로 죽어 있었다)와 같은 병이다: 검사는 있는데 입력이 없다.**
+
+### 후속 지시서 목록에 추가 (4번)
+
+4. **`run-executor.ps1`을 UTF-8 **with BOM**으로 저장**(또는 한글 리터럴을 유니코드 이스케이프로 치환). **그리고 `Get-Allowlist`가 빈 배열을 반환하면 발사를 중단하게 하라** — 조용히 0을 넣고 계속 도는 것이 이 사고의 본질이다(fail-closed).
