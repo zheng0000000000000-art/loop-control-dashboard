@@ -1,0 +1,36 @@
+너는 GUARD-03 실행자다. 저장소 루트는 C:\Users\1\Documents\Local-First Workflow Dashboard 다.
+
+## 지시서
+
+`docs/handoff/queue/directive-GUARD-03-blockers-unlock.md` 가 이 작업의 계약이다. **그 파일이 정본이고, 이 프롬프트는 진입점이다.**
+
+## 읽는 순서
+
+1. `docs/context/RUNTIME-INDEX.md` — 현재 L0
+2. `docs/directives/_header.md` — 불변 제약
+3. **`docs/handoff/decisions/ADR-014-adr002-exception-blockers.md`** — **너는 지금 ADR-002의 1회 예외 구역에 있다. 경계를 반드시 읽어라.**
+4. `docs/handoff/queue/directive-GUARD-03-blockers-unlock.md` — 계약
+
+## 한 줄 요약
+
+**저장소가 잠겨 있다.** `server/Harness/HandoffIntegrityCli.cs:232`가 **단수 `blocker`**를 읽는데 WORKSTATE는 v9 계약대로 **복수 `blockers[]`**다. 오늘 처음 `status=blocked`가 되자 발화해서 `handoff-integrity`가 exit 1을 내고, **모든 상태 전이가 실패한다.** `CheckBlockerConsistency` **함수 하나**를 고쳐라.
+
+## 절대 규칙
+
+- **너는 ADR-002 예외 구역에 있다.** 허용된 것은 **`HandoffIntegrityCli.cs`의 `CheckBlockerConsistency` 하나뿐**이다.
+  - **멱등 대조·CLI 계약·GATE-MANIFEST 등재·`claim-check --untracked`는 코덱스 몫이다. 손대면 반려다.**
+  - `server/Harness/`의 **다른 파일**, `HandoffIntegrityCli.cs`의 **다른 검사**도 건드리지 마라.
+- **단수 `blocker` 하위 호환을 만들지 마라.** 그 필드는 WORKSTATE에 **존재한 적이 없다**. 호환 코드를 남기면 **같은 함정이 다시 잠든다.**
+- **WORKSTATE를 고쳐서 게이트를 통과시키지 마라.** **상태는 맞고 하네스가 틀렸다.** (`CLAUDE.md` 금지사항 1번)
+- **반증 시험은 사본에서.** `state-transition --root <path>` / `--dry-run`이 있다.
+- **`measure`는 `dotnet run --project server -c Release -- measure dev-pack`으로.** exe 직접 호출은 부모 폴더를 봐서 exit 2가 난다.
+- **git commit/push 금지. 결재·반입·발사 금지.**
+- 함수 위 한국어 기능 주석 1줄. 빌드는 `-c Release`.
+- **자기보고는 증거가 아니다.** 못 한 시험은 `NOT_VERIFIED`. 숨기면 반려다.
+- 한도가 임박하면 마지막 세 줄로 `QUOTA_SIGNAL` / `CHANGED:` / `NEXT:`.
+
+## 판정선
+
+**실 저장소에서 `handoff-integrity`가 exit 0이 되는가**(지금은 `blocked` + `blockers` 1건인데 exit 1이다). 그리고 **`blocked` + 빈 `blockers`는 여전히 exit 1인가**(막는 기능을 잃으면 안 된다).
+
+보고는 `docs/verification/guard03-blockers-unlock.md`에 `docs/verification/_template.md` 형식으로 — **DI 유형 `harness`** 선언부터. **positive·negative·결정성·격리** 테스트가 전부 필수다.
