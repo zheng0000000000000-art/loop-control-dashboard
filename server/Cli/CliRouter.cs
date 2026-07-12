@@ -49,6 +49,10 @@ internal static class CliRouter
         if (args.Length > 0 && string.Equals(args[0], "projection", StringComparison.OrdinalIgnoreCase))
             return ProjectionCli.Run(args);
 
+        // WORKSTATE 상태 전이 CLI — 유일한 WORKSTATE writer.
+        if (args.Length > 0 && string.Equals(args[0], "state-transition", StringComparison.OrdinalIgnoreCase))
+            return StateApplierCli.Run(args);
+
         var harness = HarnessRegistry.TryRun(args);
         if (harness is not null) return harness;
 
