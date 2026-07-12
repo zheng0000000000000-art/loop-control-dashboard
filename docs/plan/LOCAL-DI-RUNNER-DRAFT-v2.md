@@ -1,6 +1,10 @@
 # Local **DI Runner** — 설계 초안 v2 (외부 검수 반영)
 
-> **v1(`LOCAL-AGENT-LOOP-DRAFT.md`)은 폐기하지 않고 남긴다** — 기록은 이력이다. **v2가 현행이다.**
+> ## ⛔ SUPERSEDED — 현행은 [`LOCAL-DI-RUNNER-DRAFT-v3.md`](LOCAL-DI-RUNNER-DRAFT-v3.md)다 (2026-07-12 19:5x, 검수자)
+> **이 문서를 근거로 결재하지 마라.** 2차 외부 검수에서 다음이 드러났고 v3가 고쳤다:
+> **①갈래 D 누락 ②"15커밋"(실제 26) ③미보존 ollama 결과를 PASS로 표기(→NOT_VERIFIED) ④"49k vs 32K" 비교 자체가 틀림(실측 턴별 피크 134,528) ⑤무모델 대조군 없음 ⑥GATE-MANIFEST를 DI 검증 계획으로 오용 ⑦격리를 "허용 입력만 복사"로 설계 ⑧target preimage 계약 없음 ⑨Context Receipt "공짜" 과장.**
+
+> **v1(`LOCAL-AGENT-LOOP-DRAFT.md`)은 폐기하지 않고 남긴다** — 기록은 이력이다.
 > 외부 검수 보고서(2026-07-12)의 20개 지적 중 **설계 지적은 전부 채택**했다. 사실 정정 3건은 §0에 분리했다.
 > **상태: 초안. 사람이 §9를 결재한다.**
 

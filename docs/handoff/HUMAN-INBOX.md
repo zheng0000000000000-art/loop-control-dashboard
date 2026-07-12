@@ -310,3 +310,25 @@
   2. 위 하네스 수정이 반영/승인되면 STATE-01 배치를 재검수 없이 바로 커밋해도 되는지, 아니면 재검수를 거칠지.
   3. WORKSTATE.json의 diId(LEDGER-04, 비canonical) 확정 - STATE-01 지시서가 이 결정을 검수자·사람 몫으로 명시했다.
 - 확인 시각: 2026-07-12 19:44 (조율자, recursion1-result-check).
+## 결정 필요: ADR-010 승인 상태 충돌 · ADR-012(무모델 대조군) 승인 · v3 §9 결재 (2026-07-12 19:5x, 검수자)
+
+**1. `ADR-010` 상태 충돌 — 문서가 스스로 모순된다 (실측)**
+- `docs/handoff/decisions/ADR-010-*.md` 헤더: **`상태: 사람 승인 대기`**
+- `docs/handoff/decisions/ADR-011-*.md:37`: "수신 증명 … (**`ADR-010` ✅ 완료**)"
+- 구현·검증 기록은 있는데 **정책은 미승인**이다. 그대로 두면 다음 세션이 "코드는 있는데 기준으로 삼아도 되나"를 **또 추론한다**(= 이 저장소의 고질병).
+- **사람이 택일**: ①ADR-010을 승인됨으로 갱신 ②ADR-011의 문구를 "구현 완료 / 정책 미승인"으로 분리.
+
+**2. `ADR-012`(신규, 승인 대기) — 무모델 대조군 의무**
+- `docs/handoff/decisions/ADR-012-no-model-control.md`
+- 요지: SIM-1은 **프로그램이 후보를 만들고 하네스가 정답을 판정**한다 → **모델 없이 후보를 순차 시험해도 DI가 끝난다.** 대조군(BASELINE-0/1) 없이 "로컬 AI가 DI를 완수했다"(ADR-011의 완료 기준)를 주장할 수 없다.
+- 이걸 승인하지 않으면 **Phase 0 완료 선언이 ADR-005가 금지한 "지표는 green, 목적은 미달"이 된다.**
+
+**3. `LOCAL-DI-RUNNER-DRAFT-v3.md` §9 결재** (v2는 SUPERSEDED 표시함 — **v2로 결재하지 마라**)
+- 2차 외부 검수 7건 + 사실정정 2건 반영. 목표 구조 **(A) 유지**.
+- 새로 결재할 항목: **D-PROBE 복구**(목표 아님, 비교 기준선) · **무모델 대조군** · **DI-local verification plan을 전역 GATE-MANIFEST에서 분리** · **고정 commit worktree 격리** · **writeTargets preimage 계약**.
+
+**4. `LAUNCH-BUDGET.json` 숫자 — 지금까지의 전제가 틀렸다 (검수자 실측)**
+- 인수인계의 "우리 실행자 **49k** vs qwen2.5-coder **32K**"는 **잘못된 비교**였다. 49,281은 **다른 과제(SMOKE-01)의 누적 과금액**이지 한 시점의 컨텍스트가 아니다.
+- 턴별 실측(`input+cache_read+cache_creation`): **STATE-01 피크 134,528 토큰**(131턴 중 124턴이 32K 초과). RESUME-01은 23,814(32K 안).
+- **→ 32K·64K 로컬 모델로는 실제 DI를 Claude Code 루프에서 못 돌린다. −35% 다이어트로는 근처도 못 간다.** 예산은 **누적 토큰**과 **턴별 컨텍스트 상한**을 **분리**해서 정해야 한다.
+- 증거: `outputs/sonnet-STATE-01.out.jsonl` · `outputs/sonnet-RESUME-01.out.jsonl`
