@@ -24,6 +24,25 @@
 2. **단수 `blocker`는 더 이상 읽지 마라.** 하위 호환을 만들지 마라 — **그 필드는 WORKSTATE에 존재한 적이 없다**(STATE-01 검수에서 "한 번도 발화한 적 없는 죽은 경로"로 이미 기록됨).
 3. **반증 시험**: 사본에서 `blocked` + `blockers` 비움 → **exit 1** / `blocked` + `blockers` 1건 → **exit 0** / `completed` + `blockers` 1건 → **exit 1**.
 
+## ★★ 0순위-B — 게이트가 "다른 바이너리"를 검사한다 (23:4x 실측, 가장 위험한 것)
+
+**`DiCompletionCheckCli.RunDotnetCommand`(:142)가 하위 검사를 이렇게 부른다:**
+
+```
+dotnet run --no-build --project server -- <command>      ← -c Release 가 없다 = Debug 기본
+```
+
+- 우리 관례는 **`-c Release`로 빌드**한다(`_header.md`·모든 지시서).
+- 그런데 **게이트는 Debug 바이너리를 실행한다.** **Release만 빌드하면 게이트는 낡은 Debug 코드를 검사한다.**
+- **실측 사고**: GUARD-03 실행자가 `HandoffIntegrityCli.cs`를 고치고 Release로 빌드했는데, `di-completion-check`가 **옛 Debug 바이너리**를 써서 `handoff-integrity` exit 1을 냈다. Debug를 따로 재빌드하고서야 PASS가 나왔다.
+- **이건 "게이트 PASS가 방금 고친 코드에 대한 PASS가 아닐 수 있다"는 뜻이다.** 오늘 발견한 게이트 거짓말 중 **가장 위험하다.**
+
+**고쳐라:**
+
+1. `RunDotnetCommand`가 **호출한 구성과 같은 구성**으로 서브프로세스를 부르게 한다(`-c Release` 전달, 또는 실행 중인 어셈블리 위치에서 구성을 판별해 전달).
+2. **`--no-build`인데 산출물이 소스보다 오래됐으면 fail-closed로 죽어라**(exit 2 + 이유). **조용히 낡은 바이너리로 판정하지 마라** — 그게 이 저장소의 고질병이다.
+3. **반증 시험**: 소스를 고치고 **한 구성만 빌드**한 뒤 `di-completion-check` → **낡은 바이너리로 PASS를 주지 않는다**(fail-closed 또는 올바른 구성 실행).
+
 ## ★ §1 멱등 대조에 반드시 반영할 것 (오탐 방지 — 실측된 정상 케이스)
 
 `post-apply` 단계(projection·handoff-integrity)가 실패하면 **WORKSTATE에는 전이가 적용되지만 `applier-log`에는 `result:"ok"`가 아니라 실패 사유가 기록된다.**
