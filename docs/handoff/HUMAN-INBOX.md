@@ -387,3 +387,11 @@
 - 사망 원인 불명: outputs/launch/GUARD-03.prompt.txt만 존재하고 .exit.json/.out.log/.err.log가 전무해 QUOTA_SIGNAL 등 원인 판단 근거가 없음. 추측하지 않음.
 - 조율자 조치: 코드는 안정적으로 확인됐으나 claim-check(exit2, 검증문서 없음) 실패로 커밋하지 않았음. FILE-CLAIMS.json도 고아 상태 그대로 커밋 안 함.
 - 사람 결정 필요: (가) 동일 지시서(GUARD-03)로 재발사해 검증 문서·반증시험·projection을 완결시킬지, (나) 검수자가 직접 반증 7개를 재현하고 문서만 작성해 완결할지, (다) 고아 클레임(GUARD-03-15956)을 수동으로 released 처리할지. 조율자는 발사·결재를 대행하지 않음.
+
+## 진행 갱신: GUARD-03 검증문서 완결·게이트 전량 PASS (2026-07-12 23:39, 조율자)
+
+- 직전 23:21 항목("GUARD-03 실행자 사망? 고아 클레임 + DI 미완료")에 대한 갱신이다 - 신규 사안 아님.
+- docs/verification/guard03-blockers-unlock.md가 그 사이 완성됨(체크리스트 전항 [x], 반증시험 7종·di-completion-check·projection 근거 기입). 조율자가 하네스 전량(build-verify/verify-behavior/measure/handoff-integrity/di-completion-check/doc-integrity/claim-check) 재실행해 문서 주장과 실체 일치(전부 PASS/MATCH) 확인.
+- server/Harness/HandoffIntegrityCli.cs·guard03-blockers-unlock.md를 레인 분리 커밋(2b48915, a520bea). 커밋 후 gate-clean server 재실행 exit0(PASS) - 게이트 잠김 해제 목적 달성.
+- 미해결: docs/handoff/FILE-CLAIMS.json의 claim GUARD-03-15956이 아직 status=active/exitCode=null이다. PID 15956을 CommandLine(--dangerously-skip-permissions 포함) 기준으로 재확인한 결과 지금도 생존 중이다 - 즉 "사망 후 방치된 고아 클레임"이라 단정할 수 없고, 프로세스가 아직 뒷정리(claim release) 전이라 진행 중일 가능성이 있다.
+- 사람 결정 필요 항목(기존 23:21 항목의 선택지 그대로 유효): FILE-CLAIMS.json의 이 claim을 (a) 프로세스 종료·정리를 기다린다 (b) 사람이 직접 released로 정정한다. 조율자는 어느 쪽도 대행하지 않았다.
