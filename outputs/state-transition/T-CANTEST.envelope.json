@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "transitionKind": "NORMAL",
+  "transitionId": "T-CANTEST",
+  "expectedPreStateSha256": "1a16bbc9caa981fac4b7c22bdb5ea0654e536e232f4f318d04ce8f61499daf5d",
+  "requestPath": "C:/Users/1/Documents/Local-First Workflow Dashboard/outputs/state-transition/fixtures/st-test-a/request-normal.json",
+  "requestSha256": "c932426f80c5d6045fddb56ac2200db07f0ec8227bcf2b124aa44007f7888e4d",
+  "effectiveAt": "2026-07-13T13:57:17.7720100Z",
+  "expectedPostStateSha256": "559f4bce7a4de194f7b47e66ec1edda220dfa5b45e083a8bf084f5d8fcbeb78b",
+  "transitionContractSha256": "5b44ec4e638c928d2ce79acee29d9370fda5073fd237fa9b057836a37d6ff541",
+  "candidatePath": "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\state-transition\\T-CANTEST.candidate.json"
+}

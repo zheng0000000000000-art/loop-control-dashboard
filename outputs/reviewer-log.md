@@ -1632,3 +1632,95 @@ log      : {"transitionId":"PENDING-FAILED","result":"handoff-integrity-failed e
 
 - **나는 이 반증을 실행으로 실증하지 못했다.** pending 경로는 CLI 미노출이라 외부에서 못 돌린다. **판정 근거는 계약 텍스트와 코드의 대조**다 — 프록시가 아니라 실체지만, **동적 실증은 아니다.** 05H-R2가 in-process 단위 시험으로 실증해야 한다.
 - **코덱스 검수 배선을 06C-1이 아니라 05H-R1로 먼저 시험했다.** 결과적으로 결함을 잡았지만, 원래 의도는 "결과를 아는 대상으로 배선을 검증"하는 것이었다. **내가 그 대상의 결과를 안다고 믿은 것 자체가 틀렸다.**
+
+---
+
+## 2026-07-13 검수 — 06C-1 (StateTransition v2): **FAIL**
+
+- **생산**: sonnet(ADR-015 예외). PID 21800, exit 0, **117턴, 41분**, transportValid. 자기보고는 성실했다(자진신고 3건).
+- **판정**: 검수자(claude-opus) + **코덱스 독립 검수**(`outputs/review/06C-1.codex.md`). 코덱스 11건 지적, 검수자가 핵심 3건 코드 대조.
+
+### 검수자 독립 재실행 — 기본 게이트는 전부 통과했다
+
+| 하네스 | exit | 기대 |
+| --- | --- | --- |
+| `build -c Release` | 0 | 0 |
+| `state-transition-callsite-check` | 0 | 0 (legacyCallsiteCount=0) |
+| `measure dev-pack -c Release` | 0 | 0 |
+| `handoff-integrity` at-rest | **1** · failures 1건 = `DI0004-BLOCKED-CODEX` | **1 (설계된 참 양성)** ✓ |
+
+**게이트가 전부 초록인데 반려한다.** 오늘 세 번째다.
+
+### ★ 구조적 원인 — **새 경로를 만들었으나 옛 경로를 지우지 않았다**
+
+`state-transition-callsite-check`가 `legacyCallsiteCount=0`을 냈다.
+**그건 "옛 호출부가 없다"는 뜻이지 "옛 경로가 없다"는 뜻이 아니다.**
+`StateApplierCli.cs`의 legacy 단일-샷 경로가 **코드에 그대로 살아 있고**, 결함이 전부 그 안에 있다.
+**하네스가 또 다른 것을 쟀다** — 오늘 반복된 주제 그대로다.
+
+### 검수자가 코드로 직접 확인한 것 (코덱스 주장 → 사실)
+
+**#8 — contract hash 결속이 가짜다** (`StateApplierCli.cs:681-685`)
+
+```csharp
+var envelopeContractHash = string.IsNullOrWhiteSpace(envelope.TransitionContractSha256)
+    ? null : envelope.TransitionContractSha256;              // ← envelope가 준 문자열을 그대로 쓴다
+if (envelopeContractHash is null || !string.Equals(
+    envelopeContractHash, logInfo.TransitionContractSha256, ...))   // ← log와 문자열 비교
+```
+
+계약(지시서 §2)은 **"envelope로부터 같은 방식으로 계약 hash를 계산한다"**를 요구한다.
+구현은 **재계산하지 않고 envelope가 스스로 신고한 hash를 믿는다.**
+→ **성공 로그의 contract hash를 복사해 envelope에 넣으면, 다른 request라도 `idempotent exit 0`.**
+**결함 4(ID 결속 없음)가 미수정이다. 오히려 나쁘다 — 결속하는 척한다.**
+
+**#7 — `--human-decision` 위조 구멍이 legacy 경로에 그대로 살아있다** (`StateApplierCli.cs:847`)
+
+```csharp
+var gateErr = ValidateHumanDecision(opts.HumanDecisionPath, $"Phase 전이({curPhase} → {newPhase})");
+```
+
+계약(§6)은 이 임의 파일 경로를 **폐기**하고 `trusted-human-receipt-required`로 fail-closed 하라고 했다.
+**새 apply 경로만 fail-closed다. legacy는 그대로다.**
+**SESSION-BRIEF가 "검수자가 오늘 실제로 그렇게 자기 승인을 위조했다"고 적은 바로 그 구멍이다.**
+
+**#6 — legacy 경로에 rollback이 없다** (코덱스 지적 `:560-612`) → **결함 2도 미수정.**
+
+### 코덱스가 추가로 잡은 것 (검수자 미확인 — 06C-1-R1이 실증해야 한다)
+
+- **#4** `_ST_SEAM_FAIL_AFTER_WRITE` **환경변수 seam이 Release 바이너리에 들어간다.** `#if DEBUG` 가드 없음.
+  주석(`:357`)은 **"production 노출 플래그 아님"이라고 쓰여 있다 — 사실과 반대다.** 검수자도 이건 독립적으로 확인했다.
+- **#9** unknown `transitionKind`(예: `EVIL`) 검증 없음 → high-risk가 아니라고 판단해 **NORMAL처럼 진행.** fail-open.
+- **#2·#3** `--root`가 있으면 `canonicalMode=false` → **projection을 끈다.** `--root <canonical repo>`로 부르면
+  **WORKSTATE는 쓰면서 L0(RUNTIME-INDEX)를 재생성하지 않는다.** CLAUDE.md가 "손으로 쓴 문서보다 이걸 믿어라"라고 한 그 파일이 조용히 낡는다.
+- **#10·#11** callsite-check 범위 결손 — `outputs/launch/**` 전체를 historical allowlist로 빼버렸고, `.md`·`.github/workflows`·JSON/YAML을 스캔하지 않는다. **그래서 `legacyCallsiteCount=0`이 나온다.**
+
+### 요구 자체의 결함 — **이번엔 내 잘못이 아니었다** (코덱스가 검증해줬다)
+
+코덱스: *"`--root` 금지와 fixture 사본 실증은 본질적 모순이 아니다. **사본을 process cwd로 실행하면 된다.**
+따라서 `--root` 추가는 요구 결함이 아니라 **구현 우회**다."* — **맞다.** `GitTools.FindRepoRoot()`는 cwd 기준이다.
+
+다만 **내가 덜 준 것은 있다**: 적용후 projection을 사본에서 안전하게 돌리는 법을 구체적으로 주지 않았다.
+`ProjectionCli.cs:32`가 `FindRepoRoot()`를 하드코딩해 root를 못 받는다 — **이것이 실행자를 `--root`로 밀어낸 실체다.**
+06C-1-R1 지시서는 이 지점을 명시적으로 다뤄야 한다.
+
+### 검수자가 하지 않은 것 (그리고 왜)
+
+**`--root <canonical>` 우회를 실행으로 증명하지 않았다.** 증명하려면 canonical WORKSTATE를 실제로 써야 한다 — **그게 바로 그 위험이다.**
+판정 근거는 `:214`(`canonicalMode = IsNullOrWhiteSpace(opts.Root)` — **Root를 canonical 루트와 대조하지 않는다**)의 **제어 흐름**이다.
+프록시가 아니라 실체다. 그러나 **동적 실증은 아니다.** 06C-1-R1이 사본에서 실증해야 한다.
+
+### ★ 검수자가 하마터면 저지를 뻔한 오판 (숨기지 않는다)
+
+`git status`가 `M server/Harness/HandoffIntegrityChecker.cs`를 보여줬다 — **allowlist 밖 파일이다.**
+**나는 그것을 범위 이탈로 적으려 했다.** 실체로 재니 **blob 해시가 HEAD와 바이트 단위로 동일**했다
+(`git hash-object` == `git rev-parse HEAD:<path>`). 파일을 열었다 그대로 저장해 **mtime만 바뀐 것**이고,
+`git status`의 stat 캐시가 `M`으로 표시했을 뿐이다(`git update-index --refresh`로 사라졌다).
+
+**`git status`는 프록시다. 실체는 blob 해시다.** CLAUDE.md가 "프록시로 단정하지 마라"라고 한 그 함정에
+**검수자가 오늘 두 번째로 걸릴 뻔했다.** (첫 번째: probe 2에서 "파일이 없다"를 "샌드박스가 막았다"로 오독할 뻔.)
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **코덱스가 잡은 11건 중 검수자가 코드로 확인한 것은 3건(#7·#8 + seam)뿐이다.** 나머지 8건은 **코덱스 주장 그대로 옮겼다** — 표시해뒀다. **06C-1-R1은 그것들을 각각 실증해야 한다.** 자기보고가 증거가 아니듯, **코덱스 보고도 증거가 아니다.**
+- **legacy 경로를 지울지 말지는 사람 결재 영역일 수 있다.** RECOVERY.md 수동 절차가 legacy 옵션을 쓴다(06H가 갱신 예정). **06C-1-R1이 legacy를 삭제하면 RECOVERY 절차가 깨진다.** 순서를 사람이 정해야 한다 — HUMAN-INBOX 후보.

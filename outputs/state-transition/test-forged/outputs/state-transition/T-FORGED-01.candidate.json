@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 3,
+  "phaseId": "P00",
+  "wpId": "WP-00",
+  "diId": "DI-00-04",
+  "status": "verifying",
+  "blockers": [],
+  "nextActions": [
+    "state-transition v2 apply 검증 중"
+  ],
+  "updatedAt": "2026-07-13",
+  "updatedBy": "test-fixture",
+  "notes": "06C-1 state-transition v2 테스트용 불변 픽스처 — 손으로 수정하지 마라",
+  "appliedTransitions": [
+    {
+      "id": "FORGED-ID-99",
+      "appliedAt": "2026-01-01"
+    },
+    {
+      "id": "T-FORGED-01",
+      "appliedAt": "2026-07-13T14:14:13.6165845Z"
+    }
+  ]
+}

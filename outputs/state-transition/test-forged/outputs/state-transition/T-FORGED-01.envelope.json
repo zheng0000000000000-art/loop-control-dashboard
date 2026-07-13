@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "transitionKind": "NORMAL",
+  "transitionId": "T-FORGED-01",
+  "expectedPreStateSha256": "b8bad8c110ed07feb548a95a4d0d8f34ef062cde2076189425778b091f594466",
+  "requestPath": "C:/Users/1/Documents/Local-First Workflow Dashboard/outputs/state-transition/fixtures/st-test-a/request-normal.json",
+  "requestSha256": "c932426f80c5d6045fddb56ac2200db07f0ec8227bcf2b124aa44007f7888e4d",
+  "effectiveAt": "2026-07-13T14:14:13.6165845Z",
+  "expectedPostStateSha256": "274d9932974cd0840d341a6754a399ac2ff1d86441cd7ef8dff42b51021a272b",
+  "transitionContractSha256": "9827b3061f4cd227afb466636440ad57755904afe9127d67381e044f69751a5a",
+  "candidatePath": "C:/Users/1/Documents/Local-First Workflow Dashboard/outputs/state-transition/test-forged\\outputs\\state-transition\\T-FORGED-01.candidate.json"
+}

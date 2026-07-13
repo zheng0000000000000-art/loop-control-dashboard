@@ -19,6 +19,7 @@ internal static class HarnessRegistry
         ["handoff-integrity"] = HandoffIntegrityCli.Run,
         ["context-pack-integrity"] = ContextPackIntegrityCli.Run,
         ["di-completion-check"] = DiCompletionCheckCli.Run,
+        ["state-transition-callsite-check"] = StateTransitionCallsiteCheckCli.Run,
     };
 
     // 등록된 하네스 이름 목록을 반환한다.
