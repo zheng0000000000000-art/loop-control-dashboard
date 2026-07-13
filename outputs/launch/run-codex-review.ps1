@@ -29,12 +29,18 @@ New-Item -ItemType Directory -Force -Path $reviewDir | Out-Null
 $directive = (Get-ChildItem (Join-Path $root "docs\handoff\queue\directive-$TaskId*.md") -ErrorAction SilentlyContinue | Select-Object -First 1)
 if (-not $directive) { throw "검수 중단: 지시서를 못 찾았다 — directive-$TaskId*.md" }
 
+# ★ git 출력을 UTF-8로 디코딩하게 강제한다 — 안 하면 한글 diff가 콘솔 인코딩에서 깨진다(실측 사고).
+$prevOut = [Console]::OutputEncoding
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
 # 검수 대상 diff를 뽑는다 — 이것이 코덱스가 볼 실체다.
 Push-Location $root
 $diff = & git diff HEAD -- . 2>$null | Out-String
 $untracked = (& git ls-files --others --exclude-standard 2>$null) -join "`n"
 $headSha = (& git rev-parse HEAD 2>$null).Trim()
 Pop-Location
+
+[Console]::OutputEncoding = $prevOut
 
 if ([string]::IsNullOrWhiteSpace($diff) -and [string]::IsNullOrWhiteSpace($untracked)) {
   throw "검수 중단: diff가 비었다. 실행자 산출물이 이미 커밋됐거나 아직 안 나왔다."
@@ -46,11 +52,50 @@ New-Item -ItemType Directory -Force -Path $copyRoot | Out-Null
 & robocopy $root $copyRoot /E /NFL /NDL /NJH /NJS /NP `
   /XD '.git' 'bin' 'obj' '.vs' 'node_modules' 'history' | Out-Null
 
+# ★★ PowerShell 5.1 인코딩 규칙 — 이걸 어기면 독립 검수자에게 깨진 입력을 준다.
+#
+# 실측 사고(2026-07-13): 검수자가 fixture를 `Get-Content -Raw`(인코딩 미지정)로 읽어 패킷을 만들었다.
+# PS 5.1의 `Get-Content`는 인코딩을 안 주면 **코드페이지 949**로 읽어 UTF-8 한글을 **읽는 순간 파괴한다.**
+# 그 결과 코덱스가 정상 fixture 5종을 "malformed JSON"으로 오독하고 **없는 결함을 보고했다.**
+# 하마터면 그 보고로 실행자를 반려할 뻔했다.
+#
+# **독립 검수자에게 준 입력이 오염되면 그가 내는 판정도 오염된다. 검수 배선도 검수 대상이다.**
+#
+# 규칙:
+#   읽기 → [IO.File]::ReadAllText(path, UTF8)      (`Get-Content` 금지. 쓰려면 반드시 -Encoding UTF8)
+#   쓰기 → [IO.File]::WriteAllText(path, text, UTF8Encoding($false))   (`Set-Content -Encoding UTF8`은 BOM을 붙인다)
+#   전달 → 프롬프트를 명령행 인자로 넘기지 마라. 파일 + stdin 리다이렉션(`<`)으로.
+#   그리고 **주장하지 말고 왕복으로 확인하라** — Assert-Utf8NoBom.
+
+# BOM 없는 UTF-8로 쓴다.
+function Write-Utf8NoBom([string]$path, [string]$text) {
+  [System.IO.File]::WriteAllText($path, $text, (New-Object System.Text.UTF8Encoding $false))
+}
+
+# UTF-8로 읽는다. Get-Content를 쓰지 않는 이유는 위 주석 참조.
+function Read-Utf8([string]$path) {
+  return [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
+}
+
+# 입력 패킷이 실제로 BOM 없는 UTF-8이고 한글이 살아있는지 되잰다 — 주장하지 말고 확인한다.
+function Assert-Utf8NoBom([string]$path) {
+  $b = [System.IO.File]::ReadAllBytes($path)
+  if ($b.Length -ge 3 -and $b[0] -eq 0xEF -and $b[1] -eq 0xBB -and $b[2] -eq 0xBF) {
+    throw "입력 패킷에 BOM이 붙었다: $path — 코덱스가 내용을 오독한다"
+  }
+  # U+FFFD(대체 문자)가 있으면 이미 어딘가에서 디코딩이 실패한 것이다.
+  if ((Read-Utf8 $path).Contains([char]0xFFFD)) {
+    throw "입력 패킷에 깨진 문자(U+FFFD)가 있다: $path — 읽기 단계에서 인코딩이 파괴됐다"
+  }
+}
+
 # diff와 지시서를 사본 안에 증거 파일로 넣는다 — 코덱스가 읽을 입력이다.
 $evidenceDir = Join-Path $copyRoot '_review'
 New-Item -ItemType Directory -Force -Path $evidenceDir | Out-Null
-Set-Content (Join-Path $evidenceDir 'CHANGES.diff') $diff -Encoding UTF8
-Set-Content (Join-Path $evidenceDir 'UNTRACKED.txt') $untracked -Encoding UTF8
+Write-Utf8NoBom (Join-Path $evidenceDir 'CHANGES.diff') $diff
+Write-Utf8NoBom (Join-Path $evidenceDir 'UNTRACKED.txt') $untracked
+Assert-Utf8NoBom (Join-Path $evidenceDir 'CHANGES.diff')
+Assert-Utf8NoBom (Join-Path $evidenceDir 'UNTRACKED.txt')
 
 # 검수 프롬프트를 만든다. 코덱스에게 "고쳐라"가 아니라 "반증해라"를 시킨다.
 $prompt = @"
@@ -127,19 +172,25 @@ $before = Get-TreeFingerprint $copyRoot
 $started = (Get-Date).ToString('o')
 $sw = [Diagnostics.Stopwatch]::StartNew()
 
-# codex exec — 비대화 헤드리스. read-only 샌드박스. 작업 경로는 사본.
-$modelArg = if ($Model) { @('-m', $Model) } else { @() }
-$codexArgs = @(
-  'exec', '--json',
-  '-s', 'read-only',
-  '--skip-git-repo-check',
-  '-C', $copyRoot,
-  '-o', $outMd
-) + $modelArg + @($prompt)
+# ★ 프롬프트를 인자로 넘기지 않는다 — 명령행 인자도 콘솔 인코딩을 타서 한글이 깨진다.
+# BOM 없는 UTF-8 파일로 쓰고 stdin으로 먹인다(`-` = stdin에서 읽어라).
+$promptFile = Join-Path $reviewDir "$TaskId.codex.prompt.txt"
+Write-Utf8NoBom $promptFile $prompt
+Assert-Utf8NoBom $promptFile
 
-& codex @codexArgs 2>&1 | Set-Content $outEvents -Encoding UTF8
+# ★ `type file | codex` 를 쓰지 마라 — cmd의 파이프가 코드페이지로 재인코딩한다.
+# stdin 리다이렉션(`<`)은 바이트를 그대로 넘긴다. 실측으로 왕복 확인했다.
+$modelArg = if ($Model) { "-m $Model " } else { '' }
+$cmd = "codex exec --json -s read-only --skip-git-repo-check " +
+       "-C `"$copyRoot`" -o `"$outMd`" $modelArg- < `"$promptFile`" > `"$outEvents`" 2>&1"
+& cmd /c $cmd
 $exit = $LASTEXITCODE
 $sw.Stop()
+
+# 코덱스 산출물도 되잰다 — 깨진 문자가 있으면 그 검수는 믿을 수 없다.
+if ((Test-Path $outMd) -and (Read-Utf8 $outMd).Contains([char]0xFFFD)) {
+  Write-Warning "*** 코덱스 산출물에 깨진 문자(U+FFFD)가 있다. 이 검수 결과를 믿지 마라. ***"
+}
 
 # 사본이 정말 안 바뀌었는지 재서 확인한다. 샌드박스가 강제됐다는 주장의 증거다.
 $after = Get-TreeFingerprint $copyRoot

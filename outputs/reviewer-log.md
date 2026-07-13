@@ -1806,3 +1806,60 @@ handoff-integrity --self-test → exit 0, {"verdict":"PASS","casesRun":5}
   **"실패의 이유가 바뀌는" 케이스는 코덱스가 지적하기 전까지 생각하지 못했다.** 내 반증은 얕았다.
 - **05H-R2의 본체 수정은 옳다.** 반려는 **계측기**에 대한 것이다. 06C-1-R1은 이 checker에 의존하지만,
   **checker 본체는 올바르므로 06C-1-R1을 막지 않는다.** 05H-R3는 병렬 대기.
+
+---
+
+## 2026-07-13 ★ 원인 규명 — 코덱스를 오염시킨 진범은 BOM이 아니었다
+
+- **주체**: 검수자(claude-opus). 자기 배선의 결함을 자기가 판다.
+
+### 증상 → 오진 → 실체
+
+**증상**: 코덱스가 정상 fixture 5종을 "malformed JSON"으로 오독했다.
+
+**1차 오진 — BOM이 범인이다.**
+`Set-Content -Encoding UTF8`이 BOM(`EF BB BF`)을 붙이는 것을 확인했다. 고쳤다. **왕복은 계속 깨졌다.**
+
+```
+코덱스 반환: pending-duplicate: state??媛숈? id 2??      ← BOM을 없앤 뒤에도 그대로
+```
+
+**2차 오진 — cmd 파이프가 범인이다.**
+`type file | codex`의 파이프가 코드페이지로 재인코딩한다고 봤다. `<` 리다이렉션으로 바꿨다. **여전히 깨졌다.**
+
+**실체 — `Get-Content -Raw`가 읽는 순간 파괴한다.**
+
+```powershell
+Get-Content $p -Raw                → {"blockers":["pending-duplicate: state??媛숈? id 2??]}   ← 파괴
+Get-Content $p -Raw -Encoding UTF8 → {"blockers":["pending-duplicate: state에 같은 id 2회"]}  ← 정상
+[IO.File]::ReadAllText($p, UTF8)   → 정상
+```
+
+**PowerShell 5.1의 `Get-Content`는 인코딩을 안 주면 시스템 코드페이지(949)로 읽는다.**
+**패킷은 쓰이기도 전에, 읽는 순간 이미 깨져 있었다.**
+
+**왕복 시험으로 확정**: 올바른 읽기로 패킷을 다시 만드니 코덱스가 한글을 **정확히 그대로** 돌려줬다.
+
+### 교훈 — 내가 CLAUDE.md 규칙을 어겼다
+
+**"원인을 지목할 때: 프록시로 단정하지 마라. 증상·에러 문구·정규식 매치는 증거가 아니다."**
+
+**나는 BOM을 봤고, BOM이 범인이라고 단정했다.** BOM은 **실재했지만 범인이 아니었다.**
+**"거기 있다"와 "그것이 원인이다"는 다르다.** 두 번 헛짚고서야 왕복 시험으로 실체에 닿았다.
+
+**증상을 고치지 말고 원인을 지목하라.** 왕복 시험이 없었으면 "BOM 고쳤으니 됐다"로 끝났을 것이다.
+
+### 조치
+
+- `outputs/launch/run-codex-review.ps1` — `Read-Utf8`/`Write-Utf8NoBom`/`Assert-Utf8NoBom`(BOM + U+FFFD 검사) + stdin 리다이렉션. **주장하지 말고 재도록 만들었다.**
+- `skills/common/powershell-encoding.md` **신설** — 규칙표 + 실측 사고 4건 + 왕복 시험법.
+- **저장소 전수 조사**: 인코딩 미지정 `Get-Content`는 `.ps1`에 **없다**(`run-executor.ps1:24`는 이미 `-Encoding UTF8`).
+  `Set-Content -Encoding UTF8`(BOM) 7건은 실재하나 .NET 독자가 BOM을 벗기므로 무해하다.
+  **함정은 임시로 만드는 패킷 코드에 있었고, 그게 나였다.**
+
+> **정정**: 전수 조사 정규식이 `Get-ContentText`(사용자 정의 함수)를 `Get-Content`로 **오탐**했다.
+> 하마터면 `run-executor.ps1:102·199`를 결함으로 보고할 뻔했다. **정규식 매치는 증거가 아니다** — 같은 규칙에 또 걸릴 뻔했다.
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **`run-codex-review.ps1`을 고쳤지만, 그 스크립트로 실제 검수를 돌려보지는 않았다.** 지금까지의 코덱스 검수는 전부 **인라인 명령**으로 했다. 스크립트 자체는 **미검증**이다. 06C-1-R1 검수 때 처음 쓴다 — **그때 왕복이 깨지면 스크립트를 믿지 마라.**
