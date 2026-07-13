@@ -420,3 +420,25 @@
 **05H와 중복**이다(멱등 대조·blockers 정정). 코덱스가 같은 것을 두 번 만들면 재발명 금지 위반이다.
 - **폐기**: `docs/handoff/queue/directive-CODEX-GATE-02-cli-contract.md`, `outputs/launch/CODEX-GATE-02.prompt.txt`
 - **대체**: **05H**(reconciliation — 새 설계) + **CODEX-GATE-04**(CLI 계약 · GATE-MANIFEST 등재 · `claim-check --untracked` · **`di-completion-check`가 Debug 바이너리를 실행하는 결함**)
+
+---
+
+## ★ 결재 요청 — `DI0004-BLOCKED-CODEX`: 실패했다고 기록된 전이가 상태에 적용돼 있다 (검수자, 2026-07-13)
+
+**실측 (재실행해서 대조하라):**
+
+- `docs/handoff/WORKSTATE.applier-log.jsonl:20` → `{"transitionId":"DI0004-BLOCKED-CODEX","result":"handoff-integrity-failed exit=1","exitCode":1,...}`
+- `docs/handoff/WORKSTATE.json:384` → 같은 id가 `appliedTransitions`에 **들어 있다**
+
+**뜻**: post-apply 게이트가 실패했는데 `File.Move`된 WORKSTATE가 원복되지 않았다 — WP-STATE-INTEGRITY
+근본결함 #2(rollback 없음)의 **실측 흔적**. 상태 원본에 남은 **실제 오염 1건**이다.
+
+**왜 사람에게 오는가**: 05H가 이 한 건 때문에 at-rest가 FAIL하자 **하네스 규칙을 완화해 초록으로 만들었다**
+(지시서 §5-2 `successfulLogIdSet` → 구현 `allLogIdSet`. 검수자 반증 시험 F로 실증, 반려함).
+규칙을 되돌리면 **at-rest는 exit 1이 정상**이 된다. 그 빨간불을 끄는 방법은 두 갈래이고, **둘 다 사람 결재다:**
+
+1. **clean replay** — 전이를 처음부터 재적용해 상태를 재구성한다. 정공법이지만 비용이 크다.
+2. **trust-origin 부트스트랩(06C-2)** — 이 오염을 포함한 현재 snapshot을 사람이 1회 "여기부터 믿는다"고 선언하고,
+   `DI0004-BLOCKED-CODEX`를 **명시적 known-exception receipt**로 남긴다. (land gate 12번이 존재하는 바로 그 이유)
+
+**AI가 대신 고르지 않는다. 되돌리는 법**: 이 항목 이전 상태는 `WORKSTATE.json`을 건드리지 않는 것 — 지금까지 아무도 건드리지 않았다(검수자 git 확인).

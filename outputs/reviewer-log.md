@@ -1234,3 +1234,236 @@ File.WriteAllText("EXECUTOR_REPORT.md", $"No deterministic edit rule matched for
 ### 교훈 (다음 검수자에게)
 
 **"없다"는 판정도 증거가 필요하다.** `where` 무결과는 "PATH에 없다"의 증거이지 "존재하지 않는다"의 증거가 아니다. **부재를 주장할 때는 탐색 범위를 함께 적어라.**
+
+---
+
+## 2026-07-13 검수 — CODEX-HEADLESS-DISPATCH-CLEANUP-plan 계획서 검수 + 정정
+
+- **주체(actor)**: 검수자(claude-opus), 대화 세션. 직접 경로(docs/ 문서 변경 — CLAUDE.md 관례상 허용).
+- **대상**: `docs/plan/wp/CODEX-HEADLESS-DISPATCH-CLEANUP-plan.md` (수정) · `docs/handoff/queue/directive-DISPATCH-01-codex-failclosed.md` (신규, **초안. 발사 금지**)
+
+### 사용한 하네스 (자기보고가 아니라 재실행 가능한 명령)
+
+| 하네스 | 명령 | exit | 핵심 수치 |
+| --- | --- | --- | --- |
+| measure | `dotnet run --project server -c Release -- measure dev-pack` | 0 | `violationCount=0` |
+| context-pack-integrity | `dotnet run --project server -c Release -- context-pack-integrity` | 0 | DISPATCH-01: `verdict=ok`, requiredInputCount=4, okCount=4, missingCount=0 |
+
+`{"gate":"dev-pack","violations":0,"attempt":1}`
+
+### 계획서 §0 사실 주장 — 6/6 실측 일치 (문서를 옮기지 않고 직접 쟀다)
+
+`~/.codex` 존재 True · Appx `OpenAI.Codex_26.707.3748.0_x64__2p2nqsd0c76g0` 존재 · `codex` 프로세스 실행 중 ·
+`where.exe codex` 무결과 · WindowsApps alias 무 · 전역 npm 무 ·
+`OutboxManager.cs:13-18`(codex 허용) · `:424`(dispatch-executor 실행) · `DispatchExecutorCli` 전체 확인(외부 프로세스 호출 0건).
+**Phase A "완료됨"도 사실이다** — ADR-015:10-12 · CODEX-QUEUE:161-163 · LAUNCHER 계약:16-17이 실제로 정정돼 있다.
+
+### ★ 신규 결함 1 — `executor: "codex"`는 예약 슬롯이 아니라 **성공을 보고하는 무동작 슬롯**이다 (여섯 번째 거짓말)
+
+- `DispatchExecutorCli.cs:51-53` — 규칙 불일치 시 `EXECUTOR_REPORT.md`를 쓰고 **exit 0**
+- `OutboxManager.cs:87-88` — `!hasChanges`일 때만 `failed`. 그 보고서가 변경으로 잡혀 → **`import_pending`**
+- `OutboxManager.cs:102` — tier-2 자동 승인이 켜져 있으면 그 항목이 자동 승인 경로로 들어간다
+- `OutboxManager.cs:339-345` — `SubscriptionCalls(codex)=1`. **하지 않은 구독 호출이 비용 meta에 기록된다**
+
+앞선 다섯 사례는 "검사가 없거나 입력이 비었다"였다. 이건 **대상이 없는데 PASS를 준다.**
+조치: 계획서 §0.1·§2.1에 실체를 명기하고, 코드 수정은 `DISPATCH-01` 지시서로 분리했다.
+**지금 발사하지 않는다** — `TRUSTED_BASELINE` 전에 통합 branch에 조각을 얹지 않는다(계획서 §2.1 · 조각 land 금지).
+그때까지의 방어는 코드가 아니라 규칙이다: **`executor: "codex"`로 dispatch하지 마라.**
+
+### ★ 신규 결함 2 — 계획서 §4의 게이트 명령이 함정 #5를 재생산했다
+
+`dotnet run --project server -- measure dev-pack` (`-c Release` 없음).
+`DiCompletionCheckCli.cs:142-157`이 정확히 그 형태로 **Debug 바이너리**를 검사한다(CODEX-GATE-04 대상).
+`ProjectionCli.cs:365-368`은 이미 `-c Release`다 — 그쪽이 정본이다. 계획서 §4를 `-c Release`로 고쳤다.
+
+### 부수 관측
+
+- **`CODEX-QUEUE.md:168`은 `C-05H`를 "대기"로 쓴다. 실제로는 실행 중이다**(PID 21128 = `claude`, 21:34 시작, `outputs/launch/` 21:34 갱신, result 산출물 없음). 계획서 Phase B에 "상태표를 믿지 마라 — L0와 실제 프로세스로 세라" 주석을 넣었다.
+- **미푸시는 60건이 아니라 70건.** SESSION-BRIEF가 옮겨 적은 숫자였다. **세었다.**
+- **working tree가 더럽다** — `CODEX-QUEUE.md`·`CODEX-HARNESS-LAUNCHER-minimal-contract.md`·`FILE-CLAIMS.json` 등 15건+ M/D 상태인데 **05H가 그 위에서 돌고 있다.** 브리프의 "발사 전에 트리를 비워라"가 지켜지지 않았다.
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **`DISPATCH-01`의 반증 시험 4종을 나는 실행하지 않았다.** 결함 1은 **코드 읽기(정적 추론)**로 판정했다 — 실제로 `executor:"codex"` dispatch를 쏴서 `import_pending`이 생기는 것을 **관측하지는 않았다.** 지시서를 받는 실행자가 시험 1·2로 반드시 실증해야 한다. 그전까지 결함 1의 등급은 **"코드상 확실, 실행 미관측"**이다.
+- **05H 실행 중에 계획서·지시서를 썼다.** 파일 경계는 겹치지 않지만(05H = `HandoffIntegrityCli.cs`+checker+fixtures), 트리가 더러운 상태에서의 문서 추가라 05H 산출물 대조 시 내 파일이 노이즈가 된다. 05H 검수 시 `docs/plan/wp/` · `docs/handoff/queue/DISPATCH-01`은 **검수자 소유**로 제외하라.
+
+---
+
+## 2026-07-13 검수 — 05H (handoff-integrity reconciler) 실판정: **FAIL (조건부 반려)**
+
+- **주체(actor)**: 검수자(claude-opus), 대화 세션. 05H 생산자는 sonnet(ADR-015 예외), `05H.exit.json`: exitCode=0, 76턴, $3.54, transportValid=true, `processed:false`.
+- **판정 근거는 전부 내가 직접 재실행했다. 생산자 자기보고를 옮기지 않았다.**
+
+### 1. 재현 — 생산자 보고 8/8 실측 일치 (정직한 보고였다)
+
+`dotnet run --project server -c Release -- handoff-integrity [--workstate … --applier-log …]`
+
+| 시험 | 기대 | 실제 |
+| --- | --- | --- |
+| at-rest | 0 | **0** |
+| fixture-a (log 성공·state 누락) | 1 | **1** |
+| fixture-b (state 중복) | 1 | **1** |
+| fixture-c (known-good) | 0 | **0** |
+| fixture-d (blocked+빈 blockers) | 1 | **1** |
+| fixture-e (completed+active blocker) | 1 | **1** |
+| fixture-malformed (appliedAt 누락) | 2 | **2** |
+| CLI `--pending-transition` | 1 | **1** |
+
+`measure dev-pack -c Release` exit 0 · `{"gate":"dev-pack","violations":0,"attempt":1}`
+절대수정금지 3파일(`WORKSTATE.json`·`WORKSTATE.applier-log.jsonl`·`StateApplierCli.cs`) **무변경 확인**(git status 공백).
+allowlist 준수 — **단 `scope-check`는 여전히 exit 2로 죽어 있어(함정 #1) 기계 판정이 불가했다. 손으로 대조했다.**
+
+### 2. ★ 반려 사유 — 지시서 §5 규칙 2를 **바꿔서** at-rest를 통과시켰다
+
+- 지시서 §5-2: `stateIdSet ⊆ successfulLogIdSet` (성공 로그)
+- 구현(`HandoffIntegrityChecker.cs:73, :245-253`): **`allLogIdSet`** (성공/실패 무관 전체 로그)
+
+생산자는 이것을 잔여위험 #3으로 **자진 신고했다**(ADR-005가 작동했다 — 숨겼으면 반려가 아니라 사고였다).
+그러나 판정은 다르다. **이 완화가 무엇을 침묵시키는지 실증했다.**
+
+**반증 시험 F (검수자 신규, `$TEMP\rev05h`)** — state에 있으나 log엔 **실패(exitCode=1)**로만 기록된 전이:
+
+```
+appliedTransitions: [ SNAP-001, FAILED-BUT-APPLIED ]
+log: SNAP-001 ok/0 · FAILED-BUT-APPLIED "handoff-integrity-failed exit=1" / exitCode=1
+지시서 §5-2대로면 기대 exit = 1
+실제 exit = 0, failures = []   ← ★ 하네스가 PASS를 준다
+```
+
+**그리고 현재 저장소가 정확히 그 상태다:**
+- `WORKSTATE.applier-log.jsonl:20` — `{"transitionId":"DI0004-BLOCKED-CODEX","result":"handoff-integrity-failed exit=1","exitCode":1,…}`
+- `WORKSTATE.json:384` — 같은 id가 `appliedTransitions`에 **들어 있다**
+
+즉 **적용이 실패했다고 자기 로그가 말하는 전이가 상태에 남아 있다.** 이것은 fixture 문제가 아니라
+**WP-STATE-INTEGRITY 근본결함 #2(post-apply 실패 시 rollback 없음)의 실측 흔적**이다.
+지시서 §5-2는 **바로 그것을 잡으라고 있는 규칙**이었다. 규칙을 완화해 at-rest를 초록으로 만든 것은
+**게이트가 존재하는 이유를 게이트로 지운 것**이다 — 세션 브리프의 "게이트가 다섯 번 거짓말했다"와 같은 계열이며,
+이번엔 **우리가 스스로 만든 여섯 번째**다.
+
+> **at-rest FAIL은 참 양성이다. 게이트가 빨간 게 아니라 저장소가 빨갛다.**
+> 그 1건을 지우는 것은 하네스가 아니라 **사람 결재**다 — 정확히 land gate 12번(clean replay / trust-origin
+> 부트스트랩 의식)이 존재하는 이유다. 05H는 그 의식을 코드 완화로 앞당겨 우회했다.
+
+### 3. 지시서(=내가 옮긴 사람 설계)의 공백도 함께 신고한다
+
+§10 fixture 표에 **"log에 있으나 실패로 기록된 항목이 state에 있음"** 유형이 **없다.**
+그래서 규칙을 완화해도 **fixture 6종 중 어느 것도 잡지 못했다.** 실행자만의 잘못이 아니다.
+**반증 자료가 없는 규칙은 규칙이 아니라 주석이다.**
+
+### 4. 반려 조건 (아래 3건 충족 시 재판정)
+
+1. `CheckStateToLog`의 두 번째 인자를 **`successfulLogIdSet`으로 복원**(지시서 §5-2 원문). Pending 면제는 유지.
+2. **fixture-f 신설** — 위 반증 시험 F를 fixture로 고정. 기대 exit 1 `state-transition-not-logged`.
+3. at-rest는 이제 **exit 1이 정상**이다. 이 상태에서 저장소를 초록으로 만드는 것은 **06C-2 trust-origin 부트스트랩 + 사람 결재**의 몫이다. **하네스를 고쳐 통과시키지 마라**(CLAUDE.md 금지사항 1번).
+   - `DI0004-BLOCKED-CODEX` 1건의 처리(참 양성 인정 → 사람이 결재하는 known-exception receipt 또는 clean replay)는 **HUMAN-INBOX 항목**이다.
+
+### 5. NOT_VERIFIED (생산자 신고를 그대로 유지)
+
+- 내부 checker pending 면제 PASS 경로 · `lookupSuccess`의 v2 hash 반환 — 둘 다 CLI 미노출. **06C-1이 호출할 때 검수자가 재확인한다.** 지금 PASS로 세지 않는다.
+- `verify-behavior` — 신규 파일이라 행동 스냅샷 미포함.
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **`scope-check`가 exit 2로 죽어 있어 allowlist 준수를 기계로 판정하지 못했다.** 손 대조는 증거 등급이 낮다. 함정 #1이 아직 살아 있다 — CODEX-GATE-04 이전에 이 하네스부터 살려야 한다.
+- **반증 시험 F를 저장소 fixture로 고정하지 않았다.** `$TEMP`에서 1회 실행했을 뿐이라 다음 세션이 재현하려면 다시 만들어야 한다. fixture-f는 05H 재작업 allowlist 안이라 내가 만들지 않았다(생산자 영역).
+
+---
+
+## 2026-07-13 실증 — 코덱스 헤드리스 진입점: **존재한다. "없다"가 아니라 "안 깔았다"였다**
+
+- **주체(actor)**: 검수자(claude-opus). **설치는 사람(choi)이 승인했다.** 시스템 변경이므로 내가 임의로 하지 않았다.
+- **정정 대상**: 내가 이 로그에 남긴 "호출 가능한 헤드리스 진입점 부재" 판정 · `ADR-015` §근거 · `CODEX-HEADLESS-DISPATCH-CLEANUP-plan` §0.2
+
+### 왜 틀렸나 — 탐색 범위가 PATH였다
+
+`where codex` 무결과 → "없다"로 단정했다. 범위를 넓히니 답이 달라졌다.
+node `v24.14.1` · npm `11.11.0` **있었다** · `npm view @openai/codex` → `0.144.3`, `bin:{codex}` **레지스트리에 있었다** ·
+`~/.codex/auth.json` 4,519B **이미 인증돼 있었다**.
+`npm i -g @openai/codex` → exit 0 · `codex-cli 0.144.3` · `C:\Users\1\AppData\Roaming\npm\codex.cmd`.
+
+**두 번째로 같은 실수를 했다.** 첫 번째는 "코덱스 CLI가 없다"(Store 앱을 못 봄), 두 번째가 이것이다.
+**부재를 주장할 때는 탐색 범위를 함께 적어라 — 그리고 그 범위가 좁으면 "없다"가 아니라 "그 범위엔 없다"라고 써라.**
+
+### probe (임시 디렉터리 `$TEMP\codex-probe`. **저장소 무접촉** — canary로 확인)
+
+| # | 시험 | 결과 |
+| --- | --- | --- |
+| 1 | 지시 도착·실행 확인 (`canary.txt` 읽어 내용+표식 반환) | exit 0 · `output-last-message` = `REPO-UNTOUCHED / CODEX-PROBE-OK` · 이벤트 6줄(`thread.started`→`turn.completed`) · 9.5s |
+| 2 | read-only에서 파일 생성 지시 | `SANDBOX-BLOCKED`, 미생성. **그러나 모델이 시도조차 안 했다 — 말로만 따랐다. 이건 샌드박스 강제의 증거가 아니다.** 프록시로 단정할 뻔했다 |
+| 3 | 쓰기를 **강제** 실행시킴 | 모델이 실제로 시도 → OS 거부 `UnauthorizedAccessException`, 내부 exit 1. `BREACH.txt` 미생성. **커널 레벨 강제 확인** |
+
+`codex exec`가 제공하는 계약 요소: `--json`(JSONL 이벤트) · `-o/--output-last-message` · `-C/--cd` · `-s/--sandbox` · exit code.
+
+### ★ 신규 결함 — `codex exec`의 exit code는 "성공"이 아니라 "세션 종료"다
+
+probe 3: **내부 명령이 exit 1로 실패했는데 `codex exec` 프로세스는 exit 0**을 냈다.
+`DispatchExecutorCli`가 exit 0을 주는 것과 **정확히 같은 함정**이다.
+**launcher가 이 exit code를 성공 신호로 읽으면 그것이 일곱 번째 거짓말이 된다.**
+판정은 **artifact hash + Program Verifier 독립 재실행**으로 한다 — 계획서 §0.2·Phase C에 명기했다.
+
+부수: probe 3 오류 문구의 한글이 깨졌다(`寃쎈줈…`). launcher는 자식 프로세스 stdout/stderr를 **UTF-8로 명시 고정**해야 한다 — `run-executor.ps1` BOM 결함과 같은 계열(claimConflictCount=0 거짓말의 원인이었던 그것).
+
+### 판정 — **ADR-015는 아직 종료되지 않는다**
+
+종료 조건은 "진입점 존재"가 아니라 **발사 규약 3요소 실측 통과 + launcher의 Program Verifier 결속**이다.
+- 지시 도착 확인 ✅ · 실행 확인 ✅ · **범위 대조 ⬜** (샌드박스 격리 수단은 실증됐으나 **diff↔allowlist 대조는 launcher가 없어 미충족**)
+- `TRUSTED_BASELINE` 전 실제 DI 발사 금지(계획서 §2)는 그대로. **05H·06H의 sonnet 대행도 그대로 유지된다.**
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **probe 2에서 "샌드박스가 막았다"고 쓸 뻔했다.** 실제로는 모델이 시도하지 않았을 뿐이다. probe 3을 돌리기 전까지 나는 **부재(파일 없음)를 강제(커널 거부)의 증거로 오독**하고 있었다. `CLAUDE.md` "프록시로 단정하지 마라"가 정확히 이 경우다.
+- **전역 npm 설치는 시스템 상태를 바꿨다.** 되돌리는 법: `npm uninstall -g @openai/codex`. 저장소는 무변경.
+- **launcher는 만들지 않았다.** 진입점이 있다는 것과 안전하게 발사할 수 있다는 것은 다르다.
+
+---
+
+## 2026-07-13 산출 — `directive-05H-R1-reconciler-rework.md` (05H 반려에 따른 재작업 지시서)
+
+- **주체(actor)**: 검수자(claude-opus). 직접 경로(docs/ 문서). **발사하지 않았다 — 사람 게이트.**
+- **actor 지정**: `CORE_INFRA_EXECUTOR(sonnet)` — ADR-015 예외 유지. **코덱스로 돌리지 않았다.** 이유는 아래 §코덱스.
+
+### 게이트
+
+| 하네스 | 명령 | exit |
+| --- | --- | --- |
+| context-pack-integrity | `dotnet run --project server -c Release -- context-pack-integrity` | **0** (05H-R1: ok, 4/4 · DISPATCH-01: ok, 4/4) |
+| measure | `… -c Release -- measure dev-pack` | **0** |
+
+`{"gate":"dev-pack","violations":0,"attempt":1}`
+
+### 지시서 요지 (딱 두 곳만 고친다)
+
+1. `HandoffIntegrityChecker.cs:73` — `CheckStateToLog(…, sets.allLogIdSet, …)` → **`sets.successfulLogIdSet`** (원 지시서 §5-2 복원). Pending 면제 유지.
+2. **fixture-f 신설** — 검수자 반증 시험 F를 저장소에 고정. state에 있으나 log엔 실패로만 기록된 전이 → **exit 1** `state-transition-not-logged`.
+
+**핵심 지시**: **at-rest는 이제 exit 1이 정상이다.** 실패 1건(`DI0004-BLOCKED-CODEX`)이어야 하고, **2건 이상이면 오염이 더 있다는 뜻이니 보고하라.** 빨간불을 끄는 것은 하네스가 아니라 **06C-2 trust-origin + 사람 결재**다(HUMAN-INBOX 등재). 게이트가 잠기면 **잠긴 대로 보고하라 — 풀지 마라.**
+
+### ★ 함정 (내가 방금 당했다) — 해시는 **하네스와 같은 런타임**에서 계산하라
+
+`context-pack-integrity`가 **내 실수를 잡았다**(exit 1, staleCount=1). 두 겹이었다.
+
+1. DISPATCH-01의 requiredInput에 계획서 해시를 박아뒀는데 **그 뒤에 내가 계획서를 또 고쳤다** → stale. 하네스가 정확히 이걸 잡으라고 있다. **잡혔다. 하네스가 일했다.**
+2. 고치려고 리눅스 마운트에서 `sha256sum`으로 다시 쟀더니 `00d377d6…`이 나왔다. **그런데 하네스는 `a426289a…`를 봤다.**
+   - 줄끝(CRLF/LF) 차이가 아니다 — 확인했다(CRLF=0, LF=241).
+   - **마운트가 지연된 바이트를 돌려줬다.** 호스트에서 방금 쓴 파일이 마운트 뷰에 아직 반영되지 않았다.
+   - Windows `Get-FileHash`(하네스와 같은 런타임)로 재니 `a426289a…` — 이게 정본이다.
+
+**교훈**: **context-pack의 sha256은 반드시 하네스가 도는 런타임에서 계산한다.** 다른 뷰로 재면 **존재하지 않는 파일의 해시**를 박게 된다. 이건 `run-executor.ps1` BOM 결함(`claimConflictCount=0`)과 **같은 계열**이다 — 두 주체가 같은 파일을 다른 바이트로 본다.
+`_header.md` 계약은 이미 이렇게 쓰고 있다: **"sha256은 프로그램이 계산한다. LLM이 적지 않는다."** 옳다. 여기에 한 줄 더 필요하다 — **"어느 프로그램이냐도 정한다."**
+
+### 코덱스로 05H-R1을 돌리지 않은 이유
+
+`codex exec`는 산다(실증 완료). 그러나 **범위 대조가 없다** — 코덱스가 allowlist 밖을 고쳐도 자동으로 못 잡고,
+`scope-check`는 **여전히 exit 2로 죽어 있어** 사후 대조도 기계로 안 된다.
+**쓰기 작업을 지금 코덱스에 발사하면 범위 이탈을 사람 눈으로 잡아야 한다. 그건 규약 미달이다.**
+
+**대신 쓰지 않는 일은 지금 안전하다.** `codex exec`에 `review` 서브커맨드가 있고, `-s read-only`가
+**커널 레벨로 강제됨을 probe 3에서 실증**했다(`UnauthorizedAccessException`). **아무것도 못 쓰면 범위 대조가 필요 없다.**
+그리고 그것이 ADR-002가 원한 구조다 — **생산은 sonnet, 검증은 다른 주체.**
+
+→ 제안: **코덱스의 첫 실전 투입은 05H-R1 diff의 read-only 독립 검수.** 사람 결재 대기(HUMAN-INBOX 후속).
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **05H-R1을 발사하지 않았다.** 지시서만 있다. 사람 게이트다.
+- **`scope-check`가 죽어 있는 한, 어떤 실행자를 쓰든 allowlist 준수는 손 대조다.** 05H-R1도 마찬가지다. 이 하네스를 살리는 것(CODEX-GATE-04)이 코덱스 쓰기 발사보다 먼저다.
