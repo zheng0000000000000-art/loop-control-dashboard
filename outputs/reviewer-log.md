@@ -1149,3 +1149,44 @@ v9 §DI-00-04는 **판정만이 아니라 제작**까지 요구한다(지시 4·
 - **`_template.md`가 바뀌었다**(DI-00-02) → 보고 형식이 다르다
 - **exe 직접 호출 시 부모 폴더를 본다**는 함정 경고
 - **`FILE-CLAIMS.paths`가 이제 실제로 채워진다**(BOM 수정) → `claim-check` 시험의 전제가 달라졌다
+
+## 검수자 2026-07-13 — 외부 설계 8건 수령: **WP-STATE-INTEGRITY**. 실측 대조 결과 **전부 사실**
+
+**출처**: 사람이 업로드. 배치: `docs/plan/wp/`(WP·계약 4건) + `docs/handoff/queue/`(지시서 4건).
+
+### 문서의 실측 주장을 검수자가 전부 대조했다 — 6/6 사실
+
+| 주장 | 실체 확인 |
+| --- | --- |
+| `ProjectionCli.WriteAtomically` 재사용 가능 | ✅ `ProjectionCli.cs:109` |
+| `BuildCandidate`가 `UtcNow`를 직접 호출(비결정성) | ✅ `StateApplierCli.cs:346·357·496` |
+| **멱등(`IsAlreadyApplied`:84)이 reconciliation보다 먼저** | ✅ — **검수자가 오늘 직접 실증한 그 구멍이다**(`TEST-DI0001-2` 재적용이 exit 0으로 통과) |
+| `--human-decision`이 임의 경로 | ✅ `:227·:261` |
+| 내부 `HandoffIntegrityChecker` 없음 | ✅ 미존재 |
+| applier-log가 v1(hash 결속 없음) | ✅ |
+
+### ★ 이 설계가 내가 놓친 것을 짚었다
+
+**GUARD-02에서 `--verdict`는 `gate.json`에 결속했지만 `--human-decision`은 그대로 뒀다.**
+→ **AI가 `{"approved":true}` 파일 하나로 Phase 변경·완료 되돌림을 통과시킬 수 있다.**
+→ **오늘 내가 실제로 그렇게 했다**: `outputs/decisions-diId-2026-07-12.json`을 **내가 써서** ADR-013 전이에 붙였다. 그건 "사람 결재의 증거"가 아니라 **내가 만든 파일**이다.
+→ `WP-HUMAN-DECISION-PROVENANCE`의 진단이 정확하다: **ACTOR-01도 `X-Action-Token`도 provenance가 아니다.**
+
+### ★★ 충돌 — 코덱스에게 지금 중복 작업을 시키고 있다 (검수자 과실)
+
+| 내가 발행한 `CODEX-GATE-02` | 새 설계 | 판정 |
+| --- | --- | --- |
+| §0순위 `blockers[]` 정정 | **05H §9와 동일** | **이미 GUARD-03이 완료.** 둘 다 삭제 |
+| §1 멱등 대조(appliedTransitions ↔ log) | **05H의 reconciliation과 같은 것.** 05H가 훨씬 정교하다(v2 log·contract hash·pending 면제·fixture 6종) | **05H로 대체.** 내 버전은 폐기 |
+| §2 CLI 계약(`CLI-CONTRACT.json`) | 05H/06C에 **없음** | **살린다**(별도) |
+| §3 `GATE-MANIFEST` 등재(scope-check·claim-check) | 없음 | **살린다**(별도) |
+| §4 `claim-check --untracked` | 없음 | **살린다**(별도) |
+| §0순위-B `di-completion-check`가 Debug 바이너리 실행 | 없음 | **살린다**(별도) — **오늘 발견한 것 중 가장 위험** |
+
+**→ `CODEX-GATE-02`를 그대로 두면 코덱스가 05H와 같은 것을 두 번 만든다.** 재발명 금지 위반이다.
+
+### 검수자 권고
+
+1. **`CODEX-GATE-02`를 폐기하고 둘로 쪼갠다**: ①**05H**(reconciliation — 새 설계 그대로) ②**`CODEX-GATE-04`**(CLI 계약 · GATE-MANIFEST 등재 · claim-check --untracked · **Debug 바이너리 fail-closed**) — 05H와 파일이 겹치지 않게 경계를 다시 그어야 한다(`DiCompletionCheckCli.cs`·`ClaimCheckCli.cs`만).
+2. **`DI-00-04`(blocked)보다 이 WP가 먼저다.** 상태 원본을 믿을 수 없으면 DI 완료 판정 자체가 무의미하다.
+3. **land gate가 단일이다** — 05H·06C-1·06C-2·06H를 **통합 branch에서 함께** 넘겨야 한다. 지금처럼 main에 조각조각 커밋하면 안 된다.
