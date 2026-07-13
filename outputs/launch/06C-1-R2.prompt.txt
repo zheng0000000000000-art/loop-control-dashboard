@@ -1,0 +1,171 @@
+너는 06C-1-R2 실행자다. 저장소 루트는 C:\Users\1\Documents\Local-First Workflow Dashboard 다.
+**현재 브랜치는 `wp/state-integrity`다(통합 branch). 브랜치를 바꾸지 마라.**
+
+## 먼저 — 전임자는 legacy를 **잘 지웠다**. 되돌리지 마라
+
+`--human-decision` · `ValidateHumanDecision` · `--root` · `canonicalMode` · `_ST_SEAM` 환경변수 →
+**소스에서 전부 사라졌다. 1131줄 → 869줄.** contract hash 재계산도 들어갔다. **잘한 일이다.**
+
+**문제는 지운 뒤에 남은 침묵이다.**
+
+## ★ 반려 사유 넷 (검수자 실증 + 코덱스 독립 검수)
+
+### A. 옵션이 **삭제된 게 아니라 무시된다**
+
+```
+prepare --transition-id T --request nonexistent.json --human-decision fake.json  → exit 2
+prepare --transition-id T --request nonexistent.json --root C:\somewhere         → exit 2
+prepare --transition-id T --request nonexistent.json --bogus-flag zzz            → exit 2
+대조군 (옵션 없음)                                                              → exit 2
+```
+
+**넷 다 exit 2. 그런데 오류 문구가 전부 `{"error":"request ... nonexistent.json"}`** —
+**"파일이 없다"는 뜻이지 usage 거부가 아니다. 옵션이 파싱을 통과했다.**
+
+`ParseFlagMap()`(`:806-823`)이 알 수 없는 키를 전부 맵에 담고, `ParsePrepareArgs`/`ParseApplyArgs`(`:826-843`)가
+**남은 키를 검사하지 않는다.**
+
+> **`--root C:\copy`를 믿고 붙이면 오류 없이 canonical WORKSTATE에 적용된다.** 사본에 적용됐다고 믿으면서.
+> **`--human-decision approved.json`도 승인이 먹혔다고 믿게 만든다. 아무 일도 안 일어난다.**
+> **조용한 거짓말은 시끄러운 거절보다 나쁘다.** **삭제의 목적은 호출자가 알게 하는 것이다.**
+
+### B. `.txt`가 callsite 스캔 범위 밖 — **발사 프롬프트가 전부 `.txt`다**
+
+```
+outputs/launch/ZZ-bait.ps1 → exit 1  잡음
+outputs/launch/ZZ-bait.txt → exit 0  ★ 못 잡음      ← 같은 경로. 확장자만 다르다
+outputs/launch/ZZ-bait.md  → exit 1  잡음
+```
+
+**`outputs/launch/*.prompt.txt` 23개 = 발사 프롬프트 전부.** 네가 지금 읽고 있는 이 파일도 `.txt`다.
+**거기가 가장 위험한 곳인데 유일하게 안 잡힌다.** 발사 프롬프트에 legacy 호출이 남으면 **실행자가 삭제된 명령을 실행하려 든다.**
+
+전임자는 `.ps1`/`.md`로 시험해 판정선 13을 PASS 받았다. **실제 위험 지점은 그대로 뚫려 있다.**
+
+### C. historical allowlist가 여전히 **접두사**다
+
+```
+docs/wiki/ZZ-live-runbook.md   → exit 0  ★ 숨겨진다
+docs/verification/ZZ-bait.md   → exit 0  ★ 숨겨진다
+docs/handoff/queue/ZZ-bait.md  → exit 0  ★ 숨겨진다
+```
+
+R1 지시서 §1-6이 **"접두사가 아니라 명시 파일 목록"**을 요구했는데 안 고쳐졌다.
+**그 접두사 아래 새로 만든 운영 문서는 legacy 호출을 영원히 숨긴다.**
+
+### D. ★ rollback(결함 2)의 **유일한 시험이 없다** — 이건 검수자 잘못이다
+
+판정선 9가 `NOT_VERIFIED`였다. 전임자 자진신고: *"새 프로세스에서 in-process 훅을 설정할 수 없다."* **맞는 말이다.**
+환경변수 seam을 없앤 것은 **옳다.** **그러나 이제 아무도 rollback을 시험할 수 없다.**
+
+**결함 2(post-apply 실패 시 rollback 없음)는 이 WP의 존재 이유 중 하나다. 고쳤다는 증거가 없다.**
+
+**"in-process 훅으로 바꿔라"까지만 쓰고 "어떻게 시험할지"를 안 준 것은 검수자다. 이번에 메운다.**
+
+## 지시서
+
+`docs/handoff/queue/directive-06C-1-R2-strict-cli.md` 가 계약이다. **그 파일이 정본이고, 이 프롬프트는 진입점이다.**
+`06C-1` · `06C-1-R1` 지시서도 **여전히 유효하다.** 셋 다 읽어라.
+
+## 읽는 순서
+
+1. `docs/context/RUNTIME-INDEX.md` — 현재 L0
+2. **`outputs/review/06C-1-R1.codex.md`** — 코덱스 독립 검수. **반증 입력이 그대로 적혀 있다**
+3. `docs/handoff/queue/directive-06C-1-R1-legacy-removal.md` — 직전 계약
+4. `docs/handoff/queue/directive-06C-1-R2-strict-cli.md` — **이번 계약**
+5. **`server/Harness/HandoffIntegrityCli.cs`의 `RunSelfTest`** — **네가 따라 할 패턴이다**(읽기만. 수정 금지)
+6. `docs/directives/_header.md`
+
+## 핵심 — `state-transition --self-test` 를 만든다
+
+**답은 이미 저장소에 있다.** 05H-R2가 `handoff-integrity --self-test`를 만들었다. **같은 패턴을 그대로 써라.**
+
+```
+dotnet run --project server -c Release -- state-transition --self-test
+```
+
+- **in-process 단언 실행기.** `FailAfterWriteHook`을 **자기 시험 코드가 직접 설정**하고 apply를 in-process로 돌린다.
+- **작업 경로는 `$TEMP` 아래 임시 사본.** **canonical 저장소를 절대 건드리지 마라.**
+- **기대 결과를 코드에 하드코딩.** **경로·id·플래그를 인자로 받지 마라** — 받는 순간 production 우회로가 된다.
+- 전부 일치 → exit 0. 하나라도 어긋나면 → exit 1 + 어긋난 case·기대·실제를 JSON으로.
+
+**필수 case**: `rollback-after-write`(ROLLED_BACK · hash==preimage · **v2 로그 미기록**) ·
+`normal-apply`(exit 0 · projection 갱신 · v2 로그 1줄) · `fatal-restore-failed`(exit 2 `FATAL_STATE_UNKNOWN`).
+
+**그리고 `--self-test`가 자기를 반증하는지도 보여라 — 기대값을 일부러 틀리게 적으면 exit 1이 나와야 한다.**
+
+## 코덱스 #1 — **네가 실증하라** (미확인 주장)
+
+> *`envelope.transitionContractSha256` 위조 검사가 **기존 transitionId일 때만** 실행된다.
+> **새 전이**는 `CheckExistingTransition()`이 null을 반환해 위조 hash가 검사되지 않는다.*
+
+1. 정상 `prepare --transition-id T-NEW --request req.json` (사본에서)
+2. `T-NEW.envelope.json`의 **`transitionContractSha256`만** `"aaaa"`로 변경
+3. `apply --envelope T-NEW.envelope.json` → **기대: exit 1 `envelope-contract-mismatch`**
+
+**뚫려 있으면 고쳐라**(검사는 기존/신규 무관하게 항상). **안 뚫려 있으면 그렇게 보고하라 — 코덱스 보고도 증거가 아니다.**
+
+## 절대 규칙
+
+- **legacy 삭제를 되돌리지 마라.** 잘한 일이다.
+- **`--self-test`에 경로·id·플래그 인자를 열지 마라.** production 우회로가 된다.
+- **`FailAfterWriteHook`을 환경변수·CLI·설정 파일로 켤 수 있게 만들지 마라.**
+- **`legacyCallsiteCount`를 0으로 만들려고 스캔 범위를 줄이지 마라.** ← R1이 그래서 반려됐다.
+- **canonical 저장소에서 시험하지 마라.** 반증 시험·self-test **전부 `$TEMP` 사본에서.**
+  (검수자가 반증 시험 중 `docs/wiki` 42파일을 지운 사고가 있었다. **시험은 저장소 밖에서.**)
+- **`HandoffIntegrityChecker.cs`·`HandoffIntegrityCli.cs` 무접촉** — 05H-R3가 **동시에** 그 파일에서 작업 중이다. **읽기만.**
+- **`docs/handoff/RECOVERY.md` 무접촉**(06H) · **`server/ProjectionCli.cs` 무접촉**.
+- **`WORKSTATE.json`·`WORKSTATE.applier-log.jsonl` 수정 금지.** `DI0004-BLOCKED-CODEX`를 지우지 마라.
+- **at-rest handoff-integrity는 exit 1이 정상이다.** 초록으로 만들면 반려다.
+- **git commit/push 금지. 브랜치 변경 금지. 결재·반입·발사 금지.**
+- **`measure`는 `dotnet run --project server -c Release -- measure dev-pack`으로.** 빌드는 `-c Release`. Debug도 한 번.
+- 함수마다 한국어 기능 주석 1줄.
+
+> **⚠ 사본에서 시험하는 법**: PowerShell `Set-Location`은 **.NET CurrentDirectory를 안 바꾼다.**
+> `cmd /c "cd /d <copy> && dotnet run --project server -c Release -- ..."` 또는 `Start-Process -WorkingDirectory <copy>`.
+> **시험마다 사본을 새로 만들어라.**
+
+## 판정선 (계약 §3) — 2·3·9·10·11은 **"뚫렸다"를 먼저 보여라**
+
+```
+ 1. build -c Release                                                → 0
+ 2. ★ prepare/apply + --human-decision                              → 2  removed-option (문구에 --human-decision)
+ 3. ★ prepare/apply + --root                                        → 2  removed-option (문구에 --root)
+ 4. ★ prepare/apply + --bogus-flag                                  → 2  usage / unknown-option
+ 5. 대조군: 올바른 인자만                                            → 정상 (2·3·4와 오류 문구가 달라야 한다)
+ 6. ★ state-transition --self-test                                  → 0
+ 7. ★ self-test의 rollback-after-write                              → ROLLED_BACK · hash==preimage · v2 로그 미기록
+ 8. ★ self-test 기대값을 일부러 틀리게 적고 실행                     → 1 (자기를 반증한다)
+ 9. ★ 새 전이 envelope의 contract hash만 위조 → apply                → 1 envelope-contract-mismatch
+10. ★ outputs/launch/X.prompt.txt 에 legacy 호출 심고 callsite-check  → 1
+11. ★ docs/wiki/X.md (새 파일)에 심고 callsite-check                 → 1 (접두사로 숨겨지지 않는다)
+12. 10·11 제거 후 callsite-check                                    → 0
+13. 회귀: 손위조 → state-corrupted-preapply · candidate 변조 → candidate-tampered ·
+    "EVIL" → unknown-transition-kind · PHASE_CHANGE → trusted-human-receipt-required   (전부 1)
+14. at-rest handoff-integrity                                      → 1 · failures 1건 (정상)
+15. measure dev-pack                                               → 0
+```
+
+## 목적 기준 (ADR-005)
+
+**"없앤 것은 없다고 말해야 한다. 그리고 고쳤다는 것은 시험할 수 있어야 한다."**
+
+우회로: `--self-test`에 인자 열기 · 스캔 범위 줄여 0 만들기 · removed-option을 일반 usage로 뭉개기.
+**전부 반려다. 자진 신고 없이 하면 반려다. 신고하면 감점이 아니다.**
+
+**요구가 서로 모순되거나 빠진 게 있으면 완화하지 말고 보고해라.**
+**직전 네 작업 중 세 번은 원인의 절반이 검수자가 준 요구의 모순 또는 공백이었다.** 이번에도 있으면 말해라.
+
+## 보고
+
+`docs/verification/06c1-r2-strict-cli.md` — `_template.md` 형식 그대로.
+
+**반드시 적을 것:**
+- **완료 기준 2·3·9·10·11의 "고치기 전" 실제 출력.**
+- **코덱스 #1이 실제로 뚫려 있었는지.** 아니면 그렇게 보고하라.
+- **`--self-test`의 case별 실제 출력** — 이것이 **rollback 경로의 최초 실행 기록**이다.
+- 임시 파일은 전부 `$TEMP`에. **저장소 무결을 blob 해시로 확인하라**(`git status`는 프록시다).
+
+**자기보고는 증거가 아니다.** 검수자가 재실행하고 **코덱스가 read-only로 독립 검수한다.**
+못 한 시험은 `NOT_VERIFIED`. **숨기면 반려다.**
+한도가 임박하면 마지막 세 줄로 `QUOTA_SIGNAL` / `CHANGED:` / `NEXT:`.
