@@ -109,7 +109,7 @@
 phase    P00 / WP-00 / DI-00-04 / blocked
 blocker  WP-STATE-INTEGRITY 미완 — 상태 원본을 아직 믿을 수 없다
 조율자   ⛔ 중단 (Claude 예약작업 recursion1-result-check enabled=false, 사람 결정)
-코덱스   ⛔ 중단 — ★ CLI가 이 머신에 없다(실측: where.exe codex 무결과). 자동화 경로 자체가 없다
+코덱스   ⛔ 중단 — ★ 설치는 돼 있다(MS Store 앱, app-server 프로세스 관찰). 없는 것은 **호출 가능한 헤드리스 진입점**이다(ADR-015 §1)
 실행자   ▶ 05H 가동 중(PID 21128). 사람 승인 건별 수동 발사만
 ```
 

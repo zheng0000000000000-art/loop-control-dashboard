@@ -1190,3 +1190,47 @@ v9 §DI-00-04는 **판정만이 아니라 제작**까지 요구한다(지시 4·
 1. **`CODEX-GATE-02`를 폐기하고 둘로 쪼갠다**: ①**05H**(reconciliation — 새 설계 그대로) ②**`CODEX-GATE-04`**(CLI 계약 · GATE-MANIFEST 등재 · claim-check --untracked · **Debug 바이너리 fail-closed**) — 05H와 파일이 겹치지 않게 경계를 다시 그어야 한다(`DiCompletionCheckCli.cs`·`ClaimCheckCli.cs`만).
 2. **`DI-00-04`(blocked)보다 이 WP가 먼저다.** 상태 원본을 믿을 수 없으면 DI 완료 판정 자체가 무의미하다.
 3. **land gate가 단일이다** — 05H·06C-1·06C-2·06H를 **통합 branch에서 함께** 넘겨야 한다. 지금처럼 main에 조각조각 커밋하면 안 된다.
+
+## 검수자 2026-07-13 21:4x — ★ 내가 틀렸다: "코덱스 CLI가 없다"는 오판이었다 (정정)
+
+**사람이 `ADR-015`를 직접 고쳐 정정했다. 내 오류다. 기록한다.**
+
+### 내가 한 것 (틀린 추론)
+
+`where.exe codex` 무결과 · npm 전역에 없음 → **"코덱스 CLI가 이 머신에 없다"고 단정**하고 인수인계에 적었다.
+**PATH 하나만 보고 존재를 부정했다.** 이 저장소가 하루 종일 경계한 바로 그 병이다 — **프록시로 원인을 단정했다.**
+
+### 실체 (사람 지적 후 다시 확인)
+
+| 항목 | 실측 |
+| --- | --- |
+| `codex.exe` | **실재.** `C:\Program Files\WindowsApps\OpenAI.Codex_26.707.3748.0\app\resources\codex.exe` — **지금도 실행 중**(PID 22504, `app-server` 모드) |
+| `~/.codex/config.toml` | 실재(4.7KB, 오늘 21:18 수정). `model = "gpt-5.5"`, plugins·projects — **데스크톱 앱 설정** |
+| 직접 실행 | **Access denied**(Store 앱 보안) |
+| App Execution Alias | **없다.** `WindowsApps`에 `OpenAI.ChatGPT-Desktop`만 있고 `codex.exe` 별칭 없음 |
+| npm `@openai/codex` | 없음 |
+
+**정확한 진술**: 코덱스는 **설치돼 있고 지금도 돌고 있다.** 없는 것은 **프로그램이 호출해 exit code·ACK를 기록할 수 있는 헤드리스 진입점**이다.
+
+### ★ 그리고 더 중요한 것 — `DispatchExecutorCli`는 LLM 실행기가 아니다 (신규 실측)
+
+`AGENT-GUIDE`와 `OutboxManager`(`:15-16`)는 `executor: "claude-code" | "codex"`를 받는다. **그래서 "dispatch로 코덱스에 라우팅한다"고 믿기 쉽다. 코드는 그렇지 않다:**
+
+```csharp
+// server/DispatchExecutorCli.cs
+if (IsSelfRefactorInstruction(instruction)) { ApplySelfRefactor(); return 0; }
+File.WriteAllText("EXECUTOR_REPORT.md", $"No deterministic edit rule matched for {executor}.");
+```
+
+**결정론 스텁이다.** README에 줄을 추가하거나 self-refactor 템플릿을 적용할 뿐, **`codex`든 `claude-code`든 모델 프로세스를 부르지 않는다.**
+
+→ **"dispatch 라우팅"은 문서에만 있고 코드에는 없다.** `CODEX-HARNESS-LAUNCHER-minimal-contract.md`가 "구현은 `TRUSTED_BASELINE` 이후"라고 못박은 자리가 **정확히 이 빈 칸**이다.
+
+### 판단은 바뀌지 않는다 (근거만 정확해졌다)
+
+- `ADR-015`(sonnet이 05H·06H 대행) **유지.** 근거를 "CLI 없음" → **"헤드리스 진입점 부재 + dispatch 스텁"**으로 정정(사람이 이미 반영).
+- **Responses 호환 프록시로 Claude를 Codex에 꽂는 것**은 기술적으로 가능하나 **지금 하지 않는다** — 상태 원본이 손 위조 id를 통과시키는 상태에서 **새 실행 통로를 추가하면 그 산출물의 신뢰도를 판정할 근거가 없다.** `CODEX-HARNESS-LAUNCHER` 계약이 같은 이유로 `TRUSTED_BASELINE` 이후로 미뤘다.
+
+### 교훈 (다음 검수자에게)
+
+**"없다"는 판정도 증거가 필요하다.** `where` 무결과는 "PATH에 없다"의 증거이지 "존재하지 않는다"의 증거가 아니다. **부재를 주장할 때는 탐색 범위를 함께 적어라.**
