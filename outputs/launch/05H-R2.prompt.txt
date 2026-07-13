@@ -1,0 +1,119 @@
+너는 05H-R2 실행자다. 저장소 루트는 C:\Users\1\Documents\Local-First Workflow Dashboard 다.
+**현재 브랜치는 `wp/state-integrity`다(통합 branch). 브랜치를 바꾸지 마라.**
+
+## 먼저 — 이건 네 전임자를 탓하는 작업이 아니다
+
+**아무도 이 경로를 한 번도 실행해본 적이 없다.** 그래서 조건절 하나가 통째로 빠져 있었는데
+fixture 7종과 게이트 전부가 초록이었다. **반증 자료가 없는 규칙은 규칙이 아니라 주석이다.**
+
+찾은 것은 **코덱스**다(`outputs/review/05H-R1.codex.md`, read-only 독립 검수). 검수자가 코드로 대조해 확정했다.
+
+## 지시서
+
+`docs/handoff/queue/directive-05H-R2-pending-exemption.md` 가 계약이다. **그 파일이 정본이고, 이 프롬프트는 진입점이다.**
+원 지시서(`directive-05H-reconciler.md`)와 `directive-05H-R1-...`도 **여전히 유효하다.** 셋 다 읽어라.
+
+## 읽는 순서
+
+1. `docs/context/RUNTIME-INDEX.md` — 현재 L0
+2. **`outputs/review/05H-R1.codex.md`** — 코덱스 독립 검수. **여기에 반증 입력이 그대로 적혀 있다**
+3. `docs/handoff/queue/directive-05H-reconciler.md` — 원 계약(§5-2 면제 조항이 핵심)
+4. `docs/handoff/queue/directive-05H-R2-pending-exemption.md` — **이번 계약**
+5. `docs/directives/_header.md` — 불변 제약
+
+## 무엇이 뚫렸나
+
+**계약**(05H 지시서 :81): `PendingTransitionId`는 면제 — **state에 정확히 1회 · log엔 없음**, 어기면 면제 미적용.
+
+**구현**(`server/Harness/HandoffIntegrityChecker.cs:254-256`): ①pendingId 있음 ②id 일치 ③state에 1회.
+**"log엔 없음"을 검사하지 않는다.**
+
+```
+state: [ { "id": "PENDING-FAILED" } ]
+log  : {"transitionId":"PENDING-FAILED","result":"handoff-integrity-failed exit=1","exitCode":1}
+호출 : PendingTransitionId = "PENDING-FAILED"
+→ :253 successfulLogIdSet에 없음 → 안 걸림
+→ :254 pending 면제(log 검사 없음!) → continue → failures 없음 → PASS
+```
+
+**실패했다고 기록된 전이를 pending으로 지정하면 통과한다.**
+현 저장소의 `DI0004-BLOCKED-CODEX`가 정확히 그 형태다.
+
+## 할 일 — 두 가지. **순서가 중요하다**
+
+### ★ 먼저 §2 (실증 수단). 그 다음 §1 (조건 추가).
+
+조건만 고치고 실증 수단을 안 만들면 **다음 사람이 같은 자리에서 같은 방식으로 다시 뚫린다.**
+이 저장소엔 테스트 프로젝트가 없다. 반증 수단은 **CLI 하네스 + fixture + exit code**뿐이다.
+
+**1) `handoff-integrity --self-test` 신설** — 내부 checker를 in-process로 부르는 **단언 실행기**.
+   - 입력은 `docs/qa/fixtures/reconciliation/pending/<case>/` **고정 경로만.** 인자로 경로·id를 받지 마라.
+   - 각 case의 `PendingTransitionId`와 기대 결과는 **코드에 하드코딩.** 질의 도구가 아니라 단언 실행기다.
+   - 전부 일치 → exit 0. 하나라도 어긋나면 → exit 1 + 어긋난 case·기대·실제를 JSON으로.
+   - **`--pending-transition`은 CLI에서 계속 금지다**(`pending-not-allowed-on-cli` exit 1 유지). `--self-test`는 우회로가 아니라 **반증 자료**다.
+
+   pending fixture 5종 (계약 §2 표 참조):
+   `pending-ok`(면제 정당 → PASS) · **`pending-failed-log`(★ 구멍 → FAIL)** · `pending-success-log`(면제 불필요 → PASS, exemption=false) ·
+   `pending-duplicate`(state 2회 → FAIL) · `pending-mismatch`(엉뚱한 id → FAIL)
+
+**2) 면제 조건에 `!allLogIdSet.Contains(id)` 추가**
+   - `CheckStateToLog`에 `allLogIdSet`을 추가 전달한다(현재 `successfulLogIdSet`만 받는다).
+   - **"log엔 없음"은 성공/실패를 가리지 않는다.** 어떤 종류든 그 id의 로그 항목이 하나라도 있으면 면제하지 않는다.
+   - 실패 메시지도 고쳐라: `"has no log entry"` → **`"has no successful log entry"`** (로그 항목은 있다 — 실패한 항목이. 지금 메시지는 거짓말이다).
+
+## ★★ 완료 기준 2번을 건너뛰지 마라
+
+```
+2. 고치기 전 재현: pending-failed-log 가 현 코드에서 PASS(exit 0)를 낸다 → 보고에 그대로 적어라
+```
+
+**"고쳤다"의 증거는 "고치기 전엔 뚫렸다"를 보인 다음에만 성립한다.**
+먼저 fixture를 만들고, **현 코드로 돌려서 PASS가 나오는 것을 확인하고**, 그 다음에 고쳐라.
+
+## 절대 규칙
+
+- **`server/StateApplierCli.cs` 무접촉.** **06C-1이 지금 그 파일에서 작업 중이다.** 충돌하면 둘 다 죽는다.
+- **`--pending-transition`을 CLI에서 허용하지 마라.** canonical 우회 통로가 된다.
+- **`--self-test`에 경로·id 인자를 열지 마라.** 그 순간 우회로가 된다.
+- **`HandoffIntegrityChecker`를 `HarnessRegistry`에 등재하지 마라**(원 지시서 §2).
+- **`WORKSTATE.json`·`WORKSTATE.applier-log.jsonl` 수정 금지.** `DI0004-BLOCKED-CODEX`를 지우지 마라.
+- **`server/Harness/DiCompletionCheckCli.cs`·`ClaimCheckCli.cs` 무접촉** — `CODEX-GATE-04` 영역.
+- **at-rest를 exit 0으로 만들려 하지 마라.** at-rest exit 1은 정상이다(오염 1건 = `DI0004-BLOCKED-CODEX`). **초록으로 만들면 반려다.**
+- **git commit/push 금지. 브랜치 변경 금지. 결재·반입·발사 금지.**
+- **`measure`는 `dotnet run --project server -c Release -- measure dev-pack`으로.**
+- 함수마다 한국어 기능 주석 1줄. 빌드는 `-c Release`. Debug도 한 번 빌드해라(`di-completion-check`가 Debug 바이너리를 본다 — 실측 결함).
+
+## 판정선 (계약 §4)
+
+```
+ 1. build -c Release                                          → 0
+ 2. ★ 고치기 전 pending-failed-log 가 PASS(exit 0)            → 보고에 그대로
+ 3. pending-ok           → 0 · pendingExemptionApplied=true   ★ 면제 경로 최초 실증
+ 4. pending-failed-log   → 1 · state-transition-not-logged    ★ 구멍이 막혔다
+ 5. pending-success-log  → 0 · pendingExemptionApplied=false
+ 6. pending-duplicate    → 1 · duplicate-in-state 포함
+ 7. pending-mismatch     → 1 · state-transition-not-logged
+ 8. handoff-integrity --self-test                             → 0
+ 9. 회귀: a→1 b→1 c→0 d→1 e→1 f→1 malformed→2                 (변화 없음)
+10. CLI --pending-transition                                  → 1 pending-not-allowed-on-cli (유지)
+11. at-rest                                                   → 1 · failures 정확히 1건 (정상)
+12. measure dev-pack                                          → 0
+```
+
+## 목적 기준 (ADR-005)
+
+**"면제는 아직 기록되지 않은 진행 중 전이에만 준다. 이미 시도돼 실패한 전이에는 주지 않는다."**
+
+우회로: `--self-test`에 인자를 열거나, 면제 조건을 "실패 로그는 예외" 식으로 다시 느슨하게 하는 것.
+**둘 다 목적 미달이다. 자진 신고 없이 하면 반려다. 신고하면 감점이 아니다.**
+
+## 보고
+
+`docs/verification/05h-r2-pending-exemption.md` — `_template.md` 형식 그대로.
+**반드시 적을 것:**
+- **완료 기준 2(고치기 전 재현)의 실제 출력.**
+- **`pending-ok`의 결과** — 이것이 pending 면제 경로의 **최초 실행 기록**이다. 05H·05H-R1이 둘 다 `NOT_VERIFIED`로 남긴 그 경로다.
+
+**자기보고는 증거가 아니다.** 검수자가 재실행하고 **코덱스가 read-only로 독립 검수한다.**
+못 한 시험은 `NOT_VERIFIED`. **숨기면 반려다.**
+한도가 임박하면 마지막 세 줄로 `QUOTA_SIGNAL` / `CHANGED:` / `NEXT:`.
