@@ -1573,3 +1573,62 @@ at-rest 실패 메시지가 `"id ... is in appliedTransitions but has no log ent
 
 - **ADR-015 §4의 우려는 여전하다** — 05H(하네스)와 06C-1(그 하네스를 소비하는 제품 코드)이 **같은 actor(sonnet)**다. 별도 세션·별도 프로세스로 발사했지만 **actor 분리는 아니다.** 완화책은 검수자의 독립 재실행뿐이다. `codex exec -s read-only` 독립 검수를 여기에 붙이는 것이 다음 단계다.
 - **06C-1 land 후 무엇이 잠기는지 나는 아직 모른다.** 실행자에게 열거를 요구했지만, 그 목록이 완전한지는 검수자가 별도로 확인해야 한다.
+
+---
+
+## 2026-07-13 ★★ 코덱스 독립 검수가 **첫 발에 내가 놓친 결함을 잡았다** — 05H-R1 재반려
+
+- **검수 주체**: codex (codex-cli 0.144.3, chatgpt 구독, **read-only 샌드박스**). 배선: `outputs/launch/run-codex-review.ps1` (신규).
+- **샌드박스 유지 실측**: 입력 3파일 바이트 수 불변(4974 / 9375 / 15766). 코덱스가 쓴 것은 최종 메시지뿐. **쓰기가 없으므로 범위 대조가 필요 없다** — 그래서 launcher 없이도 지금 안전하게 쓸 수 있다.
+- **codex exec의 exit code는 판정에 쓰지 않았다**(그건 "세션 종료"지 "성공"이 아니다). **검수자가 코드로 직접 대조했다.**
+
+### 코덱스가 잡은 것 — 그리고 **사실이다** (검수자 확인)
+
+**계약**(05H 지시서 :81):
+> `PendingTransitionId`는 면제(내부 checker 전용, **state에 정확히 1회 · log엔 없음**, 어기면 면제 미적용).
+
+**구현**(`HandoffIntegrityChecker.cs:254-256`)이 검사하는 것:
+1. `pendingId` 비어있지 않음 ✓
+2. `id == pendingId` ✓
+3. `stateIds.Count(s => s == id) == 1` ✓ (state에 정확히 1회)
+
+**빠진 것: "log엔 없음".** `allLogIdSet.Contains(id)`가 false인지 **검사하지 않는다.**
+
+**결과**: **실패 로그(exitCode=1)를 가진 전이를 `PendingTransitionId`로 지정하면 → 면제되어 PASS가 난다.**
+
+```
+workstate: appliedTransitions = [ {id: PENDING-FAILED} ]
+log      : {"transitionId":"PENDING-FAILED","result":"handoff-integrity-failed exit=1","exitCode":1}
+호출     : ReconciliationOptions(..., PendingTransitionId: "PENDING-FAILED")
+
+:253 successfulLogIdSet에 없음 → 통과 못 함
+:254-256 pending 면제 조건 충족(log 검사 없음!) → continue
+→ failures 없음 → PASS
+```
+
+**05H의 원래 구멍(allLogIdSet)이 규칙 2 본체에서는 막혔는데, 면제 조항으로 살아남았다.**
+`DI0004-BLOCKED-CODEX`가 바로 그 형태다 — 그걸 pending으로 주면 지금 통과한다.
+
+### 왜 나는 못 잡았나 (숨기지 않는다)
+
+**나는 pending 면제 경로를 `NOT_VERIFIED`로 남기고 넘어갔다.** "CLI 미노출이라 외부에서 못 돌린다"는 이유로.
+**돌릴 수 없다는 것과 읽을 수 없다는 것은 다르다.** 코덱스는 코드를 읽어서 조건절의 결손을 찾았다.
+**실행할 수 없는 경로일수록 더 읽어야 한다** — 아무도 안 밟는 코드가 가장 오래 거짓말한다.
+
+**ADR-002가 옳았다.** 생산(sonnet)과 1차 검증(sonnet)이 같은 actor일 때 생긴 사각을, **다른 주체**가 첫 발에 뚫었다.
+이것이 코덱스를 붙인 이유이고, 값을 했다.
+
+### 06C-1에 대한 영향 — ★ 지금 그 구멍 위에서 짓고 있다
+
+06C-1 지시서 :126 — `적용후: projection · 내부 checker(PendingTransitionId=id) · v2 log append`
+**즉 06C-1은 매 apply마다 이 면제 경로를 탄다.** 지금 구현으로는:
+- 정상 경로(첫 적용, log에 아직 없음)에서는 면제가 옳다.
+- **그러나 이전 시도가 실패 로그를 남기고 state에도 남았다면(= rollback 실패 = 결함 2), 그 id를 pending으로 주는 순간 오염이 통과한다.**
+- **06C-1이 고치려는 바로 그 결함이, 06C-1이 의존하는 checker의 뒷문으로 되돌아온다.**
+
+**06C-1을 중단하지 않는다** — 대상 파일(`StateApplierCli.cs`)이 다르고, 한도 창을 태우며 24턴을 버리는 것보다 끝내고 재검수하는 편이 낫다. **`05H-R2`로 면제 조건을 고친 뒤 06C-1 산출물을 그 위에서 재검증한다.** 같은 land gate 안이다.
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **나는 이 반증을 실행으로 실증하지 못했다.** pending 경로는 CLI 미노출이라 외부에서 못 돌린다. **판정 근거는 계약 텍스트와 코드의 대조**다 — 프록시가 아니라 실체지만, **동적 실증은 아니다.** 05H-R2가 in-process 단위 시험으로 실증해야 한다.
+- **코덱스 검수 배선을 06C-1이 아니라 05H-R1로 먼저 시험했다.** 결과적으로 결함을 잡았지만, 원래 의도는 "결과를 아는 대상으로 배선을 검증"하는 것이었다. **내가 그 대상의 결과를 안다고 믿은 것 자체가 틀렸다.**
