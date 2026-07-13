@@ -442,3 +442,22 @@
    `DI0004-BLOCKED-CODEX`를 **명시적 known-exception receipt**로 남긴다. (land gate 12번이 존재하는 바로 그 이유)
 
 **AI가 대신 고르지 않는다. 되돌리는 법**: 이 항목 이전 상태는 `WORKSTATE.json`을 건드리지 않는 것 — 지금까지 아무도 건드리지 않았다(검수자 git 확인).
+
+---
+
+## ★ 사람 결정 (choi, 2026-07-13) — legacy 단일-샷 경로: **삭제 + 06H가 RECOVERY 갱신**
+
+**배경**: 06C-1 검수 FAIL. 새 prepare/apply 경로는 만들었으나 **legacy 단일-샷 경로를 지우지 않았다.**
+결함이 전부 그 안에 살아 있다 — rollback 없음(`:560-612`) · `--human-decision` 임의파일 위조(`:847`) ·
+가짜 contract 결속(`:681-685`). `state-transition-callsite-check`의 `legacyCallsiteCount=0`은
+**"옛 호출부가 없다"이지 "옛 경로가 없다"가 아니다.**
+
+**갈림길**: `docs/handoff/RECOVERY.md:51`이 legacy 단일-샷 형태를 **운영 복구 절차**로 쓴다. 지우면 그 절차가 깨진다.
+
+**결정**: **legacy 경로를 통째로 삭제한다. `RECOVERY.md`는 06H가 prepare/apply로 다시 쓴다.**
+
+- 근거: 결함이 살 곳을 없앤다. fail-closed로 막기만 하면 죽은 코드가 남아 다음 사람이 되살릴 수 있다.
+- **의존이 생긴다**: `06C-1-R1`(legacy 삭제)과 `06H`(RECOVERY 갱신)는 **같은 land gate**다. 06H 없이 land하면 복구 절차 문서가 실체와 어긋난다.
+- **되돌리는 법**: 이 결정 이전 상태는 커밋 `e20fd37`(06C-1 원본, legacy 포함).
+
+**주체**: 사람(choi). 검수자가 선택지를 제시하고 사람이 골랐다. **AI가 고르지 않았다.**
