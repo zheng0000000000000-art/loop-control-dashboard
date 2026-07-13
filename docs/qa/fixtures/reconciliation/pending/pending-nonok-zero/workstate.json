@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 3,
+  "phaseId": "P00",
+  "wpId": "WP-TEST",
+  "diId": "DI-PENDING-NONOK",
+  "status": "blocked",
+  "blockers": ["pending-nonok-zero: result!=ok이지만 exitCode==0인 로그는 성공으로 세지 않는다"],
+  "appliedTransitions": [
+    { "id": "PENDING-NONOK", "appliedAt": "2026-01-01T00:00:00Z" }
+  ]
+}

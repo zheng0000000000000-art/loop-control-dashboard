@@ -1,1 +1,12 @@
-﻿{ "schemaVersion": 3, "appliedTransitions": [ BROKEN
+{
+  "schemaVersion": 3,
+  "phaseId": "P00",
+  "wpId": "WP-TEST",
+  "diId": "DI-PENDING-DUP",
+  "status": "blocked",
+  "blockers": ["pending-duplicate: state에 같은 id가 2번 있으면 면제 미적용"],
+  "appliedTransitions": [
+    { "id": "PENDING-DUP", "appliedAt": "2026-01-01T00:00:00Z" },
+    { "id": "PENDING-DUP", "appliedAt": "2026-01-01T00:00:01Z" }
+  ]
+}

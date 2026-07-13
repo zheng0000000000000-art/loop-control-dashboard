@@ -338,39 +338,33 @@ internal static class HandoffIntegrityCli
     private static JsonObject Warning(string subject, string code, string message)
         => new() { ["subject"] = subject, ["code"] = code, ["message"] = message };
 
-    // pending fixture 5종을 in-process로 실행해 기대 결과와 대조한다. 단언 실행기 — 인자 없음.
+    // pending fixture 6종을 in-process로 실행해 기대 결과(면제·실패코드·하네스오류)와 대조한다. 단언 실행기 — 인자 없음.
     private static int RunSelfTest(string root)
     {
         var cases = new[]
         {
-            (name: "pending-ok",          pendingId: "PENDING-OK",       expectPass: true,  expectExemption: true),
-            (name: "pending-failed-log",  pendingId: "PENDING-FAILED",   expectPass: false, expectExemption: false),
-            (name: "pending-success-log", pendingId: "PENDING-SUCCESS",  expectPass: true,  expectExemption: false),
-            (name: "pending-duplicate",   pendingId: "PENDING-DUP",      expectPass: false, expectExemption: false),
-            (name: "pending-mismatch",    pendingId: "WRONG-ID",         expectPass: false, expectExemption: false),
+            (name: "pending-ok",          pendingId: "PENDING-OK",      expectExemption: true,
+             expectFailureCodes: Array.Empty<string>(),          expectHarnessErrors: false),
+            (name: "pending-failed-log",  pendingId: "PENDING-FAILED",  expectExemption: false,
+             expectFailureCodes: new[] { "state-transition-not-logged" }, expectHarnessErrors: false),
+            (name: "pending-success-log", pendingId: "PENDING-SUCCESS", expectExemption: false,
+             expectFailureCodes: Array.Empty<string>(),          expectHarnessErrors: false),
+            (name: "pending-duplicate",   pendingId: "PENDING-DUP",     expectExemption: false,
+             expectFailureCodes: new[] { "duplicate-in-state", "state-transition-not-logged" }, expectHarnessErrors: false),
+            (name: "pending-mismatch",    pendingId: "WRONG-ID",        expectExemption: false,
+             expectFailureCodes: new[] { "state-transition-not-logged" }, expectHarnessErrors: false),
+            (name: "pending-nonok-zero",  pendingId: "PENDING-NONOK",   expectExemption: false,
+             expectFailureCodes: new[] { "state-transition-not-logged" }, expectHarnessErrors: false),
         };
 
         var mismatches = new JsonArray();
-        foreach (var (name, pendingId, expectPass, expectExemption) in cases)
+        foreach (var (name, pendingId, expectExemption, expectFailureCodes, expectHarnessErrors) in cases)
         {
             var dir = Path.Combine(root, "docs", "qa", "fixtures", "reconciliation", "pending", name);
-            var wsPath = Path.Combine(dir, "workstate.json");
-            var logPath = Path.Combine(dir, "applier-log.jsonl");
-            var opts = new ReconciliationOptions(wsPath, logPath, pendingId);
-            var r = HandoffIntegrityChecker.Run(opts);
-            var actualPass = r.Failures.Count == 0 && r.HarnessErrors.Count == 0;
-            var actualExemption = r.Metrics?.PendingExemptionApplied ?? false;
-            if (actualPass != expectPass || actualExemption != expectExemption)
-                mismatches.Add(new JsonObject
-                {
-                    ["case"] = name,
-                    ["expectedPass"] = expectPass,
-                    ["actualPass"] = actualPass,
-                    ["expectedPendingExemptionApplied"] = expectExemption,
-                    ["actualPendingExemptionApplied"] = actualExemption,
-                    ["failures"] = new JsonArray(r.Failures.Select(f =>
-                        (JsonNode)new JsonObject { ["code"] = f.Code, ["subject"] = f.Subject }).ToArray()),
-                });
+            var r = HandoffIntegrityChecker.Run(new ReconciliationOptions(
+                Path.Combine(dir, "workstate.json"), Path.Combine(dir, "applier-log.jsonl"), pendingId));
+            var entry = BuildSelfTestMismatch(name, r, expectExemption, expectFailureCodes, expectHarnessErrors);
+            if (entry is not null) mismatches.Add(entry);
         }
 
         if (mismatches.Count == 0)
@@ -392,5 +386,39 @@ internal static class HandoffIntegrityCli
             ["mismatches"] = mismatches,
         }.ToJsonString(JsonOptions));
         return 1;
+    }
+
+    // case 1건의 기대 vs 실제를 대조해 불일치 엔트리를 반환한다. 일치하면 null.
+    private static JsonObject? BuildSelfTestMismatch(
+        string name, ReconciliationResult r,
+        bool expectExemption, string[] expectFailureCodes, bool expectHarnessErrors)
+    {
+        var actualHasHarnessErrors = r.HarnessErrors.Count > 0;
+        var actualExemption = r.Metrics?.PendingExemptionApplied ?? false;
+        var actualCodes = new HashSet<string>(r.Failures.Select(f => f.Code), StringComparer.Ordinal);
+        var expectedCodes = new HashSet<string>(expectFailureCodes, StringComparer.Ordinal);
+
+        // HarnessErrors가 예상 밖이면 unexpected-harness-error — 입력 오염과 검사 실패를 구분한다.
+        var harnessErrorMismatch = actualHasHarnessErrors != expectHarnessErrors;
+        var codesMismatch = !actualCodes.SetEquals(expectedCodes);
+        var exemptionMismatch = actualExemption != expectExemption;
+        if (!harnessErrorMismatch && !codesMismatch && !exemptionMismatch) return null;
+
+        var entry = new JsonObject
+        {
+            ["case"] = name,
+            ["expectedPendingExemptionApplied"] = expectExemption,
+            ["actualPendingExemptionApplied"] = actualExemption,
+            ["expectedFailureCodes"] = new JsonArray(expectFailureCodes.Select(c => (JsonNode)JsonValue.Create(c)!).ToArray()),
+            ["actualFailureCodes"] = new JsonArray(actualCodes.OrderBy(c => c).Select(c => (JsonNode)JsonValue.Create(c)!).ToArray()),
+            ["expectedHarnessErrors"] = expectHarnessErrors,
+            ["actualHarnessErrors"] = actualHasHarnessErrors,
+            ["harnessErrors"] = new JsonArray(r.HarnessErrors.Select(e =>
+                (JsonNode)new JsonObject { ["code"] = e.Code, ["subject"] = e.Subject }).ToArray()),
+            ["mismatchReason"] = harnessErrorMismatch ? "unexpected-harness-error"
+                               : codesMismatch        ? "failure-code-mismatch"
+                                                      : "exemption-mismatch",
+        };
+        return entry;
     }
 }

@@ -2021,3 +2021,167 @@ docs/handoff/queue/ZZ-bait.md     → exit 0  ★ 숨겨진다
 - **코덱스 4건 중 3건만 실증했다.** #1(새 전이 self-hash)은 미확인 — **표시했다.**
 - **`docs/wiki` 삭제 사고**를 냈다. 복구했지만 **검수자가 저장소를 파괴할 뻔했다.** 반증 시험에 쓰는 임시 파일은 **저장소 밖(`$TEMP`)에 만들어야 한다.** 오늘 fixture 오염 시험(반증 C)도 저장소 안에서 했다 — 운이 좋았다.
 - **판정선 9(rollback) 공백은 내 지시서 탓이다.** 실행자를 반려하지만 **원인의 절반은 나다.** 세 번째다.
+
+---
+
+## 2026-07-14 검수 — 05H-R3: **PASS**. 그리고 실행자가 **검수자가 저지른 오염을 잡아냈다**
+
+- **생산**: sonnet(ADR-015). PID 6496, exit 0, 55턴, 9.2분, $1.65.
+- **판정**: 검수자 재실행 + 코덱스 독립 검수.
+
+### 재실행 — 전부 통과
+
+| 시험 | exit |
+| --- | --- |
+| `build -c Release` | 0 |
+| `handoff-integrity --self-test` | **0** |
+| `pending-nonok-zero` (신규 fixture) | **1** `state-transition-not-logged` |
+| 회귀 a/b/c/d/e/f/malformed | 1/1/0/1/1/1/2 (전부 일치) |
+| CLI `--pending-transition` | 1 (우회로 차단 유지) |
+| at-rest | 1 · failures 1건 |
+| `measure dev-pack -c Release` | 0 |
+
+### ★ 계측기가 고쳐졌다 (검수자 반증 시험 — **이번엔 사본에서**)
+
+```
+대조군 A (사본 무손상)               → self-test exit 0    ← 사본 자체는 정상임을 먼저 세웠다
+시험 B  (pending-duplicate만 malformed) → self-test exit 1
+    mismatchCount: 1
+    case: "pending-duplicate"
+    expectedHarnessErrors: false → actualHarnessErrors: true
+    mismatchReason: "unexpected-harness-error"
+```
+
+**정확히 하나의 case를, 정확한 이유로 잡았다.**
+
+> **첫 시도는 `.git`을 뺀 사본이었고 `mismatchCount: 6`이 나왔다.**
+> **대조군 없이 "잡았다"로 넘어갔으면 또 오판이었다** — exit 1이 "오염을 잡았다"인지 "fixture를 못 찾았다"인지 구분되지 않았다.
+> **대조군을 세워서 갈랐다.** `exit 1`은 그 자체로 증거가 아니다. **왜 1인지가 증거다.**
+
+### ★★★ 실행자가 **검수자의 사고**를 발견했다 — 그리고 그 사고는 **버그가 자기 증거를 지운 것**이었다
+
+05H-R3 실행자 보고:
+
+> *"`pending-duplicate/workstate.json`이 **malformed 상태로 HEAD에 커밋돼 있었다**(blob `b060b08`).
+> 이전 실행자가 반증 시험 중 오염시키고 원복하지 않은 것으로 추정된다."*
+
+**이전 실행자가 아니다. 검수자다.**
+
+**커밋 `f861281` — 내 05H-R2 커밋이다.**
+
+```
+커밋 제목: "05H-R2: pending 면제 구멍 수정 + --self-test (검수 결과: FAIL 조건부 — 계측기가 거짓말한다)"
+그 커밋이 담은 것: 거짓말하는 계측기가 못 잡은, 검수자가 오염시킨 fixture
+```
+
+**HEAD의 blob:** `﻿{ "schemaVersion": 3, "appliedTransitions": [ BROKEN` — **내 반증 시험 C의 오염 문자열이다. BOM까지 붙어 있다.**
+
+#### 왜 게이트가 하나도 못 잡았나
+
+- `measure dev-pack` **0** · `gate-clean` **0** · `handoff-integrity --self-test` **0**
+- **`--self-test`가 malformed fixture를 못 잡는다 — 그게 바로 그 커밋이 반려한 버그다.**
+- **버그가 자기 증거를 지웠다.** 계측기가 자기 오염을 자기가 못 봤다.
+
+#### 왜 내 "원복 확인"이 실패했나 — **실측으로 확정**(추측 아님)
+
+```
+PowerShell 위치      : C:\...\repo
+.NET CurrentDirectory: C:\Users\1              ← 다르다
+
+Set-Content 'rel/path.json'            → PS 위치 기준  → 진짜 fixture를 오염시켰다
+[IO.File]::ReadAllBytes('rel/path.json') → .NET CWD 기준 → C:\Users\1\... 를 찾음 → 예외
+```
+
+내 반증 시험 C:
+
+```powershell
+$bak = [IO.File]::ReadAllBytes($f)          # .NET → 엉뚱한 경로 → 예외 → $bak = null
+Set-Content $f '...BROKEN' -Encoding UTF8   # PS  → 진짜 fixture 오염
+[IO.File]::WriteAllBytes($f, $bak)          # .NET → 원복 실패
+```
+
+**오염은 PS cmdlet(올바른 경로)으로, 원복은 .NET API(잘못된 경로)로 했다. 오염만 됐다.**
+
+**이 저장소가 SESSION-BRIEF에 "함정 #4"로 적어둔 바로 그것이다**
+(*"PowerShell `Set-Location`은 .NET `CurrentDirectory`를 안 바꾼다. 이걸로 세 번 오판할 뻔했다."*).
+**적어놓고 내가 걸렸다.**
+
+#### 그리고 내가 출력한 "JSON valid: True"는 **검사 결과가 아니었다**
+
+```powershell
+Get-Content $f -Raw | ConvertFrom-Json | Out-Null; "  JSON valid: True"   # ← 조건부가 아니다
+```
+
+**성공/실패와 무관하게 항상 출력되는 하드코딩 문자열이었다.** **검사한 척한 문자열이다.**
+**또 프록시다.** 오늘 아홉 번째다.
+
+### 교훈 (FAIL-2026-018·019에 추가 등재해야 한다)
+
+1. **반증 시험용 임시 파일은 저장소 밖(`$TEMP` 사본)에 만든다.** 두 번 말했고 두 번 다 안 지켰다.
+2. **PS cmdlet과 .NET File API를 섞지 마라.** 상대경로일 때 **서로 다른 파일을 본다.**
+   섞어야 하면 **절대경로**로만.
+3. **원복 확인을 계측기로 하지 마라.** 그 계측기가 고장났을 수 있다 — **이번엔 실제로 고장나 있었다.**
+   원복은 **blob 해시**로 확인한다.
+4. **"검사했다"를 출력하는 문자열은 검사가 아니다.** 조건부로 출력하라.
+
+### 검수자가 실행자에게 진 빚
+
+**실행자가 지시서 요구(blob 해시 확인)를 성실히 수행하다가 내 사고를 발견했다.**
+**그리고 정확히 진단했다** — *"git status로 원복을 확인할 수 없다는 지시서의 경고가 실증됐다."*
+**내가 그 경고를 쓰고 내가 어겼다.**
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **오염된 fixture가 커밋된 채로 `05H-R2`를 "본체 수정은 옳다"고 판정했다.** 판정 자체는 유효하다
+  (`!allLogIdSet.Contains(id)`는 맞다). 그러나 **`pending-duplicate` case는 실제로 검증되지 않은 상태였다** —
+  malformed라 checker 본체에 도달하지 못했다. **05H-R3가 정상 fixture로 고친 뒤에야 처음 검증됐다.**
+- **오늘 내가 저장소에 낸 사고가 두 건이다**: `docs/wiki` 42파일 삭제(복구) · fixture 오염 커밋(실행자가 복구).
+  **둘 다 반증 시험을 저장소 안에서 했기 때문이다.**
+
+### 05H-R3 코덱스 독립 검수 — **두 번 돌렸다. 첫 번째는 내 패킷이 오염돼 있었다**
+
+**1차 (오염된 패킷)**: 코덱스가 **"allowlist 밖 파일을 대량 수정했다"**며 FAIL.
+→ **무효.** `run-codex-review.ps1`이 `git diff HEAD -- .`로 **저장소 전체 diff**를 줬다.
+거기엔 실행자 산출물이 아닌 미커밋 잡동사니(`dashboard/data/**` 런타임 데이터 · `outputs/**` 로그 · 검수자 문서)가 전부 섞여 있었다.
+**코덱스는 그걸 실행자 산출물로 오독했다.**
+
+> **FAIL-2026-017의 재발이다 — 독립 검수자에게 준 입력이 오염되면 판정도 오염된다.**
+> **이번엔 인코딩이 아니라 범위다. 두 번째로 코덱스에게 없는 결함을 보고하게 만들었다.**
+
+**배선 수정**: 지시서 allowlist로 `git diff`를 **필터링**한다. allowlist 밖 변경은 **별도 파일**(`OUT-OF-SCOPE.txt`)로,
+*"이것들은 실행자 산출물이 아닐 수 있다"*는 경고와 함께 넘긴다. **숨기지 않되 섞지도 않는다.**
+
+**기계 확인**:
+
+```
+ALLOWLIST.txt   4경로 정확히 파싱
+CHANGES.diff    pending-duplicate/workstate.json + HandoffIntegrityCli.cs   ← 실행자 산출물만
+UNTRACKED.txt   pending-nonok-zero/* + verification doc                     ← 전부 allowlist 안
+★ OUT-OF-SCOPE  0건                                                          ← 범위 이탈 없음
+```
+
+**05H-R3의 범위 준수가 기계로 증명됐다.**
+
+**2차 (깨끗한 패킷)** — 코덱스가 **정확한 것**을 잡았다:
+
+> `--self-test`가 실패 **코드 집합**만 비교한다(`HandoffIntegrityCli.cs:398-403`, `HashSet` + `SetEquals`).
+> **실패 개수도, subject(어떤 전이가 실패했는가)도 보지 않는다.**
+> → `pending-mismatch` fixture에 같은 코드를 내는 id를 하나 더 심으면 **code set은 그대로라 통과한다.**
+
+**★ 그런데 이것은 계약 위반이 아니다 — 내 지시서 §1-1이 "코드 집합 비교"를 명시했다.**
+**실행자는 정확히 따랐다. 또 내 공백이다. 네 번째다**(FAIL-2026-016).
+
+## 05H-R3 최종 판정: **PASS**
+
+- 계약 충족. 계측기가 malformed를 정확한 이유로 잡는다(대조군 세워 실증).
+- 범위 준수 기계 확인(OUT-OF-SCOPE 0건). 회귀 없음. `measure` 0.
+- **subject/count 단언 강화는 개별 R4를 또 쏘지 않는다** — **`HS-A`(`harness-selftest-check`, 12/12 즉시제작)가
+  전 하네스에 일괄 적용**하도록 넘긴다. **재발명 금지.**
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **`--self-test`는 "기대한 코드가 났는가"까지만 본다. "기대한 그 실패만 났는가"는 아직 아니다.** 코덱스 지적이 옳다.
+  **PASS로 land하되 이 공백을 HS-A로 넘긴다.** 숨기지 않는다.
+- **오늘 두 번, 내가 독립 검수자에게 오염된 입력을 줬다**(인코딩 · 범위).
+  **검수 배선은 검수 대상이다** — 그런데 **그 배선을 검수하는 자가 없다.** 이 세션에서는 코덱스의 오보를
+  검수자가 매번 실측으로 걸러냈지만, **그 실측을 안 했으면 실행자를 두 번 억울하게 반려했을 것이다.**

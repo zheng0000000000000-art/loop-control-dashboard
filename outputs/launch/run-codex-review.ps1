@@ -40,11 +40,55 @@ $prevOut = [Console]::OutputEncoding
 $prevEap = $ErrorActionPreference
 $ErrorActionPreference = 'Continue'
 
-# 검수 대상 diff를 뽑는다 — 이것이 코덱스가 볼 실체다.
+# ★★ 검수 대상 diff는 **실행자의 산출물만** 담아야 한다.
+# 실측 사고(2026-07-14): `git diff HEAD -- .`로 저장소 전체 diff를 줬더니, 실행자 산출물이 아닌
+# 미커밋 잡동사니(dashboard/data 런타임 데이터 · outputs/ 로그 · 검수자 문서)가 전부 섞여 들어갔다.
+# **코덱스는 그것을 "실행자의 산출물"로 오독하고 "allowlist 밖 파일을 수정했다"는 없는 결함을 보고했다.**
+# **독립 검수자에게 준 입력이 오염되면 판정도 오염된다** (FAIL-2026-017의 재발 — 이번엔 인코딩이 아니라 범위).
+#
+# → **지시서의 allowlist로 필터링한다.** 실행자가 만질 수 있었던 파일만 코덱스에게 보인다.
+#   allowlist 밖 변경이 있으면 그것은 **별도 절**로 명시해 넘긴다 — 숨기지 않되 섞지도 않는다.
+
+# 지시서의 '## 허용 파일 (allowlist)' 목록을 읽는다. run-executor.ps1의 Get-Allowlist와 같은 규약.
+function Get-DirectiveAllowlist([string]$directivePath) {
+  $lines = [System.IO.File]::ReadAllLines($directivePath, [System.Text.Encoding]::UTF8)
+  $inSection = $false
+  $paths = @()
+  foreach ($l in $lines) {
+    if ($l -match '^##\s+허용 파일') { $inSection = $true; continue }
+    if ($inSection -and $l -match '^##\s') { break }
+    if ($inSection -and $l -match '^\s*-\s+(\S+)') {
+      $p = $matches[1].Trim('`')
+      if ($p -notmatch '^\(') { $paths += $p }
+    }
+  }
+  return ,$paths
+}
+
+# glob 패턴(`**` 포함)을 git pathspec으로 변환한다.
+function ConvertTo-GitPathspec([string]$glob) {
+  if ($glob.EndsWith('/**')) { return $glob.Substring(0, $glob.Length - 3) }
+  return $glob
+}
+
+$allowlist = Get-DirectiveAllowlist $directive.FullName
+if ($allowlist.Count -eq 0) {
+  throw "검수 중단: 지시서에서 allowlist를 못 읽었다 — $($directive.FullName) ('^## 허용 파일' 절과 BOM 인코딩 확인)"
+}
+$pathspecs = @($allowlist | ForEach-Object { ConvertTo-GitPathspec $_ })
+
 Push-Location $root
-$diff = (& git diff HEAD -- . 2>$null | Out-String)
+# 실행자 산출물 = allowlist 경로의 변경분만
+$diff = (& git diff HEAD -- @pathspecs 2>$null | Out-String)
 if ($LASTEXITCODE -ne 0) { Pop-Location; $ErrorActionPreference = $prevEap; throw "git diff 실패 (exit $LASTEXITCODE)" }
-$untracked = ((& git ls-files --others --exclude-standard 2>$null) -join "`n")
+$untracked = ((& git ls-files --others --exclude-standard -- @pathspecs 2>$null) -join "`n")
+
+# allowlist 밖 변경도 **목록만** 뽑는다 — 코덱스가 범위 이탈 여부를 판단할 근거는 주되,
+# 그것을 실행자 산출물 diff와 섞지 않는다.
+$allChanged = @(& git diff --name-only HEAD 2>$null) + @(& git ls-files --others --exclude-standard 2>$null)
+$inScope = @(& git diff --name-only HEAD -- @pathspecs 2>$null) + @(& git ls-files --others --exclude-standard -- @pathspecs 2>$null)
+$outOfScope = @($allChanged | Where-Object { $_ -and ($inScope -notcontains $_) })
+
 $headSha = ((& git rev-parse HEAD 2>$null) | Select-Object -First 1).Trim()
 Pop-Location
 
@@ -52,7 +96,7 @@ $ErrorActionPreference = $prevEap
 [Console]::OutputEncoding = $prevOut
 
 if ([string]::IsNullOrWhiteSpace($diff) -and [string]::IsNullOrWhiteSpace($untracked)) {
-  throw "검수 중단: diff가 비었다. 실행자 산출물이 이미 커밋됐거나 아직 안 나왔다."
+  throw "검수 중단: allowlist 경로의 diff가 비었다. 실행자 산출물이 이미 커밋됐거나 아직 안 나왔다."
 }
 
 # 저장소를 사본으로 복사한다 — 원본은 코덱스 시야에서 완전히 제외한다.
@@ -103,6 +147,21 @@ $evidenceDir = Join-Path $copyRoot '_review'
 New-Item -ItemType Directory -Force -Path $evidenceDir | Out-Null
 Write-Utf8NoBom (Join-Path $evidenceDir 'CHANGES.diff') $diff
 Write-Utf8NoBom (Join-Path $evidenceDir 'UNTRACKED.txt') $untracked
+Write-Utf8NoBom (Join-Path $evidenceDir 'ALLOWLIST.txt') ($allowlist -join "`n")
+# allowlist 밖 변경 목록 — **실행자 산출물이 아닐 수 있다**는 경고와 함께 별도 파일로 넘긴다.
+Write-Utf8NoBom (Join-Path $evidenceDir 'OUT-OF-SCOPE.txt') (@(
+  '# allowlist 밖에서 변경된 파일 목록',
+  '#',
+  '# ⚠ 이것들은 실행자의 산출물이 아닐 수 있다.',
+  '#   저장소에는 실행자와 무관한 미커밋 변경이 상존한다:',
+  '#   - dashboard/data/**  : measure/게이트가 실행될 때마다 쓰는 런타임 데이터',
+  '#   - outputs/**         : 발사기·하네스·검수자가 만드는 로그와 증거',
+  '#   - docs/**            : 검수자가 같은 세션에 쓴 문서',
+  '#',
+  '# 범위 이탈을 판정하려면 **누가 언제 썼는지**를 확인해야 한다.',
+  '# 이 목록만으로 "실행자가 allowlist를 어겼다"고 단정하지 마라.',
+  ''
+) + $outOfScope) -join "`n"
 Assert-Utf8NoBom (Join-Path $evidenceDir 'CHANGES.diff')
 Assert-Utf8NoBom (Join-Path $evidenceDir 'UNTRACKED.txt')
 
@@ -115,8 +174,19 @@ $prompt = @"
 
 작업 ID: $TaskId
 계약(지시서): docs/handoff/queue/$($directive.Name)
-변경 내용: _review/CHANGES.diff (추적 파일의 diff) · _review/UNTRACKED.txt (신규 파일 목록)
 기준 커밋: $headSha
+
+**입력 파일:**
+- ``_review/ALLOWLIST.txt``   — 실행자가 만질 수 있었던 경로 목록(계약)
+- ``_review/CHANGES.diff``    — **allowlist 경로의 변경분만.** 이것이 실행자의 산출물이다
+- ``_review/UNTRACKED.txt``   — allowlist 경로의 신규 파일
+- ``_review/OUT-OF-SCOPE.txt``— allowlist 밖 변경 **목록**
+
+⚠ **``OUT-OF-SCOPE.txt``를 보고 "실행자가 범위를 어겼다"고 단정하지 마라.**
+이 저장소에는 실행자와 무관한 미커밋 변경이 **상존한다** — ``dashboard/data/**``(measure가 실행될 때마다 쓴다) ·
+``outputs/**``(발사기·하네스·검수자의 로그) · ``docs/**``(검수자가 같은 세션에 쓴 문서).
+**과거에 검수자가 저장소 전체 diff를 넘겨서, 네가 "allowlist 밖 파일을 수정했다"는 없는 결함을 보고한 적이 있다.**
+**범위 이탈을 주장하려면 "누가 언제 썼는지"의 근거가 필요하다.** 근거가 없으면 **"확인 못 한 것"에 적어라.**
 
 ## 왜 네가 있는가
 
