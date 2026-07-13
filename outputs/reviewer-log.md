@@ -1863,3 +1863,161 @@ Get-Content $p -Raw -Encoding UTF8 → {"blockers":["pending-duplicate: state에
 ### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
 
 - **`run-codex-review.ps1`을 고쳤지만, 그 스크립트로 실제 검수를 돌려보지는 않았다.** 지금까지의 코덱스 검수는 전부 **인라인 명령**으로 했다. 스크립트 자체는 **미검증**이다. 06C-1-R1 검수 때 처음 쓴다 — **그때 왕복이 깨지면 스크립트를 믿지 마라.**
+
+---
+
+## 2026-07-14 ★ 실측 사고 — 빈 인자 `dotnet run`이 **웹서버를 띄워 실행자를 12분간 교착**시켰다
+
+- **주체**: 검수자(claude-opus)가 관측·개입. 06C-1-R1 실행 중(PID 16620).
+
+### 증상 → 진단
+
+06C-1-R1이 39분째인데 **12분간 산출물이 없었다.** 죽었나 싶었지만 **프로세스는 살아 있었다.**
+
+**프록시로 단정하지 않고 쟀다:**
+
+```
+claude PID 16620 : CPU 20초간 증가 0    ← 일을 안 한다
+dotnet PID  7112 : 살아 있음, CPU 증가 0, 11.9분째
+  커맨드라인: dotnet run --project server -c Release --no-build --      ← ★ `--` 뒤가 비었다
+  자식: LocalFirstWorkflowDashboard.Server.exe (PID 3684)
+```
+
+**CLI 명령 없이 `dotnet run ... --`를 부르면 웹서버가 뜬다. 그리고 영원히 안 끝난다.**
+실행자는 그 프로세스의 종료를 기다리며 멈춰 있었다.
+
+### 이건 실행자 실수가 아니라 **저장소의 fail-silent 결함이다**
+
+SESSION-BRIEF의 함정 #3("미인식 명령이면 조용히 웹서버가 떴다")은 **절반만 고쳐졌다.**
+`GUARD-01`이 **미인식 명령 → exit 2**를 넣었다. 그러나 **인자가 아예 없는 경우는 "미인식"이 아니다** —
+**"웹서버 기동"이라는 정상 경로**다. 그래서 fail-closed가 발동하지 않는다.
+
+**비대화(headless) 발사 컨텍스트에서 웹서버를 띄우는 것은 언제나 사고다.**
+실행자는 stdout을 기다리고, 웹서버는 stdout을 안 닫는다. **교착.**
+
+### 조치
+
+- **웹서버(3684)와 그 부모(7112)를 죽였다.** 실행자는 **재개했다**(`T-TEST-001.*` 00:33:43 신규 기록으로 확인).
+- **실행자를 죽이지 않았다.** 39분·한도 창을 버리는 것보다 최소 개입이 낫다.
+- **개입 사실을 여기 남긴다.** 검수자가 실행 중인 저장소 상태에 개입했다 — **06C-1-R1 산출물 판정 시 이 개입을 고려해야 한다.**
+  (개입은 외부 프로세스 종료뿐. 파일·코드는 건드리지 않았다.)
+
+### `CODEX-GATE-04`에 추가할 항목 (§5-5)
+
+**빈 인자 `dotnet run --project server -- ` 는 발사 컨텍스트에서 fail-closed 해야 한다.**
+
+- 웹서버 기동은 **명시적 의사표시**를 요구한다(예: `serve` 서브커맨드, 또는 `--serve` 플래그).
+- 인자 없이 부르면 **exit 2 + usage.** 지금은 웹서버가 뜬다.
+- **반증 시험**: 비대화 컨텍스트에서 `dotnet run --project server -c Release -- ` (빈 인자) → **exit 2, 프로세스가 끝난다.**
+- 근거: 이 결함으로 실행자가 **12분간 교착**했고, 사람이 개입하지 않았으면 **한도 창까지 태웠을 것이다.**
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **왜 실행자가 빈 인자로 불렀는지는 모른다.** `sonnet-06C-1-R1.out.jsonl`이 종료 시에만 떨어지므로 실시간으로 확인할 수 없었다. **완료 후 그 로그에서 원인을 확인해야 한다.** 지금 시점에서 "실행자가 실수했다"고 단정하지 않는다 — **주체 미상.**
+
+---
+
+## 2026-07-14 검수 — 06C-1-R1: **FAIL**. legacy는 지워졌다. 그런데 **"삭제"가 아니라 "무시"다**
+
+- **생산**: sonnet(ADR-015). PID 16620, exit 0, 37턴. 자기보고 15/16 PASS + 1 NOT_VERIFIED.
+- **검수**: 검수자 재실행 + **코덱스 독립 검수**(새 `run-codex-review.ps1` 첫 실전, 4건 지적).
+- **개입 고지**: 실행 중 검수자가 교착된 웹서버 프로세스를 죽였다(코드·파일 무접촉).
+
+### 확인된 것 — 본체는 잘 지웠다
+
+| 항목 | 결과 |
+| --- | --- |
+| `--human-decision` · `ValidateHumanDecision` · `HumanDecisionPath` · `--expected-workstate-sha256` | **잔존 0건** ✓ |
+| `--root` · `canonicalMode` · `opts.Root` · `_ST_SEAM` · `GetEnvironmentVariable` | **잔존 0건** ✓ |
+| `StateApplierCli.cs` 줄수 | 1131 → **869** (262줄 삭제) |
+| contract hash **재계산** | `:540 var computed = ComputeContractHash(...)` ✓ · `envelope-contract-mismatch` 존재 ✓ |
+| `build -c Release` · `callsite-check` · `measure` · `at-rest` | **0 · 0 · 0 · 1**(설계된 참 양성) ✓ |
+
+`--transition-id` 잔존 2건은 **새 `prepare` 경로의 usage 문구**다 — legacy 잔재 아님.
+
+### ★ 반려 사유 A — 옵션이 **삭제된 게 아니라 무시된다** (코덱스 #2·#3, 검수자 실증)
+
+```
+state-transition prepare --transition-id T-X --request nonexistent.json --human-decision fake.json
+state-transition prepare ... --root C:\somewhere
+state-transition prepare ... --bogus-flag zzz
+  → 넷 다 exit 2. 그러나 오류 문구는 {"error":"request ... nonexistent.json"}
+     = "파일 없음"이지 usage 거부가 아니다. 옵션이 파싱을 통과했다.
+```
+
+**대조군(옵션 없음)도 같은 exit·같은 문구** — exit code만 보면 구분되지 않는다.
+지시서 §1-1은 **"그 외 인자 조합은 exit 2 + usage"**를 요구했다. **위반.**
+
+> **silent ignore가 삭제보다 위험하다.** `--root C:\copy`를 믿고 붙이면 **오류 없이 canonical에 적용된다.**
+> 사본에 적용됐다고 믿으면서. `--human-decision approved.json`도 마찬가지 — 승인이 먹혔다고 믿는다.
+> **조용한 거짓말은 시끄러운 거절보다 나쁘다.**
+
+### ★ 반려 사유 B — `.txt`가 callsite 스캔 범위 밖. **발사 프롬프트가 전부 `.txt`다**
+
+`StateTransitionCallsiteCheckCli.cs:16-21` `ActiveExtensions` = `.cs .ps1 .sh .cmd .bat .json .yaml .yml .md` — **`.txt` 없음.**
+
+**같은 경로, 확장자만 바꿔 격리:**
+
+```
+outputs/launch/ZZ-bait.ps1 → exit 1  잡음
+outputs/launch/ZZ-bait.txt → exit 0  ★ 못 잡음
+outputs/launch/ZZ-bait.md  → exit 1  잡음
+```
+
+**`outputs/launch/*.prompt.txt` 23개 = 발사 프롬프트 전부.** 원 지시서 §7은 **`outputs/launch/**`(모든 파일)**이라 했다.
+실행자는 `outputs/launch/`를 historical에서 뺐고(그건 맞다), **`.ps1`/`.md`로 시험해 판정선 13을 PASS 받았다.**
+**실제 위험 지점은 그대로 뚫려 있다** — 발사 프롬프트에 legacy 호출이 있으면 실행자가 삭제된 명령을 실행하려 든다.
+
+### ★ 반려 사유 C — historical allowlist가 여전히 **접두사**다 (코덱스 #4, 검수자 실증)
+
+```
+docs/wiki/ZZ-live-runbook.md      → exit 0  ★ 숨겨진다
+docs/verification/ZZ-bait.md      → exit 0  ★ 숨겨진다
+docs/handoff/queue/ZZ-bait.md     → exit 0  ★ 숨겨진다
+```
+
+지시서 §1-6: **"historical allowlist는 경로 접두사가 아니라 명시 파일 목록이어야 한다."** 위반.
+**그 접두사 아래 새로 만든 운영 문서는 legacy 호출을 영원히 숨긴다.**
+
+### ★ 반려 사유 D — rollback(결함 2)의 **유일한 시험이 없다**
+
+판정선 9 `NOT_VERIFIED` — 실행자 자진신고: *"새 프로세스에서 in-process 훅을 설정할 수 없다."* **맞는 말이다.**
+환경변수 seam을 없앤 것은 옳다(`:73 internal static Func<string?>? FailAfterWriteHook`). 그러나 **이제 아무도 rollback을 시험할 수 없다.**
+
+**결함 2(post-apply 실패 시 rollback 없음)는 이 WP의 존재 이유 중 하나다. 고쳤다는 증거가 없다.**
+
+**이것은 내 지시서의 공백이다.** "in-process 훅으로 바꿔라"까지만 쓰고 **어떻게 시험할지를 안 줬다.**
+**답은 이미 저장소에 있다 — 05H-R2의 `--self-test` 패턴**(in-process 단언 실행기, 고정 fixture, 하드코딩 기대값).
+**06C-1-R2는 `state-transition --self-test`를 만들어야 한다.**
+
+### 코덱스 #1 (검수자 미확인 — R2가 실증해야)
+
+*"`envelope.transitionContractSha256` 위조 검사가 **기존 transitionId일 때만** 실행된다(`:234-235`, `:513-560`).
+**새 전이**의 envelope에서 그 필드만 위조하면 검사되지 않는다."*
+→ 실증하려면 완전한 prepare→apply 왕복이 필요하다. **코덱스 보고도 증거가 아니다** — R2가 반증 시험으로 확정하라.
+
+### ★★ 검수자 과실 — **내가 `docs/wiki` 42파일을 지웠다**
+
+반증 G를 돌리며 `New-Item -ItemType Directory -Force -Path docs\wiki`로 **만들었다고 착각**하고,
+정리 단계에서 `Remove-Item docs\wiki -Recurse -Force`를 실행했다. **`docs/wiki`는 원래 있었다** — FAIL 사례 42건이 사는 곳이다.
+
+`git checkout -- docs/wiki`로 즉시 복구했다(**42파일 · git clean 확인**). 저장소 손실 없음.
+
+**교훈**: **정리 코드에서 `-Recurse`를 쓰기 전에 그 디렉터리가 원래 있었는지 먼저 확인하라.**
+`New-Item -Force`는 이미 있으면 조용히 성공한다 — **"내가 만들었다"의 증거가 아니다.**
+**또 프록시다.** 오늘만 네 번째다.
+
+### 검수 배선 사고 2건 (고침)
+
+1. **`run-codex-review.ps1`에 BOM이 없었다** → PS 5.1이 **스크립트 소스의 한글 리터럴을 코드페이지로 읽어 파괴**했다.
+   검수 패킷이 `?덈뒗 ?낅┰ 寃?섏옄??`로 나갔다. **U+FFFD가 0이라 내 assert도 못 잡았다**(깨진 바이트가 유효 UTF-8이 됐다).
+   **`run-executor.ps1`은 BOM이 있다**(`efbbbf`) — 그래서 그 한글 정규식이 작동한다. **내 스크립트만 없었다.** BOM 추가로 왕복 확인.
+2. **git이 stderr로 낸 경고 하나("CRLF will be replaced by LF")로 스크립트 전체가 죽었다**
+   (`$ErrorActionPreference='Stop'` + `NativeCommandError`). git 호출 구간만 `Continue`로 낮췄다.
+   **exit code로 판정하고 stderr 문구로 판정하지 않는다** — CLAUDE.md 규칙 그대로다.
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **코덱스 4건 중 3건만 실증했다.** #1(새 전이 self-hash)은 미확인 — **표시했다.**
+- **`docs/wiki` 삭제 사고**를 냈다. 복구했지만 **검수자가 저장소를 파괴할 뻔했다.** 반증 시험에 쓰는 임시 파일은 **저장소 밖(`$TEMP`)에 만들어야 한다.** 오늘 fixture 오염 시험(반증 C)도 저장소 안에서 했다 — 운이 좋았다.
+- **판정선 9(rollback) 공백은 내 지시서 탓이다.** 실행자를 반려하지만 **원인의 절반은 나다.** 세 번째다.

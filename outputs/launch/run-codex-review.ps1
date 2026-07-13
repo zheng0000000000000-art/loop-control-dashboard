@@ -1,4 +1,4 @@
-# 코덱스를 read-only로 발사해 실행자 산출물을 독립 검수한다. 쓰기가 없으므로 범위 대조가 필요 없다.
+﻿# 코덱스를 read-only로 발사해 실행자 산출물을 독립 검수한다. 쓰기가 없으므로 범위 대조가 필요 없다.
 # 왜: ADR-002는 "만든 사람이 검증하면 같은 착각을 코드에 새긴다"를 막는다. ADR-015 예외 기간 동안
 #     생산(sonnet)과 검증(sonnet)이 같은 actor가 됐다. 코덱스를 read-only 검수자로 붙여 주체를 다시 분리한다.
 # 사용: powershell -NoProfile -File run-codex-review.ps1 -TaskId 06C-1
@@ -33,13 +33,22 @@ if (-not $directive) { throw "검수 중단: 지시서를 못 찾았다 — dire
 $prevOut = [Console]::OutputEncoding
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
+# ★ git은 정상 동작 중에도 stderr로 경고를 쓴다("CRLF will be replaced by LF" 등).
+# $ErrorActionPreference='Stop' 이면 PowerShell이 그 경고를 **치명적 오류(NativeCommandError)**로 승격시켜
+# 스크립트를 죽인다. 실측 사고(2026-07-14): 이것 하나로 검수 배선 전체가 조용히 죽었다.
+# → git을 부르는 동안만 'Continue'로 낮춘다. **exit code로 판정하고, stderr 문구로 판정하지 않는다.**
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+
 # 검수 대상 diff를 뽑는다 — 이것이 코덱스가 볼 실체다.
 Push-Location $root
-$diff = & git diff HEAD -- . 2>$null | Out-String
-$untracked = (& git ls-files --others --exclude-standard 2>$null) -join "`n"
-$headSha = (& git rev-parse HEAD 2>$null).Trim()
+$diff = (& git diff HEAD -- . 2>$null | Out-String)
+if ($LASTEXITCODE -ne 0) { Pop-Location; $ErrorActionPreference = $prevEap; throw "git diff 실패 (exit $LASTEXITCODE)" }
+$untracked = ((& git ls-files --others --exclude-standard 2>$null) -join "`n")
+$headSha = ((& git rev-parse HEAD 2>$null) | Select-Object -First 1).Trim()
 Pop-Location
 
+$ErrorActionPreference = $prevEap
 [Console]::OutputEncoding = $prevOut
 
 if ([string]::IsNullOrWhiteSpace($diff) -and [string]::IsNullOrWhiteSpace($untracked)) {

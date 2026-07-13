@@ -38,6 +38,12 @@ internal static class StateApplierCli
         "waiting", "in_progress", "verifying", "blocked",
     };
 
+    // 허용 transitionKind 목록 — 이 밖은 unknown-transition-kind로 fail-closed.
+    private static readonly HashSet<string> ValidTransitionKinds = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "NORMAL", "PHASE_CHANGE", "RECOVERY", "REPLAY",
+    };
+
     // high-risk transitionKind — receipt ledger 부재로 이번 WP에서 fail-closed.
     private static readonly HashSet<string> HighRiskKinds = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -58,22 +64,15 @@ internal static class StateApplierCli
         string CandidatePath);
 
     // prepare 부속 명령 옵션.
-    private record PrepareOptions(string TransitionId, string RequestPath, string? Root, bool DryRun);
+    private record PrepareOptions(string TransitionId, string RequestPath, bool DryRun);
 
     // apply 부속 명령 옵션.
-    private record ApplyOptions(string EnvelopePath, string? VerdictPath, string? Root, bool DryRun);
+    private record ApplyOptions(string EnvelopePath, string? VerdictPath, bool DryRun);
 
-    // 이전 단일-샷 CLI 옵션 (backward compat).
-    private record LegacyOptions(
-        string TransitionId,
-        string ExpectedSha256,
-        string RequestPath,
-        string? VerdictPath,
-        string? HumanDecisionPath,
-        string? Root,
-        bool DryRun);
+    // 결정적 test seam — 같은 프로세스의 자기 시험 코드만 설정할 수 있다. production 진입점(CLI·환경변수·설정파일)에서 켤 수 없음.
+    internal static Func<string?>? FailAfterWriteHook;
 
-    // state-transition 진입점. prepare/apply/legacy를 args[1]로 분기한다.
+    // state-transition 진입점. prepare/apply를 args[1]로 분기하고 그 외는 exit 2.
     internal static int Run(string[] args)
     {
         var sub = args.Length > 1 ? args[1] : "";
@@ -81,7 +80,8 @@ internal static class StateApplierCli
             return RunPrepare(args);
         if (string.Equals(sub, "apply", StringComparison.OrdinalIgnoreCase))
             return RunApply(args);
-        return RunLegacy(args);
+        Console.Error.WriteLine("{\"error\":\"state-transition usage: prepare --transition-id <id> --request <file> | apply --envelope <file>\"}");
+        return 2;
     }
 
     // prepare: WORKSTATE를 읽어 결정적 candidate를 계산하고 envelope+candidate를 출력 디렉터리에 기록한다.
@@ -95,7 +95,7 @@ internal static class StateApplierCli
         }
         try
         {
-            var root = string.IsNullOrWhiteSpace(opts.Root) ? GitTools.FindRepoRoot() : opts.Root;
+            var root = GitTools.FindRepoRoot();
             var workstatePath = Path.Combine(root, "docs", "handoff", "WORKSTATE.json");
             if (!File.Exists(workstatePath)) { WriteError("WORKSTATE.json not found"); return 2; }
 
@@ -199,39 +199,19 @@ internal static class StateApplierCli
         var envelope = ReadEnvelope(opts.EnvelopePath);
         if (envelope is null) return 2;
 
+        // unknown transitionKind는 fail-closed — NORMAL/PHASE_CHANGE/RECOVERY/REPLAY 외 거부.
+        if (!ValidTransitionKinds.Contains(envelope.TransitionKind))
+            return Fail(1, envelope.TransitionId, "unknown-transition-kind",
+                $"transitionKind='{envelope.TransitionKind}'은 알 수 없는 종류입니다 (허용: NORMAL, PHASE_CHANGE, RECOVERY, REPLAY)");
+
         // high-risk transitionKind — receipt ledger 부재로 항상 fail-closed.
         if (HighRiskKinds.Contains(envelope.TransitionKind))
             return Fail(1, envelope.TransitionId, "trusted-human-receipt-required",
                 $"transitionKind={envelope.TransitionKind}는 receipt ledger 부재로 이번 WP에서 fail-closed");
 
-        string root, workstatePath, logPath;
-        bool canonicalMode;
-        try
-        {
-            root = string.IsNullOrWhiteSpace(opts.Root) ? GitTools.FindRepoRoot() : opts.Root;
-            workstatePath = Path.Combine(root, "docs", "handoff", "WORKSTATE.json");
-            logPath = Path.Combine(root, "docs", "handoff", "WORKSTATE.applier-log.jsonl");
-            canonicalMode = string.IsNullOrWhiteSpace(opts.Root);
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"{{\"error\":\"root 결정 실패: {ex.Message}\"}}");
-            return 2;
-        }
-
-        if (!File.Exists(workstatePath)) { WriteError("WORKSTATE.json not found"); return 2; }
-
-        byte[] rawWorkstateBytes;
-        JsonObject workstate;
-        string rawWorkstateStr;
-        try
-        {
-            rawWorkstateBytes = File.ReadAllBytes(workstatePath);
-            rawWorkstateStr = Encoding.UTF8.GetString(rawWorkstateBytes);
-            workstate = JsonNode.Parse(rawWorkstateStr)?.AsObject()
-                ?? throw new InvalidOperationException("WORKSTATE.json is not a valid JSON object");
-        }
-        catch (Exception ex) { WriteError(ex.Message); return 2; }
+        var ctx = LoadWorkstateContext();
+        if (ctx is null) return 2;
+        var (root, workstatePath, logPath, rawWorkstateBytes, workstate, rawWorkstateStr) = ctx.Value;
 
         // Step 1: request sha256 + candidate file hash 검증.
         var (_, request, evidenceExit) = VerifyApplyEvidence(envelope);
@@ -261,8 +241,27 @@ internal static class StateApplierCli
 
         // Steps 7-10: atomic write + post-apply 검사 + v2 log.
         return RunApplyCommitPhase(
-            envelope, workstatePath, logPath, canonicalMode,
+            envelope, workstatePath, logPath,
             rawWorkstateBytes, workstate, recompCandidate!, recompBytes!);
+    }
+
+    // 저장소 루트를 찾고 WORKSTATE를 로드한다. 실패 시 null 반환(오류는 stderr에 기록).
+    private static (string root, string workstatePath, string logPath, byte[] rawBytes, JsonObject workstate, string rawStr)?
+        LoadWorkstateContext()
+    {
+        try
+        {
+            var root = GitTools.FindRepoRoot();
+            var wsPath = Path.Combine(root, "docs", "handoff", "WORKSTATE.json");
+            var lPath = Path.Combine(root, "docs", "handoff", "WORKSTATE.applier-log.jsonl");
+            if (!File.Exists(wsPath)) { WriteError("WORKSTATE.json not found"); return null; }
+            var bytes = File.ReadAllBytes(wsPath);
+            var raw = Encoding.UTF8.GetString(bytes);
+            var ws = JsonNode.Parse(raw)?.AsObject()
+                ?? throw new InvalidOperationException("WORKSTATE.json is not a valid JSON object");
+            return (root, wsPath, lPath, bytes, ws, raw);
+        }
+        catch (Exception ex) { WriteError(ex.Message); return null; }
     }
 
     // request sha256 + candidate file hash를 검증한다. 성공 시 (rawRequest, request, null) 반환.
@@ -343,7 +342,7 @@ internal static class StateApplierCli
 
     // Steps 7-10: preimage 저장 → atomic write → test seam → post-apply 검사 → v2 log append.
     private static int RunApplyCommitPhase(
-        EnvelopeData envelope, string workstatePath, string logPath, bool canonicalMode,
+        EnvelopeData envelope, string workstatePath, string logPath,
         byte[] rawWorkstateBytes, JsonObject workstate, JsonObject recomputedCandidate, byte[] recomputedBytes)
     {
         // Step 7: preimage 저장 — atomic replace 전에 반드시 저장해야 한다.
@@ -354,20 +353,15 @@ internal static class StateApplierCli
         try { var t = workstatePath + ".stateapplier.tmp"; File.WriteAllBytes(t, recomputedBytes); File.Move(t, workstatePath, overwrite: true); }
         catch (Exception ex) { WriteError($"atomic write 실패: {ex.Message}"); return 2; }
 
-        // 결정적 test seam — atomic replace 직후 실패 주입 (production 노출 플래그 아님).
-        var seamFail = Environment.GetEnvironmentVariable("_ST_SEAM_FAIL_AFTER_WRITE") == "1"
-            ? "test seam: _ST_SEAM_FAIL_AFTER_WRITE" : null;
+        // 결정적 test seam — in-process 훅만 허용. 환경변수는 읽지 않는다.
+        var seamFail = FailAfterWriteHook?.Invoke();
         if (seamFail is not null)
-            return Rollback(workstatePath, logPath, preimage, preimageHash, envelope, seamFail, canonicalMode);
+            return Rollback(workstatePath, logPath, preimage, preimageHash, envelope, seamFail);
 
-        // Step 9: 적용후 검사.
-        // canonical mode에서만 projection 실행(--root 사본에서 projection을 실행하면 실 저장소를 덮어쓴다).
-        if (canonicalMode)
-        {
-            var projExit = ProjectionCli.Run(["projection"]);
-            if (projExit != 0)
-                return Rollback(workstatePath, logPath, preimage, preimageHash, envelope, "projection-failed", true);
-        }
+        // Step 9: 적용후 검사 — 항상 projection 실행.
+        var projExit = ProjectionCli.Run(["projection"]);
+        if (projExit != 0)
+            return Rollback(workstatePath, logPath, preimage, preimageHash, envelope, "projection-failed");
 
         // 내부 checker — PendingTransitionId로 pending 면제 경로를 실증한다.
         ReconciliationResult reconAfter;
@@ -375,14 +369,14 @@ internal static class StateApplierCli
         catch (Exception ex)
         {
             return Rollback(workstatePath, logPath, preimage, preimageHash, envelope,
-                $"post-apply checker 실행 실패: {ex.Message}", canonicalMode);
+                $"post-apply checker 실행 실패: {ex.Message}");
         }
 
         if (reconAfter.Failures.Count > 0 || reconAfter.HarnessErrors.Count > 0)
         {
             var codes = string.Join("; ", reconAfter.Failures.Concat(reconAfter.HarnessErrors).Select(f => f.Code));
             return Rollback(workstatePath, logPath, preimage, preimageHash, envelope,
-                $"post-apply-integrity-failed: {codes}", canonicalMode);
+                $"post-apply-integrity-failed: {codes}");
         }
 
         // Step 10: v2 log append — 성공 경로에서만.
@@ -422,7 +416,7 @@ internal static class StateApplierCli
     // rollback: preimage를 복원하고 FATAL taxonomy에 따라 exit code와 로그를 결정한다.
     private static int Rollback(
         string workstatePath, string logPath, byte[] preimage, string preimageHash,
-        EnvelopeData envelope, string failureReason, bool canonicalMode)
+        EnvelopeData envelope, string failureReason)
     {
         try
         {
@@ -442,21 +436,18 @@ internal static class StateApplierCli
                 return 2;
             }
 
-            // canonical mode에서만 rollback 후 projection 재생성 시도.
-            if (canonicalMode)
+            // rollback 후 항상 projection 재생성 시도.
+            var projExit = ProjectionCli.Run(["projection"]);
+            if (projExit != 0)
             {
-                var projExit = ProjectionCli.Run(["projection"]);
-                if (projExit != 0)
+                AppendLogSafe(logPath, envelope.TransitionId, "STATE_RESTORED_PROJECTION_NOT_VERIFIED", 2);
+                Console.Error.WriteLine(new JsonObject
                 {
-                    AppendLogSafe(logPath, envelope.TransitionId, "STATE_RESTORED_PROJECTION_NOT_VERIFIED", 2);
-                    Console.Error.WriteLine(new JsonObject
-                    {
-                        ["fatal"] = "STATE_RESTORED_PROJECTION_NOT_VERIFIED",
-                        ["transitionId"] = envelope.TransitionId,
-                        ["detail"] = "WORKSTATE 복원 성공, projection 재생성 실패 — HUMAN-INBOX 필요.",
-                    }.ToJsonString());
-                    return 2;
-                }
+                    ["fatal"] = "STATE_RESTORED_PROJECTION_NOT_VERIFIED",
+                    ["transitionId"] = envelope.TransitionId,
+                    ["detail"] = "WORKSTATE 복원 성공, projection 재생성 실패 — HUMAN-INBOX 필요.",
+                }.ToJsonString());
+                return 2;
             }
 
             AppendLogSafe(logPath, envelope.TransitionId, "ROLLED_BACK", 1);
@@ -481,137 +472,6 @@ internal static class StateApplierCli
             }.ToJsonString());
             return 2;
         }
-    }
-
-    // RunLegacy: 이전 단일-샷 방식(--transition-id 등). reconciliation이 추가됐다.
-    private static int RunLegacy(string[] args)
-    {
-        var opts = ParseLegacyArgs(args);
-        if (opts is null)
-        {
-            Console.Error.WriteLine("{\"error\":\"--transition-id, --expected-workstate-sha256, --request 가 모두 필요합니다\"}");
-            return 2;
-        }
-        try
-        {
-            var root = string.IsNullOrWhiteSpace(opts.Root) ? GitTools.FindRepoRoot() : opts.Root;
-            var workstatePath = Path.Combine(root, "docs", "handoff", "WORKSTATE.json");
-            if (!File.Exists(workstatePath)) { WriteError("WORKSTATE.json not found"); return 2; }
-
-            var raw = File.ReadAllText(workstatePath, new UTF8Encoding(false));
-            var workstate = JsonNode.Parse(raw)?.AsObject();
-            if (workstate is null) { WriteError("WORKSTATE.json is not a valid JSON object"); return 2; }
-
-            // Step 1: 낙관적 동시성 — sha256 불일치 시 쓰지 않는다.
-            var currentSha = ComputeSha256(raw);
-            if (!string.Equals(currentSha, opts.ExpectedSha256, StringComparison.OrdinalIgnoreCase))
-                return Fail(1, opts.TransitionId, "sha256-mismatch",
-                    $"expected={Short(opts.ExpectedSha256)} actual={Short(currentSha)}");
-
-            var logPath = Path.Combine(root, "docs", "handoff", "WORKSTATE.applier-log.jsonl");
-
-            // Step 2: reconciliation — idempotency보다 먼저 실행해 가짜 id 공격을 막는다.
-            var reconResult = HandoffIntegrityChecker.Run(new ReconciliationOptions(workstatePath, logPath));
-            if (reconResult.Failures.Count > 0 || reconResult.HarnessErrors.Count > 0)
-            {
-                var codes = string.Join("; ", reconResult.Failures.Concat(reconResult.HarnessErrors).Select(f => f.Code));
-                return Fail(1, opts.TransitionId, "state-corrupted-preapply", codes);
-            }
-
-            // Step 3: 멱등 판정 (reconciliation 통과 후).
-            if (IsAlreadyAppliedWithLog(workstate, reconResult, opts.TransitionId, out var legacyIdempotentExit))
-                return legacyIdempotentExit;
-
-            var actualRoot = string.IsNullOrWhiteSpace(opts.Root) ? GitTools.FindRepoRoot() : root;
-            return ApplyLegacy(workstatePath, logPath, workstate, opts, actualRoot);
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"{{\"error\":\"state-transition 실패: {ex.Message}\"}}");
-            return 2;
-        }
-    }
-
-    // ApplyLegacy: 이전 단일-샷 경로의 검증·쓰기·post-apply를 실행한다.
-    private static int ApplyLegacy(
-        string workstatePath, string logPath, JsonObject workstate,
-        LegacyOptions opts, string actualRoot)
-    {
-        if (!File.Exists(opts.RequestPath)) { WriteError($"request file not found: {opts.RequestPath}"); return 2; }
-        var request = JsonNode.Parse(File.ReadAllText(opts.RequestPath))?.AsObject();
-        if (request is null) { WriteError("request JSON은 JSON 객체여야 한다"); return 2; }
-
-        var validErr = ValidateRequest(request, opts, workstate, actualRoot);
-        if (validErr is not null) return Fail(1, opts.TransitionId, "validation-failed", validErr);
-
-        var effectiveAt = DateTime.UtcNow.ToString("o");
-        var candidate = BuildCandidate(workstate, request, opts.TransitionId, effectiveAt);
-
-        if (opts.DryRun) return ApplyLegacyDryRun(workstate, candidate, opts, actualRoot);
-
-        var tmpPath = workstatePath + ".stateapplier.tmp";
-        var candidateJson = candidate.ToJsonString(WriteOptions);
-        File.WriteAllText(tmpPath, candidateJson, new UTF8Encoding(false));
-
-        var candidateCheck = JsonNode.Parse(File.ReadAllText(tmpPath))?.AsObject();
-        var recheckErr = candidateCheck is null ? "임시 파일 파싱 실패" : ValidateCandidate(candidateCheck, actualRoot);
-        if (recheckErr is not null) { File.Delete(tmpPath); return Fail(1, opts.TransitionId, "candidate-invalid", recheckErr); }
-
-        File.Move(tmpPath, workstatePath, overwrite: true);
-
-        // canonical mode에서만 post-apply 실행.
-        if (string.IsNullOrWhiteSpace(opts.Root))
-        {
-            var postExit = RunLegacyPostApply(logPath, opts);
-            if (postExit != 0) return postExit;
-        }
-
-        var newSha = ComputeSha256(File.ReadAllText(workstatePath, new UTF8Encoding(false)));
-        AppendApplierLog(logPath, opts.TransitionId, "ok", 0);
-        Console.WriteLine(new JsonObject
-        {
-            ["ok"] = true,
-            ["transitionId"] = opts.TransitionId,
-            ["previousStatus"] = workstate["status"]?.ToString(),
-            ["newStatus"] = candidate["status"]?.ToString(),
-            ["workstateSha256"] = newSha,
-        }.ToJsonString(WriteOptions));
-        return 0;
-    }
-
-    // ApplyLegacyDryRun: candidate를 검증하고 결과를 출력하지만 아무것도 쓰지 않는다.
-    private static int ApplyLegacyDryRun(JsonObject workstate, JsonObject candidate, LegacyOptions opts, string actualRoot)
-    {
-        var err = ValidateCandidate(candidate, actualRoot);
-        if (err is not null) return Fail(1, opts.TransitionId, "candidate-invalid", err);
-        Console.WriteLine(new JsonObject
-        {
-            ["ok"] = true, ["dryRun"] = true,
-            ["transitionId"] = opts.TransitionId,
-            ["previousStatus"] = workstate["status"]?.ToString(),
-            ["newStatus"] = candidate["status"]?.ToString(),
-        }.ToJsonString(WriteOptions));
-        return 0;
-    }
-
-    // RunLegacyPostApply: projection과 handoff-integrity CLI를 실행한다.
-    private static int RunLegacyPostApply(string logPath, LegacyOptions opts)
-    {
-        var projExit = ProjectionCli.Run(["projection"]);
-        if (projExit != 0)
-        {
-            AppendApplierLog(logPath, opts.TransitionId, "projection-failed", projExit);
-            Console.Error.WriteLine(LegacyPostApplyError(opts.TransitionId, "projection-failed", projExit, true, false));
-            return 1;
-        }
-        var intExit = HandoffIntegrityCli.Run(["handoff-integrity"]);
-        if (intExit != 0)
-        {
-            AppendApplierLog(logPath, opts.TransitionId, $"handoff-integrity-failed exit={intExit}", intExit);
-            Console.Error.WriteLine(LegacyPostApplyError(opts.TransitionId, $"handoff-integrity exit={intExit}", intExit, true, true));
-            return 1;
-        }
-        return 0;
     }
 
     // envelope JSON을 읽어 EnvelopeData로 파싱한다. 실패 시 null 반환.
@@ -650,7 +510,7 @@ internal static class StateApplierCli
         return new EnvelopeData(sv, kind, tid, preHash, reqPath, reqSha, effAt, postHash, contractSha, candidatePath);
     }
 
-    // 전이 ID가 이미 state에 있는지 판정하고 idempotent/collision/legacy-unverifiable exit를 반환한다.
+    // 전이 ID가 이미 state에 있는지 판정하고 idempotent/collision/envelope-mismatch/legacy-unverifiable exit를 반환한다.
     private static int? CheckExistingTransition(
         JsonObject workstate, ReconciliationResult reconResult, EnvelopeData envelope)
     {
@@ -676,43 +536,28 @@ internal static class StateApplierCli
                 $"id '{envelope.TransitionId}'는 v1 log에 있음 — contract binding 검증 불가");
         }
 
-        // v2 log — envelope의 contract hash와 비교.
-        // envelope에 contractHash가 있으면 직접 비교, 없으면 계산.
-        var envelopeContractHash = string.IsNullOrWhiteSpace(envelope.TransitionContractSha256)
-            ? null : envelope.TransitionContractSha256;
+        // v2 log — envelope 구성 필드로부터 contract hash를 재계산해 비교한다 (envelope 자기신고 불신).
+        var computed = ComputeContractHash(
+            envelope.TransitionId, envelope.TransitionKind, envelope.RequestSha256,
+            envelope.ExpectedPreStateSha256, envelope.ExpectedPostStateSha256, envelope.EffectiveAt);
 
-        if (envelopeContractHash is null || !string.Equals(
-            envelopeContractHash, logInfo.TransitionContractSha256, StringComparison.OrdinalIgnoreCase))
+        // 재계산값이 log hash와 다르면 — 다른 계약의 transition-id가 충돌함.
+        if (!string.Equals(computed, logInfo.TransitionContractSha256, StringComparison.OrdinalIgnoreCase))
         {
             return Fail(1, envelope.TransitionId, "transition-id-collision",
                 $"id '{envelope.TransitionId}'는 다른 contract hash로 이미 적용됨");
         }
 
-        // 동일 contract hash — idempotent.
+        // envelope 자기신고 hash가 계산값과 다르면 — envelope 위조 탐지.
+        if (!string.IsNullOrWhiteSpace(envelope.TransitionContractSha256) &&
+            !string.Equals(envelope.TransitionContractSha256, computed, StringComparison.OrdinalIgnoreCase))
+        {
+            return Fail(1, envelope.TransitionId, "envelope-contract-mismatch",
+                $"envelope.transitionContractSha256이 계산값과 다릅니다 — 위조 또는 수정됨");
+        }
+
+        // 동일 contract — idempotent.
         return ReportIdempotent(envelope.TransitionId);
-    }
-
-    // 이전 단일-샷 경로의 멱등 판정. v2 log 항목이면 legacy-unverifiable, v1이면 idempotent.
-    private static bool IsAlreadyAppliedWithLog(
-        JsonObject workstate, ReconciliationResult reconResult, string transitionId, out int exitCode)
-    {
-        var applied = workstate["appliedTransitions"] as JsonArray;
-        if (applied is null || !applied.OfType<JsonObject>().Any(o =>
-            string.Equals(o["id"]?.ToString(), transitionId, StringComparison.OrdinalIgnoreCase)))
-        {
-            exitCode = 0;
-            return false;
-        }
-
-        reconResult.SuccessLookup.TryGetValue(transitionId, out var logInfo);
-        if (logInfo?.SchemaVersion >= 2)
-        {
-            exitCode = Fail(1, transitionId, "legacy-idempotency-unverifiable",
-                $"id '{transitionId}'는 v2 log에 있음 — legacy 경로에서 재적용 불가");
-            return true;
-        }
-        exitCode = ReportIdempotent(transitionId);
-        return true;
     }
 
     // effectiveAt을 외부에서 받아 결정적 candidate를 구성한다. UtcNow 호출 없음.
@@ -765,8 +610,7 @@ internal static class StateApplierCli
         var currentDiId = current["diId"]?.ToString() ?? "";
         var requestDiId = request["diId"]?.ToString();
 
-        // apply 경로에서 human-decision 없이 전이 그래프를 검증한다.
-        var transErr = ValidateStatusTransition(currentStatus, newStatus, currentDiId, requestDiId, null);
+        var transErr = ValidateStatusTransition(currentStatus, newStatus, currentDiId, requestDiId);
         if (transErr is not null) return transErr;
 
         var newBlockers = request["blockers"] as JsonArray ?? current["blockers"] as JsonArray ?? new JsonArray();
@@ -802,59 +646,9 @@ internal static class StateApplierCli
         return null;
     }
 
-    // request JSON의 canonical ID 패턴, status enum, DI 경계·전이 그래프·verdict·human-decision을 검증한다.
-    private static string? ValidateRequest(JsonObject request, LegacyOptions opts, JsonObject current, string root)
-    {
-        if (request["phaseId"] is JsonNode ph && !Regex.IsMatch(ph.ToString(), @"^P\d{2,}$"))
-            return $"phaseId '{ph}'는 canonical 형식(P00, P01 …)이 아닙니다";
-        if (request["wpId"] is JsonNode wp && !Regex.IsMatch(wp.ToString(), @"^WP-\d{2,}$"))
-            return $"wpId '{wp}'는 canonical 형식(WP-00 …)이 아닙니다";
-        if (request["diId"] is JsonNode di && !Regex.IsMatch(di.ToString(), @"^DI-\d{2}-\d{2,}$"))
-            return $"diId '{di}'는 canonical 형식(DI-00-05 …)이 아닙니다";
-
-        var newStatus = request["status"]?.ToString() ?? current["status"]?.ToString() ?? "";
-        if (!ValidStatuses.Contains(newStatus))
-            return $"status '{newStatus}'는 허용 목록(waiting|in_progress|verifying|completed|blocked)에 없습니다";
-
-        var currentStatus = current["status"]?.ToString() ?? "";
-        var currentDiId = current["diId"]?.ToString() ?? "";
-        var requestDiId = request["diId"]?.ToString();
-
-        var transErr = ValidateStatusTransition(currentStatus, newStatus, currentDiId, requestDiId,
-            opts.HumanDecisionPath);
-        if (transErr is not null) return transErr;
-
-        var newBlockers = request["blockers"] as JsonArray ?? current["blockers"] as JsonArray ?? new JsonArray();
-        var newNext = request["nextActions"] as JsonArray ?? current["nextActions"] as JsonArray ?? new JsonArray();
-
-        if (string.Equals(newStatus, "blocked", StringComparison.OrdinalIgnoreCase) && newBlockers.Count == 0)
-            return "status=blocked인데 blockers가 비어있습니다";
-        if (NextActionsRequired.Contains(newStatus) && newNext.Count == 0)
-            return $"status={newStatus}인데 nextActions가 비어있습니다 — 독립 재개가 실패하는 지점입니다";
-
-        if (string.Equals(newStatus, "completed", StringComparison.OrdinalIgnoreCase))
-        {
-            var targetDiId = requestDiId ?? currentDiId;
-            var wsUpdatedAt = current["updatedAt"]?.ToString() ?? "";
-            var verdictErr = ValidateVerdict(opts.VerdictPath, targetDiId, wsUpdatedAt);
-            if (verdictErr is not null) return verdictErr;
-        }
-
-        var curPhase = current["phaseId"]?.ToString();
-        var newPhase = request["phaseId"]?.ToString();
-        if (newPhase is not null && !string.Equals(newPhase, curPhase, StringComparison.OrdinalIgnoreCase))
-        {
-            var gateErr = ValidateHumanDecision(opts.HumanDecisionPath, $"Phase 전이({curPhase} → {newPhase})");
-            if (gateErr is not null) return gateErr;
-        }
-
-        return null;
-    }
-
     // DI 경계와 전이 그래프를 검사한다.
     private static string? ValidateStatusTransition(
-        string currentStatus, string newStatus, string currentDiId, string? requestDiId,
-        string? humanDecisionPath)
+        string currentStatus, string newStatus, string currentDiId, string? requestDiId)
     {
         var isNewDi = requestDiId is not null &&
                       !string.Equals(requestDiId, currentDiId, StringComparison.OrdinalIgnoreCase);
@@ -871,9 +665,9 @@ internal static class StateApplierCli
 
         if (string.Equals(currentStatus, newStatus, StringComparison.OrdinalIgnoreCase)) return null;
 
-        // completed는 terminal — 이탈하려면 human-decision 필요 (legacy 경로).
+        // completed는 terminal.
         if (string.Equals(currentStatus, "completed", StringComparison.OrdinalIgnoreCase))
-            return ValidateHumanDecision(humanDecisionPath, $"completed 상태 전이({currentStatus} → {newStatus})");
+            return $"completed 상태 전이({currentStatus} → {newStatus})는 허용되지 않습니다 — completed는 terminal 상태입니다";
 
         if (AllowedTransitions.TryGetValue(currentStatus, out var allowed) && !allowed.Contains(newStatus))
         {
@@ -921,48 +715,6 @@ internal static class StateApplierCli
             createdAt.Date < wsUpdated.Date)
         {
             return $"gate 증거가 WORKSTATE updatedAt({workstateUpdatedAt})보다 오래됐습니다(gate createdAt={createdAt:yyyy-MM-dd})";
-        }
-        return null;
-    }
-
-    // human-decision 파일이 approved=true인지 검증한다. 골격 유지 — 이 경로는 이번 WP에서 fail-closed다.
-    private static string? ValidateHumanDecision(string? decPath, string context)
-    {
-        if (string.IsNullOrWhiteSpace(decPath))
-            return $"{context}에는 --human-decision 파일이 필요합니다";
-        if (!File.Exists(decPath)) return $"human-decision file not found: {decPath}";
-        var d = JsonNode.Parse(File.ReadAllText(decPath))?.AsObject();
-        if (d is null) return "human-decision JSON이 유효하지 않습니다";
-        var approved = d["approved"]?.GetValue<bool>() ?? false;
-        return !approved ? $"{context}가 사람에게 승인되지 않았습니다(approved={approved})" : null;
-    }
-
-    // candidate WORKSTATE의 사후 조건을 검증한다.
-    private static string? ValidateCandidate(JsonObject candidate, string root)
-    {
-        var status = candidate["status"]?.ToString() ?? "";
-        if (!ValidStatuses.Contains(status)) return $"candidate status '{status}'가 유효하지 않습니다";
-
-        var blockers = candidate["blockers"] as JsonArray;
-        if (string.Equals(status, "blocked", StringComparison.OrdinalIgnoreCase) && (blockers is null || blockers.Count == 0))
-            return "candidate: status=blocked인데 blockers가 비어있습니다";
-
-        var nextActions = candidate["nextActions"] as JsonArray;
-        if (NextActionsRequired.Contains(status) && (nextActions is null || nextActions.Count == 0))
-            return $"candidate: status={status}인데 nextActions가 비어있습니다";
-
-        if (candidate["phaseId"] is JsonNode ph && !Regex.IsMatch(ph.ToString(), @"^P\d{2,}$"))
-            return $"candidate phaseId '{ph}'는 canonical 형식이 아닙니다";
-        if (candidate["wpId"] is JsonNode wp && !Regex.IsMatch(wp.ToString(), @"^WP-\d{2,}$"))
-            return $"candidate wpId '{wp}'는 canonical 형식이 아닙니다";
-        if (candidate["diId"] is JsonNode di && !Regex.IsMatch(di.ToString(), @"^DI-\d{2}-\d{2,}$"))
-            return $"candidate diId '{di}'는 canonical 형식이 아닙니다";
-
-        var wpId = candidate["wpId"]?.ToString();
-        if (!string.IsNullOrWhiteSpace(wpId))
-        {
-            var registryErr = ValidateWpRegistry(root, wpId);
-            if (registryErr is not null) return registryErr;
         }
         return null;
     }
@@ -1019,7 +771,7 @@ internal static class StateApplierCli
         File.AppendAllText(logPath, entry.ToJsonString() + "\n", new UTF8Encoding(false));
     }
 
-    // 전이 결과를 applier-log에 한 줄 추가한다(v1 format, legacy 경로용).
+    // rollback/error 이벤트를 applier-log에 한 줄 추가한다.
     private static void AppendApplierLog(string logPath, string transitionId, string result, int exitCode)
     {
         var entry = new JsonObject
@@ -1051,21 +803,6 @@ internal static class StateApplierCli
         return 0;
     }
 
-    // post-apply 단계 실패 메시지를 JSON 문자열로 만든다(legacy 경로용).
-    private static string LegacyPostApplyError(string tid, string failure, int exitCode, bool wsApplied, bool projApplied)
-    {
-        var note = projApplied
-            ? "WORKSTATE와 projection은 갱신됐으나 handoff-integrity가 실패했다"
-            : "WORKSTATE는 갱신됐으나 projection이 실패했다 — projection을 수동으로 재실행하라";
-        return new JsonObject
-        {
-            ["transitionId"] = tid, ["phase"] = "post-apply",
-            ["failure"] = failure, ["exitCode"] = exitCode,
-            ["workstateApplied"] = wsApplied, ["projectionApplied"] = projApplied,
-            ["note"] = note,
-        }.ToJsonString();
-    }
-
     // prepare 인수를 파싱한다.
     private static PrepareOptions? ParsePrepareArgs(string[] args)
     {
@@ -1073,8 +810,7 @@ internal static class StateApplierCli
         var dryRun = map.ContainsKey("dry-run-flag"); map.Remove("dry-run-flag");
         if (!map.TryGetValue("transition-id", out var tid) || string.IsNullOrWhiteSpace(tid)) return null;
         if (!map.TryGetValue("request", out var req) || string.IsNullOrWhiteSpace(req)) return null;
-        map.TryGetValue("root", out var root);
-        return new PrepareOptions(tid, req, root, dryRun);
+        return new PrepareOptions(tid, req, dryRun);
     }
 
     // apply 인수를 파싱한다.
@@ -1084,22 +820,7 @@ internal static class StateApplierCli
         var dryRun = map.ContainsKey("dry-run-flag"); map.Remove("dry-run-flag");
         if (!map.TryGetValue("envelope", out var env) || string.IsNullOrWhiteSpace(env)) return null;
         map.TryGetValue("verdict", out var verdict);
-        map.TryGetValue("root", out var root);
-        return new ApplyOptions(env, verdict, root, dryRun);
-    }
-
-    // legacy 인수를 파싱한다.
-    private static LegacyOptions? ParseLegacyArgs(string[] args)
-    {
-        var map = ParseFlagMap(args, 1);
-        var dryRun = map.ContainsKey("dry-run-flag"); map.Remove("dry-run-flag");
-        if (!map.TryGetValue("transition-id", out var tid) || string.IsNullOrWhiteSpace(tid)) return null;
-        if (!map.TryGetValue("expected-workstate-sha256", out var sha) || string.IsNullOrWhiteSpace(sha)) return null;
-        if (!map.TryGetValue("request", out var req) || string.IsNullOrWhiteSpace(req)) return null;
-        map.TryGetValue("verdict", out var verdict);
-        map.TryGetValue("human-decision", out var humanDec);
-        map.TryGetValue("root", out var root);
-        return new LegacyOptions(tid, sha, req, verdict, humanDec, root, dryRun);
+        return new ApplyOptions(env, verdict, dryRun);
     }
 
     // args[startIndex]부터 --key value 쌍을 파싱한다. --dry-run은 "dry-run-flag"="1"로 저장.

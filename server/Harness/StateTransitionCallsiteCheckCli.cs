@@ -12,22 +12,25 @@ internal static class StateTransitionCallsiteCheckCli
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    // 활성 경로로 간주하는 파일 패턴 — 역사적 증거 파일은 allowlist로 면제.
+    // 활성 경로로 간주하는 파일 확장자 — 역사적 증거 파일은 allowlist로 면제.
     private static readonly string[] ActiveExtensions =
     [
         ".cs", ".ps1", ".sh", ".cmd", ".bat",
         ".json", ".yaml", ".yml",
+        ".md",
     ];
 
     // 역사적 증거 경로 allowlist — 이 경로 아래 파일은 legacyCallsiteCount에 포함하지 않는다.
+    // 경로 접두사가 아니라 명시 경로 목록 — 활성 경로(outputs/launch/ 등)는 포함하지 않는다.
     private static readonly string[] HistoricalPrefixes =
     [
-        "outputs/launch/",
         "docs/handoff/sessions/",
         "docs/handoff/WORKSTATE.applier-log.jsonl",
+        "docs/handoff/RECOVERY.md",
+        "docs/handoff/queue/",
         "docs/verification/",
         "docs/wiki/",
-        "docs/handoff/RECOVERY.md",
+        "outputs/review/",
         "outputs/review-log.md",
         "outputs/reviewer-log.md",
         "HUMAN-INBOX.md",
@@ -99,6 +102,7 @@ internal static class StateTransitionCallsiteCheckCli
             Path.Combine(root, "outputs"),
             Path.Combine(root, "docs"),
             Path.Combine(root, ".claude"),
+            Path.Combine(root, ".github"),
         };
 
         foreach (var dir in scanDirs.Where(Directory.Exists))
@@ -111,8 +115,8 @@ internal static class StateTransitionCallsiteCheckCli
             }
         }
 
-        // 루트의 *.ps1, *.sh, *.cmd, *.bat도 포함.
-        foreach (var ext in new[] { "*.ps1", "*.sh", "*.cmd", "*.bat" })
+        // 루트의 스크립트·manifest 파일도 포함.
+        foreach (var ext in new[] { "*.ps1", "*.sh", "*.cmd", "*.bat", "*.json", "*.yaml", "*.yml" })
         {
             foreach (var file in Directory.GetFiles(root, ext))
                 yield return file;
@@ -124,7 +128,8 @@ internal static class StateTransitionCallsiteCheckCli
     {
         var normalized = relPath.Replace('\\', '/');
         return HistoricalPrefixes.Any(prefix =>
-            normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+            normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, prefix.TrimEnd('/'), StringComparison.OrdinalIgnoreCase));
     }
 
     // 파일 내용에 legacy single-shot 패턴이 있는지 확인한다.

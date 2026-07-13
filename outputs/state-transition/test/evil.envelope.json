@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "transitionKind": "EVIL",
+  "transitionId": "TEST-EVIL-001",
+  "expectedPreStateSha256": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111",
+  "requestPath": "outputs/state-transition/test/dummy.request.json",
+  "requestSha256": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222",
+  "effectiveAt": "2026-07-14T00:00:00Z",
+  "expectedPostStateSha256": "cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333",
+  "transitionContractSha256": "dddd4444dddd4444dddd4444dddd4444dddd4444dddd4444dddd4444dddd4444",
+  "candidatePath": "outputs/state-transition/test/dummy.candidate.json"
+}
