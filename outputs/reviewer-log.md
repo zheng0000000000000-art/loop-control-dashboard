@@ -1540,3 +1540,36 @@ at-rest 실패 메시지가 `"id ... is in appliedTransitions but has no log ent
 
 - **내부 checker의 pending 면제 PASS 경로는 여전히 `NOT_VERIFIED`다.** CLI 미노출이라 외부에서 못 돌린다. **06C-1이 호출할 때 재확인한다.** 05H·05H-R1 어느 쪽도 이걸 실증하지 못했다.
 - **at-rest exit 1 때문에 `handoff-integrity`를 부르는 다른 게이트가 잠길 수 있다.** 아직 어디가 잠기는지 전수 조사하지 않았다. 06C-2가 알아야 할 정보다.
+
+---
+
+## 2026-07-13 발사 — 06C-1 (StateTransition v2). ★ 05H의 모순을 미리 끊었다
+
+- **주체**: 검수자(claude-opus)가 프롬프트 작성 + 발사(사람 choi 승인). 생산 = sonnet, PID 21800, claim 6 paths.
+- **push**: `origin/wp/state-integrity` = `c8c1a76`. gate-clean exit 0, 미푸시 0. **main merge 아님 — 조각 land 금지.**
+
+### 발사 전에 잡은 모순 (05H와 같은 함정이 06C-1에도 있었다)
+
+06C-1 지시서 §1 순서: **reconciliation이 먼저** → FAIL이면 `exit 1 state-corrupted-preapply`.
+그런데 05H-R1이 살려낸 탐지 때문에 **canonical at-rest reconciliation은 이제 FAIL한다**(DI0004-BLOCKED-CODEX).
+
+**따라서 지시서 §8 완료 기준 2·3(NORMAL prepare→apply 왕복 → exit 0)은 canonical 저장소에서 달성 불가능하다.**
+그대로 발사했으면 실행자는 **또 reconciliation을 완화했을 것이다.** 05H와 똑같이.
+
+프롬프트에서 끊었다:
+
+- **canonical에 apply하지 마라.** 저장소 **사본 + known-good WORKSTATE/log 쌍**(fixture-c)에서 왕복 시험하라. 사본은 매번 새로.
+- **`--root` 같은 production 경로 플래그를 만들지 마라** — canonical 우회 통로가 된다.
+- **판정선 13번 신설**: canonical `handoff-integrity` → **exit 1이 정상이다. 0으로 만들려 하지 마라.**
+- **"요구가 서로 모순돼 보이면 완화하지 말고 보고해라. 보고는 감점이 아니다. 완화는 반려다."**
+- **06C-1 land 후 canonical 전이가 전부 거부된다는 사실**과 **그 때문에 잠기는 게이트·스크립트 목록**을 보고서에 나열하라고 요구했다 — 06C-2가 그 목록을 필요로 한다.
+
+### 첫 실증을 요구한 것
+
+내부 checker의 **pending 면제 PASS 경로**는 05H·05H-R1 어느 쪽도 실증하지 못했다(CLI 미노출, `NOT_VERIFIED`).
+06C-1이 §4-7 적용후 검사에서 `PendingTransitionId=id`로 호출하는 그 순간이 **첫 실증**이다. 보고서에 명시하라고 지시했다.
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **ADR-015 §4의 우려는 여전하다** — 05H(하네스)와 06C-1(그 하네스를 소비하는 제품 코드)이 **같은 actor(sonnet)**다. 별도 세션·별도 프로세스로 발사했지만 **actor 분리는 아니다.** 완화책은 검수자의 독립 재실행뿐이다. `codex exec -s read-only` 독립 검수를 여기에 붙이는 것이 다음 단계다.
+- **06C-1 land 후 무엇이 잠기는지 나는 아직 모른다.** 실행자에게 열거를 요구했지만, 그 목록이 완전한지는 검수자가 별도로 확인해야 한다.
