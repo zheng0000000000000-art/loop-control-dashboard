@@ -18,7 +18,7 @@ internal static class CliRouter
     [
         "snapshot-behavior", "verify-behavior", "dispatch-executor", "orch-observe",
         "measure", "simtest", "simtune", "refeedbacktest", "tier2test",
-        "projection", "state-transition",
+        "projection", "state-transition", "trust-origin",
     ];
 
     // CLI 紐낅졊??遺꾧린?쒕떎. ?대떦 紐낅졊???놁쑝硫?null??諛섑솚?????쒕쾭濡?吏꾪뻾?쒕떎.
@@ -60,6 +60,10 @@ internal static class CliRouter
         // WORKSTATE 상태 전이 CLI — 유일한 WORKSTATE writer.
         if (args.Length > 0 && string.Equals(args[0], "state-transition", StringComparison.OrdinalIgnoreCase))
             return StateApplierCli.Run(args);
+
+        // trust-origin 부트스트랩 선언 CLI — HarnessRegistry 미등록 (일반 write command).
+        if (args.Length > 0 && string.Equals(args[0], "trust-origin", StringComparison.OrdinalIgnoreCase))
+            return TrustOriginCli.Run(args);
 
         var harness = HarnessRegistry.TryRun(args);
         if (harness is not null) return harness;
