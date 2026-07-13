@@ -2185,3 +2185,153 @@ UNTRACKED.txt   pending-nonok-zero/* + verification doc                     ← 
 - **오늘 두 번, 내가 독립 검수자에게 오염된 입력을 줬다**(인코딩 · 범위).
   **검수 배선은 검수 대상이다** — 그런데 **그 배선을 검수하는 자가 없다.** 이 세션에서는 코덱스의 오보를
   검수자가 매번 실측으로 걸러냈지만, **그 실측을 안 했으면 실행자를 두 번 억울하게 반려했을 것이다.**
+
+---
+
+## 2026-07-14 검수 — 06C-1-R2: **PASS**. ★ **결함 2(rollback)가 오늘 처음 실증됐다**
+
+- **생산**: sonnet(ADR-015). PID 1224, exit 0, **159턴, 38분, $6.88**. 오늘 최대 작업.
+- **판정**: 검수자 재실행(전부 직접) + 코덱스 독립 검수.
+
+### 범위 — 기계 확인
+
+`git status`가 `HandoffIntegrityChecker.cs`·`HandoffIntegrityCli.cs`·`HarnessRegistry.cs`를 `M`으로 보여줬다(allowlist 밖).
+**blob 해시로 재니 3건 다 HEAD와 동일 — stat 캐시 artifact.** 실제 변경은 `StateApplierCli.cs`·`StateTransitionCallsiteCheckCli.cs`
++ `CALLSITE-HISTORICAL.json`(신규) + 검증문서. **전부 allowlist 안.**
+
+### ★ A. silent ignore → **거절**. 그리고 **왜 없앴는지와 대안까지 말한다**
+
+```
+--human-decision → exit 2  removed-option: --human-decision (06C-1-R1에서 삭제됨.
+                                            PHASE_CHANGE/RECOVERY/REPLAY는 trusted-human-receipt-required로 fail-closed)
+--root           → exit 2  removed-option: --root (06C-1-R1에서 삭제됨. 사본 시험은 process cwd를 바꿔서 하라)
+--bogus-flag     → exit 2  unknown-option: --bogus-flag
+대조군(정상인자)  → exit 2  request file not found: x.json        ← 구분된다
+```
+
+**"모르는 옵션"과 "일부러 없앤 옵션"이 구분된다. 삭제의 목적(호출자가 알게 하는 것)이 달성됐다.**
+
+### ★ B. callsite 스캔 — **네 곳 다 잡는다** (검수자 반증, 06C-1-R1을 반려한 그 시험)
+
+```
+outputs/launch/ZZ-rev.prompt.txt   → exit 1  ★ 잡는다   (.txt — 발사 프롬프트가 사는 곳)
+docs/wiki/ZZ-rev.md                → exit 1  ★ 잡는다   (접두사 → 명시 목록 전환)
+docs/verification/ZZ-rev.md        → exit 1  ★ 잡는다
+docs/handoff/queue/ZZ-rev.md       → exit 1  ★ 잡는다
+정리 후                             → exit 0
+```
+
+`CALLSITE-HISTORICAL.json` 신설. **접두사 아래 새 파일이 legacy 호출을 숨기던 구멍이 막혔다.**
+
+### ★★★ C. `state-transition --self-test` — **결함 2의 최초 실행 증거**
+
+```json
+{ "selfTest":"state-transition", "verdict":"PASS", "casesRun":4,
+  "cases":[
+    {"case":"normal-apply",          "exit":0, "v2LogWritten":true, "wsChanged":true,  "pass":true},
+    {"case":"rollback-after-write",  "exit":1, "rolledBack":true, "noOkLog":true, "hashRestored":true, "pass":true},
+    {"case":"rollback-restores-log", "noV2OkEntry":true, "pass":true},
+    {"case":"fatal-restore-failed",  "exit":2, "fatalLogged":true, "pass":true}
+  ]}
+```
+
+- `rollback-after-write`: **exit 1 · rolledBack ✓ · hashRestored ✓(==preimage) · noOkLog ✓(v2 성공로그 미기록)**
+- `fatal-restore-failed`: **exit 2 `FATAL_STATE_UNKNOWN`** — FATAL 분기 도달
+- 작업 경로: `$TEMP\st-selftest-*`. **canonical `WORKSTATE.json`·`applier-log` blob 불변 확인**(실체로).
+
+> **결함 2(post-apply 실패 시 rollback 없음)는 WP-STATE-INTEGRITY의 존재 이유 중 하나다.**
+> **05H → 05H-R1 → 06C-1 → 06C-1-R1 을 거치는 동안 한 번도 실행되지 못했다**(env var seam은 production 노출,
+> in-process 훅은 외부에서 못 켬 → `NOT_VERIFIED`).
+> **오늘 처음 돌았고, 통과했다.**
+
+### ★ D. 코덱스 #1 — **검수자가 사본에서 직접 재현했다** (자기보고를 믿지 않았다)
+
+```
+사본 + known-good WORKSTATE(fixture-c) + cwd=사본
+1) prepare --transition-id T-REV --request <abs>   → exit 0, envelope 생성 (contract hash 594ccaee...)
+2) envelope의 transitionContractSha256 만 "aaaa"로 위조
+3) apply --envelope <abs>                          → exit 1
+   {"reason":"envelope-contract-mismatch","detail":"envelope.transitionContractSha256이 계산값과 다릅니다 — 위조 또는 수정됨"}
+```
+
+**새 전이에서도 envelope 자기신고 hash가 대조된다. 코덱스 #1이 막혔다.**
+(참고: `--request`에 상대경로를 주면 `request file not found`가 난다 — .NET CWD 문제. **절대경로로 줘야 한다.**
+이건 R2의 결함이 아니라 **환경 함정**이다. 다만 **오류 문구가 "왜"를 말하지 않는다** — 후속 개선 후보.)
+
+### 나머지 게이트 (검수자 직접 재실행)
+
+`build 0` · `at-rest 1`(설계된 참 양성) · `handoff-integrity --self-test 0` · `callsite-check 0` · `measure 0` · `verify-behavior 0`
+**검수자 반증 시험 잔재 없음** — 이번엔 **전부 `$TEMP` 사본에서 했다**(어제 두 번 사고 낸 뒤의 교훈).
+
+### 자진 신고 3건 (ADR-005) — 검토
+
+1. **`scope-check` exit 1 (out-of-scope 146건)** — **실행자 잘못이 아니다.** `scope-check`가 `outputs/`·`dashboard/data`
+   같은 **하네스 자기 배설물을 범위 이탈로 센다**(FAIL-2026-015 사례, `CODEX-GATE-04 §5-1`). **실행자 판단이 옳다.**
+2. `measure`의 새 함수 주석 독립 확인 못 함 — minor.
+3. **★ `--self-test`의 projection이 `ProjectionOverride = () => 0`(항상 성공)이라 projection 실패 경로를 시험하지 않는다.**
+   → **`STATE_RESTORED_PROJECTION_NOT_VERIFIED`(exit 2) 분기가 미검증이다. 정직하고 정확한 신고다.**
+   **후속: `HS-A`(harness-selftest-check)가 "모든 실패 분기가 self-test case로 존재하는가"를 검사하게 한다.**
+
+## 06C-1-R2 최종 판정: **PASS**
+
+**WP-STATE-INTEGRITY의 결함 4개가 전부 실증됐다:**
+
+| 결함 | 상태 | 증거 |
+| --- | --- | --- |
+| 1. 멱등이 reconciliation보다 먼저 | ✓ | `state-corrupted-preapply` (손 위조 차단) |
+| 2. rollback 없음 | ✓ **오늘 최초** | `rollback-after-write`: hash==preimage, v2 로그 미기록 |
+| 3. `BuildCandidate` 비결정성 | ✓ | 결정적 candidate + 재계산 write (TOCTOU 차단) |
+| 4. ID 결속 없음 | ✓ | `transition-id-collision` + `envelope-contract-mismatch` (검수자 재현) |
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **`STATE_RESTORED_PROJECTION_NOT_VERIFIED` 분기는 여전히 미검증**(실행자 자진신고 3번). **HS-A로 넘긴다.**
+- **`--self-test`의 case 기대값이 여전히 "코드/불린" 수준**이다 — 05H-R3에서 코덱스가 지적한 것과 같은 계열
+  (subject·count 미단언). **HS-A가 전 하네스에 일괄 적용해야 한다.**
+- **06C-2(trust-origin)가 아직 없다.** 06C-1-R2가 land되면 **canonical 전이가 전부 거부된다**(at-rest 오염 때문).
+  **상태 기계가 얼어붙은 채로 land된다.** 해동은 06C-2 + 사람 결재다. **land gate에서 이 순서를 반드시 확인하라.**
+
+### 06C-1-R2 코덱스 독립 검수 — **잔여 결함 2건. 검수자가 실증했다**
+
+```
+--bogus-flag zzz (값 있음)  → exit 2  unknown-option: --bogus-flag        ✓ 잡는다
+--bogus-flag (값 없음)      → exit 2  request file not found: x.json      ★ 무시된다
+--root (값 없음)            → exit 2  request file not found: x.json      ★ 무시된다
+위치 인자 zzz               → exit 2  request file not found: x.json      ★ 무시된다
+state-transition --self-test --root X → exit 0  verdict PASS             ★ 인자 무시하고 통과
+```
+
+**`ParseFlagMap()`이 `--key value` 형태만 map에 넣는다**(`StateApplierCli.cs:873-889`).
+**값 없는 플래그와 위치 인자는 map에 안 들어가 `ValidateOptions()`가 못 본다.**
+유효한 request가 있으면 **조용히 진행한다.**
+
+**★ 내 완료기준 4가 "값 있는" `--bogus-flag zzz`만 시험했다.** 실행자는 정확히 그것만 고쳤다.
+**또 내 시험의 공백이다 — 다섯 번째**(FAIL-2026-016).
+
+## 결정: **PASS로 land한다. 세 번째 R을 쏘지 않는다.**
+
+**근거:**
+
+1. **핵심 넷(A·B·C·D) 전부 달성.** WP-STATE-INTEGRITY의 **결함 4개가 전부 실증됐다.**
+   특히 **결함 2(rollback)는 오늘 처음 실행됐다** — 이 WP의 존재 이유다.
+2. **잔여 2건은 같은 계열**(CLI 표면 엄격화)이고, **위험도가 낮다**
+   (`--root <값>`은 이미 `removed-option`으로 잡힌다. 값 없는 플래그는 의도 자체가 불완전하다).
+3. **★ 개별 수정이 또 빠뜨렸다는 것이 증거다.** R1에서 `--root`를 지웠는데 silent ignore가 남았고,
+   R2에서 그걸 고쳤는데 **값 없는 플래그가 남았다.**
+   **개별 R을 또 쏘면 또 빠뜨린다. 이건 하네스로 일괄 강제해야 하는 문제다.**
+
+→ **`HS-A`(harness-selftest-check, 12/12)에 편입:**
+   - 모든 CLI가 **알 수 없는 인자를 거절하는가**(값 유무·위치 인자 무관)
+   - 모든 `--self-test`가 **추가 인자를 거절하는가**
+   - 모든 실패 분기가 **self-test case로 존재하는가**(`STATE_RESTORED_PROJECTION_NOT_VERIFIED` 미검증)
+   - self-test가 **실패의 subject·count까지 단언하는가**(05H-R3 코덱스 지적)
+
+**재발명 금지 + FAIL-2026-015("하네스가 다른 것을 잰다")의 교훈이다.**
+**같은 실수를 네 번 개별로 고치는 대신, 그 실수 계열 전체를 기계가 막게 한다.**
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **잔여 결함 2건을 알면서 PASS를 준다.** 숨기지 않는다 — **HS-A로 넘긴다는 조건부 PASS다.**
+  **HS-A가 만들어지기 전에 land하면 이 구멍은 남는다.** land gate에서 사람이 판단해야 한다.
+- **오늘 다섯 번, 내 지시서·프롬프트·완료기준의 공백이 실행자를 불완전한 수정으로 이끌었다.**
+  **매번 코덱스가 잡았다.** 검수자 혼자였으면 다섯 번 다 놓쳤을 것이다.

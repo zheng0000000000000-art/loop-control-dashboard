@@ -17,23 +17,7 @@ internal static class StateTransitionCallsiteCheckCli
     [
         ".cs", ".ps1", ".sh", ".cmd", ".bat",
         ".json", ".yaml", ".yml",
-        ".md",
-    ];
-
-    // 역사적 증거 경로 allowlist — 이 경로 아래 파일은 legacyCallsiteCount에 포함하지 않는다.
-    // 경로 접두사가 아니라 명시 경로 목록 — 활성 경로(outputs/launch/ 등)는 포함하지 않는다.
-    private static readonly string[] HistoricalPrefixes =
-    [
-        "docs/handoff/sessions/",
-        "docs/handoff/WORKSTATE.applier-log.jsonl",
-        "docs/handoff/RECOVERY.md",
-        "docs/handoff/queue/",
-        "docs/verification/",
-        "docs/wiki/",
-        "outputs/review/",
-        "outputs/review-log.md",
-        "outputs/reviewer-log.md",
-        "HUMAN-INBOX.md",
+        ".md", ".txt",
     ];
 
     // 옛 단일-샷 호출 패턴 — state-transition 뒤에 --transition-id 또는 --expected-workstate-sha256이 오는 경우.
@@ -62,6 +46,7 @@ internal static class StateTransitionCallsiteCheckCli
     // 저장소 전체를 스캔해 legacy callsite 수를 반환한다.
     private static JsonObject ScanCallsites(string root)
     {
+        var historicalFiles = LoadHistoricalFiles(root);
         var legacyPaths = new List<string>();
         var historicalPaths = new List<string>();
         var scannedCount = 0;
@@ -69,7 +54,7 @@ internal static class StateTransitionCallsiteCheckCli
         foreach (var filePath in EnumerateActiveFiles(root))
         {
             var relPath = ToRelative(filePath, root);
-            if (IsHistorical(relPath))
+            if (IsHistorical(relPath, historicalFiles))
             {
                 if (ContainsLegacyCall(filePath))
                     historicalPaths.Add(relPath);
@@ -123,13 +108,28 @@ internal static class StateTransitionCallsiteCheckCli
         }
     }
 
-    // 경로가 역사적 증거 allowlist에 속하는지 확인한다.
-    private static bool IsHistorical(string relPath)
+    // docs/handoff/CALLSITE-HISTORICAL.json에서 역사적 증거 파일 목록을 읽는다.
+    private static HashSet<string> LoadHistoricalFiles(string root)
+    {
+        var path = Path.Combine(root, "docs", "handoff", "CALLSITE-HISTORICAL.json");
+        if (!File.Exists(path)) return [];
+        try
+        {
+            var doc = JsonNode.Parse(File.ReadAllText(path));
+            var arr = doc?["historicalFiles"]?.AsArray();
+            if (arr is null) return [];
+            return arr.Select(n => n?.GetValue<string>() ?? "")
+                      .Where(s => s.Length > 0)
+                      .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+        catch { return []; }
+    }
+
+    // 경로가 역사적 증거 명시 목록에 정확히 일치하는지 확인한다 (접두사 매칭 금지).
+    private static bool IsHistorical(string relPath, HashSet<string> historicalFiles)
     {
         var normalized = relPath.Replace('\\', '/');
-        return HistoricalPrefixes.Any(prefix =>
-            normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(normalized, prefix.TrimEnd('/'), StringComparison.OrdinalIgnoreCase));
+        return historicalFiles.Contains(normalized);
     }
 
     // 파일 내용에 legacy single-shot 패턴이 있는지 확인한다.

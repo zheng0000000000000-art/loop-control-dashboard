@@ -72,7 +72,28 @@ internal static class StateApplierCli
     // 결정적 test seam — 같은 프로세스의 자기 시험 코드만 설정할 수 있다. production 진입점(CLI·환경변수·설정파일)에서 켤 수 없음.
     internal static Func<string?>? FailAfterWriteHook;
 
-    // state-transition 진입점. prepare/apply를 args[1]로 분기하고 그 외는 exit 2.
+    // 결정적 projection seam — 자기 시험 코드만 설정. 환경변수·CLI에서 켤 수 없음.
+    internal static Func<int>? ProjectionOverride;
+
+    // 결정적 복원 실패 seam — rollback 내 복원 단계를 실패시킨다. 자기 시험 코드만 설정.
+    internal static bool FailRestoreForTest;
+
+    // 삭제된 옵션과 그 이유 메시지 — 일반 unknown-option과 구분한 명시적 오류.
+    private static readonly Dictionary<string, string> RemovedOptions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["human-decision"] = "removed-option: --human-decision (06C-1-R1에서 삭제됨. PHASE_CHANGE/RECOVERY/REPLAY는 trusted-human-receipt-required로 fail-closed)",
+        ["root"] = "removed-option: --root (06C-1-R1에서 삭제됨. 사본 시험은 process cwd를 바꿔서 하라)",
+    };
+
+    // prepare 허용 키 — 이 밖의 키는 ValidateOptions에서 거부한다.
+    private static readonly HashSet<string> PrepareKnownKeys = new(StringComparer.OrdinalIgnoreCase)
+        { "transition-id", "request", "dry-run-flag" };
+
+    // apply 허용 키 — 이 밖의 키는 ValidateOptions에서 거부한다.
+    private static readonly HashSet<string> ApplyKnownKeys = new(StringComparer.OrdinalIgnoreCase)
+        { "envelope", "verdict", "dry-run-flag" };
+
+    // state-transition 진입점. prepare/apply/--self-test를 args[1]로 분기하고 그 외는 exit 2.
     internal static int Run(string[] args)
     {
         var sub = args.Length > 1 ? args[1] : "";
@@ -80,66 +101,68 @@ internal static class StateApplierCli
             return RunPrepare(args);
         if (string.Equals(sub, "apply", StringComparison.OrdinalIgnoreCase))
             return RunApply(args);
-        Console.Error.WriteLine("{\"error\":\"state-transition usage: prepare --transition-id <id> --request <file> | apply --envelope <file>\"}");
+        if (string.Equals(sub, "--self-test", StringComparison.OrdinalIgnoreCase))
+            return RunSelfTest();
+        Console.Error.WriteLine("{\"error\":\"state-transition usage: prepare --transition-id <id> --request <file> | apply --envelope <file> | --self-test\"}");
         return 2;
     }
 
-    // prepare: WORKSTATE를 읽어 결정적 candidate를 계산하고 envelope+candidate를 출력 디렉터리에 기록한다.
+    // prepare: 옵션을 검증하고 root를 찾아 RunPrepareCore에 위임한다.
     private static int RunPrepare(string[] args)
     {
+        var optErr = ValidateOptions(ParseFlagMap(args, 2), PrepareKnownKeys);
+        if (optErr is not null) { Console.Error.WriteLine($"{{\"error\":\"{optErr}\"}}"); return 2; }
         var opts = ParsePrepareArgs(args);
         if (opts is null)
         {
             Console.Error.WriteLine("{\"error\":\"prepare에는 --transition-id, --request 가 필요합니다\"}");
             return 2;
         }
-        try
+        try { return RunPrepareCore(GitTools.FindRepoRoot(), opts); }
+        catch (Exception ex) { Console.Error.WriteLine($"{{\"error\":\"state-transition prepare 실패: {ex.Message}\"}}"); return 2; }
+    }
+
+    // prepare 핵심 — root를 명시적으로 받아 자기 시험과 production 경로 공유.
+    private static int RunPrepareCore(string root, PrepareOptions opts)
+    {
+        var workstatePath = Path.Combine(root, "docs", "handoff", "WORKSTATE.json");
+        if (!File.Exists(workstatePath)) { WriteError("WORKSTATE.json not found"); return 2; }
+
+        var rawWorkstate = File.ReadAllText(workstatePath, new UTF8Encoding(false));
+        var workstate = JsonNode.Parse(rawWorkstate)?.AsObject();
+        if (workstate is null) { WriteError("WORKSTATE.json is not a valid JSON object"); return 2; }
+
+        if (!File.Exists(opts.RequestPath)) { WriteError($"request file not found: {opts.RequestPath}"); return 2; }
+        var rawRequest = File.ReadAllText(opts.RequestPath, new UTF8Encoding(false));
+        var request = JsonNode.Parse(rawRequest)?.AsObject();
+        if (request is null) { WriteError("request JSON must be a JSON object"); return 2; }
+
+        // 해시 계산 + effectiveAt 발급 (NORMAL은 prepare가 현재 UTC를 발급, 외부 플래그 없음).
+        var preStateSha256 = ComputeSha256(rawWorkstate);
+        var requestSha256 = ComputeSha256(rawRequest);
+        var effectiveAt = DateTime.UtcNow.ToString("o");
+
+        // 결정적 candidate 계산 — UtcNow 호출 없이 effectiveAt을 파라미터로 받는다.
+        var candidate = BuildCandidate(workstate, request, opts.TransitionId, effectiveAt);
+        var candidateBytes = Encoding.UTF8.GetBytes(candidate.ToJsonString(WriteOptions));
+        var postStateSha256 = Convert.ToHexString(SHA256.HashData(candidateBytes)).ToLowerInvariant();
+        var contractHash = ComputeContractHash(
+            opts.TransitionId, "NORMAL", requestSha256, preStateSha256, postStateSha256, effectiveAt);
+
+        if (opts.DryRun)
         {
-            var root = GitTools.FindRepoRoot();
-            var workstatePath = Path.Combine(root, "docs", "handoff", "WORKSTATE.json");
-            if (!File.Exists(workstatePath)) { WriteError("WORKSTATE.json not found"); return 2; }
-
-            var rawWorkstate = File.ReadAllText(workstatePath, new UTF8Encoding(false));
-            var workstate = JsonNode.Parse(rawWorkstate)?.AsObject();
-            if (workstate is null) { WriteError("WORKSTATE.json is not a valid JSON object"); return 2; }
-
-            if (!File.Exists(opts.RequestPath)) { WriteError($"request file not found: {opts.RequestPath}"); return 2; }
-            var rawRequest = File.ReadAllText(opts.RequestPath, new UTF8Encoding(false));
-            var request = JsonNode.Parse(rawRequest)?.AsObject();
-            if (request is null) { WriteError("request JSON must be a JSON object"); return 2; }
-
-            // 해시 계산 + effectiveAt 발급 (NORMAL은 prepare가 현재 UTC를 발급, 외부 플래그 없음).
-            var preStateSha256 = ComputeSha256(rawWorkstate);
-            var requestSha256 = ComputeSha256(rawRequest);
-            var effectiveAt = DateTime.UtcNow.ToString("o");
-
-            // 결정적 candidate 계산 — UtcNow 호출 없이 effectiveAt을 파라미터로 받는다.
-            var candidate = BuildCandidate(workstate, request, opts.TransitionId, effectiveAt);
-            var candidateBytes = Encoding.UTF8.GetBytes(candidate.ToJsonString(WriteOptions));
-            var postStateSha256 = Convert.ToHexString(SHA256.HashData(candidateBytes)).ToLowerInvariant();
-            var contractHash = ComputeContractHash(
-                opts.TransitionId, "NORMAL", requestSha256, preStateSha256, postStateSha256, effectiveAt);
-
-            if (opts.DryRun)
+            Console.WriteLine(new JsonObject
             {
-                Console.WriteLine(new JsonObject
-                {
-                    ["ok"] = true, ["dryRun"] = true,
-                    ["transitionId"] = opts.TransitionId,
-                    ["preStateSha256"] = preStateSha256,
-                    ["expectedPostStateSha256"] = postStateSha256,
-                    ["transitionContractSha256"] = contractHash,
-                }.ToJsonString(WriteOptions));
-                return 0;
-            }
+                ["ok"] = true, ["dryRun"] = true,
+                ["transitionId"] = opts.TransitionId,
+                ["preStateSha256"] = preStateSha256,
+                ["expectedPostStateSha256"] = postStateSha256,
+                ["transitionContractSha256"] = contractHash,
+            }.ToJsonString(WriteOptions));
+            return 0;
+        }
 
-            return WritePrepareOutput(root, opts, preStateSha256, requestSha256, postStateSha256, contractHash, candidateBytes, effectiveAt);
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"{{\"error\":\"state-transition prepare 실패: {ex.Message}\"}}");
-            return 2;
-        }
+        return WritePrepareOutput(root, opts, preStateSha256, requestSha256, postStateSha256, contractHash, candidateBytes, effectiveAt);
     }
 
     // envelope+candidate 파일을 outputs/state-transition/에 기록하고 결과를 출력한다.
@@ -185,9 +208,11 @@ internal static class StateApplierCli
         return 0;
     }
 
-    // apply: reconciliation-먼저 순서로 WORKSTATE에 전이를 적용한다. rollback + FATAL 분류 포함.
+    // apply: 옵션을 검증하고 ApplyEnvelopeCore에 위임한다.
     private static int RunApply(string[] args)
     {
+        var optErr = ValidateOptions(ParseFlagMap(args, 2), ApplyKnownKeys);
+        if (optErr is not null) { Console.Error.WriteLine($"{{\"error\":\"{optErr}\"}}"); return 2; }
         var opts = ParseApplyArgs(args);
         if (opts is null)
         {
@@ -195,10 +220,19 @@ internal static class StateApplierCli
             return 2;
         }
 
-        // Envelope 읽기 — 이 단계는 atomic write 전이므로 예외 발생 시 rollback 불필요.
         var envelope = ReadEnvelope(opts.EnvelopePath);
         if (envelope is null) return 2;
 
+        var ctx = LoadWorkstateContextFromRoot(GitTools.FindRepoRoot());
+        if (ctx is null) return 2;
+        return ApplyEnvelopeCore(ctx.Value, envelope, opts.DryRun);
+    }
+
+    // apply 핵심 — root를 명시적으로 받아 자기 시험과 production 경로 공유.
+    private static int ApplyEnvelopeCore(
+        (string root, string workstatePath, string logPath, byte[] rawWorkstateBytes, JsonObject workstate, string rawWorkstateStr) ctx,
+        EnvelopeData envelope, bool dryRun)
+    {
         // unknown transitionKind는 fail-closed — NORMAL/PHASE_CHANGE/RECOVERY/REPLAY 외 거부.
         if (!ValidTransitionKinds.Contains(envelope.TransitionKind))
             return Fail(1, envelope.TransitionId, "unknown-transition-kind",
@@ -209,9 +243,7 @@ internal static class StateApplierCli
             return Fail(1, envelope.TransitionId, "trusted-human-receipt-required",
                 $"transitionKind={envelope.TransitionKind}는 receipt ledger 부재로 이번 WP에서 fail-closed");
 
-        var ctx = LoadWorkstateContext();
-        if (ctx is null) return 2;
-        var (root, workstatePath, logPath, rawWorkstateBytes, workstate, rawWorkstateStr) = ctx.Value;
+        var (root, workstatePath, logPath, rawWorkstateBytes, workstate, rawWorkstateStr) = ctx;
 
         // Step 1: request sha256 + candidate file hash 검증.
         var (_, request, evidenceExit) = VerifyApplyEvidence(envelope);
@@ -236,7 +268,7 @@ internal static class StateApplierCli
 
         // Steps 4-6: candidate 재계산 + 검증 + dry-run.
         var (recompCandidate, recompBytes, validateExit) =
-            RunApplyValidatePhase(envelope, workstate, rawWorkstateStr, request!, opts.DryRun, root);
+            RunApplyValidatePhase(envelope, workstate, rawWorkstateStr, request!, dryRun, root);
         if (validateExit.HasValue) return validateExit.Value;
 
         // Steps 7-10: atomic write + post-apply 검사 + v2 log.
@@ -245,13 +277,12 @@ internal static class StateApplierCli
             rawWorkstateBytes, workstate, recompCandidate!, recompBytes!);
     }
 
-    // 저장소 루트를 찾고 WORKSTATE를 로드한다. 실패 시 null 반환(오류는 stderr에 기록).
+    // root를 받아 WORKSTATE를 로드한다. 실패 시 null 반환(오류는 stderr에 기록).
     private static (string root, string workstatePath, string logPath, byte[] rawBytes, JsonObject workstate, string rawStr)?
-        LoadWorkstateContext()
+        LoadWorkstateContextFromRoot(string root)
     {
         try
         {
-            var root = GitTools.FindRepoRoot();
             var wsPath = Path.Combine(root, "docs", "handoff", "WORKSTATE.json");
             var lPath = Path.Combine(root, "docs", "handoff", "WORKSTATE.applier-log.jsonl");
             if (!File.Exists(wsPath)) { WriteError("WORKSTATE.json not found"); return null; }
@@ -359,7 +390,7 @@ internal static class StateApplierCli
             return Rollback(workstatePath, logPath, preimage, preimageHash, envelope, seamFail);
 
         // Step 9: 적용후 검사 — 항상 projection 실행.
-        var projExit = ProjectionCli.Run(["projection"]);
+        var projExit = RunProjection();
         if (projExit != 0)
             return Rollback(workstatePath, logPath, preimage, preimageHash, envelope, "projection-failed");
 
@@ -420,6 +451,8 @@ internal static class StateApplierCli
     {
         try
         {
+            // 결정적 복원 실패 seam — 자기 시험에서 FATAL_STATE_UNKNOWN 경로를 검증한다.
+            if (FailRestoreForTest) throw new InvalidOperationException("self-test injected restore failure");
             File.WriteAllBytes(workstatePath, preimage);
             var restoredStr = File.ReadAllText(workstatePath, new UTF8Encoding(false));
             var restoredHash = ComputeSha256(restoredStr);
@@ -437,7 +470,7 @@ internal static class StateApplierCli
             }
 
             // rollback 후 항상 projection 재생성 시도.
-            var projExit = ProjectionCli.Run(["projection"]);
+            var projExit = RunProjection();
             if (projExit != 0)
             {
                 AppendLogSafe(logPath, envelope.TransitionId, "STATE_RESTORED_PROJECTION_NOT_VERIFIED", 2);
@@ -518,7 +551,20 @@ internal static class StateApplierCli
             applied.OfType<JsonObject>().Any(o =>
                 string.Equals(o["id"]?.ToString(), envelope.TransitionId, StringComparison.Ordinal));
 
-        if (!isInState) return null; // 미적용 — 정상 경로로 진행.
+        if (!isInState)
+        {
+            // 신규 전이 — self-reported contract hash가 재계산값과 일치하는지 검증 (envelope 자기신고 불신).
+            if (!string.IsNullOrWhiteSpace(envelope.TransitionContractSha256))
+            {
+                var newEnvelopeHash = ComputeContractHash(
+                    envelope.TransitionId, envelope.TransitionKind, envelope.RequestSha256,
+                    envelope.ExpectedPreStateSha256, envelope.ExpectedPostStateSha256, envelope.EffectiveAt);
+                if (!string.Equals(envelope.TransitionContractSha256, newEnvelopeHash, StringComparison.OrdinalIgnoreCase))
+                    return Fail(1, envelope.TransitionId, "envelope-contract-mismatch",
+                        "envelope.transitionContractSha256이 계산값과 다릅니다 — 위조 또는 수정됨");
+            }
+            return null; // 정상 경로로 진행.
+        }
 
         // state에 있음 — log 조회.
         reconResult.SuccessLookup.TryGetValue(envelope.TransitionId, out var logInfo);
@@ -843,6 +889,22 @@ internal static class StateApplierCli
         return map;
     }
 
+    // 알 수 없거나 삭제된 옵션을 검사해 오류 메시지를 반환한다. 없으면 null.
+    private static string? ValidateOptions(Dictionary<string, string> map, HashSet<string> knownKeys)
+    {
+        foreach (var key in map.Keys)
+        {
+            if (knownKeys.Contains(key)) continue;
+            if (RemovedOptions.TryGetValue(key, out var msg)) return msg;
+            return $"unknown-option: --{key}";
+        }
+        return null;
+    }
+
+    // ProjectionOverride가 있으면 그것을, 없으면 ProjectionCli를 실행한다.
+    private static int RunProjection()
+        => ProjectionOverride is not null ? ProjectionOverride() : ProjectionCli.Run(["projection"]);
+
     // 문자열의 SHA-256을 소문자 hex로 반환한다.
     private static string ComputeSha256(string content)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant();
@@ -866,4 +928,143 @@ internal static class StateApplierCli
 
     // sha256 문자열의 앞 16자 + "..."를 반환한다.
     private static string Short(string s) => s.Length > 16 ? s[..16] + "..." : s;
+
+    // state-transition --self-test: rollback·정상·FATAL 경로를 in-process로 단언한다.
+    private static int RunSelfTest()
+    {
+        var tmpBase = Path.Combine(Path.GetTempPath(), $"st-selftest-{Guid.NewGuid():N}");
+        try { return RunSelfTestInDir(tmpBase); }
+        finally
+        {
+            try { if (Directory.Exists(tmpBase)) Directory.Delete(tmpBase, recursive: true); } catch { }
+        }
+    }
+
+    // 임시 저장소를 만들고 4개 case를 순서대로 실행한다.
+    private static int RunSelfTestInDir(string tmpRoot)
+    {
+        var wsDir = Path.Combine(tmpRoot, "docs", "handoff");
+        var outDir = Path.Combine(tmpRoot, "outputs", "state-transition");
+        Directory.CreateDirectory(wsDir);
+        Directory.CreateDirectory(outDir);
+        Directory.CreateDirectory(Path.Combine(tmpRoot, ".git")); // GitTools.FindRepoRoot 기준점
+        var wsPath = Path.Combine(wsDir, "WORKSTATE.json");
+        var logPath = Path.Combine(wsDir, "WORKSTATE.applier-log.jsonl");
+        var reqPath = Path.Combine(tmpRoot, "req.json");
+        var wsContent = "{\"schemaVersion\":1,\"diId\":\"DI-00-04\",\"status\":\"in_progress\","
+            + "\"blockers\":[],\"nextActions\":[\"test\"],\"phaseId\":\"P00\",\"wpId\":\"WP-00\","
+            + "\"updatedAt\":\"2026-07-14\",\"updatedBy\":\"self-test\",\"appliedTransitions\":[]}";
+        File.WriteAllText(wsPath, wsContent, new UTF8Encoding(false));
+        File.WriteAllText(logPath, "", new UTF8Encoding(false));
+        File.WriteAllText(Path.Combine(wsDir, "WP-REGISTRY.json"),
+            "{\"wps\":[{\"wpId\":\"WP-00\",\"title\":\"Self Test\"}]}", new UTF8Encoding(false));
+        File.WriteAllText(reqPath,
+            "{\"status\":\"in_progress\",\"nextActions\":[\"test\"],\"phaseId\":\"P00\","
+            + "\"wpId\":\"WP-00\",\"diId\":\"DI-00-04\",\"updatedBy\":\"self-test\"}",
+            new UTF8Encoding(false));
+        var mismatches = new JsonArray();
+        var caseResults = new JsonArray();
+        RunCaseNormalApply(tmpRoot, reqPath, wsPath, wsContent, logPath, outDir, caseResults, mismatches);
+        RunCaseRollbackAfterWrite(tmpRoot, reqPath, wsPath, wsContent, logPath, outDir, caseResults, mismatches);
+        RunCaseRollbackRestoresLog(logPath, caseResults, mismatches);
+        RunCaseFatalRestoreFailed(tmpRoot, reqPath, wsPath, wsContent, logPath, outDir, caseResults, mismatches);
+        ProjectionOverride = null;
+        if (mismatches.Count == 0)
+        {
+            Console.WriteLine(new JsonObject { ["selfTest"] = "state-transition", ["verdict"] = "PASS",
+                ["casesRun"] = caseResults.Count, ["cases"] = caseResults }.ToJsonString(WriteOptions));
+            return 0;
+        }
+        Console.Error.WriteLine(new JsonObject { ["selfTest"] = "state-transition", ["verdict"] = "FAIL",
+            ["mismatchCount"] = mismatches.Count, ["mismatches"] = mismatches,
+            ["cases"] = caseResults }.ToJsonString(WriteOptions));
+        return 1;
+    }
+
+    // case: normal-apply — 주입 없음, exit 0, v2 log 기록, WS 변경.
+    private static void RunCaseNormalApply(string tmpRoot, string reqPath, string wsPath, string wsContent,
+        string logPath, string outDir, JsonArray caseResults, JsonArray mismatches)
+    {
+        RestoreFixture(wsPath, wsContent, logPath);
+        ProjectionOverride = () => 0; FailAfterWriteHook = null; FailRestoreForTest = false;
+        var prepExit = RunPrepareCore(tmpRoot, new PrepareOptions("ST-NORMAL", reqPath, false));
+        var preimageHash = ComputeSha256(File.ReadAllText(wsPath, new UTF8Encoding(false)));
+        var env = ReadEnvelope(Path.Combine(outDir, "ST-NORMAL.envelope.json"));
+        int? applyExit = null;
+        if (env is not null && prepExit == 0)
+        {
+            var ctx = LoadWorkstateContextFromRoot(tmpRoot);
+            if (ctx is not null) applyExit = ApplyEnvelopeCore(ctx.Value, env, false);
+        }
+        var logLines = File.Exists(logPath) ? File.ReadAllLines(logPath) : [];
+        var okLogged = logLines.Any(l => l.Contains("\"ok\"") && l.Contains("ST-NORMAL"));
+        var wsMoved = !string.Equals(ComputeSha256(File.ReadAllText(wsPath, new UTF8Encoding(false))), preimageHash);
+        var ok = applyExit == 0 && okLogged && wsMoved;
+        caseResults.Add(new JsonObject { ["case"] = "normal-apply", ["exit"] = applyExit, ["v2LogWritten"] = okLogged, ["wsChanged"] = wsMoved, ["pass"] = ok });
+        if (!ok) mismatches.Add(new JsonObject { ["case"] = "normal-apply", ["expected"] = "exit=0, v2-log-ok, ws-changed", ["actual"] = $"exit={applyExit},log={okLogged},ws={wsMoved}" });
+    }
+
+    // case: rollback-after-write — 쓰기 직후 실패 주입, exit 1 ROLLED_BACK, hash==preimage, v2 ok 미기록.
+    private static void RunCaseRollbackAfterWrite(string tmpRoot, string reqPath, string wsPath, string wsContent,
+        string logPath, string outDir, JsonArray caseResults, JsonArray mismatches)
+    {
+        RestoreFixture(wsPath, wsContent, logPath);
+        ProjectionOverride = () => 0; FailAfterWriteHook = () => "self-test-failure"; FailRestoreForTest = false;
+        var prepExit = RunPrepareCore(tmpRoot, new PrepareOptions("ST-ROLLBACK", reqPath, false));
+        var preimageHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(wsPath))).ToLowerInvariant();
+        var env = ReadEnvelope(Path.Combine(outDir, "ST-ROLLBACK.envelope.json"));
+        int? applyExit = null;
+        if (env is not null && prepExit == 0)
+        {
+            var ctx = LoadWorkstateContextFromRoot(tmpRoot);
+            if (ctx is not null) applyExit = ApplyEnvelopeCore(ctx.Value, env, false);
+        }
+        FailAfterWriteHook = null;
+        var restoredHash = ComputeSha256(File.ReadAllText(wsPath, new UTF8Encoding(false)));
+        var logLines = File.Exists(logPath) ? File.ReadAllLines(logPath) : [];
+        var rolledBack = logLines.Any(l => l.Contains("ROLLED_BACK") && l.Contains("ST-ROLLBACK"));
+        var noOkLog = !logLines.Any(l => l.Contains("\"ok\"") && l.Contains("ST-ROLLBACK"));
+        var hashRestored = string.Equals(restoredHash, preimageHash, StringComparison.OrdinalIgnoreCase);
+        var ok = applyExit == 1 && rolledBack && noOkLog && hashRestored;
+        caseResults.Add(new JsonObject { ["case"] = "rollback-after-write", ["exit"] = applyExit, ["rolledBack"] = rolledBack, ["noOkLog"] = noOkLog, ["hashRestored"] = hashRestored, ["pass"] = ok });
+        if (!ok) mismatches.Add(new JsonObject { ["case"] = "rollback-after-write", ["expected"] = "exit=1,ROLLED_BACK,no-ok-log,hash==preimage", ["actual"] = $"exit={applyExit},rolledBack={rolledBack},noOkLog={noOkLog},hashRestored={hashRestored}" });
+    }
+
+    // case: rollback-restores-log — rollback 후 v2 ok 항목이 없음을 재확인한다.
+    private static void RunCaseRollbackRestoresLog(string logPath, JsonArray caseResults, JsonArray mismatches)
+    {
+        var logLines = File.Exists(logPath) ? File.ReadAllLines(logPath) : [];
+        var noV2OkEntry = !logLines.Any(l => l.Contains("\"result\":\"ok\"") && l.Contains("ST-ROLLBACK"));
+        caseResults.Add(new JsonObject { ["case"] = "rollback-restores-log", ["noV2OkEntry"] = noV2OkEntry, ["pass"] = noV2OkEntry });
+        if (!noV2OkEntry) mismatches.Add(new JsonObject { ["case"] = "rollback-restores-log", ["expected"] = "v2-ok-log-not-written", ["actual"] = "v2-ok-log-was-written" });
+    }
+
+    // case: fatal-restore-failed — 복원 자체를 실패시켜 exit 2 FATAL_STATE_UNKNOWN을 검증한다.
+    private static void RunCaseFatalRestoreFailed(string tmpRoot, string reqPath, string wsPath, string wsContent,
+        string logPath, string outDir, JsonArray caseResults, JsonArray mismatches)
+    {
+        RestoreFixture(wsPath, wsContent, logPath);
+        ProjectionOverride = () => 0; FailAfterWriteHook = () => "self-test-fatal"; FailRestoreForTest = true;
+        var prepExit = RunPrepareCore(tmpRoot, new PrepareOptions("ST-FATAL", reqPath, false));
+        var env = ReadEnvelope(Path.Combine(outDir, "ST-FATAL.envelope.json"));
+        int? applyExit = null;
+        if (env is not null && prepExit == 0)
+        {
+            var ctx = LoadWorkstateContextFromRoot(tmpRoot);
+            if (ctx is not null) applyExit = ApplyEnvelopeCore(ctx.Value, env, false);
+        }
+        FailAfterWriteHook = null; FailRestoreForTest = false;
+        var logLines = File.Exists(logPath) ? File.ReadAllLines(logPath) : [];
+        var fatalLogged = logLines.Any(l => l.Contains("FATAL_STATE_UNKNOWN") && l.Contains("ST-FATAL"));
+        var ok = applyExit == 2 && fatalLogged;
+        caseResults.Add(new JsonObject { ["case"] = "fatal-restore-failed", ["exit"] = applyExit, ["fatalLogged"] = fatalLogged, ["pass"] = ok });
+        if (!ok) mismatches.Add(new JsonObject { ["case"] = "fatal-restore-failed", ["expected"] = "exit=2,FATAL_STATE_UNKNOWN", ["actual"] = $"exit={applyExit},fatal={fatalLogged}" });
+    }
+
+    // 자기 시험용 fixture 초기화 — WORKSTATE를 preimage로 되돌리고 log를 비운다.
+    private static void RestoreFixture(string wsPath, string wsContent, string logPath)
+    {
+        File.WriteAllText(wsPath, wsContent, new UTF8Encoding(false));
+        File.WriteAllText(logPath, "", new UTF8Encoding(false));
+    }
 }

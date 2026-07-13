@@ -1,0 +1,9 @@
+{
+  "_comment": "state-transition-callsite-check 역사적 증거 파일 명시 목록. 접두사 매칭 금지 — 정확한 경로만 등재. 새 파일 추가 시 사람 결재 필요.",
+  "historicalFiles": [
+    "docs/handoff/queue/directive-06C-1-R1-legacy-removal.md",
+    "docs/verification/06c1-r1-legacy-removal.md",
+    "outputs/review/06C-1.codex.md",
+    "outputs/review/06C-1-R1.codex.md"
+  ]
+}
