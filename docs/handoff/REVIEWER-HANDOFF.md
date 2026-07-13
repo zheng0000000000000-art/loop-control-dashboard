@@ -100,6 +100,64 @@
 - `outputs/quarantine/` 3건 처리.
 - push는 사람이 직접 한다(2026-07-11 47건 push 완료).
 
+## 4-0-C. ★★ 2026-07-13 세션 이사 — **여기부터 읽어라. §4-0·§4-0-B는 낡았다.**
+
+### 지금 어디인가
+
+```
+브랜치   wp/state-integrity   ← 통합 branch. main 아니다. 조각 land 금지
+phase    P00 / WP-00 / DI-00-04 / blocked
+blocker  WP-STATE-INTEGRITY 미완 — 상태 원본을 아직 믿을 수 없다
+조율자   ⛔ 중단 (Claude 예약작업 recursion1-result-check enabled=false, 사람 결정)
+코덱스   ⛔ 중단 — ★ CLI가 이 머신에 없다(실측: where.exe codex 무결과). 자동화 경로 자체가 없다
+실행자   ▶ 05H 가동 중(PID 21128). 사람 승인 건별 수동 발사만
+```
+
+### 오늘 들어온 것: `WP-STATE-INTEGRITY` (사람이 준 외부 설계)
+
+`docs/plan/wp/` 4건 + `docs/handoff/queue/directive-05H|06C-1|06C-2|06H` 4건.
+**검수자가 실측 주장 6/6을 전부 대조했다 — 사실이다.**
+
+**이 WP가 고치는 근본 결함(전부 실측):**
+
+1. **멱등이 reconciliation보다 먼저다**(`StateApplierCli.cs:84`) → **손 위조 transition-id가 통과한다.** 검수자가 실증했다(`TEST-DI0001-2` 재적용 exit 0).
+2. **rollback 없음** — post-apply 실패 시 `File.Move`된 WORKSTATE가 원복되지 않는다.
+3. **비결정성** — `BuildCandidate`가 `UtcNow`를 직접 호출(`:346·357·496`).
+4. **ID 결속 없음** — id만 같으면 다른 request라도 멱등 성공.
+5. **★ `--human-decision`이 임의 파일이다** — **AI가 자기 승인을 위조할 수 있다.** **검수자가 오늘 실제로 그렇게 했다**(`outputs/decisions-diId-2026-07-12.json`을 내가 써서 ADR-013 전이에 붙였다).
+
+### 순서 (조각 land 금지 — 넷이 다 모인 뒤 통합 land gate 12개)
+
+```
+05H(가동 중) → 06C-1 → 06C-2 → 06H → land gate 1~12 → 사람이 main merge
+```
+
+- **05H·06H는 원래 코덱스 영역**인데 코덱스 CLI가 없다 → **`ADR-015`(사람 승인)로 sonnet 대행.**
+- **위험을 숨기지 않는다**: sonnet이 하네스(05H)와 그것이 검사할 코드(06C-1)를 둘 다 만든다. **별도 발사로 분리**하고 **검수자가 land gate를 직접 재실행**해 완화한다.
+
+### 새 검수자가 절대 하면 안 되는 것
+
+- **`main`에 조각 커밋** — 통합 branch에서만.
+- **`--human-decision` 파일을 직접 써서 전이를 통과시키는 것** — 그게 위조다. 06C-1이 이 경로를 `trusted-human-receipt-required`로 fail-closed 시킨다.
+- **자동 스케줄러를 다시 켜는 것** — `TRUSTED_BASELINE` 선언 전까지 금지(HUMAN-INBOX 2026-07-13).
+
+### 오늘 발견한 함정 (전부 실측)
+
+| 함정 | 실체 |
+| --- | --- |
+| **게이트가 다른 바이너리를 검사한다** | `DiCompletionCheckCli.RunDotnetCommand:142`가 `-c Release` 없이 서브프로세스를 부른다 → **Debug 바이너리.** Release만 빌드하면 **게이트는 낡은 코드를 검사한다.** `CODEX-GATE-04`가 고친다 |
+| exe 직접 실행 | 저장소 루트를 **부모 폴더**로 잡는다. 하네스는 **`dotnet run --project server`로** 불러라 |
+| `outputs/sonnet-*.out.log` | 재발사 때 **갱신되지 않는다.** 정본은 `.out.jsonl`의 `result` 이벤트 |
+| PowerShell `Set-Location` | .NET `CurrentDirectory`를 **안 바꾼다.** 검수자가 이걸로 세 번 오판할 뻔했다 |
+
+### 사람 게이트 대기
+
+- **land gate 12번**(clean replay 또는 `trust-origin` 부트스트랩 의식) — **사람이 직접**
+- **main merge** · **push 60건+**
+- `ADR-010`(승인 대기인데 ADR-011이 완료로 인용) · `ADR-012`(무모델 대조군) · `LOCAL-DI-RUNNER-v3 §9` · `LAUNCH-BUDGET`(턴별 피크 **134,528** 실측)
+
+---
+
 ## 4-0. ★★ 2026-07-12 19:3x 세션 이사 — **여기부터 읽어라. 아래 §4는 낡았다.**
 
 ### 이번 세션에 바뀐 가장 큰 것: **Phase 0의 완료 기준이 재정의됐다**(`ADR-011`, 사람 승인)
