@@ -395,3 +395,10 @@
 - server/Harness/HandoffIntegrityCli.cs·guard03-blockers-unlock.md를 레인 분리 커밋(2b48915, a520bea). 커밋 후 gate-clean server 재실행 exit0(PASS) - 게이트 잠김 해제 목적 달성.
 - 미해결: docs/handoff/FILE-CLAIMS.json의 claim GUARD-03-15956이 아직 status=active/exitCode=null이다. PID 15956을 CommandLine(--dangerously-skip-permissions 포함) 기준으로 재확인한 결과 지금도 생존 중이다 - 즉 "사망 후 방치된 고아 클레임"이라 단정할 수 없고, 프로세스가 아직 뒷정리(claim release) 전이라 진행 중일 가능성이 있다.
 - 사람 결정 필요 항목(기존 23:21 항목의 선택지 그대로 유효): FILE-CLAIMS.json의 이 claim을 (a) 프로세스 종료·정리를 기다린다 (b) 사람이 직접 released로 정정한다. 조율자는 어느 쪽도 대행하지 않았다.
+## 갱신: GUARD-03 고아 클레임 — PID 15956 완전 사망 확인 (2026-07-13 21:20, 조율자)
+
+- 기존 항목("GUARD-03 실행자 사망 - 고아 클레임 + DI 미완료", 2026-07-12 23:21 최초 등재, 23:39 갱신)에 대한 추가 갱신.
+- 이번 회차(2026-07-13 21:20)에서 PID 15956을 Get-Process로 조회한 결과 더 이상 존재하지 않음(완전 사망). 이전 회차들에서는 생존·사망 관측이 번갈아 나타나 "진행 중일 가능성"을 배제하지 못했으나, 이번엔 명확히 부재함을 확인.
+- docs/handoff/FILE-CLAIMS.json의 claim GUARD-03-15956은 여전히 status=active/exitCode=null(고아 상태 그대로).
+- GUARD-03 자체의 코드·검증문서는 이미 2026-07-12 23:39 회차에 커밋 완료(2b48915, a520bea)되어 gate-clean 잠김 해제도 확인됨. 남은 것은 이 고아 클레임 레코드 처리뿐임.
+- 사람 결정 필요(기존 선택지 그대로 유효, 프로세스 사망 확정으로 자연 소멸 대기 옵션의 근거는 약해짐): FILE-CLAIMS.json의 해당 claim을 (a) 그대로 두거나 (b) 사람이 직접 released로 정정. 조율자는 대행하지 않음.
