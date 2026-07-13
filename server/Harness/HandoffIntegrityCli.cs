@@ -1,5 +1,6 @@
 // WORKSTATE handoff integrity harness.
 // Checks that the current handoff record is backed by real files, hashes, and completion artifacts.
+// --workstate + --applier-log 둘 다 지정 시 fixture 격리 모드: reconciliation+malformed+blockers만 실행.
 using System.Security.Cryptography;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -18,74 +19,24 @@ internal static class HandoffIntegrityCli
         "done", "completed", "complete", "pass", "passed",
     };
 
-    // handoff-integrity entry. exit 0=handoff is backed by concrete artifacts, 1=contract gap, 2=harness error.
+    // handoff-integrity entry. exit 0=integrity verified, 1=contract gap, 2=harness error.
     internal static int Run(string[] args)
     {
         try
         {
-            var root = GitTools.FindRepoRoot();
-            var workstatePath = args.Length > 1
-                ? Path.GetFullPath(Path.IsPathRooted(args[1]) ? args[1] : Path.Combine(root, args[1]))
-                : Path.Combine(root, "docs", "handoff", "WORKSTATE.json");
-
-            if (!File.Exists(workstatePath))
+            if (args.Any(a => string.Equals(a, "--pending-transition", StringComparison.OrdinalIgnoreCase)))
             {
-                Console.Error.WriteLine("{\"error\":\"WORKSTATE.json not found\"}");
-                return 2;
+                Console.Error.WriteLine("{\"error\":\"pending-not-allowed-on-cli\",\"code\":\"pending-not-allowed-on-cli\"}");
+                return 1;
             }
-
+            var root = GitTools.FindRepoRoot();
+            var (workstatePath, applierLogPath, fixtureMode) = ParsePaths(args, root);
+            if (!File.Exists(workstatePath))
+                { Console.Error.WriteLine("{\"error\":\"WORKSTATE.json not found\"}"); return 2; }
             var parsed = JsonNode.Parse(File.ReadAllText(workstatePath)) as JsonObject;
             if (parsed is null)
-            {
-                Console.Error.WriteLine("{\"error\":\"WORKSTATE.json is not a JSON object\"}");
-                return 2;
-            }
-
-            var failures = new JsonArray();
-            var warnings = new JsonArray();
-            var changedFiles = new JsonArray();
-
-            var diId = ReadString(parsed, "diId");
-            var status = ReadString(parsed, "status");
-            CheckRequired(parsed, "schemaVersion", failures);
-            CheckRequired(parsed, "diId", failures);
-            CheckRequired(parsed, "status", failures);
-
-            var changed = parsed["changedFiles"] as JsonArray;
-            if (changed is null || changed.Count == 0)
-            {
-                failures.Add(Failure("changedFiles", "missing", "changedFiles must be a non-empty array"));
-            }
-            else
-            {
-                foreach (var item in changed.OfType<JsonObject>())
-                {
-                    changedFiles.Add(CheckChangedFile(root, item, failures));
-                }
-            }
-
-            CheckCompletionArtifacts(root, parsed, diId, status, failures, warnings);
-            CheckQueueStatus(root, diId, status, failures, warnings);
-            CheckBlockerConsistency(parsed, status, failures);
-
-            var report = new JsonObject
-            {
-                ["harness"] = "handoff-integrity",
-                ["workstate"] = Path.GetRelativePath(root, workstatePath).Replace('\\', '/'),
-                ["diId"] = diId,
-                ["status"] = status,
-                ["changedFileCount"] = changed?.Count ?? 0,
-                ["failureCount"] = failures.Count,
-                ["warningCount"] = warnings.Count,
-                ["verdict"] = failures.Count == 0 ? "PASS" : "FAIL",
-                ["changedFiles"] = changedFiles,
-                ["failures"] = failures,
-                ["warnings"] = warnings,
-                ["note"] = "Read-only check. Hash fields are required for current changedFiles because handoff must be machine-verifiable.",
-            };
-
-            Console.WriteLine(report.ToJsonString(JsonOptions));
-            return failures.Count == 0 ? 0 : 1;
+                { Console.Error.WriteLine("{\"error\":\"WORKSTATE.json is not a JSON object\"}"); return 2; }
+            return RunChecks(root, parsed, workstatePath, applierLogPath, fixtureMode);
         }
         catch (Exception ex)
         {
@@ -94,14 +45,138 @@ internal static class HandoffIntegrityCli
         }
     }
 
-    // Checks a required top-level WORKSTATE field.
+    // --workstate / --applier-log 인자를 파싱해 절대 경로와 모드를 반환한다.
+    private static (string workstatePath, string applierLogPath, bool fixtureMode) ParsePaths(string[] args, string root)
+    {
+        string? workstateArg = null;
+        string? applierLogArg = null;
+        for (int i = 1; i < args.Length; i++)
+        {
+            if (string.Equals(args[i], "--workstate", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                workstateArg = args[++i];
+            else if (string.Equals(args[i], "--applier-log", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                applierLogArg = args[++i];
+            else if (workstateArg is null && !args[i].StartsWith("--"))
+                workstateArg = args[i];
+        }
+        var wsPath = workstateArg is not null
+            ? Path.GetFullPath(Path.IsPathRooted(workstateArg) ? workstateArg : Path.Combine(root, workstateArg))
+            : Path.Combine(root, "docs", "handoff", "WORKSTATE.json");
+        var logPath = applierLogArg is not null
+            ? Path.GetFullPath(Path.IsPathRooted(applierLogArg) ? applierLogArg : Path.Combine(root, applierLogArg))
+            : Path.Combine(root, "docs", "handoff", "WORKSTATE.applier-log.jsonl");
+        return (wsPath, logPath, applierLogArg is not null);
+    }
+
+    // 모든 검사를 실행하고 보고서를 출력한다.
+    private static int RunChecks(
+        string root, JsonObject parsed, string workstatePath, string applierLogPath, bool fixtureMode)
+    {
+        var failures = new JsonArray();
+        var warnings = new JsonArray();
+        var changedFiles = new JsonArray();
+        var diId = ReadString(parsed, "diId");
+        var status = ReadString(parsed, "status");
+
+        var reconc = RunReconciliation(workstatePath, applierLogPath, failures, warnings);
+        if (reconc.harnessErrors > 0)
+        {
+            Console.WriteLine(new JsonObject
+            {
+                ["harness"] = "handoff-integrity",
+                ["workstate"] = Path.GetRelativePath(root, workstatePath).Replace('\\', '/'),
+                ["fixtureMode"] = fixtureMode,
+                ["verdict"] = "HARNESS_ERROR",
+                ["failures"] = failures, ["warnings"] = warnings,
+            }.ToJsonString(JsonOptions));
+            return 2;
+        }
+
+        if (!fixtureMode)
+            RunFullModeChecks(root, parsed, diId, status, failures, warnings, changedFiles);
+        CheckBlockerConsistency(parsed, status, failures);
+
+        Console.WriteLine(new JsonObject
+        {
+            ["harness"] = "handoff-integrity",
+            ["workstate"] = Path.GetRelativePath(root, workstatePath).Replace('\\', '/'),
+            ["applierLog"] = Path.GetRelativePath(root, applierLogPath).Replace('\\', '/'),
+            ["fixtureMode"] = fixtureMode,
+            ["diId"] = diId, ["status"] = status,
+            ["changedFileCount"] = changedFiles.Count,
+            ["failureCount"] = failures.Count, ["warningCount"] = warnings.Count,
+            ["verdict"] = failures.Count == 0 ? "PASS" : "FAIL",
+            ["reconciliation"] = reconc.reconciliationResult,
+            ["changedFiles"] = changedFiles, ["failures"] = failures, ["warnings"] = warnings,
+            ["note"] = fixtureMode
+                ? "Fixture isolation mode: reconciliation+blockers only."
+                : "Full mode: changedFiles hash, completion, queue, reconciliation.",
+        }.ToJsonString(JsonOptions));
+        return failures.Count == 0 ? 0 : 1;
+    }
+
+    // full 모드에서 changedFiles·completion·queue를 검사한다.
+    private static void RunFullModeChecks(
+        string root, JsonObject parsed, string diId, string status,
+        JsonArray failures, JsonArray warnings, JsonArray changedFiles)
+    {
+        CheckRequired(parsed, "schemaVersion", failures);
+        CheckRequired(parsed, "diId", failures);
+        CheckRequired(parsed, "status", failures);
+        var changed = parsed["changedFiles"] as JsonArray;
+        if (changed is null || changed.Count == 0)
+            failures.Add(Failure("changedFiles", "missing", "changedFiles must be a non-empty array"));
+        else
+            foreach (var item in changed.OfType<JsonObject>())
+                changedFiles.Add(CheckChangedFile(root, item, failures));
+        CheckCompletionArtifacts(root, parsed, diId, status, failures, warnings);
+        CheckQueueStatus(root, diId, status, failures, warnings);
+    }
+
+    // HandoffIntegrityChecker를 실행하고 결과를 failures/warnings에 병합한다.
+    private static (int harnessErrors, JsonNode? reconciliationResult) RunReconciliation(
+        string workstatePath, string applierLogPath,
+        JsonArray failures, JsonArray warnings)
+    {
+        var opts = new ReconciliationOptions(workstatePath, applierLogPath, null);
+        var result = HandoffIntegrityChecker.Run(opts);
+
+        foreach (var e in result.HarnessErrors)
+            Console.Error.WriteLine($"{{\"harness-error\":\"{e.Code}\",\"subject\":\"{e.Subject}\",\"message\":\"{e.Message}\"}}");
+
+        if (result.HarnessErrors.Count > 0)
+            return (result.HarnessErrors.Count, null);
+
+        foreach (var f in result.Failures)
+            failures.Add(Failure(f.Subject, f.Code, f.Message));
+        foreach (var w in result.Warnings)
+            warnings.Add(Warning(w.Subject, w.Code, w.Message));
+
+        JsonNode? metricsNode = null;
+        if (result.Metrics is { } m)
+        {
+            metricsNode = new JsonObject
+            {
+                ["appliedTransitionCount"] = m.AppliedTransitionCount,
+                ["successfulLogEntryCount"] = m.SuccessfulLogEntryCount,
+                ["successfulLogIdCount"] = m.SuccessfulLogIdCount,
+                ["duplicateSuccessLogCount"] = m.DuplicateSuccessLogCount,
+                ["pendingExemptionApplied"] = m.PendingExemptionApplied,
+                ["reconciliation"] = m.Reconciliation,
+            };
+        }
+
+        return (0, metricsNode);
+    }
+
+    // 필수 최상위 WORKSTATE 필드를 확인한다.
     private static void CheckRequired(JsonObject root, string property, JsonArray failures)
     {
         if (root[property] is null || string.IsNullOrWhiteSpace(root[property]?.ToString()))
             failures.Add(Failure($"workstate.{property}", "missing", "required field is absent or empty"));
     }
 
-    // Verifies one changedFiles item against the filesystem and optional hash value.
+    // changedFiles 항목 하나를 파일시스템·해시와 대조한다.
     private static JsonObject CheckChangedFile(string root, JsonObject item, JsonArray failures)
     {
         var path = ReadString(item, "path");
@@ -169,7 +244,7 @@ internal static class HandoffIntegrityCli
         return entry;
     }
 
-    // Checks that a done handoff points to a real verification artifact.
+    // 완료 상태의 handoff가 실제 verification 아티팩트를 가리키는지 확인한다.
     private static void CheckCompletionArtifacts(string root, JsonObject workstate, string diId, string status, JsonArray failures, JsonArray warnings)
     {
         if (!DoneStatuses.Contains(status)) return;
@@ -195,7 +270,7 @@ internal static class HandoffIntegrityCli
             warnings.Add(Warning(diId, "verification-not-in-changedFiles", "verification exists by id but is not listed in current changedFiles"));
     }
 
-    // Compares WORKSTATE status against queue rows that mention the same diId.
+    // WORKSTATE diId가 큐 파일에서 열린 상태인지 대조한다.
     private static void CheckQueueStatus(string root, string diId, string status, JsonArray failures, JsonArray warnings)
     {
         if (string.IsNullOrWhiteSpace(diId)) return;
@@ -226,16 +301,16 @@ internal static class HandoffIntegrityCli
             warnings.Add(Warning(diId, "queue-mention-missing", "diId is not mentioned in CODEX or SONNET queue"));
     }
 
-    // blocked 상태에서 blockers[] 배열이 비어 있거나 없으면 failure, completed 상태에서 blockers[]가 남아 있으면 stale failure.
+    // blocked 상태에 blockers[]가 없거나 비어 있으면 blockers-missing, done 상태에 blockers[]가 남으면 blockers-stale.
     private static void CheckBlockerConsistency(JsonObject workstate, string status, JsonArray failures)
     {
         var blockers = workstate["blockers"] as JsonArray;
         var hasBlockers = blockers is not null && blockers.Count > 0;
         var blocked = status.Contains("block", StringComparison.OrdinalIgnoreCase);
         if (blocked && !hasBlockers)
-            failures.Add(Failure("blockers", "missing", "blocked status requires a non-empty blockers array"));
+            failures.Add(Failure("blockers", "blockers-missing", "blocked status requires a non-empty blockers array"));
         if (!blocked && hasBlockers && DoneStatuses.Contains(status))
-            failures.Add(Failure("blockers", "stale", "done status must not carry a non-empty blockers array"));
+            failures.Add(Failure("blockers", "blockers-stale", "done status must not carry a non-empty blockers array"));
     }
 
     // 큐 행이 아직 열린 상태를 뜻하는지 판정한다.
@@ -255,19 +330,9 @@ internal static class HandoffIntegrityCli
 
     // 실패 항목을 공통 JSON 형식으로 만든다.
     private static JsonObject Failure(string subject, string code, string message)
-        => new()
-        {
-            ["subject"] = subject,
-            ["code"] = code,
-            ["message"] = message,
-        };
+        => new() { ["subject"] = subject, ["code"] = code, ["message"] = message };
 
     // 경고 항목을 공통 JSON 형식으로 만든다.
     private static JsonObject Warning(string subject, string code, string message)
-        => new()
-        {
-            ["subject"] = subject,
-            ["code"] = code,
-            ["message"] = message,
-        };
+        => new() { ["subject"] = subject, ["code"] = code, ["message"] = message };
 }

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 3,
+  "phaseId": "P00",
+  "wpId": "WP-TEST",
+  "diId": "DI-TEST-E",
+  "status": "completed",
+  "blockers": [{ "id": "stale-blocker", "reason": "이 blocker는 완료 상태에서 남으면 안 된다" }],
+  "appliedTransitions": [
+    { "id": "TRANS-E-001", "appliedAt": "2026-01-01T00:00:00Z" }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 3,
+  "phaseId": "P00",
+  "wpId": "WP-TEST",
+  "diId": "DI-TEST-A",
+  "status": "blocked",
+  "blockers": ["mid-incident: TEST-DI0001-2 적용됐으나 state에서 누락"],
+  "appliedTransitions": [
+    { "id": "TEST-DI0001-1", "appliedAt": "2026-01-01T00:00:00Z" },
+    { "id": "TEST-DI0001-3", "appliedAt": "2026-01-01T00:02:00Z" }
+  ]
+}

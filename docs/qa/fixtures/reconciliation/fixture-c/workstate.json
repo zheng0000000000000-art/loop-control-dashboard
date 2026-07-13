@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 3,
+  "phaseId": "P00",
+  "wpId": "WP-TEST",
+  "diId": "DI-TEST-C",
+  "status": "blocked",
+  "blockers": ["known-good snapshot: 정상 state"],
+  "appliedTransitions": [
+    { "id": "SNAP-001", "appliedAt": "2026-01-01T00:00:00Z" },
+    { "id": "SNAP-002", "appliedAt": "2026-01-01T00:01:00Z" },
+    { "id": "SNAP-003", "appliedAt": "2026-01-01T00:02:00Z" }
+  ]
+}

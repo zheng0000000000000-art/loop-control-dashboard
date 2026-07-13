@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 3,
+  "phaseId": "P00",
+  "wpId": "WP-TEST",
+  "diId": "DI-TEST-B",
+  "status": "blocked",
+  "blockers": ["duplicate state test"],
+  "appliedTransitions": [
+    { "id": "TRANS-001", "appliedAt": "2026-01-01T00:00:00Z" },
+    { "id": "TRANS-001", "appliedAt": "2026-01-01T00:01:00Z" }
+  ]
+}
