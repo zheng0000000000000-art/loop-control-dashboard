@@ -16,3 +16,8 @@
 | [FAIL-2026-012](cases/FAIL-2026-012-proxy-actor-misjudgment.md) | 커밋 메시지 접두사를 행위 주체로 오판해 위반 22건을 날조 | 해결됨 | unnormalized_gate, design_learning | gate-evaluation, executor-orchestration |
 | [FAIL-2026-013](cases/FAIL-2026-013-launch-prompt-truncation.md) | 발사 프롬프트가 잘려 실행자가 지시서를 받은 적이 없었음 | 해결됨 | unnormalized_gate, observability, design_learning | executor-orchestration |
 | [FAIL-2026-014](cases/FAIL-2026-014-tier2test-verification-cli-crashes.md) | Tier2Approver 검증 CLI 일부 시나리오가 예외로 종료되고 검증 문서 주장과 실측이 불일치 | 확인됨 | verification_gap, harness_runtime_error, design_learning | tier2-approver, verification-harness |
+| [FAIL-2026-015](cases/FAIL-2026-015-harness-measures-wrong-thing.md) | 하네스가 다른 것을 잰다 — 초록불이 대상과 무관하다(9건 실측) | 진행 중 | verification_gap | verification-harness |
+| [FAIL-2026-016](cases/FAIL-2026-016-contradictory-requirements-force-relaxation.md) | 모순된 요구가 실행자를 규칙 완화로 민다 — 원인의 절반은 검수자 | 부분 해결 | design_learning | executor-orchestration |
+| [FAIL-2026-017](cases/FAIL-2026-017-powershell-encoding-triple-trap.md) | PowerShell 5.1 인코딩 3중 함정 — 독립 검수자에게 깨진 입력을 줘 없는 결함을 보고받음 | 해결됨 | config_side_effect | executor-orchestration |
+| [FAIL-2026-018](cases/FAIL-2026-018-reviewer-proxy-relapse.md) | 검수자가 프록시로 네 번 오판할 뻔했다(1건은 실제 사고 — wiki 42파일 삭제) | 진행 중 | known_failure | verification-harness |
+| [FAIL-2026-019](cases/FAIL-2026-019-empty-args-webserver-deadlock.md) | 빈 인자 dotnet run이 웹서버를 띄워 실행자를 12분 교착 | 미해결 | harness_runtime_error | executor-orchestration |

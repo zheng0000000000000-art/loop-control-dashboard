@@ -424,3 +424,153 @@ FAIL-005는 "실행 중인가"를 StartTime으로, FAIL-010은 "깨끗한가"를
 - proof: `dotnet build server -c Release` exit 0; `verify-behavior` exit 0 with `behaviorEqual=true`; `measure dev-pack` exit 0 with `violationCount=0`; `build-verify` exit 0 with `verdict=PASS`.
 - note: `claim-check FIX-07` exit 0 but `claimCount=0`, so dashboard function-length claims were verified through `measure` evidence rather than claim parsing.
 - next candidates: project-api-edge-check after `FAIL-2026-009` fix, 신규 sonnet 커밋 QA, `hs-scan` component split proposal.
+
+---
+
+## 2026-07-14 검수자 HS-GATE 심사 (오늘 등재한 FAIL-2026-015~019 기반)
+
+- actor: **검수자(claude-opus)**
+- command: `dotnet run --project server -c Release -- hs-scan` → **exit 1**, `failureCaseCount=14`, candidate=`executor-orchestration(6)`
+- **hs-scan이 내놓은 후보는 이미 심사된 broad class다.** 그러나 **오늘 FAIL-2026-015~019를 등재하면서
+  같은 failureClass가 2회 이상이 된 계열이 넷 생겼다.** 수동 확인으로 후보를 추가한다(hs-gate.md §트리거 단서).
+
+> **⚠ hs-scan 자체의 한계**: 후보를 `component` 단위로만 낸다(`executor-orchestration(6)`).
+> **`failureClass` 반복은 못 본다.** 오늘 새로 생긴 반복(verification_gap 2회 · known_failure/proxy 2회 ·
+> config_side_effect 2회 · harness_runtime_error 2회)을 **하나도 제기하지 못했다.**
+> → **hs-scan 개선을 별도 후보로 올린다(HS-D).**
+
+### 데이터 존재 관문 (§2 — 점수화 전 필수)
+
+| 후보 | 판정 근거 데이터가 실재하는가 | 실체/프록시 |
+| --- | --- | --- |
+| HS-A `harness-selftest-check` | `HarnessRegistry.Handlers` 키 목록 + 각 하네스의 CLI 인자 파싱 | **실체** (코드) |
+| HS-B `ps-encoding-check` | `.ps1` 파일 바이트(BOM) + 소스 텍스트 | **실체** (바이트) |
+| HS-C `empty-args-failclosed-check` | `dotnet run --project server -- ` 의 exit code | **실체** (실행 결과) |
+| HS-D `hs-scan` failureClass 집계 | `docs/wiki/failures/index.md`의 failureClass 열 | **실체** (파일) |
+
+**넷 다 PASS.** 프록시에 기대는 후보 없음.
+
+---
+
+### HS-A — `harness-selftest-check` (신규 하네스)
+
+**근거**: `FAIL-2026-015`(하네스가 다른 것을 잰다, **실측 9건**) · `FAIL-2026-014`(검증 문서 PASS 주장과 실측 불일치)
+→ **`verification_gap` 2회.**
+
+**규칙**: **"하네스는 자기가 틀렸을 때 그것을 말할 수 있어야 한다."**
+하네스를 만들었으면 **`--self-test`(in-process 단언 실행기)를 함께 만든다.**
+그리고 **그 self-test가 자기를 반증하는지** 보여야 한다(fixture를 오염시키면 exit 1).
+
+**검사 내용**:
+1. `HarnessRegistry`에 등록된 각 하네스가 `--self-test`를 지원하는가 (미지원 목록 출력)
+2. 지원하는 하네스의 `--self-test`가 **fixture 오염 시 exit 1을 내는가** (사본에서 오염 주입)
+3. `--self-test`가 **경로·id 인자를 받지 않는가** (받으면 production 우회로)
+
+| 항목 | 점수 | 근거 |
+| --- | --- | --- |
+| 반복성 | **2** | 9건 실측. 매 하네스 제작마다 반복 |
+| 결정가능성 | **2** | 완전 기계 판정(있다/없다 · exit code) |
+| 장애주입 | **2** | fixture 오염 자명 |
+| 격리 | **2** | **저장소 사본에서** 오염 주입 → 원본 부작용 0 |
+| 관찰성 | **2** | 하네스별 미지원/미반증 목록을 분해 출력 |
+| 유지가치 | **2** | 모든 게이트가 여기 의존한다 |
+| **총점** | **12/12** | **즉시제작** |
+
+**제안 산출물**: `server/Harness/HarnessSelfTestCheckCli.cs` + `GATE-MANIFEST` POST-COMMIT 등재.
+**선행**: `05H-R3`(self-test가 실패 코드 단언) · `06C-1-R2`(`state-transition --self-test` 신설)가 **참조 구현**이 된다.
+
+---
+
+### HS-B — `ps-encoding-check` (신규 하네스)
+
+**근거**: `FAIL-2026-017`(PS 5.1 인코딩 3중 함정 — **독립 검수자에게 깨진 입력**) · `FAIL-2026-010`(줄바꿈 표현이 게이트를 영구 잠금)
+→ **`config_side_effect` 2회.** 둘 다 **"표현(인코딩·줄바꿈)이 판정을 오염시킨다"**는 같은 규칙이다.
+
+**규칙**: **"텍스트의 표현이 판정을 바꾸면 안 된다."**
+
+**검사 내용**:
+1. 모든 `.ps1`이 **BOM 있는 UTF-8**인가 (없으면 한글 리터럴이 파괴된다 — `run-executor.ps1`이 그래서 BOM을 갖는다)
+2. 인코딩 미지정 `Get-Content`가 있는가 (`Get-ContentText` 같은 **사용자 함수 오탐 금지** — 단어 경계로 매치)
+3. 하네스·검수 배선이 만드는 **입력 패킷에 BOM·U+FFFD가 있는가**
+
+| 항목 | 점수 | 근거 |
+| --- | --- | --- |
+| 반복성 | **2** | `run-executor.ps1` BOM(P0-06 무력화) · `run-codex-review.ps1` BOM · `Get-Content` 파괴 → 3회+ |
+| 결정가능성 | **2** | 바이트 검사. 완전 이분 |
+| 장애주입 | **2** | BOM을 떼면 즉시 재현 |
+| 격리 | **2** | 읽기 전용 |
+| 관찰성 | **2** | 파일별 위반 사유 출력 |
+| 유지가치 | **2** | **P0-06(파일 소유권)이 이것 때문에 한 번도 작동하지 않았다** |
+| **총점** | **12/12** | **즉시제작** |
+
+**제안 산출물**: `server/Harness/PsEncodingCheckCli.cs` + POST-COMMIT 등재.
+**주의**: 검사 #2의 정규식은 **단어 경계**를 써야 한다. 검수자가 `Get-ContentText`를 `Get-Content`로 **오탐**했다(FAIL-2026-018 사례 7).
+
+---
+
+### HS-C — `empty-args-failclosed-check` (기존 확장 — `CODEX-GATE-04`에 편입)
+
+**근거**: `FAIL-2026-019`(빈 인자 `dotnet run`이 웹서버를 띄워 실행자 **12분 교착**) · `FAIL-2026-014`(하네스 런타임 예외)
+→ **`harness_runtime_error` 2회.**
+
+**규칙**: **"비대화 발사 컨텍스트에서 끝나지 않는 프로세스를 띄우면 안 된다."**
+
+| 항목 | 점수 | 근거 |
+| --- | --- | --- |
+| 반복성 | **1** | 실측 1회(다만 함정 #3으로 이미 관측됨 — 절반만 고쳐졌다) |
+| 결정가능성 | **2** | exit code 이분 |
+| 장애주입 | **2** | 빈 인자로 부르면 즉시 재현 |
+| 격리 | **1** | 웹서버가 뜨면 **죽여야 한다** — 부작용 있음 |
+| 관찰성 | **2** | 어느 인자 조합이 안 끝나는지 출력 |
+| 유지가치 | **2** | **한도 창을 통째로 태울 수 있다** |
+| **총점** | **10/12** | **기존확장·기한부** |
+
+**제안**: 신규 하네스가 아니라 **`CODEX-GATE-04 §5-5`에 편입**(이미 등재됨). 재발명 금지.
+**보완**: `run-executor.ps1`의 서브프로세스 타임아웃(별도).
+
+---
+
+### HS-D — `hs-scan`의 **failureClass 반복 집계** (기존 확장)
+
+**근거**: **hs-scan 자신이 이번 반복을 못 잡았다.**
+오늘 `verification_gap` 2회 · `known_failure` 2회 · `config_side_effect` 2회 · `harness_runtime_error` 2회가 새로 생겼는데
+`hs-scan`은 **`executor-orchestration(6)`이라는 component 후보만** 냈다.
+
+**`hs-gate.md`의 좋은 심사 예시가 바로 failureClass 반복이다**(`unnormalized_gate` 2회 → `gate-clean` 12/12).
+**탐지기가 자기 스킬의 핵심 패턴을 못 본다.**
+
+| 항목 | 점수 | 근거 |
+| --- | --- | --- |
+| 반복성 | **2** | 매 hs-scan 실행마다 |
+| 결정가능성 | **2** | index.md의 failureClass 열 집계. 완전 기계 판정 |
+| 장애주입 | **2** | 같은 class 2건을 심으면 즉시 재현 |
+| 격리 | **2** | 읽기 전용 |
+| 관찰성 | **2** | class별 건수·사례 ID 출력 |
+| 유지가치 | **2** | **HS-GATE 전체가 이 탐지에 의존한다** |
+| **총점** | **12/12** | **즉시제작 (기존 `hs-scan` 확장)** |
+
+**제안 산출물**: `hs-scan`에 `failureClass` 집계 추가 + `judgedClasses` 메타로 중복 제기 방지(이미 계약에 있다).
+
+---
+
+### 판정 요약 (검수자 → 사람 게이트)
+
+| ID | 후보 | 총점 | 판정 | 유형 |
+| --- | --- | --- | --- | --- |
+| HS-A | `harness-selftest-check` | **12** | **즉시제작** | 하네스 |
+| HS-B | `ps-encoding-check` | **12** | **즉시제작** | 하네스 |
+| HS-D | `hs-scan` failureClass 집계 | **12** | **즉시제작(기존확장)** | 하네스 |
+| HS-C | 빈 인자 fail-closed | **10** | 기한부 | `CODEX-GATE-04`에 편입(등재됨) |
+
+**스킬로 내리는 것** (기계 판정 불가 — 사람·LLM 절차):
+
+- **`skills/common/root-cause-diagnosis.md` 확장** — **프록시→실체 대응표**(FAIL-2026-018, 8건).
+  프록시 사용은 기계로 못 막는다. **규칙과 체크리스트로 간다.**
+- **`skills/common/directive-writing.md` 확장** — **요구 무모순성 자가 검사**(FAIL-2026-016, 3건).
+  *"완료 기준을 저장소 실제 상태로 한 번 실행해 보라. 불가능한 기준은 그 자리에서 드러난다."*
+  *"금지 항목마다 대안을 붙여라. 대안 없는 금지는 우회를 부른다."*
+
+**큐 등재·발사는 사람 게이트다. 이 심사는 점수화만 했다.**
+
+- lastGate: 2026-07-14 01:30
+- judgedClasses: unnormalized_gate, executor-orchestration, verification_gap, config_side_effect, harness_runtime_error, known_failure, design_learning
