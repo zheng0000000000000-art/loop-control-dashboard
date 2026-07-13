@@ -150,3 +150,19 @@
 | C-02 | **CODEX-GATE-03**(대기 — `DI-00-04` 완료 후) — ①`skills/common/*.md` 5개에 **Skill manifest 헤더 적용**(`skillType`·`automationLevel`·`humanApprovalPoints`·`sideEffectScope`·`requiredCapabilities`. 계약은 DI-00-04가 `docs/handoff/SKILL-MANIFEST.md`에 정의한다) ②**HS-GATE 누락 탐지 검사**(v9 §DI-00-04 지시 4항 — Phase 종료 시 `HS-GATE-PXX.md`가 없으면 다음 Phase 진입 차단. `di-completion-check` 확장으로. **신규 하네스 아님**) ③`HS-REVIEW-P00-R1`의 판정이 `기존 항목 확장`이면 그대로 따르고, **판정에 없는 것을 만들지 마라** | v9 §0.4 · DI-00-04 산출물 | server/Harness/ + skills/ | 대기 |
 
 > **`skills/`는 코덱스 배타 영역(ADR-002)이라 실행자가 못 만진다.** DI-00-04는 **계약 문서만** 만들고, **적용은 코덱스 몫이다.**
+
+## ⛔ 2026-07-13 — 큐 재편 (사람 결정). 위의 C-01/C-02는 폐기다
+
+**`CODEX-GATE-02` 폐기.** 멱등 대조·`blockers[]`가 **05H와 중복**이었다(재발명 금지 위반). `blockers[]`는 이미 **GUARD-03**이 완료(`ADR-014`).
+
+**★ 자동 실행 중단**: 조율자 스케줄러 `recursion1-result-check` **enabled=false**(2026-07-13). 코덱스 15분 루틴도 중단.
+**`WP-STATE-INTEGRITY` land + `TRUSTED_BASELINE` 선언 전까지 자동 발사 금지 · 수동 dispatch만.** 근거: `docs/plan/wp/WP-STATE-INTEGRITY-land-gate.md`.
+
+| 순번 | 작업 | 지시서 | 영역 | 상태 |
+| --- | --- | --- | --- | --- |
+| **C-05H** | **reconciliation** — 내부 `HandoffIntegrityChecker` + v2 log 계약 + `blockers[]` + fixture 6종. **멱등보다 reconciliation이 먼저**(손 위조 id 차단) | `docs/handoff/queue/directive-05H-reconciler.md` | `server/Harness/HandoffIntegrityCli.cs` + 내부 checker + `docs/qa/fixtures/` | **대기 — 사람이 수동 발사** |
+| **C-06H** | `RECOVERY.md` 갱신(두 시기 분리) + 사고 fixture 전용 manifest | `docs/handoff/queue/directive-06H-recovery-fixture.md` | `docs/handoff/RECOVERY.md`, `docs/qa/fixtures/` | **06C-1 선행** |
+| **C-GATE-04** | 게이트 진실 — **`di-completion-check`가 Debug 바이너리를 실행한다**(가장 위험) + CLI 계약 + GATE-MANIFEST 등재 + `claim-check --untracked` | `docs/handoff/queue/directive-CODEX-GATE-04-gate-truth.md` | `DiCompletionCheckCli.cs`·`ClaimCheckCli.cs` | 대기 |
+
+> **파일 경계(겹치면 반려)**: 05H = `HandoffIntegrityCli.cs` + 내부 checker · GATE-04 = `DiCompletionCheckCli.cs`·`ClaimCheckCli.cs` · 06C-1 = `StateApplierCli.cs`(sonnet).
+> **단일 land gate**: 05H·06C-1·06C-2·06H는 **통합 branch에서 함께** 넘긴다. **조각 land 금지.**

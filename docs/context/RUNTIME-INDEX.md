@@ -8,6 +8,6 @@
 | wpId | WP-00 |
 | diId | DI-00-04 |
 | status | blocked |
-| blockers | DI-00-04의 '즉시 제작 필수' 2건이 코덱스 배타 영역이라 실행자가 못 만든다: ①H-4 HS-GATE 누락 탐지(di-completion-check 확장으로 정정 — 검수자 판단. 예산 결재 불필요) ②S-2 prepare-model-handoff Skill(skills/는 ADR-002상 코덱스 소유). 코덱스가 CODEX-GATE-02(C-01) -> CODEX-GATE-03(C-02)을 끝내야 DI-00-04가 닫힌다 |
-| nextActions | 코덱스: outputs/launch/CODEX-GATE-02.prompt.txt(재작성됨) 투입 -> C-01(멱등 대조·CLI 계약·GATE-MANIFEST 등재·claim-check --untracked) -> C-02(Skill manifest 적용·HS-GATE 누락 탐지·prepare-model-handoff); 검수자: 코덱스 산출물 반증 재현 후 DI-00-04 completed 전이(verdict는 outputs/gates/DI-00-04.gate.json — 손으로 쓴 JSON은 GUARD-02가 거부한다); 그 다음 DI-00-05(CONTEXT-MANIFEST·sessions 템플릿) -> DI-00-06(Context Receipt·Budget·L1~L3·schema) -> DI-00-07(HS-GATE-P00, 사람 판정); 사람 결재(HUMAN-INBOX): ADR-010 상태 · ADR-012 · LOCAL-DI-RUNNER-v3 §9 · LAUNCH-BUDGET(턴별 피크 134,528) · push 48건+ |
-| updatedAt | 2026-07-12 |
+| blockers | WP-STATE-INTEGRITY 미완: state-transition의 멱등이 reconciliation보다 먼저라 손 위조 transition-id가 통과한다(검수자 실증). --human-decision도 임의 파일이라 AI가 자기 승인을 위조할 수 있다. 상태 원본을 믿을 수 없으므로 DI 완료 판정 자체가 무의미하다. 05H+06C-1+06C-2+06H를 통합 branch에서 단일 land gate로 넘겨야 한다; DI-00-04의 즉시제작 2건(HS-GATE 누락 탐지 · prepare-model-handoff)은 코덱스 영역인데 코덱스 자동 루프가 중단됐다 — 사람이 수동 발사한다 |
+| nextActions | ★ 자동 스케줄러 전부 중단됨(2026-07-13 사람 결정). 조율자 recursion1-result-check enabled=false. 자동 발사 금지 — 수동 dispatch만. 재개 조건: TRUSTED_BASELINE 선언; WP-STATE-INTEGRITY 단일 land gate: 05H(codex, reconciliation) -> 06C-1(sonnet, StateTransition v2) -> 06C-2(sonnet, trust-origin) -> 06H(codex, RECOVERY+fixture). 통합 branch에서 함께 land. 조각 land 금지; CODEX-GATE-02 폐기(05H와 중복). 살아남은 절반은 CODEX-GATE-04(di-completion-check가 Debug 바이너리를 실행한다 + CLI 계약 + GATE-MANIFEST 등재 + claim-check --untracked); 사람 게이트: land gate 12번(clean replay 또는 trust-origin 부트스트랩 의식)은 사람이 직접 수행한다. push 60건+ |
+| updatedAt | 2026-07-13 |

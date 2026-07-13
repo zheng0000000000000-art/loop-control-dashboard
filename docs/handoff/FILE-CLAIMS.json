@@ -408,6 +408,26 @@
                        "expiresAt":  "2026-07-13T00:42:20.4078384+09:00",
                        "status":  "released",
                        "exitCode":  0
+                   },
+                   {
+                       "claimId":  "GUARD-03-15956",
+                       "actor":  "sonnet",
+                       "taskId":  "GUARD-03",
+                       "paths":  [
+                                     "server/Harness/HandoffIntegrityCli.cs",
+                                     "docs/verification/guard03-blockers-unlock.md",
+                                     "docs/handoff/queue/directive-GUARD-03-blockers-unlock.md",
+                                     "docs/handoff/WORKSTATE.json",
+                                     "docs/context/RUNTIME-INDEX.md",
+                                     "docs/handoff/HANDOFF.md",
+                                     "docs/STATUS.md"
+                                 ],
+                       "allowlistSource":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\docs\\handoff\\queue\\directive-GUARD-03-blockers-unlock.md",
+                       "pid":  15956,
+                       "claimedAt":  "2026-07-12T23:16:44.5374834+09:00",
+                       "expiresAt":  "2026-07-13T01:16:44.5374834+09:00",
+                       "status":  "active",
+                       "exitCode":  null
                    }
                ]
 }

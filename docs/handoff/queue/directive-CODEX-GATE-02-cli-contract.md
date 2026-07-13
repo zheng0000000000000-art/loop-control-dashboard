@@ -1,3 +1,13 @@
+# ⛔ CODEX-GATE-02 — 폐기됨 (2026-07-13, 사람 결정)
+
+> **이 지시서로 작업하지 마라.**
+> - **멱등 대조 · `blockers[]` 정정** → **`directive-05H-reconciler.md`**가 훨씬 정교하게 다시 한다(v2 log · contract hash · pending 면제 · fixture 6종). **중복 제작 금지.**
+> - **`blockers[]` 정정**은 이미 **GUARD-03**이 완료했다(사람 승인 `ADR-014`, ADR-002 1회 예외).
+> - **CLI 계약 · GATE-MANIFEST 등재 · `claim-check --untracked` · di-completion-check Debug 바이너리 결함** → **`directive-CODEX-GATE-04-gate-truth.md`**로 이관.
+>
+> 아래는 이력으로만 남긴다.
+
+---
 # CODEX-GATE-02 — 게이트가 "사라진 것"을 보게 만든다
 
 ```context-pack

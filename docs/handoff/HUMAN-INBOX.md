@@ -402,3 +402,21 @@
 - docs/handoff/FILE-CLAIMS.json의 claim GUARD-03-15956은 여전히 status=active/exitCode=null(고아 상태 그대로).
 - GUARD-03 자체의 코드·검증문서는 이미 2026-07-12 23:39 회차에 커밋 완료(2b48915, a520bea)되어 gate-clean 잠김 해제도 확인됨. 남은 것은 이 고아 클레임 레코드 처리뿐임.
 - 사람 결정 필요(기존 선택지 그대로 유효, 프로세스 사망 확정으로 자연 소멸 대기 옵션의 근거는 약해짐): FILE-CLAIMS.json의 해당 claim을 (a) 그대로 두거나 (b) 사람이 직접 released로 정정. 조율자는 대행하지 않음.
+## ★ 사람 결정 2026-07-13: 자동 스케줄러 전부 중단 (WP-STATE-INTEGRITY land 전까지)
+
+**근거**: `docs/plan/wp/WP-STATE-INTEGRITY-land-gate.md` — **"자동 launcher 실행 금지 · 수동 dispatch/outbox만 허용"**(WP-STATE-LAUNCH-GATE 통과 전까지). 상태 원본(WORKSTATE)의 무결성이 아직 증명되지 않았다 — 멱등이 reconciliation보다 먼저라 **손 위조 id가 통과한다**(검수자 실증).
+
+**중단 대상**
+- **조율자**(예약 작업 `recursion1-result-check`, 5분) → **중단**
+- **코덱스**(15분 루틴) → **중단**(사람이 창을 닫는다)
+- **실행자 발사**(`run-executor.ps1`) → **사람이 건별로만.** 자동 발사 금지
+
+**재개 조건**: `WP-STATE-INTEGRITY` 단일 land gate 통과 → `TRUSTED_BASELINE` 선언 → (자동 발사는) `WP-STATE-LAUNCH-GATE` 통과 후 `AUTOMATED_EXECUTION_READY`.
+
+**조율자에게**: 이 문서가 정본이다. 스케줄이 다시 켜져 있으면 **그것이 오류다** — 끄고 HUMAN-INBOX에 남겨라.
+
+## ★ CODEX-GATE-02 폐기 (사람 결정 2026-07-13)
+
+**05H와 중복**이다(멱등 대조·blockers 정정). 코덱스가 같은 것을 두 번 만들면 재발명 금지 위반이다.
+- **폐기**: `docs/handoff/queue/directive-CODEX-GATE-02-cli-contract.md`, `outputs/launch/CODEX-GATE-02.prompt.txt`
+- **대체**: **05H**(reconciliation — 새 설계) + **CODEX-GATE-04**(CLI 계약 · GATE-MANIFEST 등재 · `claim-check --untracked` · **`di-completion-check`가 Debug 바이너리를 실행하는 결함**)
