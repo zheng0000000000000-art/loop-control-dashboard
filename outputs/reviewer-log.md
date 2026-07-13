@@ -1724,3 +1724,85 @@ var gateErr = ValidateHumanDecision(opts.HumanDecisionPath, $"Phase 전이({curP
 
 - **코덱스가 잡은 11건 중 검수자가 코드로 확인한 것은 3건(#7·#8 + seam)뿐이다.** 나머지 8건은 **코덱스 주장 그대로 옮겼다** — 표시해뒀다. **06C-1-R1은 그것들을 각각 실증해야 한다.** 자기보고가 증거가 아니듯, **코덱스 보고도 증거가 아니다.**
 - **legacy 경로를 지울지 말지는 사람 결재 영역일 수 있다.** RECOVERY.md 수동 절차가 legacy 옵션을 쓴다(06H가 갱신 예정). **06C-1-R1이 legacy를 삭제하면 RECOVERY 절차가 깨진다.** 순서를 사람이 정해야 한다 — HUMAN-INBOX 후보.
+
+---
+
+## 2026-07-13 검수 — 05H-R2: **FAIL (조건부)** — 고친 것은 맞다. 그런데 **고쳤는지 확인하는 도구가 거짓말한다**
+
+- **생산**: sonnet(ADR-015). PID 31212, exit 0, 48턴, 8분, transportValid.
+- **판정**: 검수자 재실행 + **코덱스 독립 검수**. **코덱스가 두 번째로 값을 했다.**
+
+### 본체 수정은 옳다 (검수자 실측)
+
+`HandoffIntegrityChecker.cs:254-257` — 면제 조건에 **`&& !allLogIdSet.Contains(id)`** 추가됨. 메시지도 `"has no successful log entry"`로 정정.
+
+| 시험 | exit |
+| --- | --- |
+| `--self-test` | **0** |
+| 회귀 fixture a/b/c/d/e/f/malformed | **1/1/0/1/1/1/2** (전부 일치) |
+| CLI `--pending-transition` | **1** (우회로 차단 유지) |
+| at-rest | **1** · `DI0004-BLOCKED-CODEX` / `state-transition-not-logged` |
+| `measure dev-pack -c Release` | **0** |
+
+**우회로 없음도 확인**: `HandoffIntegrityCli.cs:33-35` — `--self-test`는 다른 인자를 **전부 무시하고** `RunSelfTest(root)`만 부른다. fixture 경로·pendingId·기대값이 `:346-350`에 **하드코딩**. **canonical에 pending을 먹일 통로가 없다.**
+
+### ★ 반려 사유 — `--self-test`가 **실패의 원인을 단언하지 않는다**
+
+`HandoffIntegrityCli.cs:361-363`:
+
+```csharp
+var actualPass = r.Failures.Count == 0 && r.HarnessErrors.Count == 0;
+var actualExemption = r.Metrics?.PendingExemptionApplied ?? false;
+if (actualPass != expectPass || actualExemption != expectExemption)   // ← 코드를 안 본다
+```
+
+**"실패했는가"만 묻고 "왜 실패했는가"는 묻지 않는다.**
+지시서 §4 완료기준은 **실패 코드**까지 지정했다(4: `state-transition-not-logged` · 6: `duplicate-in-state` 포함 · 7: `state-transition-not-logged`).
+
+**검수자 반증 시험 C (실증):**
+
+```
+docs/qa/fixtures/.../pending-duplicate/workstate.json → malformed JSON으로 오염
+  기대 실패: duplicate-in-state
+  실제 실패: workstate-malformed (HarnessError) — 다른 이유다
+handoff-integrity --self-test → exit 0, {"verdict":"PASS","casesRun":5}
+```
+
+**잘못된 이유로 실패했는데 초록을 줬다.**
+**반증 자료 없는 규칙을 막으려고 만든 도구가, 그 자신이 반증되지 않는다.**
+저장소의 반복 주제 그대로다 — **하네스가 다른 것을 쟀다.** (fixture가 깨져도 self-test는 모른다.)
+
+### ★ 검수자 자기 오류 — 코덱스에 준 입력을 **내가 오염시켰다**
+
+코덱스는 두 가지를 주장했다. **하나는 맞고 하나는 틀렸다.**
+
+- **맞음**: self-test가 실패 코드를 단언하지 않는다 (위 실증).
+- **틀림**: "pending-duplicate·pending-mismatch fixture의 JSON이 malformed다."
+  **실제 fixture 5종은 전부 valid JSON이다**(검수자가 `ConvertFrom-Json`으로 전수 확인).
+
+**왜 코덱스가 그렇게 봤나**: 내가 `run-codex-review` 입력을 만들 때
+`Get-Content -Raw | Out-File -Encoding utf8`로 fixture들을 이어붙였다 → **BOM(`EF BB BF`)이 붙고 한글이 깨졌다.**
+코덱스가 인용한 `"pending-duplicate: state??..."`의 `??`가 그 증거다.
+
+**이 저장소가 이미 세 번 당한 PowerShell 인코딩 함정을 내가 반복했다**
+(`run-executor.ps1` BOM → `claimConflictCount=0` 거짓말 / 콘솔 한글 깨짐 / 지금 이것).
+**`run-codex-review.ps1`을 고쳐야 한다** — 입력 패킷은 `[IO.File]::WriteAllText(..., UTF8Encoding($false))`로 쓴다.
+
+**교훈**: **독립 검수자에게 준 입력이 오염되면, 그가 내는 판정도 오염된다.** 검수 배선도 검수 대상이다.
+코덱스 지적을 그대로 옮겼으면 **없는 결함으로 실행자를 반려할 뻔했다.** 두 주장을 각각 실측해서 갈랐다.
+
+### 반려 조건 (05H-R3)
+
+1. **`--self-test`가 실패 코드를 단언하게 하라.** case별 기대 failure code 집합을 하드코딩하고, 코드가 다르면 mismatch.
+   `HarnessErrors`가 났는데 기대가 `Failures`면 **불일치로 잡아라**(지금은 둘 다 "실패"로 뭉갠다).
+2. **fixture 추가** (코덱스 제안, 타당함): `result != "ok"` 이지만 `exitCode == 0`인 로그 항목.
+   `successfulLogEntries`는 `result=="ok" && exitCode==0`이므로 이건 성공이 아니다 → 면제 미적용 → `state-transition-not-logged`.
+   **현 코드는 올바르게 처리하지만 fixture가 없다.**
+3. `run-codex-review.ps1`의 입력 패킷 인코딩 수정(검수자 영역).
+
+### 지표는 만족했으나 목적은 미달인 부분 (ADR-005 자진 신고)
+
+- **나는 반증 시험 A(fixture의 log를 성공으로 뒤집기)만 하고 만족했다.** 그건 `actualPass`가 뒤집히는 케이스라 self-test가 잡았다.
+  **"실패의 이유가 바뀌는" 케이스는 코덱스가 지적하기 전까지 생각하지 못했다.** 내 반증은 얕았다.
+- **05H-R2의 본체 수정은 옳다.** 반려는 **계측기**에 대한 것이다. 06C-1-R1은 이 checker에 의존하지만,
+  **checker 본체는 올바르므로 06C-1-R1을 막지 않는다.** 05H-R3는 병렬 대기.

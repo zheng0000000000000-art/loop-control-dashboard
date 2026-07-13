@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 3,
+  "phaseId": "P00",
+  "wpId": "WP-TEST",
+  "diId": "DI-PENDING-SUCCESS",
+  "status": "blocked",
+  "blockers": ["pending-success-log: 이미 성공 로그가 있는 전이 — 면제 불필요, pendingExemptionApplied=false"],
+  "appliedTransitions": [
+    { "id": "PENDING-SUCCESS", "appliedAt": "2026-01-01T00:00:00Z" }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 3,
+  "phaseId": "P00",
+  "wpId": "WP-TEST",
+  "diId": "DI-PENDING-OK",
+  "status": "blocked",
+  "blockers": ["pending-ok: 정당한 pending 면제 — state에 있고 log에 없는 진행 중 전이"],
+  "appliedTransitions": [
+    { "id": "PENDING-OK", "appliedAt": "2026-01-01T00:00:00Z" }
+  ]
+}

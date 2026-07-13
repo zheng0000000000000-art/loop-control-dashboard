@@ -70,7 +70,7 @@ internal static class HandoffIntegrityChecker
         CheckDuplicatesInState(stateIds!, result);
         CheckDuplicateSuccessLog(sets.successCounts, result);
         CheckLogToState(sets.successfulLogIdSet, sets.stateIdSet, result);
-        var pendingApplied = CheckStateToLog(sets.stateIdSet, sets.successfulLogIdSet, stateIds!, opts.PendingTransitionId, result);
+        var pendingApplied = CheckStateToLog(sets.stateIdSet, sets.successfulLogIdSet, sets.allLogIdSet, stateIds!, opts.PendingTransitionId, result);
         BuildLookup(sets.successfulLogIdSet, sets.successCounts, result);
         result.Metrics = BuildMetrics(stateIds!, logEntries!, sets, pendingApplied, result);
         return result;
@@ -242,10 +242,10 @@ internal static class HandoffIntegrityChecker
                     $"id '{id}' is in successful log but missing from appliedTransitions (mid-incident state)"));
     }
 
-    // 규칙 2: stateIdSet ⊆ successfulLogIdSet. state 항목이 성공 log에 없으면 Failure. PendingTransitionId 1회 면제.
+    // 규칙 2: stateIdSet ⊆ successfulLogIdSet. state 항목이 성공 log에 없으면 Failure. PendingTransitionId 1회 면제(log에 어떤 항목도 없을 때만).
     private static bool CheckStateToLog(
         HashSet<string> stateIdSet, HashSet<string> successfulLogIdSet,
-        List<string> stateIds, string? pendingId, ReconciliationResult result)
+        HashSet<string> allLogIdSet, List<string> stateIds, string? pendingId, ReconciliationResult result)
     {
         var pendingApplied = false;
         foreach (var id in stateIdSet)
@@ -253,13 +253,14 @@ internal static class HandoffIntegrityChecker
             if (successfulLogIdSet.Contains(id)) continue;
             if (!string.IsNullOrEmpty(pendingId)
                 && string.Equals(id, pendingId, StringComparison.Ordinal)
-                && stateIds.Count(s => string.Equals(s, id, StringComparison.Ordinal)) == 1)
+                && stateIds.Count(s => string.Equals(s, id, StringComparison.Ordinal)) == 1
+                && !allLogIdSet.Contains(id))
             {
                 pendingApplied = true;
                 continue;
             }
             result.Failures.Add(F(id, "state-transition-not-logged",
-                $"id '{id}' is in appliedTransitions but has no log entry"));
+                $"id '{id}' is in appliedTransitions but has no successful log entry"));
         }
         return pendingApplied;
     }

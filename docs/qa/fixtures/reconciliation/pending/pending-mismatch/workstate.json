@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 3,
+  "phaseId": "P00",
+  "wpId": "WP-TEST",
+  "diId": "DI-PENDING-MISMATCH",
+  "status": "blocked",
+  "blockers": ["pending-mismatch: 엉뚱한 id를 pending으로 줘도 실제 state id는 면제되지 않는다"],
+  "appliedTransitions": [
+    { "id": "PENDING-REAL-ID", "appliedAt": "2026-01-01T00:00:00Z" }
+  ]
+}

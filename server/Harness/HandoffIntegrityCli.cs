@@ -30,6 +30,8 @@ internal static class HandoffIntegrityCli
                 return 1;
             }
             var root = GitTools.FindRepoRoot();
+            if (args.Any(a => string.Equals(a, "--self-test", StringComparison.OrdinalIgnoreCase)))
+                return RunSelfTest(root);
             var (workstatePath, applierLogPath, fixtureMode) = ParsePaths(args, root);
             if (!File.Exists(workstatePath))
                 { Console.Error.WriteLine("{\"error\":\"WORKSTATE.json not found\"}"); return 2; }
@@ -335,4 +337,60 @@ internal static class HandoffIntegrityCli
     // 경고 항목을 공통 JSON 형식으로 만든다.
     private static JsonObject Warning(string subject, string code, string message)
         => new() { ["subject"] = subject, ["code"] = code, ["message"] = message };
+
+    // pending fixture 5종을 in-process로 실행해 기대 결과와 대조한다. 단언 실행기 — 인자 없음.
+    private static int RunSelfTest(string root)
+    {
+        var cases = new[]
+        {
+            (name: "pending-ok",          pendingId: "PENDING-OK",       expectPass: true,  expectExemption: true),
+            (name: "pending-failed-log",  pendingId: "PENDING-FAILED",   expectPass: false, expectExemption: false),
+            (name: "pending-success-log", pendingId: "PENDING-SUCCESS",  expectPass: true,  expectExemption: false),
+            (name: "pending-duplicate",   pendingId: "PENDING-DUP",      expectPass: false, expectExemption: false),
+            (name: "pending-mismatch",    pendingId: "WRONG-ID",         expectPass: false, expectExemption: false),
+        };
+
+        var mismatches = new JsonArray();
+        foreach (var (name, pendingId, expectPass, expectExemption) in cases)
+        {
+            var dir = Path.Combine(root, "docs", "qa", "fixtures", "reconciliation", "pending", name);
+            var wsPath = Path.Combine(dir, "workstate.json");
+            var logPath = Path.Combine(dir, "applier-log.jsonl");
+            var opts = new ReconciliationOptions(wsPath, logPath, pendingId);
+            var r = HandoffIntegrityChecker.Run(opts);
+            var actualPass = r.Failures.Count == 0 && r.HarnessErrors.Count == 0;
+            var actualExemption = r.Metrics?.PendingExemptionApplied ?? false;
+            if (actualPass != expectPass || actualExemption != expectExemption)
+                mismatches.Add(new JsonObject
+                {
+                    ["case"] = name,
+                    ["expectedPass"] = expectPass,
+                    ["actualPass"] = actualPass,
+                    ["expectedPendingExemptionApplied"] = expectExemption,
+                    ["actualPendingExemptionApplied"] = actualExemption,
+                    ["failures"] = new JsonArray(r.Failures.Select(f =>
+                        (JsonNode)new JsonObject { ["code"] = f.Code, ["subject"] = f.Subject }).ToArray()),
+                });
+        }
+
+        if (mismatches.Count == 0)
+        {
+            Console.WriteLine(new JsonObject
+            {
+                ["selfTest"] = "handoff-integrity-pending",
+                ["verdict"] = "PASS",
+                ["casesRun"] = cases.Length,
+            }.ToJsonString(JsonOptions));
+            return 0;
+        }
+
+        Console.Error.WriteLine(new JsonObject
+        {
+            ["selfTest"] = "handoff-integrity-pending",
+            ["verdict"] = "FAIL",
+            ["mismatchCount"] = mismatches.Count,
+            ["mismatches"] = mismatches,
+        }.ToJsonString(JsonOptions));
+        return 1;
+    }
 }
