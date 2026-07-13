@@ -118,3 +118,61 @@ bootstrap으로 처리하지 않는다.
 TRUSTED_BASELINE = true · NORMAL_TRANSITION_READY = true
 VERIFIED_HUMAN_APPROVAL_READY / RECOVERY_APPLY_READY / PHASE_CHANGE_READY / REPLAY_READY / AUTOMATED_EXECUTION_READY = false
 ```
+
+---
+
+## 부록 A — 선행조건 2 정정 (사람 결재, 2026-07-14)
+
+> **위 원문은 사람이 준 설계다. 바꾸지 않았다. 이 부록이 정정분이다.**
+
+### 발견된 순환 (검수자, 06C-2 발사 전)
+
+```
+선행조건 2 : "현재 WORKSTATE ↔ applier-log reconciliation exit 0"
+현실       : at-rest reconciliation = exit 1  (DI0004-BLOCKED-CODEX)
+```
+
+`DI0004-BLOCKED-CODEX`는 **적용이 실패했다고 자기 로그가 말하는 전이가 상태에 남아 있는 것**이다
+(`WORKSTATE.applier-log.jsonl:20` = `exitCode:1` / `WORKSTATE.json:384` = `appliedTransitions`에 존재).
+**rollback 부재 결함(WP 결함 2)의 실측 흔적**이며, 05H-R1이 되살린 reconciliation이 정확히 이것을 잡는다.
+
+**부트스트랩의 목적이 바로 이 오염을 사람이 1회 인정하고 "여기부터 믿는다"고 선언하는 것이다.
+그런데 선행조건 2가 그것을 막는다. 순환이다.**
+
+### 정정 (사람 결재: choi, 2026-07-14 — `HUMAN-INBOX.md` 참조)
+
+**선행조건 2**:
+
+> ~~현재 WORKSTATE ↔ applier-log reconciliation **exit 0**~~
+>
+> **→ reconciliation이 실행 가능하고, 발생하는 모든 failure가 record의 `knownExceptions[]`에
+> 빠짐없이 명시돼 있을 것. 명시되지 않은 failure가 하나라도 있으면 선언하지 않는다.**
+
+**`trust-origin` record에 `knownExceptions[]` 추가:**
+
+```json
+"knownExceptions": [
+  {
+    "code": "state-transition-not-logged",
+    "subject": "DI0004-BLOCKED-CODEX",
+    "what": "적용이 실패했다고 로그에 기록된 전이가 appliedTransitions에 남아 있다",
+    "why": "post-apply 실패 시 rollback이 없던 시절(WP 결함 2)의 흔적. 06C-1-R2가 그 결함을 고쳤다",
+    "whyNotReplayed": "새 prepare/apply 경로로 과거 legacy 전이를 재생할 수 있는지 미지수다. 재생 실패 시 상태가 더 나빠진다"
+  }
+]
+```
+
+**핵심 안전장치**: `knownExceptions[]`는 **정확한 집합**이어야 한다.
+
+- reconciliation의 failure 집합 **⊆** `knownExceptions[]`의 subject 집합 → 통과
+- **하나라도 명시되지 않은 failure가 있으면 → 선언 거부.**
+- **즉 "오염을 인정한다"가 "오염을 안 본다"가 되지 않는다.** 새 오염이 생기면 선언이 막힌다.
+
+**기존 필드 `legacyHistory: "NOT_EXACTLY_REPLAY_VERIFIED"`와 일관된다** — 이 record는 원래
+"정확한 replay는 검증되지 않았다"를 **인정하는** 설계다. `knownExceptions[]`는 그것을 **구체화**한다.
+
+### 이것이 바꾸지 않는 것
+
+- **선언은 여전히 사람 게이트다.** 이 정정은 "AI가 선언해도 된다"는 뜻이 **아니다.**
+- **`recoveryApplyReady: false` · `automatedExecutionReady: false` 유지.**
+- **재선언 규칙(§재선언) 유지** — `trustEpoch >= 1`이면 `VERIFIED_HUMAN_APPROVAL` receipt 필수.

@@ -461,3 +461,37 @@
 - **되돌리는 법**: 이 결정 이전 상태는 커밋 `e20fd37`(06C-1 원본, legacy 포함).
 
 **주체**: 사람(choi). 검수자가 선택지를 제시하고 사람이 골랐다. **AI가 고르지 않았다.**
+
+---
+
+## ★ 사람 결정 (choi, 2026-07-14) — `DI0004-BLOCKED-CODEX`: **known-exception으로 인정**
+
+**이것은 2026-07-13 결재 요청("clean replay vs known-exception receipt")에 대한 답이다.**
+
+**발견된 순환** (검수자가 06C-2 발사 전에 잡음):
+
+```
+TRUST-ORIGIN-BOOTSTRAP 선행조건 2 : "현재 WORKSTATE ↔ applier-log reconciliation exit 0"
+현실                              : at-rest reconciliation = exit 1  (DI0004-BLOCKED-CODEX)
+
+→ reconciliation이 통과해야 선언 가능. 그런데 통과 못 하니까 선언이 필요하다. 순환이다.
+```
+
+**부트스트랩의 목적이 바로 그 오염을 사람이 1회 인정하고 "여기부터 믿는다"고 선언하는 것인데,
+선행조건이 그것을 막는다.**
+
+**결정: known-exception으로 인정한다.**
+
+- **선행조건 2를 정정한다**: ~~"reconciliation exit 0"~~ →
+  **"reconciliation이 실행 가능하고, 모든 failure가 record의 `knownExceptions[]`에 명시돼 있을 것."**
+- `trust-origin record`에 **`knownExceptions[]`** 필드를 추가한다. `DI0004-BLOCKED-CODEX` 1건을 담는다:
+  - 무엇인가 · 왜 남았는가(rollback 부재 결함의 흔적) · **왜 replay하지 않는가**
+- 기존 필드 **`legacyHistory: "NOT_EXACTLY_REPLAY_VERIFIED"`와 일관된다** — 이 record는 원래
+  "정확한 replay는 검증되지 않았다"를 인정하는 설계다.
+- **clean replay를 하지 않는 이유**: 06C-1-R2가 만든 새 prepare/apply 경로로 과거 legacy 전이를
+  재생할 수 있는지 **미지수**다. 재생 실패 시 상태가 더 나빠진다. **비용 대비 불확실하다.**
+
+**되돌리는 법**: 이 결정 이전 상태는 `TRUST-ORIGIN-BOOTSTRAP.md` 선행조건 2의 원문("reconciliation exit 0").
+부록 A를 삭제하면 원래 계약으로 돌아간다. `trust-origin` record는 아직 생성되지 않았다.
+
+**주체**: 사람(choi). 검수자가 순환을 발견하고 선택지를 제시했고, **사람이 골랐다. AI가 고르지 않았다.**
