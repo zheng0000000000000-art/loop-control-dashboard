@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 3,
+  "phaseId": "P00",
+  "wpId": "WP-TEST",
+  "diId": "DI-TEST-F",
+  "status": "blocked",
+  "blockers": ["fixture-f: 실패-적용 전이 오염 탐지 — state에 있으나 log엔 exitCode=1로만 기록"],
+  "appliedTransitions": [
+    { "id": "SNAP-001", "appliedAt": "2026-01-01T00:00:00Z" },
+    { "id": "FAILED-BUT-APPLIED", "appliedAt": "2026-01-01T00:01:00Z" }
+  ]
+}

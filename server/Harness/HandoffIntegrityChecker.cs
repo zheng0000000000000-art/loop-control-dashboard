@@ -70,7 +70,7 @@ internal static class HandoffIntegrityChecker
         CheckDuplicatesInState(stateIds!, result);
         CheckDuplicateSuccessLog(sets.successCounts, result);
         CheckLogToState(sets.successfulLogIdSet, sets.stateIdSet, result);
-        var pendingApplied = CheckStateToLog(sets.stateIdSet, sets.allLogIdSet, stateIds!, opts.PendingTransitionId, result);
+        var pendingApplied = CheckStateToLog(sets.stateIdSet, sets.successfulLogIdSet, stateIds!, opts.PendingTransitionId, result);
         BuildLookup(sets.successfulLogIdSet, sets.successCounts, result);
         result.Metrics = BuildMetrics(stateIds!, logEntries!, sets, pendingApplied, result);
         return result;
@@ -242,15 +242,15 @@ internal static class HandoffIntegrityChecker
                     $"id '{id}' is in successful log but missing from appliedTransitions (mid-incident state)"));
     }
 
-    // 규칙 2: stateIdSet ⊆ allLogIdSet. state 항목이 log에 없으면 Failure. PendingTransitionId 1회 면제.
+    // 규칙 2: stateIdSet ⊆ successfulLogIdSet. state 항목이 성공 log에 없으면 Failure. PendingTransitionId 1회 면제.
     private static bool CheckStateToLog(
-        HashSet<string> stateIdSet, HashSet<string> allLogIdSet,
+        HashSet<string> stateIdSet, HashSet<string> successfulLogIdSet,
         List<string> stateIds, string? pendingId, ReconciliationResult result)
     {
         var pendingApplied = false;
         foreach (var id in stateIdSet)
         {
-            if (allLogIdSet.Contains(id)) continue;
+            if (successfulLogIdSet.Contains(id)) continue;
             if (!string.IsNullOrEmpty(pendingId)
                 && string.Equals(id, pendingId, StringComparison.Ordinal)
                 && stateIds.Count(s => string.Equals(s, id, StringComparison.Ordinal)) == 1)
