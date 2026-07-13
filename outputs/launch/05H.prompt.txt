@@ -1,0 +1,59 @@
+너는 05H 실행자다. 저장소 루트는 C:\Users\1\Documents\Local-First Workflow Dashboard 다.
+**현재 브랜치는 `wp/state-integrity`다(통합 branch). 브랜치를 바꾸지 마라.**
+
+## 지시서
+
+`docs/handoff/queue/directive-05H-reconciler.md` 가 이 작업의 계약이다. **그 파일이 정본이고, 이 프롬프트는 진입점이다.**
+
+## 읽는 순서
+
+1. `docs/context/RUNTIME-INDEX.md` — 현재 L0
+2. **`docs/plan/wp/WP-STATE-INTEGRITY-land-gate.md`** — 이 조각이 속한 WP. **단일 land gate**다
+3. **`docs/handoff/decisions/ADR-015-harness-actor-substitution.md`** — **너는 ADR-002 예외 구역에 있다. 경계를 읽어라**
+4. `docs/directives/_header.md` — 불변 제약
+5. `docs/handoff/queue/directive-05H-reconciler.md` — **계약**
+
+## 한 줄 요약
+
+**`handoff-integrity`에 reconciliation을 넣는다.** 내부 `HandoffIntegrityChecker`(CLI 미노출) + v2 log 계약 + `blockers[]` + fixture 6종. **핵심은 `log-transition-missing-from-state`** — 손 위조 transition-id를 잡는 검사다.
+
+## 왜 (실측)
+
+**지금 `state-transition`은 손 위조 id를 통과시킨다.** 멱등 검사(`IsAlreadyApplied`)가 reconciliation보다 **먼저** 돌기 때문이다. 검수자가 실증했다: `appliedTransitions`에서 항목 하나가 누락된 상태에서 그 id로 재적용하니 **exit 0으로 통과하고 WORKSTATE가 바뀌었다.**
+**06C-1이 그 순서를 뒤집는다. 그러려면 네가 만드는 내부 checker가 먼저 있어야 한다.**
+
+## 절대 규칙
+
+- **`server/StateApplierCli.cs` 무접촉.** 06C-1(다른 발사)의 영역이다. **읽기만 해라.**
+- **`WORKSTATE.json`·`WORKSTATE.applier-log.jsonl` 수정 금지.** append-only 증거다. **fixture는 `docs/qa/fixtures/reconciliation/` 안에서만 만든다.**
+- **`server/Harness/DiCompletionCheckCli.cs`·`ClaimCheckCli.cs` 무접촉** — `CODEX-GATE-04`의 영역이다.
+- **내부 checker를 `HarnessRegistry`에 등재하지 마라.** CLI 표면에 노출되면 pending 면제가 우회 통로가 된다(지시서 §2).
+- **`--pending-transition`을 외부 CLI가 받으면 exit 1**(`pending-not-allowed-on-cli`).
+- **git commit/push 금지. 브랜치 변경 금지. 결재·반입·발사 금지.**
+- **`measure`는 `dotnet run --project server -c Release -- measure dev-pack`으로.** exe 직접 호출은 부모 폴더를 봐서 exit 2가 난다(실측).
+- 함수마다 한국어 기능 주석 1줄. 빌드는 `-c Release`.
+- **⚠️ `di-completion-check`는 하위 검사를 Debug 바이너리로 돌린다**(실측 결함, `CODEX-GATE-04`가 고친다). 코드를 고쳤으면 **`dotnet build server`(Debug)도 한 번 돌려야** 게이트가 새 코드를 본다.
+
+## 판정선 (지시서 §11)
+
+1. `build -c Release` → 0
+2. **at-rest 현재 저장소(CLI, pending 없음) → exit 0**
+3. **fixture A(mid-incident) → exit 1 `log-transition-missing-from-state`** ← **핵심**
+4. fixture B/D/E → 1 · C → 0 · malformed → **exit 2**
+5. CLI에 `--pending-transition` → 1 `pending-not-allowed-on-cli`
+6. 내부 checker 단위: state에 X 1회 + log에 X 없음 + Pending=X → **PASS** / Pending 없음 → **FAIL** `state-transition-not-logged`
+7. v2 log fixture에서 `lookupSuccess`가 hash 반환
+8. `appliedAt` 누락 fixture → 2 `workstate-malformed`
+9. `measure dev-pack` → 0
+
+**통과를 믿기 전에 실패시킬 수 있음을 먼저 증명해라.**
+
+## 보고
+
+`docs/verification/05h-reconciler.md` — `docs/verification/_template.md` 형식 그대로.
+**DI 유형(`harness`) 선언** · 유형별 필수 검증(**positive·negative·결정성·격리**) · 하네스별 **기대 exit vs 실제 exit** · 실패 분류(v9 §0.3) · 잔여 위험 · **`## 지표는 만족했으나 목적은 미달인 부분`**(ADR-005).
+**「직접 경로 사용 사유」에 ADR-015 예외를 명시하라.**
+
+- **자기보고는 증거가 아니다.** 검수자가 land gate를 직접 재실행한다.
+- 못 한 시험은 **`NOT_VERIFIED`**. 신고하면 감점이 아니고, **숨기면 반려다.**
+- 한도가 임박하면 마지막 세 줄로 `QUOTA_SIGNAL` / `CHANGED:` / `NEXT:`.
