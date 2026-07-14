@@ -15,6 +15,7 @@ $errLog      = Join-Path $root "outputs\sonnet-$TaskId.err.log"
 $sentinel    = Join-Path $launchDir "$TaskId.exit.json"
 $usageLog    = Join-Path $launchDir 'usage-ledger.jsonl'
 $evidenceOut = Join-Path $launchDir "$TaskId.transport.json"
+$stdinFrame  = Join-Path $launchDir "$TaskId.stdin.jsonl"
 
 if (-not (Test-Path $promptFile)) { throw "프롬프트 파일이 없다: $promptFile" }
 
@@ -71,6 +72,46 @@ function Get-Sha256Hex([byte[]]$bytes) {
   return ($hash | ForEach-Object { $_.ToString('x2') }) -join ''
 }
 
+# 바이트 배열 앞부분을 hex로 반환한다 — stdin 프레이밍 오염(BOM 등)을 evidence에 남긴다.
+function Get-BytePrefixHex([byte[]]$bytes, [int]$count) {
+  if ($null -eq $bytes -or $bytes.Length -eq 0) { return '' }
+  $take = [Math]::Min($count, $bytes.Length)
+  return (($bytes[0..($take - 1)]) | ForEach-Object { $_.ToString('x2') }) -join ''
+}
+
+# UTF-8 BOM 여부를 검사한다.
+function Test-Utf8Bom([byte[]]$bytes) {
+  return ($null -ne $bytes -and $bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
+}
+
+# wrapper process 아래에서 실제 claude 실행자 PID를 찾는다.
+function Find-ExecutorProcess([int]$wrapperPid, [int]$timeoutMs) {
+  $deadline = (Get-Date).AddMilliseconds($timeoutMs)
+  while ((Get-Date) -lt $deadline) {
+    try {
+      $queue = New-Object System.Collections.Queue
+      $seen = @{}
+      $queue.Enqueue($wrapperPid)
+      while ($queue.Count -gt 0) {
+        $pidToCheck = [int]$queue.Dequeue()
+        if ($seen.ContainsKey($pidToCheck)) { continue }
+        $seen[$pidToCheck] = $true
+        $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $pidToCheck" -ErrorAction SilentlyContinue)
+        foreach ($child in $children) {
+          $name = [string]$child.Name
+          $cmd = [string]$child.CommandLine
+          if ($name -match 'claude' -or $cmd -match 'claude') {
+            return $child
+          }
+          $queue.Enqueue([int]$child.ProcessId)
+        }
+      }
+    } catch { }
+    Start-Sleep -Milliseconds 100
+  }
+  return $null
+}
+
 # stdout JSONL에서 첫 번째 사용자 프롬프트 replay 이벤트만 찾아 반환한다.
 # tool_result user 이벤트(content가 배열)는 제외한다 — content가 문자열인 것만 카운트.
 # StringReader로 줄 단위 읽기 — 대형 배열 분기 없이 안전하게.
@@ -121,8 +162,11 @@ if ($allow.Count -eq 0) {
     throw "발사 중단: Get-Allowlist가 빈 배열을 반환했다 — 지시서: $dPath ('^## 허용 파일' 섹션이 있는지, BOM 인코딩인지 확인하라)"
 }
 
-# 이전 sentinel 제거
+# 이전 산출물 제거 — stderr가 비어 있으면 stale err.log가 남아 성공 실행을 실패처럼 보이게 한다.
 if (Test-Path $sentinel) { Remove-Item $sentinel -Force }
+foreach ($old in @($outJsonl, $outLog, $errLog, $evidenceOut, $stdinFrame)) {
+  if (Test-Path $old) { Remove-Item $old -Force }
+}
 
 # --- 프롬프트 준비 ---
 # sourceSha256: 파일 원본 바이트의 해시
@@ -141,14 +185,29 @@ $payloadLine = '{"type":"user","message":{"role":"user","content":' + $contentJs
 $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($payloadLine + "`n")
 $payloadSha256 = Get-Sha256Hex $payloadBytes
 $payloadByteLength = $payloadBytes.Length
+$payloadFramePrefixHex = Get-BytePrefixHex $payloadBytes 8
+$payloadFrameBomPresent = Test-Utf8Bom $payloadBytes
+if ($payloadFrameBomPresent -or $payloadBytes[0] -ne 0x7B) {
+  throw "발사 중단: stdin stream-json frame 첫 바이트가 '{'가 아니다. prefix=$payloadFramePrefixHex"
+}
 
 $started = (Get-Date).ToString('o')
 
+# stdin frame을 BOM 없는 파일로 쓰고 cmd의 raw '< file' 리다이렉션으로 전달한다.
+# 왜: Process.StandardInput StreamWriter 계층이 UTF-8 preamble을 주입한 사례가 있어 BaseStream 쓰기만으로는 부족했다.
+[System.IO.File]::WriteAllBytes($stdinFrame, $payloadBytes)
+$writtenFrame = [System.IO.File]::ReadAllBytes($stdinFrame)
+if ((Test-Utf8Bom $writtenFrame) -or $writtenFrame[0] -ne 0x7B) {
+  throw "발사 중단: stdin frame 파일 첫 바이트가 '{'가 아니다. prefix=$(Get-BytePrefixHex $writtenFrame 8)"
+}
+
 # --- claude 프로세스 시작 ---
-$psi = [System.Diagnostics.ProcessStartInfo]::new('claude.exe')
-$psi.Arguments = '-p --verbose --input-format stream-json --output-format stream-json --replay-user-messages --dangerously-skip-permissions'
+$claudeArgs = '-p --verbose --input-format stream-json --output-format stream-json --replay-user-messages --dangerously-skip-permissions'
+$cmdLine = '/d /c ""claude.exe" ' + $claudeArgs + ' < "' + $stdinFrame + '""'
+$psi = [System.Diagnostics.ProcessStartInfo]::new('cmd.exe')
+$psi.Arguments = $cmdLine
 $psi.WorkingDirectory = $root
-$psi.RedirectStandardInput  = $true
+$psi.RedirectStandardInput  = $false
 $psi.RedirectStandardOutput = $true
 $psi.RedirectStandardError  = $true
 $psi.UseShellExecute        = $false
@@ -160,19 +219,20 @@ $proc.StartInfo = $psi
 $null = $proc.Start()
 $null = $proc.Handle   # 핸들 캐시 — 종료 후 ExitCode null 방지
 
-# 핸들을 캐시한 직후 PID를 기록한다.
-$proc.Id | Out-File (Join-Path $root 'outputs\sonnet-active.pid') -Encoding ascii
-
-Set-Claim -status 'active' -pid_ $proc.Id -paths $allow -allowlistSource $dPath -exitCode $null
-
-# stdout/stderr 비동기 읽기를 stdin 쓰기 전에 시작한다 — 먼저 시작해야 stdout 버퍼 교착을 막는다.
+# stdout/stderr 비동기 읽기를 먼저 시작한다 — PID 탐색 중에도 pipe 버퍼 교착을 막는다.
 $stdoutTask = $proc.StandardOutput.ReadToEndAsync()
 $stderrTask = $proc.StandardError.ReadToEndAsync()
 
-# ★ UTF-8 바이트를 BaseStream에 직접 쓴다 — PowerShell 5.1 기본 writer는 한글을 깨뜨린다(ADR-010 §6).
-$proc.StandardInput.BaseStream.Write($payloadBytes, 0, $payloadBytes.Length)
-$proc.StandardInput.BaseStream.Flush()
-$proc.StandardInput.Close()
+$wrapperPid = $proc.Id
+$executorProcess = Find-ExecutorProcess -wrapperPid $wrapperPid -timeoutMs 5000
+$executorPid = if ($null -ne $executorProcess) { [int]$executorProcess.ProcessId } else { $wrapperPid }
+$executorProcessName = if ($null -ne $executorProcess) { [string]$executorProcess.Name } else { 'unknown' }
+$executorPidDiscovered = ($null -ne $executorProcess)
+
+# 실제 실행자 PID를 기록한다. 못 찾으면 wrapperPid로 fail-soft 기록하되 launch-check에서 잡는다.
+$executorPid | Out-File (Join-Path $root 'outputs\sonnet-active.pid') -Encoding ascii
+
+Set-Claim -status 'active' -pid_ $executorPid -paths $allow -allowlistSource $dPath -exitCode $null
 
 $proc.WaitForExit()
 $exitCode = $proc.ExitCode
@@ -220,12 +280,22 @@ $evidence = [ordered]@{
   cliVersion       = "$cliVersion"
   sourceSha256     = $sourceSha256
   payloadSha256    = (Get-Sha256Hex ([System.Text.Encoding]::UTF8.GetBytes($promptText)))
+  payloadFrameSha256 = $payloadSha256
+  payloadFrameByteLength = $payloadByteLength
+  payloadFramePrefixHex = $payloadFramePrefixHex
+  payloadFrameBomPresent = $payloadFrameBomPresent
+  stdinFramePath   = $stdinFrame
+  stdinTransport   = 'cmd-stdin-file-redirection'
+  wrapperPid       = $wrapperPid
+  executorPid      = $executorPid
+  executorProcessName = $executorProcessName
+  executorPidDiscovered = $executorPidDiscovered
   replaySha256     = $replaySha256
   sourceByteLength = $sourceByteLength
   payloadByteLength = ([System.Text.Encoding]::UTF8.GetBytes($promptText)).Length
   replayByteLength = $replayByteLength
   replayEventCount = $replayEventCount
-  pid              = $proc.Id
+  pid              = $executorPid
   startedAt        = $started
   exitedAt         = (Get-Date).ToString('o')
   verdict          = $transportVerdict
@@ -269,11 +339,11 @@ try {
 # 사람이 읽는 보고문
 if ($report) { $report | Set-Content $outLog -Encoding UTF8 }
 
-Set-Claim -status 'released' -pid_ $proc.Id -paths $allow -allowlistSource $dPath -exitCode $exitCode
+Set-Claim -status 'released' -pid_ $executorPid -paths $allow -allowlistSource $dPath -exitCode $exitCode
 
 # 토큰 원장 append
 $ledgerLine = [ordered]@{
-  taskId = $TaskId; actor = 'sonnet'; pid = $proc.Id
+  taskId = $TaskId; actor = 'sonnet'; pid = $executorPid; wrapperPid = $wrapperPid
   startedAt = $started; exitedAt = (Get-Date).ToString('o')
   exitCode = $exitCode; usage = $usage
 } | ConvertTo-Json -Depth 6 -Compress
@@ -283,7 +353,8 @@ Add-Content -Path $usageLog -Value $ledgerLine -Encoding UTF8
 $payload = [ordered]@{
   schemaVersion    = 2
   taskId           = $TaskId
-  pid              = $proc.Id
+  pid              = $executorPid
+  wrapperPid       = $wrapperPid
   exitCode         = $exitCode
   startedAt        = $started
   exitedAt         = (Get-Date).ToString('o')

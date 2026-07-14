@@ -92,6 +92,8 @@ internal static class LaunchCheckCli
         RequireNonNegativeLong(evidence, "payloadByteLength", failures);
         RequireNonNegativeLong(evidence, "replayByteLength", failures);
         RequireLong(evidence, "replayEventCount", 1, failures);
+        CheckPayloadFrameEvidence(evidence, failures);
+        CheckExecutorPidEvidence(evidence, failures);
         RequireNonNegativeLong(evidence, "pid", failures);
         RequireStringPresent(evidence, "startedAt", failures);
         RequireStringPresent(evidence, "exitedAt", failures);
@@ -105,6 +107,51 @@ internal static class LaunchCheckCli
         {
             failures.Add(Failure("TRANSPORT_INVALID", "payloadSha256 and replaySha256 differ"));
         }
+    }
+
+    // cmd stdin redirection transport에서는 wrapperPid와 실제 executorPid가 분리되어야 한다.
+    private static void CheckExecutorPidEvidence(JsonObject evidence, JsonArray failures)
+    {
+        var stdinTransport = ReadString(evidence, "stdinTransport");
+        if (!stdinTransport.Equals("cmd-stdin-file-redirection", StringComparison.Ordinal)) return;
+
+        var wrapperPid = ReadLong(evidence, "wrapperPid");
+        var executorPid = ReadLong(evidence, "executorPid");
+        var pid = ReadLong(evidence, "pid");
+        if (wrapperPid <= 0)
+            failures.Add(Failure("wrapper-pid-missing", "wrapperPid must be positive for cmd stdin redirection"));
+        if (executorPid <= 0)
+            failures.Add(Failure("executor-pid-missing", "executorPid must be positive for cmd stdin redirection"));
+        if (wrapperPid > 0 && executorPid > 0 && wrapperPid == executorPid)
+            failures.Add(Failure("executor-pid-not-discovered", "executorPid must differ from wrapperPid for cmd stdin redirection"));
+        if (executorPid > 0 && pid != executorPid)
+            failures.Add(Failure("pid-mismatch", "pid must equal executorPid for cmd stdin redirection"));
+        if (ReadBool(evidence, "executorPidDiscovered") != true)
+            failures.Add(Failure("executor-pid-not-discovered", "executorPidDiscovered must be true for cmd stdin redirection"));
+    }
+
+    // 새 런처 evidence가 stdin stream-json 프레임의 첫 바이트와 BOM 여부를 기록하면 엄격히 검사한다.
+    private static void CheckPayloadFrameEvidence(JsonObject evidence, JsonArray failures)
+    {
+        var prefix = ReadString(evidence, "payloadFramePrefixHex").Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(prefix))
+        {
+            if (!prefix.StartsWith("7b", StringComparison.Ordinal))
+                failures.Add(Failure("stdin-frame-prefix", "payloadFramePrefixHex must start with 7b, the JSON object opening byte"));
+            if (prefix.StartsWith("efbbbf", StringComparison.Ordinal))
+                failures.Add(Failure("stdin-frame-bom", "stdin stream-json frame starts with UTF-8 BOM"));
+        }
+
+        if (ReadBool(evidence, "payloadFrameBomPresent") == true)
+            failures.Add(Failure("stdin-frame-bom", "payloadFrameBomPresent must be false"));
+
+        var frameLength = ReadLong(evidence, "payloadFrameByteLength");
+        if (evidence.ContainsKey("payloadFrameByteLength") && frameLength <= 0)
+            failures.Add(Failure("invalid-field", "payloadFrameByteLength must be positive when present"));
+
+        var frameSha = ReadString(evidence, "payloadFrameSha256").Trim();
+        if (!string.IsNullOrWhiteSpace(frameSha) && !Sha256Pattern.IsMatch(frameSha))
+            failures.Add(Failure("invalid-field", "payloadFrameSha256 must be a full 64-character sha256 when present"));
     }
 
     // 예산 정책 파일이 있으면 초과 예외 조건만 실패로 기록한다.
@@ -242,6 +289,19 @@ internal static class LaunchCheckCli
         return evidence[name]?.GetValue<string>() ?? "";
     }
 
+    // JSON bool 필드를 읽고 실패 시 null을 반환한다.
+    private static bool? ReadBool(JsonObject evidence, string name)
+    {
+        try
+        {
+            return evidence[name]?.GetValue<bool>();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     // 실패 항목을 JSON 객체로 만든다.
     private static JsonObject Failure(string code, string message)
     {
@@ -264,6 +324,8 @@ internal static class LaunchCheckCli
     {
         var payloadSha256 = ReadString(evidence, "payloadSha256");
         var replaySha256 = ReadString(evidence, "replaySha256");
+        var payloadFrameBomPresent = ReadBool(evidence, "payloadFrameBomPresent");
+        var executorPidDiscovered = ReadBool(evidence, "executorPidDiscovered");
         var valid = failures.Count == 0
             && payloadSha256.Equals(replaySha256, StringComparison.OrdinalIgnoreCase);
         var report = new JsonObject
@@ -276,6 +338,11 @@ internal static class LaunchCheckCli
             ["payloadSha256"] = payloadSha256,
             ["replaySha256"] = replaySha256,
             ["payloadByteLength"] = ReadLong(evidence, "payloadByteLength"),
+            ["payloadFramePrefixHex"] = ReadString(evidence, "payloadFramePrefixHex"),
+            ["payloadFrameBomPresent"] = payloadFrameBomPresent.HasValue ? JsonValue.Create(payloadFrameBomPresent.Value) : null,
+            ["wrapperPid"] = ReadLong(evidence, "wrapperPid"),
+            ["executorPid"] = ReadLong(evidence, "executorPid"),
+            ["executorPidDiscovered"] = executorPidDiscovered.HasValue ? JsonValue.Create(executorPidDiscovered.Value) : null,
             ["replayByteLength"] = ReadLong(evidence, "replayByteLength"),
             ["replayEventCount"] = ReadLong(evidence, "replayEventCount"),
             ["budgetCheck"] = budgetStatus,

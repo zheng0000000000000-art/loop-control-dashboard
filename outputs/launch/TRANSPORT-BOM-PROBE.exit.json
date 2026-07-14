@@ -1,0 +1,26 @@
+﻿{
+    "schemaVersion":  2,
+    "taskId":  "TRANSPORT-BOM-PROBE",
+    "pid":  25924,
+    "wrapperPid":  15884,
+    "exitCode":  0,
+    "startedAt":  "2026-07-14T14:42:18.2125697+09:00",
+    "exitedAt":  "2026-07-14T14:42:27.7156489+09:00",
+    "outLog":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-TRANSPORT-BOM-PROBE.out.log",
+    "outJson":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-TRANSPORT-BOM-PROBE.out.jsonl",
+    "processed":  false,
+    "transportValid":  true,
+    "transportEvidence":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\launch\\TRANSPORT-BOM-PROBE.transport.json",
+    "usage":  {
+                  "inputTokens":  3,
+                  "outputTokens":  212,
+                  "cacheCreationTokens":  10351,
+                  "cacheReadTokens":  36408,
+                  "totalCostUsd":  0.05343365,
+                  "numTurns":  2,
+                  "durationMs":  5621,
+                  "isError":  false,
+                  "stopReason":  "end_turn",
+                  "sessionId":  "af785a52-99cc-4d51-9608-4bf32fadcbbb"
+              }
+}

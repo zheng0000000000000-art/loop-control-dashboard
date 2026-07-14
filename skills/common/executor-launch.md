@@ -15,6 +15,26 @@
 
 ## ① 지시 도착 확인 (가장 중요, 가장 늦게 발견됨)
 
+### stdin stream-json preflight — 필수
+
+`run-executor.ps1`처럼 `--input-format stream-json`으로 실행자를 발사할 때는 자식 프로세스를 시작하기 전에 stdin으로 보낼 **프레임 바이트**를 검사한다.
+
+- 첫 바이트는 반드시 `{` (`0x7b`)이어야 한다.
+- UTF-8 BOM (`ef bb bf`)으로 시작하면 발사하지 않는다.
+- evidence에 `payloadFramePrefixHex`, `payloadFrameBomPresent`, `payloadFrameSha256`, `payloadFrameByteLength`를 남긴다.
+- `launch-check`가 위 evidence를 검사한다. `payloadFrameBomPresent=true` 또는 prefix가 `7b`로 시작하지 않으면 transport failure다.
+
+주의: `.ps1` 파일 자체는 Windows PowerShell 5.1의 한글 리터럴 보존 때문에 BOM이 필요할 수 있다. 그러나 **stdin stream-json payload에는 BOM이 있으면 안 된다.** 스크립트 파일 인코딩과 자식 프로세스 입력 프레임은 다른 계층이다.
+
+### wrapper PID와 executor PID 분리
+
+stdin 파일 리다이렉션을 위해 `cmd.exe` 같은 wrapper를 쓰면, 발사 evidence와 `sonnet-active.pid`에는 wrapper PID가 아니라 **실제 실행자 PID**를 기록한다.
+
+- `wrapperPid`: `cmd.exe` 등 transport wrapper.
+- `executorPid`: 실제 `claude.exe` PID.
+- `pid`: 하위 호환 필드지만 값은 `executorPid`와 같아야 한다.
+- `executorPidDiscovered=false`면 발사 검증 실패다.
+
 ### 프롬프트 전달 — Windows PowerShell
 
 ```powershell
@@ -37,6 +57,14 @@ Start-Process claude.exe -ArgumentList $argline -RedirectStandardOutput $log ...
 
 **실행자 출력에 `ACK-<DI>`가 없으면 발사 실패다. 산출물을 폐기하고 재발사한다.**
 프롬프트가 잘리면 ACK도 안 나오므로 **잘림이 자동 검출된다.**
+
+### fallback 사용 규칙
+
+stream-json transport가 실패해 `claude -p "Task ID ..."` 같은 짧은 인자 fallback을 쓰면, 그 실행은 **작업 수행은 가능하지만 transport receipt가 없다.**
+
+- fallback을 쓴 사실을 verification/report에 반드시 적는다.
+- fallback 산출물을 최종 PASS로 보려면 별도 read-only 검수 세션이 필요하다.
+- fallback 성공을 `transportValid=true`로 쓰지 않는다.
 
 ### 프로브 (전달 방식 검증용, 부작용 0)
 
