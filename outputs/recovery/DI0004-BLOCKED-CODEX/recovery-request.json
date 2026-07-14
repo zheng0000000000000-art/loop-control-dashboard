@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "kind": "RECOVERY_REQUEST_DRAFT",
+  "status": "DRAFT_NOT_EXECUTABLE",
+  "requiresTrustedBaseline": true,
+  "requiresVerifiedHumanReceipt": true,
+  "recoveryApplyReady": false,
+  "report": {
+    "command": "recovery inspect",
+    "recoveryApplyReady": false,
+    "highRiskTransitionReady": false,
+    "automatedExecutionReady": false,
+    "trustedBaselineRequired": true,
+    "reconciliationExitCode": 1,
+    "recommendedAction": "quarantine-and-human-inbox",
+    "failures": [
+      {
+        "code": "state-transition-not-logged",
+        "subject": "DI0004-BLOCKED-CODEX",
+        "recoveryClass": "L2"
+      }
+    ],
+    "pending": [],
+    "warnings": [
+      {
+        "code": "duplicate-success-in-log",
+        "subject": "TEST-DI0001-2"
+      }
+    ]
+  }
+}

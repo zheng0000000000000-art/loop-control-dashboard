@@ -495,3 +495,44 @@ TRUST-ORIGIN-BOOTSTRAP 선행조건 2 : "현재 WORKSTATE ↔ applier-log reconc
 부록 A를 삭제하면 원래 계약으로 돌아간다. `trust-origin` record는 아직 생성되지 않았다.
 
 **주체**: 사람(choi). 검수자가 순환을 발견하고 선택지를 제시했고, **사람이 골랐다. AI가 고르지 않았다.**
+
+## ★★ 사람 결정 필요: `DI0004-BLOCKED-CODEX` — 부트스트랩이 여기서 막힌다 (2026-07-15, 검수자)
+
+### 실체 (전부 실측)
+
+```
+appliedTransitions : DI0004-BLOCKED-CODEX  appliedAt 2026-07-12T14:02:29.94Z   ← 적용됐다
+applier-log        : {"result":"handoff-integrity-failed exit=1", at 14:02:29.96}  ← 성공 로그 없음
+handoff-integrity  : exit 1  state-transition-not-logged
+recovery inspect   : recoveryClass=L2 · recommendedAction=quarantine-and-human-inbox · recoveryApplyReady=false
+```
+
+**증거**: `outputs/recovery/DI0004-BLOCKED-CODEX/` (`quarantine-manifest.json`·`recovery-request.json`·`hard-rollback.json`).
+프로그램이 만들었고 **상태를 건드리지 않았다**(`stateMutated:false`, `logMutated:false`).
+
+### 원인 — 상태는 정당했고, **검증기가 잘못 실패시켰다**
+
+그 전이의 post-apply 검증이 실패한 이유는 **당시 `handoff-integrity`가 단수 `blocker`를 읽던 버그**다(`ADR-014`/GUARD-03이 고쳤다).
+**상태 변경 자체는 유효했고**(현재 `blocked`+`blockers` 2건이 그 전이가 넣은 값이다), **v1에는 rollback이 없어서** 적용만 남고 성공 로그가 안 남았다.
+**06C-1의 v2는 rollback이 있으므로 이 오염은 재발하지 않는다. 레거시 1건이다.**
+
+### 왜 지금 막히나
+
+`TRUST-ORIGIN-BOOTSTRAP.md` 선행조건 **2번**: **"현재 WORKSTATE ↔ applier-log reconciliation exit 0"**.
+지금 **exit 1**이다. → **부트스트랩 자격이 없다.** 그런데 `recoveryApplyReady=false`(receipt 없음)라 **in-place 복구도 못 한다.**
+**두 문이 서로를 잠그고 있다.**
+
+### 선택지 (사람 결재)
+
+| 안 | 내용 | 대가 |
+| --- | --- | --- |
+| **(가) 권고** — **1회 legacy 정리를 결재한다** | 사람이 승인하고, **정당한 경로**로 그 전이의 성공 로그를 append한다(append-only 유지). 근거: 상태는 유효했고 실패는 하네스 버그였다. **결재·근거·되돌리는 법을 `BASELINE-CHANGES.md`에 남긴다** | 로그에 사후 항목이 들어간다. **하지만 거짓을 쓰는 게 아니라 "당시 실패 판정이 하네스 버그였다"는 사실을 기록하는 것이다** |
+| (나) reconciliation에 legacy 코드 신설 | v1 로그이면서 실패 사유가 post-apply인 전이를 `legacy-postapply-orphan`으로 분류해 **warning 강등** | **검사를 약화한다.** 좁게 짜도 다음 사람이 그 구멍을 쓴다 |
+| (다) 부트스트랩 선행조건 2를 완화 | reconciliation failure가 이 1건뿐이면 허용 | **가장 나쁘다.** "신뢰의 바닥"을 어긋난 상태 위에 놓는 것 |
+
+**검수자 권고: (가).**
+(나)·(다)는 **판정이 불편해서 기준을 옮기는 모양**이다 — `CLAUDE.md` 금지사항 1번이 막는 행동이고, 오늘 하루 종일 싸운 병(게이트가 거짓말한다)을 **우리 손으로 만드는 것**이다.
+**(가)는 기준을 지키면서 사실을 기록한다.** 기록이 남으므로 다음 사람이 검증할 수 있다.
+
+> ⚠️ **`GATE-MANIFEST`의 `handoff-integrity` expectedExit를 1로 바꾸자는 안은 기각한다.**
+> 그건 **"상태가 어긋난 것이 정상"이라고 등재**하는 것이고, 그 순간 그 검사는 죽는다.

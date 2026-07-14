@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "kind": "RECOVERY_QUARANTINE_EVIDENCE",
+  "workstateSha256": "1a16bbc9caa981fac4b7c22bdb5ea0654e536e232f4f318d04ce8f61499daf5d",
+  "applierLogSha256": "cd8c92a5498b5888f9d930f05bd867701d07ba30046c98183cb24e4b6160ca93",
+  "stateMutated": false,
+  "logMutated": false,
+  "report": {
+    "command": "recovery inspect",
+    "recoveryApplyReady": false,
+    "highRiskTransitionReady": false,
+    "automatedExecutionReady": false,
+    "trustedBaselineRequired": true,
+    "reconciliationExitCode": 1,
+    "recommendedAction": "quarantine-and-human-inbox",
+    "failures": [
+      {
+        "code": "state-transition-not-logged",
+        "subject": "DI0004-BLOCKED-CODEX",
+        "recoveryClass": "L2"
+      }
+    ],
+    "pending": [],
+    "warnings": [
+      {
+        "code": "duplicate-success-in-log",
+        "subject": "TEST-DI0001-2"
+      }
+    ]
+  }
+}
