@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 3,
+  "phaseId": "P00",
+  "wpId": "WP-TEST",
+  "diId": "DI-TEST-V2-CONFLICT",
+  "status": "blocked",
+  "blockers": ["fixture-v2-conflict: same transitionId with conflicting v2 binding"],
+  "appliedTransitions": [
+    { "id": "V2-CONFLICT", "appliedAt": "2026-01-01T00:00:00Z" }
+  ]
+}

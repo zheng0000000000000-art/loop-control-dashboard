@@ -163,10 +163,27 @@ internal static class HandoffIntegrityCli
                 ["successfulLogEntryCount"] = m.SuccessfulLogEntryCount,
                 ["successfulLogIdCount"] = m.SuccessfulLogIdCount,
                 ["duplicateSuccessLogCount"] = m.DuplicateSuccessLogCount,
+                ["logSchemaVersions"] = new JsonObject(m.LogSchemaVersions
+                    .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                    .Select(kv => KeyValuePair.Create<string, JsonNode?>(kv.Key, JsonValue.Create(kv.Value)))),
                 ["pendingExemptionApplied"] = m.PendingExemptionApplied,
                 ["reconciliation"] = m.Reconciliation,
             };
         }
+
+        var lookupNode = new JsonObject(result.SuccessLookup
+            .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+            .Select(kv => KeyValuePair.Create<string, JsonNode?>(kv.Key, new JsonObject
+            {
+                ["exists"] = kv.Value.Exists,
+                ["schemaVersion"] = kv.Value.SchemaVersion,
+                ["requestSha256"] = kv.Value.RequestSha256,
+                ["preStateSha256"] = kv.Value.PreStateSha256,
+                ["postStateSha256"] = kv.Value.PostStateSha256,
+                ["transitionContractSha256"] = kv.Value.TransitionContractSha256,
+            })));
+        if (metricsNode is JsonObject metricsObj)
+            metricsObj["lookupSuccess"] = lookupNode;
 
         return (0, metricsNode);
     }

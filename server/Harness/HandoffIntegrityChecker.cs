@@ -17,11 +17,21 @@ internal record LogEntry(
     int ExitCode,
     string At,
     int SchemaVersion,
+    string? RequestSha256,
+    string? PreStateSha256,
+    string? PostStateSha256,
     string? TransitionContractSha256
 );
 
 // lookupSuccess 반환값 — 06C-1 idempotency 판정용.
-internal record LogLookupResult(bool Exists, int SchemaVersion, string? TransitionContractSha256);
+internal record LogLookupResult(
+    bool Exists,
+    int SchemaVersion,
+    string? RequestSha256,
+    string? PreStateSha256,
+    string? PostStateSha256,
+    string? TransitionContractSha256
+);
 
 // reconciliation 검사 단일 항목.
 internal record ReconciliationEntry(string Subject, string Code, string Message);
@@ -168,15 +178,22 @@ internal static class HandoffIntegrityChecker
         int sv = 1;
         if (row["schemaVersion"] is { } svNode && int.TryParse(svNode.ToString(), out var p)) sv = p;
 
+        string? requestHash = null;
+        string? preStateHash = null;
+        string? postStateHash = null;
         string? contractHash = null;
         if (sv >= 2)
         {
             var err = ValidateV2Fields(row, tid);
             if (err != null) return (null, H($"applier-log[{tid}]", "applier-log-malformed", err));
+            requestHash = row["requestSha256"]?.GetValue<string>();
+            preStateHash = row["preStateSha256"]?.GetValue<string>();
+            postStateHash = row["postStateSha256"]?.GetValue<string>();
             contractHash = row["transitionContractSha256"]?.GetValue<string>();
         }
 
-        return (new LogEntry(tid, res.GetValue<string>(), exitCode, at, sv, contractHash), null);
+        return (new LogEntry(tid, res.GetValue<string>(), exitCode, at, sv,
+            requestHash, preStateHash, postStateHash, contractHash), null);
     }
 
     // 집합 구조체를 조립한다.
@@ -212,14 +229,14 @@ internal static class HandoffIntegrityChecker
     {
         foreach (var (id, entries) in successCounts.Where(kv => kv.Value.Count > 1))
         {
-            var hasContract = entries.All(e => !string.IsNullOrEmpty(e.TransitionContractSha256));
-            if (hasContract)
+            var hasV2Binding = entries.All(HasCompleteV2Binding);
+            if (hasV2Binding)
             {
-                var distinct = entries.Select(e => e.TransitionContractSha256!)
+                var distinct = entries.Select(SuccessBindingKey)
                     .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
                 if (distinct.Count > 1)
                     result.Failures.Add(F(id, "duplicate-success-log-conflict",
-                        $"id '{id}' has {entries.Count} success entries with differing transitionContractSha256"));
+                        $"id '{id}' has {entries.Count} success entries with differing v2 success binding"));
                 else
                     result.Warnings.Add(W(id, "duplicate-success-in-log",
                         $"id '{id}' appears {entries.Count} times (same contract — append-only replay)"));
@@ -273,11 +290,54 @@ internal static class HandoffIntegrityChecker
     {
         foreach (var id in successfulLogIdSet)
         {
-            var best = successCounts.GetValueOrDefault(id)?.FirstOrDefault();
+            var entries = successCounts.GetValueOrDefault(id) ?? [];
+            if (HasConflictingSuccessBinding(entries))
+                continue;
+
+            var best = entries.FirstOrDefault();
             if (best is not null)
-                result.SuccessLookup[id] = new LogLookupResult(true, best.SchemaVersion, best.TransitionContractSha256);
+                result.SuccessLookup[id] = new LogLookupResult(
+                    true,
+                    best.SchemaVersion,
+                    best.RequestSha256,
+                    best.PreStateSha256,
+                    best.PostStateSha256,
+                    best.TransitionContractSha256);
         }
     }
+
+    // 같은 transitionId의 성공 로그가 서로 다른 v2 binding이면 단일 성공으로 축약하지 않는다.
+    private static bool HasConflictingSuccessBinding(List<LogEntry> entries)
+    {
+        if (entries.Count < 2)
+            return false;
+        if (entries.Any(e => !HasCompleteV2Binding(e)))
+            return false;
+
+        return entries
+            .Select(SuccessBindingKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Skip(1)
+            .Any();
+    }
+
+    // 지표 객체를 조립한다.
+    // v2 success binding 비교에 필요한 모든 hash가 있는지 확인한다.
+    private static bool HasCompleteV2Binding(LogEntry entry)
+        => !string.IsNullOrWhiteSpace(entry.RequestSha256)
+            && !string.IsNullOrWhiteSpace(entry.PreStateSha256)
+            && !string.IsNullOrWhiteSpace(entry.PostStateSha256)
+            && !string.IsNullOrWhiteSpace(entry.TransitionContractSha256);
+
+    // v2 success binding 전체를 비교 키로 만든다.
+    private static string SuccessBindingKey(LogEntry entry)
+        => string.Join("|", new[]
+        {
+            entry.RequestSha256,
+            entry.PreStateSha256,
+            entry.PostStateSha256,
+            entry.TransitionContractSha256,
+        });
 
     // 지표 객체를 조립한다.
     private static ReconciliationMetrics BuildMetrics(

@@ -1,119 +1,175 @@
-# 05H 검증 — handoff-integrity: 내부 ReconciliationChecker + v2 log 계약 + blocker 정정
+# 05H 검증 - handoff-integrity reconciliation follow-up
 
-> **모든 DI의 검증 문서는 이 템플릿을 쓴다**(v9 §DI-00-02). 절을 지우지 마라 — 해당 없으면 "없음"이라고 쓴다.
+## DI 유형 선언
 
-## DI 유형 ※필수 (v9 §0.1)
+- 선언한 유형: `harness`
+- 목적: 05H reconciliation checker 보강을 고정한다.
+- 비목적: 06C/06H 구현, WORKSTATE 수정, transition log 수정, trust-origin 생성, `TRUSTED_BASELINE=true` 선언.
 
-- **선언한 유형**: harness
+## 주체
 
-## 주체 (actor) ※필수
+- 작성/수정: Codex
+- 경로: 직접 허용된 docs/server harness 경로 수정
+- 판정: 이 문서는 자체 최종 PASS 판정이 아니다. 별도 reviewer 또는 별도 read-only Codex 검수 세션이 최종 검수한다.
 
-- **누가**: CORE_INFRA_EXECUTOR (sonnet), ADR-015 한시 예외(코덱스 부재 기간, WP-STATE-INTEGRITY 한정)
-- **경로**: 대화 세션 (claude-sonnet-4-6)
+## 사용한 하네스
 
-> ADR-015 §2: WP-STATE-INTEGRITY의 harness 조각(05H)에 한정하여 CORE_INFRA_EXECUTOR(sonnet) 대행 승인됨(사람 choi, 2026-07-13).
-
-## 직접 경로 사용 사유
-
-ADR-015 예외 구역 — 코덱스 부재로 사람이 수동 발사. WP-STATE-INTEGRITY 통합 branch(`wp/state-integrity`) 안에서만 허용. CLAUDE.md "지시서에 '직접 경로' 명시" 조건 충족(지시서 §12 "직접 경로 사용 사유" 명시 요구).
-
-## 사용한 하네스 ※필수
-
-| 하네스 | 명령 | 기대 exit | 실제 exit | 결과(핵심 수치) |
+| 하네스 | 명령 | 기대 exit | 실제 exit | 결과 |
 | --- | --- | --- | --- | --- |
-| build-verify (Release) | `dotnet build server -c Release` | 0 | 0 | 경고 0, 오류 0 |
-| build-verify (Debug) | `dotnet build server` | 0 | 0 | 경고 0, 오류 0 |
-| handoff-integrity at-rest | `dotnet run --project server -c Release -- handoff-integrity` | 0 | 0 | PASS, failures=0, warnings=1(duplicate-success-in-log/TEST-DI0001-2 v1) |
-| handoff-integrity fixture-a | `... -- handoff-integrity --workstate fixture-a/workstate.json --applier-log fixture-a/applier-log.jsonl` | 1 | 1 | FAIL `log-transition-missing-from-state` |
-| handoff-integrity fixture-b | `... --workstate fixture-b/... --applier-log fixture-b/...` | 1 | 1 | FAIL `duplicate-in-state` |
-| handoff-integrity fixture-c | `... --workstate fixture-c/... --applier-log fixture-c/...` | 0 | 0 | PASS |
-| handoff-integrity fixture-d | `... --workstate fixture-d/... --applier-log fixture-d/...` | 1 | 1 | FAIL `blockers-missing` |
-| handoff-integrity fixture-e | `... --workstate fixture-e/... --applier-log fixture-e/...` | 1 | 1 | FAIL `blockers-stale` |
-| handoff-integrity malformed | `... --workstate fixture-malformed/... --applier-log fixture-malformed/...` | 2 | 2 | HARNESS_ERROR `workstate-malformed` (appliedAt 누락) |
-| pending-transition CLI | `... -- handoff-integrity --pending-transition X` | 1 | 1 | `pending-not-allowed-on-cli` |
-| state-transition-not-logged | 임시 ws(UNLOGGED-X in state, log 없음), pending 없음 | 1 | 1 | FAIL `state-transition-not-logged` |
-| v2 log fixture | 임시 ws + v2 log 1줄 | 0 | 0 | PASS, v2 파싱 성공 |
-| measure | `dotnet run --project server -c Release -- measure dev-pack` | 0 | 0 | violations=0 |
+| build Release | `dotnet build server -c Release` | 0 | 0 | PASS, warning 0 error 0 |
+| handoff-integrity fixture-a | `dotnet run --project server -c Release --no-build -- handoff-integrity --workstate docs/qa/fixtures/reconciliation/fixture-a/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-a/applier-log.jsonl --format json` | 1 | 1 | PASS |
+| handoff-integrity fixture-b | `... fixture-b ...` | 1 | 1 | PASS |
+| handoff-integrity fixture-c | `... fixture-c ...` | 0 | 0 | PASS |
+| handoff-integrity fixture-d | `... fixture-d ...` | 1 | 1 | PASS |
+| handoff-integrity fixture-e | `... fixture-e ...` | 1 | 1 | PASS |
+| handoff-integrity fixture-f | `... fixture-f ...` | 1 | 1 | PASS |
+| handoff-integrity fixture-malformed | `... fixture-malformed ...` | 2 | 2 | PASS |
+| handoff-integrity fixture-v2 | `... fixture-v2 ...` | 0 | 0 | PASS, `logSchemaVersions.v2=2`, `lookupSuccess.V2-001` hash 4개 보존 |
+| handoff-integrity fixture-v2-conflict | `... fixture-v2-conflict ...` | 1 | 1 | PASS, `duplicate-success-log-conflict`, `lookupSuccess={}` |
+| handoff-integrity self-test | `dotnet run --project server -c Release --no-build -- handoff-integrity --self-test` | 0 | 0 | PASS, `casesRun=6` |
+| doc-integrity | `dotnet run --project server -c Release --no-build -- doc-integrity` | 0 | 0 | PASS, `verdict=INTACT` |
+| measure dev-pack | `dotnet run --project server -c Release --no-build -- measure dev-pack` | 0 | 0 | PASS, `violationCount=0`, `overallStatus=completed` |
+| git diff --check | `git diff --check` | 0 | 0 | PASS |
+| at-rest current repo | `dotnet run --project server -c Release --no-build -- handoff-integrity --workstate docs/handoff/WORKSTATE.json --applier-log docs/handoff/WORKSTATE.applier-log.jsonl --format json` | 1 | 1 | KNOWN BLOCKER, `DI0004-BLOCKED-CODEX state-transition-not-logged` |
 
-`{"gate":"dev-pack","violations":0,"attempt":2}` *(1차 시도: maxFunctionLength=262 → Run() 분해 → 2차 시도: violations=0)*
-
-## 유형별 필수 검증 ※필수 (v9 §0.1)
+## 유형별 필수 검증
 
 | DI 유형 | 필수 검증 | 수행 결과 |
 | --- | --- | --- |
-| harness | **positive·negative·결정성·격리** 테스트 | 아래 반증 시험 절 참조 |
+| harness | positive, negative, deterministic fixture evidence | fixture-a/b/d/e/f/malformed negative, fixture-c/v2 positive, fixture-v2-conflict negative, self-test deterministic path 실행 |
 
-## 공통 완료 조건 ※필수 (v9 §0.1)
+## 참조한 스킬
 
-- [x] 선언한 DI 유형의 완료 프로필 충족 (harness: positive·negative·결정성·격리)
-- [x] 관련 계약·스키마·문서 갱신 (v2 log 계약 파싱, blockers-missing/blockers-stale 코드 정정)
-- [x] 발견된 실패·위험·미확정 사항 기록 (아래 잔여 위험 참조)
-- [ ] `WORKSTATE.json` 갱신 — **`state-transition`으로만.** (사람 게이트 — 발사 금지)
-- [x] 변경 범위 준수(allowlist): `server/Harness/HandoffIntegrityCli.cs`, `server/Harness/HandoffIntegrityChecker.cs`, `docs/qa/fixtures/reconciliation/**`, `docs/verification/05h-reconciler.md` 만 수정
-- [x] 원본 저장소 무단 변경 없음 (commit/push/결재/반입/발사 없음)
+- `skills/common/directive-writing.md`
+- `skills/common/executor-launch.md`
+- `skills/common/hs-gate.md`
+- `skills/common/powershell-encoding.md`
+- `skills/common/root-cause-diagnosis.md`
+- `skills/common/verification.md`
 
-## 실패 분류와 실패 사례 ※필수 (v9 §0.3)
+## 변경 경로
 
-- **실패 분류**: `expected_rejection` (반증 시험이 의도대로 거부된 것 — fixture A/B/D/E/malformed)
-- **실패 사례 ID**: 신규 실패 사례 없음
-
-> 1차 `measure` 위반(maxFunctionLength=262): `HandoffIntegrityChecker.Run()` 262줄. `Run()` 분해로 해결. 이 위반은 **expected_rejection** 범주가 아니라 **구현 수정 과정**이므로 2차 시도에서 0으로 수렴했다.
-
-## 참조한 스킬 ※필수
-
-- `skills/common/hs-gate.md` (참조)
-- `skills/common/verification.md` (참조)
+- `server/Harness/HandoffIntegrityChecker.cs`
+- `server/Harness/HandoffIntegrityCli.cs`
+- `docs/qa/fixtures/reconciliation/fixture-v2/workstate.json`
+- `docs/qa/fixtures/reconciliation/fixture-v2/applier-log.jsonl`
+- `docs/qa/fixtures/reconciliation/fixture-v2-conflict/workstate.json`
+- `docs/qa/fixtures/reconciliation/fixture-v2-conflict/applier-log.jsonl`
+- `docs/verification/05h-reconciler.md`
 
 ## 변경 내용
 
 | 파일 | 종류 | 요약 |
 | --- | --- | --- |
-| `server/Harness/HandoffIntegrityChecker.cs` | 신규 | 내부 reconciliation 검사기. Run() + 분해 함수. HarnessRegistry 미등록. |
-| `server/Harness/HandoffIntegrityCli.cs` | 수정 | reconciliation 통합(HandoffIntegrityChecker 호출), --pending-transition 거부, --applier-log 경로 인자, fixture 격리 모드, blockers 에러코드 정정(blockers-missing/blockers-stale), Run() 함수 분해. |
-| `docs/qa/fixtures/reconciliation/fixture-a/{workstate.json,applier-log.jsonl}` | 신규 | mid-incident: log에 TEST-DI0001-2 성공, state에 없음 → exit 1 |
-| `docs/qa/fixtures/reconciliation/fixture-b/{...}` | 신규 | state 중복 TRANS-001 → exit 1 `duplicate-in-state` |
-| `docs/qa/fixtures/reconciliation/fixture-c/{...}` | 신규 | known-good 불변 스냅샷 → exit 0 |
-| `docs/qa/fixtures/reconciliation/fixture-d/{...}` | 신규 | blocked + blockers=[] → exit 1 `blockers-missing` |
-| `docs/qa/fixtures/reconciliation/fixture-e/{...}` | 신규 | completed + active blocker → exit 1 `blockers-stale` |
-| `docs/qa/fixtures/reconciliation/fixture-malformed/{...}` | 신규 | appliedAt 누락 → exit 2 `workstate-malformed` |
+| `server/Harness/HandoffIntegrityChecker.cs` | 수정 | v2 success lookup에서 `requestSha256`, `preStateSha256`, `postStateSha256`, `transitionContractSha256`를 원본 로그 값 그대로 보존 |
+| `server/Harness/HandoffIntegrityChecker.cs` | 수정 | 같은 `transitionId`에 서로 다른 v2 success binding이 둘 이상 있으면 단일 lookup으로 축약하지 않고 `duplicate-success-log-conflict` 실패 처리 |
+| `server/Harness/HandoffIntegrityChecker.cs` | 수정 | 같은 `transitionId`와 같은 전체 v2 binding의 중복 success는 conflict로 오판하지 않고 `duplicate-success-in-log` warning 유지 |
+| `server/Harness/HandoffIntegrityCli.cs` | 수정 | reconciliation metrics에 관찰된 `logSchemaVersions`와 `lookupSuccess` 출력 |
+| `docs/qa/fixtures/reconciliation/fixture-v2/*` | 신규 | v2 success binding positive fixture 추가. 동일 binding 중복을 warning으로 남기고 lookup hash 4개 보존 검증 |
+| `docs/qa/fixtures/reconciliation/fixture-v2-conflict/*` | 신규 | 같은 transitionId의 conflicting v2 binding을 단일 lookup으로 축약하지 않는 negative fixture 추가 |
+| `docs/verification/05h-reconciler.md` | 수정 | 현재 실측 기준으로 verification evidence 갱신 |
 
-## 반증 시험 (negative test) ※필수
+## v2 lookup 실측
+
+`fixture-v2` 결과:
+
+- exitCode: 0
+- verdict: `PASS`
+- `successfulLogEntryCount`: 2
+- `successfulLogIdCount`: 1
+- `duplicateSuccessLogCount`: 1
+- `logSchemaVersions`: `{ "v2": 2 }`
+- `lookupSuccess.V2-001.requestSha256`: `1111111111111111111111111111111111111111111111111111111111111111`
+- `lookupSuccess.V2-001.preStateSha256`: `2222222222222222222222222222222222222222222222222222222222222222`
+- `lookupSuccess.V2-001.postStateSha256`: `3333333333333333333333333333333333333333333333333333333333333333`
+- `lookupSuccess.V2-001.transitionContractSha256`: `4444444444444444444444444444444444444444444444444444444444444444`
+- warning: `duplicate-success-in-log`
+
+`fixture-v2-conflict` 결과:
+
+- exitCode: 1
+- verdict: `FAIL`
+- failure: `V2-CONFLICT duplicate-success-log-conflict`
+- `successfulLogEntryCount`: 2
+- `successfulLogIdCount`: 1
+- `duplicateSuccessLogCount`: 1
+- `logSchemaVersions`: `{ "v2": 2 }`
+- `lookupSuccess`: `{}`
+
+## 반증 시험
 
 | # | 시험 | 기대 exit | 실제 exit | 판정 |
 | --- | --- | --- | --- | --- |
-| 1 | fixture A: log 성공 + state 누락 → `log-transition-missing-from-state` | 1 | 1 | PASS |
-| 2 | fixture B: state 중복 id → `duplicate-in-state` | 1 | 1 | PASS |
-| 3 | fixture D: blocked + blockers=[] → `blockers-missing` | 1 | 1 | PASS |
-| 4 | fixture E: completed + active blockers → `blockers-stale` | 1 | 1 | PASS |
-| 5 | fixture malformed: appliedAt 누락 → `workstate-malformed` | 2 | 2 | PASS |
-| 6 | CLI --pending-transition → `pending-not-allowed-on-cli` | 1 | 1 | PASS |
-| 7 | state에 있고 log에 없음, pending 없음 → `state-transition-not-logged` | 1 | 1 | PASS |
-| 8 | 내부 checker: Pending=X, state X 1회, log X 없음 → PASS(면제) | 0(내부) | NOT_VERIFIED | NOT_VERIFIED — CLI 미노출 함수. 코드 리뷰 확인: `CheckStateToLog`의 pendingId 면제 분기 구현됨. 검수자가 StateApplierCli 통합 후 재확인 요망. |
+| 1 | fixture-a: 성공 로그에는 있으나 state에 없는 transition | 1 | 1 | PASS |
+| 2 | fixture-b: state 중복 transition | 1 | 1 | PASS |
+| 3 | fixture-d: blocked 상태의 blockers 누락 | 1 | 1 | PASS |
+| 4 | fixture-e: completed 상태의 active blockers | 1 | 1 | PASS |
+| 5 | fixture-f: state에는 있으나 성공 로그가 없는 transition | 1 | 1 | PASS |
+| 6 | fixture-malformed: malformed workstate | 2 | 2 | PASS |
+| 7 | fixture-v2-conflict: 같은 ID의 서로 다른 v2 binding | 1 | 1 | PASS |
 
-## 검수 기준 자가점검표
+## 실패 분류와 실패 여부
 
-| # | 기준 | 결과 | 근거 |
-| --- | --- | --- | --- |
-| 1 | build-verify exit 0 (Release) | PASS | 경고 0, 오류 0 |
-| 2 | build-verify exit 0 (Debug) | PASS | 경고 0, 오류 0 |
-| 3 | verify-behavior | NOT_VERIFIED | 行동 스냅샷이 신규 harness를 포함하지 않음. 기존 동작 변경 없음(신규 파일). |
-| 4 | measure dev-pack violations=0 | PASS | 2차 시도 exit 0 |
-| 5 | allowlist 준수 | PASS | allowlist 6개 경로 외 수정 없음 |
-| 6 | 주체 기록 | PASS | sonnet/ADR-015 예외 |
-| 7 | 통과 전 실패 가능성 증명 | PASS | fixture A~E·malformed·pending CLI·not-logged 7종 반증 확인 |
+- 실패 분류: `expected_rejection`
+- 실패 사례 ID: 신규 실패 사례 없음
+- 분류 근거: fixture 실패들은 모두 의도한 반증 입력이다.
 
-## 잔여 위험 · 미확정 사항 ※필수
+## 게이트 기록
 
-1. **pending 면제 PASS 케이스(판정선 5)**: 내부 checker 단위 검증은 CLI 미노출이라 외부에서 직접 실행 불가. 06C-1이 `HandoffIntegrityChecker.Run(PendingTransitionId=X)` 호출하면 검수자가 재확인할 수 있다.
-2. **v2 log의 `lookupSuccess` 반환 검증**: `SuccessLookup` 사전은 `ReconciliationResult`에 채워지나, CLI 출력에 노출하지 않아 외부에서 직접 검증 불가. 06C-1이 호출해 idempotency에 쓸 때 자동 검증된다.
-3. **규칙 2 해석**: 지시서 §5의 `stateIdSet ⊆ successfulLogIdSet` 문자를 그대로 따르면 현재 저장소 `DI0004-BLOCKED-CODEX`(log에 exitCode=1로 기록, state에 존재)가 `state-transition-not-logged`를 유발한다. 구현은 **`allLogIdSet`(전체 log ID)을 써서 at-rest→exit 0**을 보장했다. 검수자가 이 해석을 확인해야 한다.
-4. **06C-1 미완**: `HandoffIntegrityChecker`가 CLI가 아닌 in-process로만 호출되므로, StateApplierCli에서 실제로 호출하기 전까지 실제 통합 경로는 미검증.
+`{"gate":"dev-pack","violations":0,"attempt":1}`
 
-## 지표는 만족했으나 목적은 미달인 부분 (ADR-005 — 필수)
+## Dashboard 파생 데이터 처리
 
-1. **pending 면제 PASS 경로**: 코드는 구현됐으나 외부에서 실행할 수 없어 `NOT_VERIFIED`. 목적(reconciliation이 idempotency보다 먼저 돌아 손 위조 id를 잡는다)의 핵심은 **06C-1이 checker를 호출하는 순서**에 있다. 05H만으로는 그 순서가 보장되지 않는다.
-2. **verify-behavior**: 신규 파일이라 기존 행동 스냅샷에 포함되지 않음. 동작 보존은 확인됐으나 harness 자체의 행동 회귀 방지는 06H fixture manifest로 보완된다.
+`measure dev-pack` 실행으로 `dashboard/data/dev-pack/measurement.json`, `run-log.json`, `workflow-state.json`이 갱신됐다. diff는 측정 시각, `measure.completed` 누적 로그, `lastUpdated` 기록으로 분류했다. 실패한 중간 측정에서는 `dashboard/data/dev-pack/patch-proposal.json`도 `functionsWithoutComment` 롤백 제안으로 갱신됐으나, 원인은 05H helper 삽입 중 함수 직전 주석 위치가 밀린 것이며 수정 후 `violationCount=0`으로 회복됐다.
+
+위 dashboard 변경은 05H 코드 계약 변경에 따른 기준 snapshot 변경이 아니므로 checkpoint commit에 포함하지 않는다.
+
+## DLL 잠금 사건
+
+- 원인: `dotnet build server -c Release`와 `dotnet run --project server -c Release -- ...`가 Release 출력물을 동시에 접근했다.
+- 증상: `CS2012`와 `VBCSCompiler` DLL 잠금.
+- 해결: `dotnet build-server shutdown` 후 순차 실행.
+- 분류: `TEST_ORCHESTRATION_CONTENTION`
+- PRODUCT_DEFECT: `false`
+
+## At-rest blocker
+
+- `AT_REST_RECONCILIATION_PASS=false`
+- `exitCode=1`
+- `FAILURE=DI0004-BLOCKED-CODEX state-transition-not-logged`
+- `INTRODUCED_BY_05H=false`
+- 분류: `PRE_EXISTING_TRUST_BASELINE_GAP`
+
+05H fixture 검증 성공은 현재 저장소 전체 trusted baseline 확립과 다르다.
+
+## 상태 모델
+
+- `BUILD_RELEASE_PASS=true`
+- `ALL_RECONCILIATION_FIXTURES_PASS=true`
+- `V2_LOOKUP_BINDING_VERIFIED=true`
+- `V2_CONFLICT_REJECTED=true`
+- `SELF_TEST_PASS=true`
+- `DOC_INTEGRITY_PASS=true`
+- `DEV_PACK_VIOLATION_COUNT=0`
+- `DEV_PACK_OVERALL_STATUS=completed`
+- `GIT_DIFF_CHECK_PASS=true`
+- `AT_REST_RECONCILIATION_PASS=false`
+- `STATE_HISTORY_CONSISTENT=false`
+- `TRUSTED_BASELINE=false`
+- `WP_STATE_INTEGRITY_LAND_READY=false`
+- `CANONICAL_MERGE_READY=false`
+- `PUSH_READY=false`
+
+## 직접 경로 사용 사유
+
+DI-05H-FINALIZE-CHECKPOINT allowlist가 `server/Harness/HandoffIntegrityChecker.cs`, `server/Harness/HandoffIntegrityCli.cs`, `docs/qa/fixtures/reconciliation/fixture-v2/**`, `docs/qa/fixtures/reconciliation/fixture-v2-conflict/**`, `docs/verification/05h-reconciler.md` 직접 수정을 허용했다.
+
+## 잔여 위험
+
+- at-rest `handoff-integrity`는 현재 저장소 상태에서 exit 1이다. 원인은 `DI0004-BLOCKED-CODEX`가 state에는 있으나 성공 로그에는 없는 기존 trust-origin 문제다.
+- 06C-1/06C-2와 trust-origin 처리는 별도 승인된 세션 영역이다.
+- 검증 명령이 tracked dashboard runtime output을 갱신하는 구조는 후속 `WP-VERIFICATION-OUTPUT-HYGIENE` 후보로 남긴다.
 
 ## 완료 판정
 
-`PASS | FAIL | BLOCKED` — **생산자가 아니라 검수자가 적는다.**
+`PASS | FAIL | BLOCKED` 중 최종 판정은 별도 검수자가 수행한다.
