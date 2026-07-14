@@ -1,0 +1,25 @@
+﻿{
+    "schemaVersion":  2,
+    "taskId":  "06C-1-R1",
+    "pid":  16620,
+    "exitCode":  0,
+    "startedAt":  "2026-07-13T23:52:06.5749132+09:00",
+    "exitedAt":  "2026-07-14T00:42:40.2931037+09:00",
+    "outLog":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-06C-1-R1.out.log",
+    "outJson":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-06C-1-R1.out.jsonl",
+    "processed":  false,
+    "transportValid":  true,
+    "transportEvidence":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\launch\\06C-1-R1.transport.json",
+    "usage":  {
+                  "inputTokens":  29,
+                  "outputTokens":  32069,
+                  "cacheCreationTokens":  114171,
+                  "cacheReadTokens":  2655464,
+                  "totalCostUsd":  6.290911200000001,
+                  "numTurns":  37,
+                  "durationMs":  562936,
+                  "isError":  false,
+                  "stopReason":  "end_turn",
+                  "sessionId":  "34648174-55d4-437b-9cad-fe8ea82d9a5f"
+              }
+}

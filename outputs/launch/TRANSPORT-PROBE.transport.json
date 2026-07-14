@@ -1,0 +1,16 @@
+﻿{
+    "schemaVersion":  1,
+    "taskId":  "TRANSPORT-PROBE",
+    "cliVersion":  "2.1.114 (Claude Code)",
+    "sourceSha256":  "683dfc836f09fd95b5998f0e3c8052e9976965569973ae825e681b4c9622d03e",
+    "payloadSha256":  "683dfc836f09fd95b5998f0e3c8052e9976965569973ae825e681b4c9622d03e",
+    "replaySha256":  "683dfc836f09fd95b5998f0e3c8052e9976965569973ae825e681b4c9622d03e",
+    "sourceByteLength":  168,
+    "payloadByteLength":  168,
+    "replayByteLength":  168,
+    "replayEventCount":  1,
+    "pid":  15224,
+    "startedAt":  "2026-07-12T18:06:29.7832473+09:00",
+    "exitedAt":  "2026-07-12T18:06:35.5041049+09:00",
+    "verdict":  "TRANSPORT_VALID"
+}

@@ -1,0 +1,11 @@
+﻿{
+  "phaseId": "P00",
+  "wpId": "WP-00",
+  "status": "verifying",
+  "nextActions": [
+    "검수자가 STATE-01 검수 기준(반증 9개 포함)을 검증한다",
+    "state-transition으로 completed 또는 blocked를 결정한다",
+    "StateApplierCli를 통해서만 WORKSTATE를 갱신한다 — 직접 수정 경로는 이번 작업 이후 폐기"
+  ],
+  "updatedBy": "claude-sonnet-4-6"
+}

@@ -1,0 +1,16 @@
+﻿{
+    "schemaVersion":  1,
+    "taskId":  "05H",
+    "cliVersion":  "2.1.114 (Claude Code)",
+    "sourceSha256":  "77dc4de4beb2a01c0bd92d4effb40766a31e80698f047ab9df69740166c04045",
+    "payloadSha256":  "77dc4de4beb2a01c0bd92d4effb40766a31e80698f047ab9df69740166c04045",
+    "replaySha256":  "77dc4de4beb2a01c0bd92d4effb40766a31e80698f047ab9df69740166c04045",
+    "sourceByteLength":  4170,
+    "payloadByteLength":  4170,
+    "replayByteLength":  4170,
+    "replayEventCount":  1,
+    "pid":  21128,
+    "startedAt":  "2026-07-13T21:34:58.0129435+09:00",
+    "exitedAt":  "2026-07-13T21:59:59.5251327+09:00",
+    "verdict":  "TRANSPORT_VALID"
+}

@@ -1,0 +1,32 @@
+---
+
+## LEDGER-03 수행 요약
+
+### 자가 점검표
+
+| 항목 | 결과 |
+|---|---|
+| `dotnet build server -c Release` warning 0, error 0 | ✅ exit 0 |
+| `verify-behavior` behaviorEqual: true | ✅ exit 0 |
+| `measure dev-pack` violations=0 (주입 제거 후) | ✅ exit 0 |
+| `gate-clean server` | exit 1 (예상 — 실제 코드 변경) |
+| `handoff-integrity` | exit 1 (WORKSTATE 해시 미반영) |
+| `proposal.fallback` 이벤트 run-log 원문 확인 | ✅ |
+| 주입 제거 후 violations=0 복귀 | ✅ |
+
+### 실체 증명 결과
+
+**proposal.fallback 항목 원문** (2026-07-12T01:38:02 KST):
+```json
+{"event": "proposal.fallback", "params": {"reason": "parse-rejected-metricid", "provider": "ollama", "model": "qwen3:8b", "expectedMetricId": "functionsWithoutComment", "actualMetricId": "functionsWithOutComment"}, "level": "warn", ...}
+```
+
+**검수자 진단 검증**: **맞다.** qwen3:8b는 실제로 `functionsWithOutComment`(대문자 O)를 반환한다. 이제 이 폴백이 run-log에 기록된다.
+
+### 산출물
+
+- `server/OllamaExecutor.cs` — ParseNoteResponse 거부 사유 분해, 체인 전파
+- `server/Program.cs` — FallbackLogEntry 헬퍼, 4개 콜러에서 append
+- `docs/verification/ledger03-fallback-observability.md` — 검증 문서
+- `docs/directives/LEDGER03-fallback-observability.md` — 지시서 보관본
+- `docs/handoff/WORKSTATE.json` + `docs/context/RUNTIME-INDEX.md` — LEDGER-03으로 갱신

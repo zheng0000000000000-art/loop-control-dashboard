@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 2,
+  "projectName": "개발 팩 — 자기 검수 루프",
+  "currentStage": "changeReview",
+  "overallStatus": "warning",
+  "loopState": "running",
+  "mode": "normal",
+  "suspendedTracks": [
+    {
+      "metricId": "functionsWithoutComment",
+      "detectedAt": "2026-07-12T00:43:25.6191021+09:00",
+      "relatedProposalId": null,
+      "suspectConfidence": "temporal"
+    }
+  ],
+  "loopIteration": 13,
+  "stages": {
+    "goals": "passed",
+    "measure": "passed",
+    "deviationCheck": "warning",
+    "changeReview": "pending_review",
+    "apply": "blocked"
+  },
+  "blockInfo": {
+    "apply": {
+      "kind": "waiting"
+    }
+  },
+  "stageDetails": {
+    "goals": {
+      "summary": "개발 팩은 저장소의 핵심 규칙을 측정하고 블루프린트 기준과 비교한다.",
+      "metrics": [
+        {
+          "label": "블루프린트 지표",
+          "value": "7"
+        },
+        {
+          "label": "측정 방식",
+          "value": "규칙 기반"
+        }
+      ],
+      "issues": []
+    },
+    "measure": {
+      "summary": "측정 실행 버튼으로 현재 저장소 상태를 measurement.json에 기록한다.",
+      "metrics": [],
+      "issues": []
+    },
+    "deviationCheck": {
+      "summary": "측정 결과에서 1개 괴리가 감지됐다.",
+      "metrics": [
+        {
+          "label": "domainWordsInEngine",
+          "value": "0 / 0"
+        },
+        {
+          "label": "functionsWithoutComment",
+          "value": "1 / 0"
+        },
+        {
+          "label": "directiveAcceptanceCriteria",
+          "value": "8 / 3~99"
+        },
+        {
+          "label": "koPoliteEndings",
+          "value": "0 / 0"
+        },
+        {
+          "label": "verdictInProposalFile",
+          "value": "0 / 0"
+        },
+        {
+          "label": "devRoleInRuntimeLogs",
+          "value": "0 / 0"
+        },
+        {
+          "label": "schemaVersionMissing",
+          "value": "0 / 0"
+        },
+        {
+          "label": "hardcodedColors",
+          "value": "0 / 0"
+        },
+        {
+          "label": "inlineStyles",
+          "value": "0 / 0"
+        },
+        {
+          "label": "smallTouchTargets",
+          "value": "0 / 0"
+        },
+        {
+          "label": "newFontFamilies",
+          "value": "0 / 0"
+        },
+        {
+          "label": "skillsWithoutVersion",
+          "value": "0 / 0"
+        },
+        {
+          "label": "skillDomainViolations",
+          "value": "0 / 0"
+        },
+        {
+          "label": "programCsLines",
+          "value": "2333 / 0~2661"
+        },
+        {
+          "label": "appJsLines",
+          "value": "2688 / 0~2692"
+        },
+        {
+          "label": "maxFunctionLength",
+          "value": "80 / 0~80"
+        }
+      ],
+      "issues": [
+        "functionsWithoutComment: 측정값 1이 기준 0을 벗어났다. 근거: server/OllamaExecutor.cs:569"
+      ]
+    },
+    "changeReview": {
+      "summary": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "metrics": [
+        {
+          "label": "1층 검토 판정",
+          "value": "approved"
+        }
+      ],
+      "issues": []
+    },
+    "apply": {
+      "summary": "변경 승인이 완료될 때까지 차단된다.",
+      "metrics": [
+        {
+          "label": "적용 상태",
+          "value": "차단됨"
+        }
+      ],
+      "issues": [
+        "이전 단계가 아직 완료되지 않았다."
+      ]
+    }
+  },
+  "lastUpdated": "2026-07-12T00:44:32.3646520+09:00",
+  "acknowledgedGuardrails": [
+    {
+      "id": "loopIteration",
+      "type": "loopIteration",
+      "loopIteration": 0,
+      "acknowledgedAt": "2026-07-09T13:32:02.3444819+09:00"
+    },
+    {
+      "id": "guardrail",
+      "type": "loopIteration",
+      "loopIteration": 10,
+      "acknowledgedAt": "2026-07-10T22:15:17.2399332+09:00"
+    },
+    {
+      "id": "guardrail",
+      "type": "guardrail",
+      "loopIteration": 10,
+      "acknowledgedAt": "2026-07-11T19:23:49.6408921+09:00"
+    },
+    {
+      "id": "guardrail",
+      "type": "loopIteration",
+      "loopIteration": 11,
+      "acknowledgedAt": "2026-07-11T19:33:39.2734825+09:00"
+    },
+    {
+      "id": "guardrail",
+      "type": "loopIteration",
+      "loopIteration": 12,
+      "acknowledgedAt": "2026-07-11T19:33:44.9362152+09:00"
+    }
+  ],
+  "acknowledgedCheckpoints": [
+    {
+      "checkpointId": "loop-milestone",
+      "loopIteration": 5,
+      "acknowledgedAt": "2026-07-10T09:51:46.6476225+09:00"
+    }
+  ],
+  "applyBaselineViolations": [
+    "smallTouchTargets=1",
+    "skillDomainViolations=2",
+    "maxFunctionLength=159"
+  ]
+}

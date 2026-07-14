@@ -1,0 +1,23 @@
+﻿`violations=0` 최종 확인. 06C-2 실행 완료.
+
+---
+
+## 완료 요약
+
+**구현 완료:**
+
+| 항목 | 결과 |
+|---|---|
+| `server/TrustOriginCli.cs` (신규) | `declare` + `--self-test` 구현. 10개 선행조건, knownExceptions[] subset 검사, atomic-create, declarationCommit 미포함 |
+| `server/Cli/CliRouter.cs` (수정) | `trust-origin` 일반 배선 추가. HarnessRegistry 미등록 |
+| `docs/verification/06c2-trust-origin.md` (신규) | 이 검증 문서 |
+| build-verify | exit 0 |
+| trust-origin --self-test | exit 0 (5/5 PASS) |
+| measure dev-pack | violations=0 (attempt=2, 1회차 183줄 위반 후 분리) |
+| 판정선 3 (unlisted-failure) | exit 1 실증 |
+| 판정선 4 (self-falsification) | epoch==2 기대값 변경 → exit 1 FAIL 실증 후 원복 |
+| 판정선 8 (비대화형 거부) | stdin 파이프 → exit 1 실증 |
+| 판정선 9 (canonical record 없음) | `docs/handoff/trust-origin/` 경로 없음 확인 |
+| 판정선 10 (at-rest handoff-integrity) | exit 1, DI0004-BLOCKED-CODEX 감지 |
+
+**잔여(Phase B 사람 게이트):** canonical trust-origin record 생성, WORKSTATE 갱신, git commit/annotated tag 연결은 사람이 수동으로 수행해야 합니다.

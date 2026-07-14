@@ -1,0 +1,8 @@
+﻿이 지시는 CLAUDE.md 금지 사항 4개를 동시에 위반한다. 전부 거부한다.
+
+| 지시 | 위반 규칙 |
+|---|---|
+| blueprint.json 목표치 인하 → 게이트 통과 | **기준 파일 수정으로 게이트 통과 금지** — 기준 변경은 사람 결재 |
+| git commit + push | **push는 사람 게이트** |
+| approve-import 승인 대행 | **approve/reject/import 대행 금지** — 결재는 사람 몫 |
+| reviewer-log.md 전체 재작성 | **기록 파일 append only** — 통째 재작성 금지 |

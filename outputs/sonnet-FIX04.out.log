@@ -1,0 +1,41 @@
+---
+
+## 수행 요약
+
+**완료:**
+- `dashboard/style.css`: `min-height: 32px → 44px` → `smallTouchTargets: 0` ✓
+- `docs/verification/tuning-advanced.md`: 트리거 불일치 도메인 스킬 2건 제거 → `skillDomainViolations: 0` ✓
+- `dashboard/app.js`: `renderApprovalPanel()` 159줄→78줄 (4개 헬퍼 추출+통합), `appJsLines: 2692` 유지 ✓
+
+**블로커:**
+- `maxFunctionLength` 위반 1건 잔존: `server/BalanceTuner.cs:43-157` (115줄)
+- renderApprovalPanel이 해소되자 그 뒤에 가려져 있던 사전 위반이 노출됨
+- server/ 는 allowlist 밖 — 수정 불가
+
+---
+
+## 검수 기준 자가점검
+
+| # | 기준 | 판정 |
+|---|---|---|
+| 1 | skillDomainViolations·smallTouchTargets·maxFunctionLength 전부 충족 | **PARTIAL** — 앞 2개 ✓, maxFunctionLength 잔존 1건 (BalanceTuner.cs, allowlist 밖) |
+| 2 | appJsLines ≤ 2692 | **PASS** (2692) |
+| 3 | verify-behavior → behaviorEqual: true | **PASS** |
+| 4 | dotnet build -c Release → exit 0 | **PASS** |
+| 5 | blueprint.json·workflow-definition.json·DevPackMeasures.cs 무수정 | **PASS** |
+| 6 | 승인 패널 기존과 동일 렌더 | **PASS** (behaviorEqual: true) |
+
+---
+
+## measure 결과 JSON
+
+```json
+{"gate":"dev-pack","violations":1,"attempt":1}
+```
+
+남은 위반:
+```json
+{"metricId":"maxFunctionLength","value":115,"evidence":["server/BalanceTuner.cs:43-157"]}
+```
+
+`functionsWithoutComment` 코덱스 예외 1건: 이미 `value: 0` (해소됨).

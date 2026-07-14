@@ -1,0 +1,16 @@
+﻿{
+    "schemaVersion":  1,
+    "taskId":  "GUARD-01",
+    "cliVersion":  "2.1.114 (Claude Code)",
+    "sourceSha256":  "0d903e32fb338805481f960c91fafb89a35b7ae2f94fb9c0e2be92ff91c827aa",
+    "payloadSha256":  "0d903e32fb338805481f960c91fafb89a35b7ae2f94fb9c0e2be92ff91c827aa",
+    "replaySha256":  "0d903e32fb338805481f960c91fafb89a35b7ae2f94fb9c0e2be92ff91c827aa",
+    "sourceByteLength":  1921,
+    "payloadByteLength":  1921,
+    "replayByteLength":  1921,
+    "replayEventCount":  1,
+    "pid":  4396,
+    "startedAt":  "2026-07-12T21:30:56.4121559+09:00",
+    "exitedAt":  "2026-07-12T21:49:25.7506118+09:00",
+    "verdict":  "TRANSPORT_VALID"
+}

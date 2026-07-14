@@ -1,0 +1,25 @@
+﻿{
+    "schemaVersion":  2,
+    "taskId":  "TRANSPORT-PROBE",
+    "pid":  15224,
+    "exitCode":  0,
+    "startedAt":  "2026-07-12T18:06:29.7832473+09:00",
+    "exitedAt":  "2026-07-12T18:06:35.5186846+09:00",
+    "outLog":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-TRANSPORT-PROBE.out.log",
+    "outJson":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-TRANSPORT-PROBE.out.jsonl",
+    "processed":  true,
+    "transportValid":  true,
+    "transportEvidence":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\launch\\TRANSPORT-PROBE.transport.json",
+    "usage":  {
+                  "inputTokens":  3,
+                  "outputTokens":  7,
+                  "cacheCreationTokens":  9755,
+                  "cacheReadTokens":  13347,
+                  "totalCostUsd":  0.04116834999999999,
+                  "numTurns":  1,
+                  "durationMs":  2228,
+                  "isError":  false,
+                  "stopReason":  "end_turn",
+                  "sessionId":  "46bf3208-6b40-49c6-ba3d-df4e570e769a"
+              }
+}

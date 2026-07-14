@@ -1,0 +1,29 @@
+---
+
+## 수행 요약
+
+**변경 파일 (allowlist 내):**
+- `dashboard/app.js`: 2692줄→2688줄, 장문 함수 3건 모두 80줄 이하 달성
+- `docs/verification/fix07-appjs-long-functions.md`: 신규 검증 문서
+- `docs/directives/FIX07-appjs-long-functions.md`: 지시서 보관 (복사)
+- `docs/handoff/WORKSTATE.json`: diId FIX-07로 갱신
+
+**방법:** renderStageDetail(99줄)에서 metrics 블록을 `appendStageMetricsSection` 헬퍼로 추출 + 빈 줄 제거. renderProposalChange(86줄)와 renderImportPendingItem(81줄)은 빈 줄 제거만으로 80줄 달성.
+
+---
+
+## 검수 기준 자가점검표
+
+| # | 기준 | 결과 |
+|---|---|---|
+| 1 | `measure dev-pack` → `violationCount: 0` | ✅ 0 |
+| 2 | `appJsLines` ≤ 2692 | ✅ 2688 |
+| 3 | `functionsWithoutComment` = 0 | ✅ 0 |
+| 4 | `verify-behavior` → `behaviorEqual: true` (exit 0) | ✅ |
+| 5 | `build-verify` → `verdict: PASS` (exit 0) | ✅ |
+| 6 | blueprint·workflow-definition·DevPackMeasures.cs 무수정 | ✅ |
+
+**measure 증거 JSON:**
+```json
+{"gate":"dev-pack","violations":0,"attempt":1}
+```

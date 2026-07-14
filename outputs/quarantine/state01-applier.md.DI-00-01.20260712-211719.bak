@@ -1,0 +1,106 @@
+# STATE-01 검증 — WORKSTATE canonical 계약 + StateApplierCli
+
+## ① 주체 (actor)
+
+- **실행자**: claude-sonnet-4-6 (대화 세션, STATE-01 지시 수령)
+- **세션**: 2026-07-12
+- **지시서**: 이번 대화 세션에서 직접 전달된 STATE-01 지시
+
+## ② 사용한 하네스와 exit code
+
+| 하네스 | 명령 | exit code | 핵심 수치 |
+|---|---|---|---|
+| build | `dotnet build server -c Release` | 0 | warning 0, error 0 |
+| measure dev-pack (1차, ApplierOptions 주석 누락) | `dotnet run --project server -c Release -- measure dev-pack` | 1 | violationCount=1, server/StateApplierCli.cs:28 |
+| measure dev-pack (수정 후) | `dotnet run --project server -c Release -- measure dev-pack` | 0 | violationCount=0 |
+| handoff-integrity | `dotnet run --project server -c Release -- handoff-integrity` | 0 | PASS, failureCount=0 |
+| projection (최종) | `dotnet run --project server -c Release -- projection` | 0 | stamped=4, missingFiles=0 |
+| state-transition 정상 전이 | `dotnet run … -- state-transition --transition-id STATE-01-NORMAL-001 …` | 0 | previousStatus=verifying, newStatus=verifying, handoff-integrity PASS |
+
+## ③ 참조한 스킬
+
+- 없음(allowlist 내 파일만 수정·신규 생성하는 implementation 작업)
+
+## 반증 시험 결과
+
+| # | 시험 | 기대 | 실제 exit | 판정 |
+|---|---|---|---|---|
+| 1 | stale sha256 | WORKSTATE 변경 안 됨, exit 1 | 1, sha256 불변 확인 | PASS |
+| 2 | 같은 transition-id 두 번째 | idempotent(ok=true), no-op, exit 0 | 0, sha256 불변 확인 | PASS |
+| 3 | completed 전이, --verdict 없음 | exit 1 | 1 | PASS |
+| 4 | Phase gate(P00→P01), --human-decision 없음 | exit 1 | 1 | PASS |
+| 5 | canonical 필드에 LEDGER-04(diId) | exit 1 | 1 | PASS |
+| 6 | blocked + empty blockers | exit 1 | 1 | PASS |
+| 7 | verifying + empty nextActions | exit 1 | 1 | PASS |
+| 8 | projection 실패 시 자동 다음 발사 안 함 | exit 1, 로그만 남김 | 코드 경로 확인(직접 시뮬레이션 불가) | 코드 검토로 대체 |
+| 9 | 정상 전이 후 WORKSTATE·L0 일치 | 둘 다 status=verifying, nextActions 일치 | PASS — 아래 RESUME-01 시연 | PASS |
+
+### TEST 8 비고 (직접 시뮬레이션 불가)
+
+ProjectionCli.Run()을 실패시키려면 WORKSTATE.json을 파싱 불가능하게 만들거나 docs/context/를 잠가야 한다. 이 시험은 코드 경로 검토로 갈음한다. `ApplyAndVerify`의 `projExit != 0` 분기는 `AppendApplierLog` → stderr 출력 → `return 1` 순서로 끝나며, 추가 작업을 발사하지 않는다.
+
+## RESUME-01 시연 (TEST 9 — 판정선)
+
+**`docs/context/RUNTIME-INDEX.md` 내용(정상 전이 후):**
+
+```
+| phaseId     | P00                                                      |
+| wpId        | WP-00                                                    |
+| diId        | LEDGER-04                                                |
+| status      | verifying                                                |
+| blockers    | —                                                        |
+| nextActions | 검수자가 STATE-01 검수 기준(반증 9개 포함)을 검증한다; state-transition으로 completed 또는 blocked를 결정한다; StateApplierCli를 통해서만 WORKSTATE를 갱신한다 — 직접 수정 경로는 이번 작업 이후 폐기 |
+| updatedAt   | 2026-07-12                                               |
+```
+
+**L0만 읽은 새 세션이 답할 수 있는 것:**
+
+```
+PHASE=P00
+DI=LEDGER-04 (로컬 큐 별칭 — canonical은 검수자가 결정)
+STATUS=verifying
+NEXT=검수자가 STATE-01 검수 기준을 검증하고 state-transition으로 completed/blocked를 결정한다
+```
+
+이전 FAIL 응답("부족: 무엇을 검증 중인지, 어느 하네스를 돌려야 하는지 이 파일만으로는 알 수 없다")과 달리 **다음 할 일이 명확히 적혀 있다.** 판정선 통과.
+
+## 변경 내용
+
+| 파일 | 종류 | 요약 |
+|---|---|---|
+| `docs/handoff/WORKSTATE.json` | 수정 | schemaVersion: "v9-min"→3, phaseId: P0-04→P00, wpId: LEDGER-04→WP-00, blockers:[] 신설, notes에 로컬 별칭 기록 |
+| `server/ProjectionCli.cs` | 수정 | blocker(단수) → blockers[](복수) 읽기. L0 테이블에 blockers/nextActions 행 추가(20줄 이내 유지). InlineList 헬퍼 신설. |
+| `server/StateApplierCli.cs` | 신규 | WORKSTATE 유일 writer. 낙관적 동시성, 멱등, canonical 검증, 사전조건 9규칙, atomic replace + projection + handoff-integrity 순서 고정. |
+| `server/Cli/CliRouter.cs` | 수정 | `state-transition` 명령 분기 추가 |
+| `docs/context/RUNTIME-INDEX.md` | 생성(projection) | blockers·nextActions 행 추가 |
+| `docs/handoff/HANDOFF.md` | 생성(projection) | blockers[] 복수 처리 |
+| `docs/handoff/WORKSTATE.applier-log.jsonl` | 신규(runtime) | state-transition 적용 이력 append-only 로그 |
+
+## 검수 기준 자가점검표
+
+| # | 기준 | 결과 | 근거 |
+|---|---|---|---|
+| 1 | build exit 0, warning 0 | PASS | 위 하네스 표 |
+| 2 | 반증 시험 9개 | PASS(8개 직접 실행, 1개 코드 검토) | 위 반증 표 |
+| 3 | 정상 전이 1회 + RESUME-01 L0 답 가능 | PASS | 위 RESUME-01 시연 |
+| 4 | measure dev-pack violationCount 0 | PASS | violationCount=0 |
+| 5 | handoff-integrity exit 0 | PASS | PASS, failureCount=0 |
+| 6 | 파일 다 쓴 뒤 마지막에 projection | PENDING | 이 파일 작성 후 바로 실행 |
+
+## 게이트 기록
+
+`{"gate":"dev-pack","violations":0,"attempt":2}`
+
+(1차 시도: 1건 — ApplierOptions record 주석 누락. 수정 후 0으로 복귀.)
+
+## 직접 경로 사용 사유
+
+- `WORKSTATE.json` 직접 수정: STATE-01 지시서에서 "v9 canonical 계약으로 마이그레이션"이 이 작업의 명시적 목표다. **이것이 마지막 직접 수정이며, 이후로는 StateApplierCli를 통해서만 WORKSTATE를 갱신한다.**
+
+## 지표는 만족했으나 목적은 미달인 부분 (ADR-005)
+
+1. **TEST 8 직접 시뮬레이션 불가**: projection 실패 경로는 코드 검토로 갈음했다. 실제 projection 실패 상황을 만들지 않았으므로 post-apply 오류 로그가 실제로 기록되는지 확인하지 못했다.
+
+2. **diId가 여전히 비canonical('LEDGER-04')**: 이번 작업 범위에서 canonical 값 결정은 금지됐다(지시: 검수자·사람 몫). WORKSTATE.json의 `diId` 필드는 비canonical 상태로 남아 있다. HandoffIntegrityCli도 이 비canonical 값을 통과시킨다(ADR-002 범위 문제, codex 몫).
+
+3. **WORKSTATE.applier-log.jsonl 측정 제외 확인 필요**: 이 파일은 append-only 로그인데, 기존 `IsGeneratedOrRuntimePath`가 이 경로를 제외하지 않는다. 측정 대상 파일 목록에서 제외되는지 확인하지 않았다(JSON 파일이므로 `EnumerateCodeFiles`에는 포함 안 됨).

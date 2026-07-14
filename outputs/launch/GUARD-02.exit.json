@@ -1,0 +1,25 @@
+﻿{
+    "schemaVersion":  2,
+    "taskId":  "GUARD-02",
+    "pid":  18332,
+    "exitCode":  0,
+    "startedAt":  "2026-07-12T22:12:27.4104311+09:00",
+    "exitedAt":  "2026-07-12T22:26:34.6450364+09:00",
+    "outLog":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-GUARD-02.out.log",
+    "outJson":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-GUARD-02.out.jsonl",
+    "processed":  true,
+    "transportValid":  true,
+    "transportEvidence":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\launch\\GUARD-02.transport.json",
+    "usage":  {
+                  "inputTokens":  53,
+                  "outputTokens":  47091,
+                  "cacheCreationTokens":  111092,
+                  "cacheReadTokens":  4620347,
+                  "totalCostUsd":  2.5105590999999996,
+                  "numTurns":  55,
+                  "durationMs":  843405,
+                  "isError":  false,
+                  "stopReason":  "end_turn",
+                  "sessionId":  "cac827cd-dcc6-448b-9ddb-f480db73ff99"
+              }
+}

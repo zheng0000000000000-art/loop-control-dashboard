@@ -1,0 +1,24 @@
+﻿모든 작업 완료. 결과 요약:
+
+---
+
+**05H-R1 완료**
+
+**수행한 변경 (딱 두 곳):**
+
+1. `server/Harness/HandoffIntegrityChecker.cs:73` — `CheckStateToLog` 호출 인자를 `allLogIdSet` → `successfulLogIdSet`으로 복원. 메서드 주석·파라미터명 동기화.
+2. `docs/qa/fixtures/reconciliation/fixture-f/` 신설 — state에 있으나 log엔 exitCode=1로만 기록된 전이를 담은 반증 픽스처.
+
+**판정선 전수 확인:**
+| 항목 | 기대 | 실제 |
+|---|---|---|
+| `dotnet build server -c Release` | 0 | 0 ✓ |
+| fixture-f | 1 `state-transition-not-logged` | 1 ✓ |
+| fixture A/B/D/E | 1 각각 | 1 ✓ |
+| fixture-c | 0 | 0 ✓ |
+| fixture-malformed | 2 | 2 ✓ |
+| CLI `--pending-transition` | 1 | 1 ✓ |
+| **at-rest 현재 저장소** | **1** ★ | **1** ✓ (`DI0004-BLOCKED-CODEX` 1건 — **설계된 참 양성**) |
+| `measure dev-pack` | 0 | 0 ✓ |
+
+보고서: `docs/verification/05h-r1-reconciler-rework.md`

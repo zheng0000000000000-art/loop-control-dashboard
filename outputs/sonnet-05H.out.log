@@ -1,0 +1,13 @@
+﻿모든 작업 완료. 변경 요약:
+
+**신규 파일:**
+- `server/Harness/HandoffIntegrityChecker.cs` — 내부 reconciliation 검사기. `ReconciliationOptions(PendingTransitionId)` 지원. HarnessRegistry 미등록.
+- `docs/qa/fixtures/reconciliation/fixture-{a,b,c,d,e,malformed}/` — 6종 fixture (각 workstate.json + applier-log.jsonl)
+- `docs/verification/05h-reconciler.md` — 검증 보고서
+
+**수정:**
+- `server/Harness/HandoffIntegrityCli.cs` — reconciliation 통합, `--pending-transition` → exit 1 `pending-not-allowed-on-cli`, `--applier-log` 경로 인자, fixture 격리 모드, 오류코드 `blockers-missing`/`blockers-stale` 정정, `Run()` 80줄 이내 분해
+
+**판정선 결과:** 빌드(Debug+Release) exit 0, at-rest exit 0, fixture A/B/D/E exit 1, C exit 0, malformed exit 2, `--pending-transition` exit 1, `measure dev-pack` exit 0. 자기보고는 증거가 아니다 — 검수자가 land gate를 직접 재실행한다.
+
+**잔여 위험(검수자 확인 필요):** pending 면제 PASS 케이스(내부 API), `allLogIdSet` 해석(규칙 2), 06C-1 통합 전 순서 미보장.

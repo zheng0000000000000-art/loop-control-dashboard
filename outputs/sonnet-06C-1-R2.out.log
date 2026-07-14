@@ -1,0 +1,28 @@
+﻿All done. Let me do a final summary verification of all 15 판정선:
+
+**판정선 15개 결과 요약:**
+
+| # | 시험 | 결과 |
+|---|---|---|
+| 1 | `dotnet build -c Release` | PASS (exit=0) |
+| 2 | `prepare/apply + --human-decision` | PASS (exit=2, `removed-option` 문구) |
+| 3 | `prepare/apply + --root` | PASS (exit=2, `removed-option` 문구) |
+| 4 | `prepare/apply + --bogus-flag` | PASS (exit=2, `unknown-option`) |
+| 5 | 올바른 인자 대조군 | PASS (exit=2, 다른 오류 문구) |
+| 6 | `state-transition --self-test` | PASS (exit=0, 4 case PASS) |
+| 7 | self-test rollback-after-write case | PASS (ROLLED_BACK, hash==preimage, v2 미기록) |
+| 8 | self-test 기대값 틀리게 → exit 1 | PASS (exit=1, verdict=FAIL) |
+| 9 | 신규 전이 hash 위조 → exit 1 | PASS (pre-fix exit=0 확인 후 수정, post-fix exit=1 `envelope-contract-mismatch`) |
+| 10 | `.txt` legacy call → callsite-check exit 1 | PASS (legacyCallsiteCount=1) |
+| 11 | `docs/wiki/` 새 파일 → callsite-check exit 1 | PASS (legacyCallsiteCount=1, historical 면제 안 됨) |
+| 12 | bait 제거 후 exit 0 | PASS (legacyCallsiteCount=0) |
+| 13 | 회귀 (state-corrupted/candidate-tampered/EVIL-kind/PHASE_CHANGE) | PASS (전부 exit=1) |
+| 14 | at-rest handoff-integrity → exit 1, 1 failure | PASS |
+| 15 | `measure dev-pack` → exit 0 | PASS (violationCount=0, attempt 3) |
+
+**수정 파일 3종** (모두 `06C-1-R2` allowlist 내):
+- `server/StateApplierCli.cs` — 옵션 검증 + contract hash 신규 전이 검사 + `--self-test`
+- `server/Harness/StateTransitionCallsiteCheckCli.cs` — `.txt` 추가 + 명시 목록 기반 historical 판정
+- `docs/handoff/CALLSITE-HISTORICAL.json` — 신규 생성 (4개 파일 명시)
+
+`docs/verification/06c1-r2-strict-cli.md` 보고서 작성 완료. 검수자 판정 대기.

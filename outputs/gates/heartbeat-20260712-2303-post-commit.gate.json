@@ -1,0 +1,137 @@
+{
+  "harness": "di-completion-check",
+  "gateId": "POST-COMMIT",
+  "taskId": "heartbeat-20260712-2303-post-commit",
+  "manifest": "C:/Users/1/Documents/Local-First Workflow Dashboard/docs/handoff/GATE-MANIFEST.json",
+  "createdAt": "2026-07-12T23:03:43.7776866+09:00",
+  "gateVerdict": "FAIL",
+  "checkCount": 5,
+  "failureCount": 1,
+  "warningCount": 9,
+  "verdict": "FAIL",
+  "checks": [
+    {
+      "order": 1,
+      "command": "gate-clean",
+      "args": [
+        "server"
+      ],
+      "expectedExit": 0,
+      "mutatesState": false,
+      "actualExit": 0,
+      "durationMs": 622,
+      "startedAt": "2026-07-12T23:03:43.8012190+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"gate-clean\",\n  \"paths\": [\n    \"server\"\n  ],\n  \"contentDirtyCount\": 0,\n  \"representationOnlyCount\": 0,\n  \"gate\": \"PASS\",\n  \"files\": [],\n  \"hygieneWarning\": null\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 2,
+      "command": "handoff-integrity",
+      "args": [],
+      "expectedExit": 0,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 587,
+      "startedAt": "2026-07-12T23:03:44.4258418+09:00",
+      "verdict": "FAIL",
+      "stdoutTail": "{\n  \"harness\": \"handoff-integrity\",\n  \"workstate\": \"docs/handoff/WORKSTATE.json\",\n  \"diId\": \"DI-00-04\",\n  \"status\": \"blocked\",\n  \"changedFileCount\": 4,\n  \"failureCount\": 1,\n  \"warningCount\": 0,\n  \"verdict\": \"FAIL\",\n  \"changedFiles\": [\n    {\n      \"path\": \"server/OllamaExecutor.cs\",\n      \"exists\": true,\n      \"hashField\": \"sha256\",\n      \"hashMatches\": true,\n      \"actualSha256\": \"4eb15cee5726081c775f1f75a1a9b050da2c3b5675a78e811a0b5cf0134f3e4d\"\n    },\n    {\n      \"path\": \"server/Program.cs\",\n      \"exists\": true,\n      \"hashField\": \"sha256\",\n      \"hashMatches\": true,\n      \"actualSha256\": \"7e29ecd56a5a6107ba533e6e828fa8a35d1268d4897077b87271cf521b638246\"\n    },\n    {\n      \"path\": \"docs/verification/ledger04-metricid-normalization.md\",\n      \"exists\": true,\n      \"hashField\": \"sha256\",\n      \"hashMatches\": true,\n      \"actualSha256\": \"129c601ea657909d5d95a7e44d6daee69d2b3076a604e1c868610fbc67baa8e6\"\n    },\n    {\n      \"path\": \"docs/directives/LEDGER04-metricid-normalization.md\",\n      \"exists\": true,\n      \"hashField\": \"sha256\",\n      \"hashMatches\": true,\n      \"actualSha256\": \"fa6855c850db1c9fec592d87ec348fb1fec8ee2e901d16e102f1a8a93868a0d5\"\n    }\n  ],\n  \"failures\": [\n    {\n      \"subject\": \"blocker\",\n      \"code\": \"missing\",\n      \"message\": \"blocked status requires a blocker field\"\n    }\n  ],\n  \"warnings\": [],\n  \"note\": \"Read-only check. Hash fields are required for current changedFiles because handoff must be machine-verifiable.\"\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 3,
+      "command": "context-pack-integrity",
+      "args": [],
+      "expectedExit": 0,
+      "mutatesState": false,
+      "actualExit": 0,
+      "durationMs": 625,
+      "startedAt": "2026-07-12T23:03:45.0136638+09:00",
+      "verdict": "PASS",
+      "stdoutTail": ",\n          \"actualSha256\": \"b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee\"\n        },\n        {\n          \"path\": \"docs/verification/_template.md\",\n          \"verdict\": \"ok\",\n          \"expectedSha256\": \"15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69\",\n          \"actualSha256\": \"15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69\"\n        },\n        {\n          \"path\": \"docs/verification/ledger02-executor-token-wiring.md\",\n          \"verdict\": \"ok\",\n          \"expectedSha256\": \"24f834c3a9f105b14c43af0fd94c03cef286b0740e7cea5f2986071839686ae3\",\n          \"actualSha256\": \"24f834c3a9f105b14c43af0fd94c03cef286b0740e7cea5f2986071839686ae3\"\n        },\n        {\n          \"path\": \"docs/handoff/decisions/ADR-005-metric-vs-purpose.md\",\n          \"verdict\": \"ok\",\n          \"expectedSha256\": \"0b9fb7c5756b27923ceeafab6c8dcd44d00b3c73708d00abdb0887f1891a4bed\",\n          \"actualSha256\": \"0b9fb7c5756b27923ceeafab6c8dcd44d00b3c73708d00abdb0887f1891a4bed\"\n        }\n      ],\n      \"warnings\": []\n    },\n    {\n      \"directive\": \"docs/handoff/queue/directive-LEDGER04-metricid-normalization.md\",\n      \"diId\": \"LEDGER-04\",\n      \"verdict\": \"ok\",\n      \"requiredInputCount\": 4,\n      \"okCount\": 4,\n      \"missingCount\": 0,\n      \"staleCount\": 0,\n      \"warningCount\": 0,\n      \"requiredInputs\": [\n        {\n          \"path\": \"docs/directives/_header.md\",\n          \"verdict\": \"ok\",\n          \"expectedSha256\": \"b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee\",\n          \"actualSha256\": \"b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee\"\n        },\n        {\n          \"path\": \"docs/verification/_template.md\",\n          \"verdict\": \"ok\",\n          \"expectedSha256\": \"15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69\",\n          \"actualSha256\": \"15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69\"\n        },\n        {\n          \"path\": \"docs/verification/ledger03-fallback-observability.md\",\n          \"verdict\": \"ok\",\n          \"expectedSha256\": \"eba0cad65a60f313bc11b697eb1bea8fa6111f16f0d4543ed398fe7eeffb3815\",\n          \"actualSha256\": \"eba0cad65a60f313bc11b697eb1bea8fa6111f16f0d4543ed398fe7eeffb3815\"\n        },\n        {\n          \"path\": \"docs/handoff/decisions/ADR-005-metric-vs-purpose.md\",\n          \"verdict\": \"ok\",\n          \"expectedSha256\": \"0b9fb7c5756b27923ceeafab6c8dcd44d00b3c73708d00abdb0887f1891a4bed\",\n          \"actualSha256\": \"0b9fb7c5756b27923ceeafab6c8dcd44d00b3c73708d00abdb0887f1891a4bed\"\n        }\n      ],\n      \"warnings\": []\n    },\n    {\n      \"directive\": \"docs/handoff/queue/directive-ORCH01-observer.md\",\n      \"verdict\": \"skipped\",\n      \"reason\": \"Context Pack block not found\"\n    },\n    {\n      \"directive\": \"docs/handoff/queue/directive-P004-projection.md\",\n      \"verdict\": \"skipped\",\n      \"reason\": \"Context Pack block not found\"\n    }\n  ],\n  \"note\": \"Read-only check. Context Pack hashes are supplied by directive authors, not by this harness.\"\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 4,
+      "command": "doc-integrity",
+      "args": [],
+      "expectedExit": 0,
+      "mutatesState": false,
+      "actualExit": 0,
+      "durationMs": 595,
+      "startedAt": "2026-07-12T23:03:45.6397767+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"doc-integrity\",\n  \"checked\": 12,\n  \"brokenCount\": 0,\n  \"verdict\": \"INTACT\",\n  \"files\": [\n    {\n      \"path\": \"docs/handoff/WORKSTATE.json\",\n      \"kind\": \"json\",\n      \"verdict\": \"intact\",\n      \"reason\": \"파싱 성공\"\n    },\n    {\n      \"path\": \"docs/STATUS.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"docs/handoff/SONNET-QUEUE.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"docs/handoff/HUMAN-INBOX.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"docs/handoff/HS-CANDIDATES.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"docs/wiki/failures/index.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"docs/handoff/HARNESSES.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"skills/common/hs-gate.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"skills/common/verification.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"skills/common/directive-writing.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"AGENT-GUIDE.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"CLAUDE.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    }\n  ],\n  \"note\": \"비원자적 쓰기로 조용히 잘린 파일을 검출한다. 복구는 사람·조율자의 몫.\"\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 5,
+      "command": "hs-scan",
+      "args": [],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 692,
+      "startedAt": "2026-07-12T23:03:46.2354506+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"hs-scan\",\n  \"triggered\": true,\n  \"lastGate\": \"2026-07-11 23:37\",\n  \"failureCaseCount\": 14,\n  \"signals\": [\n    \"S4 반복 구성요소: executor-orchestration 6회\"\n  ],\n  \"candidates\": [\n    {\n      \"signal\": \"S4\",\n      \"component\": \"executor-orchestration\",\n      \"occurrences\": 6,\n      \"cases\": [\n        \"FAIL-2026-004\",\n        \"FAIL-2026-005\",\n        \"FAIL-2026-008\",\n        \"FAIL-2026-010\",\n        \"FAIL-2026-012\",\n        \"FAIL-2026-013\"\n      ],\n      \"suggestedType\": \"하네스\",\n      \"why\": \"같은 구성요소에서 6회 실패 — 회귀 하네스 후보\"\n    }\n  ],\n  \"action\": \"HS-GATE 수행 의무 — skills/common/hs-gate.md 절차로 점수화 후 HS-CANDIDATES.md에 기록\"\n}",
+      "stderrTail": ""
+    }
+  ],
+  "failures": [
+    {
+      "subject": "handoff-integrity",
+      "code": "exit-mismatch",
+      "message": "expected 0, actual 1"
+    }
+  ],
+  "warnings": [
+    {
+      "command": "call-integrity-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "claim-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "di-completion-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "e2e-usage",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "launch-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "path-guard-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "project-api-edge-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "scope-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "template-sync-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    }
+  ],
+  "note": "Pass/fail is decided by expectedExit versus actual exit code. stdout/stderr are diagnostic evidence.",
+  "evidencePath": "outputs/gates/heartbeat-20260712-2303-post-commit.gate.json"
+}

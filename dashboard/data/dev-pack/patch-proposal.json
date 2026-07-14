@@ -1,28 +1,26 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1783780895094",
-  "title": "블루프린트 괴리 해소 제안",
+  "id": "proposal-1784007439049",
+  "title": "악화 롤백 제안: maxFunctionLength",
   "lifecycle": "superseded",
+  "kind": "rollback",
   "createdBy": {
     "provider": "rule-engine",
     "model": null
   },
-  "revisionOf": "proposal-1783780869127",
-  "summary": "측정 결과가 블루프린트 기준을 벗어난 항목을 수정 대상으로 제안한다.",
+  "revisionOf": null,
+  "summary": "직전에 충족되던 지표가 악화되어 자동 롤백을 제안한다. 체크리스트가 검토할 내용이 없어 1층을 건너뛰고 사람 결재로 직행한다.",
   "changes": [
     {
-      "path": "directiveAcceptanceCriteria",
-      "before": 0,
-      "after": [
-        3,
-        99
-      ],
-      "note": "docs/directives/P004-projection.md"
+      "path": "maxFunctionLength",
+      "before": 232,
+      "after": 80,
+      "note": "직전 승인 원인 미상 이후 maxFunctionLength이 80→232로 악화됨. 되돌리거나 원인 조사 필요"
     }
   ],
   "impact": [
     {
-      "label": "위반 항목",
+      "label": "악화 항목",
       "value": "1"
     },
     {

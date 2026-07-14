@@ -1,0 +1,24 @@
+﻿작업 완료. 요약:
+
+---
+
+**TRANSPORT-01 완료 보고**
+
+**변경**: `outputs/launch/run-executor.ps1`을 stdin 전달 + replay 수집 + transport evidence 생산 방식으로 전면 재작성.
+
+**검수 기준 달성:**
+
+| 기준 | 결과 |
+|------|------|
+| `launch-check TRANSPORT-PROBE evidence` | **exit 0** (TRANSPORT_VALID) |
+| 명령행에 프롬프트 본문 없음 | **PASS** (CommandLine = `-p --verbose --input-format stream-json ...` 뿐) |
+| 손상 인코딩 fixture → mismatch | **확인** (UTF-16 기본 writer → sha256 불일치, TRANSPORT_INVALID) |
+| `measure dev-pack` | **violationCount 0** |
+| `handoff-integrity` | **exit 0** |
+
+**핵심 설계 사항:**
+1. ReadToEndAsync를 stdin 쓰기 **전에** 시작 (교착 방지)
+2. `BaseStream.Write(UTF8bytes)` 직접 사용 (PS 5.1 한글 깨짐 방지)
+3. `message.content -is [string]` 필터로 tool_result user 이벤트 제외, 초기 프롬프트 replay만 카운트
+
+**자진 신고**: tool-use 세션 end-to-end 증명 미완 (concurrent run 오염). 작업 보고: `docs/verification/transport01-stdin-receipt.md`.

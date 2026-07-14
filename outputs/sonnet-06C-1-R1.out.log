@@ -1,0 +1,30 @@
+﻿`legacyCallsiteCount=0`, `historicalReferenceCount=3`(검증 문서가 historical allowlist에 정상 분류됨).
+
+모든 작업이 완료됐습니다.
+
+---
+
+**06C-1-R1 작업 완료 요약**
+
+판정선 16개 실측 결과:
+
+| # | 항목 | 결과 |
+|---|------|------|
+| 1 | build Release | PASS |
+| 2 | legacy 인자(--transition-id/--human-decision) | PASS (exit 2) |
+| 3 | NORMAL prepare→apply 왕복 | PASS (exit 0) |
+| 4 | 같은 envelope 재적용 | PASS (idempotent exit 0) |
+| 5★ | 다른 effectiveAt + 같은 ID → collision | PASS (exit 1) |
+| 6★ | envelope hash 위조 → mismatch | PASS (exit 1) |
+| 7 | state 가짜 ID, log 없음 → reconciliation 차단 | PASS (exit 1) |
+| 8 | candidate 변조 | PASS (exit 1) |
+| 9 | in-process 훅 seam | **NOT_VERIFIED** (새 프로세스에서 설정 불가) |
+| 10★ | `_ST_SEAM_FAIL_AFTER_WRITE=1` 설정 후 apply | PASS (exit 0 — 환경변수 무효) |
+| 11 | `transitionKind="EVIL"` | PASS (exit 1) |
+| 12 | `transitionKind="PHASE_CHANGE"` | PASS (exit 1) |
+| 13★ | outputs/launch/ 에 legacy 호출 심고 callsite-check | PASS (exit 1) |
+| 14 | 심은 파일 제거 후 callsite-check | PASS (exit 0) |
+| 15 | at-rest handoff-integrity | PASS (exit 1, failures=1 설계된 참양성) |
+| 16 | measure dev-pack | PASS (violations=0) |
+
+**RECOVERY.md 파손**: §3 줄 49–55의 단일-샷 명령 형식이 삭제됨. 06H가 `prepare + apply` 두 단계로 교체해야 합니다. 상세 내용은 `docs/verification/06c1-r1-legacy-removal.md`에 기록했습니다.

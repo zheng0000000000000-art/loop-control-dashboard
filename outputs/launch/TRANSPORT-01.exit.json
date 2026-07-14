@@ -1,0 +1,24 @@
+﻿{
+    "schemaVersion":  2,
+    "taskId":  "TRANSPORT-01",
+    "pid":  7784,
+    "exitCode":  0,
+    "startedAt":  "2026-07-12T17:42:03.2641784+09:00",
+    "exitedAt":  "2026-07-12T18:08:13.7378828+09:00",
+    "outLog":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-TRANSPORT-01.out.log",
+    "outJson":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\sonnet-TRANSPORT-01.out.json",
+    "processed":  true,
+    "argLength":  4538,
+    "usage":  {
+                  "inputTokens":  52,
+                  "outputTokens":  78531,
+                  "cacheCreationTokens":  91194,
+                  "cacheReadTokens":  3540462,
+                  "totalCostUsd":  2.5852781000000014,
+                  "numTurns":  52,
+                  "durationMs":  1566604,
+                  "isError":  false,
+                  "stopReason":  "end_turn",
+                  "sessionId":  "6fe8d91a-fa53-47c9-a7e5-b014fa40da34"
+              }
+}

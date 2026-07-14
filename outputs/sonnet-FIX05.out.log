@@ -1,0 +1,31 @@
+모든 산출물이 allowlist 범위 안에 있습니다.
+
+---
+
+## 수행 요약
+
+`server/BalanceTuner.cs`의 `Search` 함수(43-157행, **115줄**)에서 "결과 수집" 블록을 `BuildTuningResult` 헬퍼로 추출했습니다.
+
+- `Search`: 115줄 → **67줄** (43-109행)
+- `BuildTuningResult` 신규: **52줄** (112-163행), 한국어 주석 1줄 부착
+
+---
+
+## 검수 기준 자가점검표
+
+| # | 기준 | 결과 |
+|---|---|---|
+| 1 | `maxFunctionLength` ≤ 80 (Search 함수) | **✓** 67줄 |
+| 1a | 새로 드러난 더 긴 함수 위치 보고 | **보고**: `server/Tier2Approver.cs:38-138` (101줄) — 고치지 않음 |
+| 2 | verify-behavior → behaviorEqual: true | **✓** exit 0 |
+| 3 | build-verify → verdict: PASS, exit 0 | **✓** |
+| 4 | functionsWithoutComment = 0 | **✓** (measure: 0) |
+| 5 | blueprint.json·workflow-definition.json·DevPackMeasures.cs 무수정 | **✓** |
+
+## measure 결과 JSON
+
+```json
+{"gate":"dev-pack","violations":1,"attempt":1}
+```
+
+> 잔여 위반 1건: `server/Tier2Approver.cs:38-138` (101줄) — Search 함수 해소 후 드러난 것. 지시서 명시대로 고치지 않고 보고함. 다음 지시서(FIX-06) 대상.

@@ -1,0 +1,10 @@
+{
+  "status": "in_progress",
+  "updatedBy": "sonnet-DI-00-04",
+  "nextActions": [
+    "DI-00-04 작업 완료 — _template.md·HS-REVIEW-P00-R1·SKILL-MANIFEST 작성. 검수 대기.",
+    "코덱스 대기: CODEX-GATE-02(큐 C-01) — handoff-integrity 멱등 대조 + di-completion-check CLI 계약 + GATE-MANIFEST 등재 + claim-check --untracked",
+    "사람 결재(HUMAN-INBOX): ADR-010 상태 · ADR-012 · LOCAL-DI-RUNNER-v3 §9 · LAUNCH-BUDGET(턴별 피크 134,528) · push 43건+",
+    "H-4(HS-GATE 누락 탐지) 즉시 제작 필수 — 예산 예외 적용 사람 결재 필요"
+  ]
+}
