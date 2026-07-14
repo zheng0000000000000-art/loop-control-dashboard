@@ -1,33 +1,58 @@
-# 06H RECOVERY fixture QA
+# 06H Recovery Fault QA
 
-## 목적
+## Purpose
 
-06H는 현재 fail-closed RECOVERY 규칙과 post-provenance RECOVERY 경계를 문서화하고, reconciliation fixture A가 POST-COMMIT manifest에서 실패로 잡히는지 확인한다.
+06H verifies recovery and fault-injection infrastructure without activating recovery.
 
-## fixture A
+The core rule is:
 
-`docs/qa/fixtures/reconciliation/A/WORKSTATE.appliedTransitions`에는 `TEST-DI0001-2`가 없다. 같은 ID는 `WORKSTATE.applier-log.jsonl`에 성공 로그로 존재한다.
+`Generator != Executor != Verifier`, and recovery diagnosis is not recovery approval.
 
-직접 무결성 검사는 `log-transition-missing-from-state` 계열 실패로 exit 1이어야 한다.
+## Fixture Coverage
 
-```bash
-dotnet run --project server -c Release -- handoff-integrity \
-  --workstate docs/qa/fixtures/reconciliation/A/WORKSTATE.json \
-  --applier-log docs/qa/fixtures/reconciliation/A/WORKSTATE.applier-log.jsonl
-```
+`dotnet run --project server -c Release --no-build -- recovery --self-test`
 
-POST-COMMIT manifest는 이 명령의 기대 exit을 0으로 둔다. 따라서 `di-completion-check`는 실제 exit 1과 기대 exit 0의 불일치를 감지해 exit 1이어야 한다.
+Expected:
 
-```bash
-dotnet run --project server -c Release -- di-completion-check \
-  --gate POST-COMMIT \
-  --manifest docs/qa/fixtures/reconciliation/A/GATE-MANIFEST.json \
-  --task recon-postcommit-A
-```
+- exit code: 0
+- `selfTest=recovery-fault-infra`
+- `verdict=PASS`
+- `casesRun=8`
 
-## 참조한 스킬
+Cases:
 
-- `skills/common/hs-gate.md`
-- `skills/common/root-cause-diagnosis.md`
-- `skills/common/verification.md`
-- `skills/domains/docs/README.md`
+- `pending-pre-no-success`
+- `pending-post-success`
+- `pending-post-no-success`
+- `pending-ambiguous`
+- `state-only-gap`
+- `conflicting-success`
+- `evidence-package`
+- `high-risk-stays-closed`
+
+## Evidence Contract
+
+`recovery evidence --out <dir>` creates only quarantine evidence:
+
+- `quarantine-manifest.json`
+- `recovery-request.json`
+- `hard-rollback.json`
+
+It must not mutate WORKSTATE or applier-log bytes.
+
+## Current Production State
+
+Production at-rest reconciliation is still expected to fail on the existing legacy gap:
+
+- `DI0004-BLOCKED-CODEX`
+- `state-transition-not-logged`
+
+This is not introduced by 06H.
+
+## Not Verified By 06H
+
+- actual RECOVERY apply
+- verified human receipt issuance
+- Trust Origin declaration
+- `TRUSTED_BASELINE=true`
+- automatic launcher readiness
