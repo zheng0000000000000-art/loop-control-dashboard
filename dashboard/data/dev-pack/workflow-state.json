@@ -114,7 +114,7 @@
         }
       ],
       "issues": [
-        "maxFunctionLength: 80→232로 악화"
+        "skillDomainViolations: 0→1로 악화"
       ]
     },
     "apply": {
@@ -128,7 +128,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-14T14:51:55.0102208+09:00",
+  "lastUpdated": "2026-07-14T15:03:14.9810868+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",

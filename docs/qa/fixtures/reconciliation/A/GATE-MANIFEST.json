@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "gates": [
+    {
+      "gateId": "POST-COMMIT",
+      "checks": [
+        {
+          "order": 1,
+          "command": "handoff-integrity",
+          "args": [
+            "--workstate",
+            "docs/qa/fixtures/reconciliation/A/WORKSTATE.json",
+            "--applier-log",
+            "docs/qa/fixtures/reconciliation/A/WORKSTATE.applier-log.jsonl"
+          ],
+          "expectedExit": 0,
+          "mutatesState": false
+        }
+      ]
+    }
+  ]
+}

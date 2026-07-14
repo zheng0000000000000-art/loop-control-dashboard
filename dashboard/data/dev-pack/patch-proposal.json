@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1784007439049",
-  "title": "악화 롤백 제안: maxFunctionLength",
+  "id": "proposal-1784008763763",
+  "title": "악화 롤백 제안: skillDomainViolations",
   "lifecycle": "superseded",
   "kind": "rollback",
   "createdBy": {
@@ -12,10 +12,10 @@
   "summary": "직전에 충족되던 지표가 악화되어 자동 롤백을 제안한다. 체크리스트가 검토할 내용이 없어 1층을 건너뛰고 사람 결재로 직행한다.",
   "changes": [
     {
-      "path": "maxFunctionLength",
-      "before": 232,
-      "after": 80,
-      "note": "직전 승인 원인 미상 이후 maxFunctionLength이 80→232로 악화됨. 되돌리거나 원인 조사 필요"
+      "path": "skillDomainViolations",
+      "before": 1,
+      "after": 0,
+      "note": "직전 승인 원인 미상 이후 skillDomainViolations이 0→1로 악화됨. 되돌리거나 원인 조사 필요"
     }
   ],
   "impact": [
