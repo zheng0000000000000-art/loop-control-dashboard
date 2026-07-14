@@ -9,6 +9,7 @@ The production repository has not declared a Trust Origin in this checkpoint.
 ## Commands
 
 - `trust-origin inspect`: read-only eligibility and current evidence summary.
+- `trust-origin evidence --out <file>`: writes a draft machine-readable evidence file. It does not run the gates and does not mark them PASS.
 - `trust-origin declare --evidence <file>`: validates evidence and writes a Trust Origin record candidate only. It does not edit `WORKSTATE.json`, the applier log, git commits, tags, or readiness flags.
 - `trust-origin verify`: validates a committed Trust Origin record, Git ancestry, baseline snapshots, immutable prefixes, and post-origin delta reconciliation.
 - `trust-origin --self-test`: runs isolated temporary Git fixture coverage.
@@ -32,6 +33,9 @@ Required meanings:
 - `baselineApplierLogSha256`: SHA-256 of `docs/handoff/WORKSTATE.applier-log.jsonl` at `baselineCommit`.
 - `declaredLegacyFailures`: exact canonical failure set for `DECLARED_LEGACY_GAP`.
 - `declaredLegacyFailureSetSha256`: canonical hash over code, subject, and detail hash.
+- `declaredLegacyWarnings`: baseline warning set for audit context.
+- `baselineReconciliationReportSha256`: canonical hash over baseline failures and warnings.
+- `integrationGateEvidenceSha256`: canonical hash of the integration gate evidence accepted by `declare`.
 - `declarationStatus`: `HUMAN_DECLARED_NOT_CRYPTOGRAPHICALLY_VERIFIED`.
 - `declaredBy.provenance`: `CLAIMED_NOT_VERIFIED`.
 
@@ -64,6 +68,11 @@ After a valid committed Trust Origin exists, verification does not reinterpret t
 5. Current `appliedTransitions` preserve the baseline prefix exactly.
 6. Current applier log preserves the baseline log prefix exactly.
 7. Only post-origin state/log suffixes are reconciled strictly.
+8. Post-origin log suffixes must use complete v2 success bindings. If a post-origin state entry carries binding fields, the verifier compares `transitionId`, `transitionKind`, `requestSha256`, `preStateSha256`, `postStateSha256`, `effectiveAt`, and `transitionContractSha256` against the log binding.
+
+`verify` does not trust that a record was created by the CLI. It independently validates schema version, trust epoch, declaration type, declaration status, claimed actor provenance, failure-set hash, reconciliation report hash, baseline Git snapshot, high-risk fail-closed state, automatic launcher disabled state, and direct-writer gate.
+
+`declare` requires integration gate evidence bound to the current baseline commit and current state/log hashes. The evidence must report Release build PASS, reconciliation fixture PASS, 06C-1 PASS with 19 cases, 06C-2 PASS with 24 cases, 06H PASS with 8 cases, doc-integrity PASS, dev-pack violation count 0 with completed status, and legacy callsite count 0.
 
 Valid delta reconciliation reports `reconciliationMode = TRUST_ORIGIN_DELTA`.
 
