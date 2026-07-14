@@ -19,3 +19,4 @@
 {"transitionId":"DI-00-04-VERIFY-001","result":"ok","exitCode":0,"at":"2026-07-12T13:55:51.6786424Z"}
 {"transitionId":"DI0004-BLOCKED-CODEX","result":"handoff-integrity-failed exit=1","exitCode":1,"at":"2026-07-12T14:02:29.9626015Z"}
 {"transitionId":"WP-STATE-INTEGRITY-INTAKE","result":"ok","exitCode":0,"at":"2026-07-13T12:30:21.8083529Z"}
+{"transitionId":"DI0004-BLOCKED-CODEX","result":"ok","exitCode":0,"at":"2026-07-14T16:04:38.7639609Z"}

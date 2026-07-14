@@ -47,3 +47,23 @@
   즉 이것은 **예산 초과가 아니라 예산 오배분의 정정**에 가깝다. 그래도 상한을 바꾸는 것이므로 **사람 결재로 처리한다.**
 - **되돌리는 법**: di-completion-check를 HarnessRegistry에서 제거하고 server/Harness/DiCompletionCheckCli.cs를 삭제하면 원복된다. manifest(docs/handoff/GATE-MANIFEST.json)는 데이터라 남겨도 무해하다.
 - **부작용 주의**: 이 하네스는 **다른 하네스를 실행한다.** measure처럼 **부작용이 있는 검사**(run-log·proposal 생성)를 포함하므로, manifest에 mutatesState를 표기하고 **게이트 재실행이 증거를 오염시킨다는 사실을 드러내야 한다.** (근본 해결은 별도 과제 — 검수자가 재실행할 때마다 run-log가 늘어나는 문제가 이미 실측됐다: 1075 → 1076.)
+
+## BC-003 — `DI0004-BLOCKED-CODEX` 1회 legacy 정리 (applier-log corrective append)
+
+- **주체**: 사람(choi) 결재, 2026-07-15. 제안·실행: 검수자(claude-opus).
+- **무엇을 바꿨나**: `docs/handoff/WORKSTATE.applier-log.jsonl`에 **성공 항목 1건을 append**했다(append-only 유지, 기존 줄 무수정).
+  ```
+  {"transitionId":"DI0004-BLOCKED-CODEX","result":"ok","exitCode":0,"at":"<정정 시각>"}
+  ```
+- **근거 (실측)**:
+  - 그 전이는 **실제로 적용됐다**: `appliedTransitions[].appliedAt = 2026-07-12T14:02:29.94Z`. 현재 `status=blocked` + `blockers` 2건이 **그 전이가 넣은 값**이다.
+  - post-apply 검증이 실패한 이유는 **당시 `handoff-integrity`가 단수 `blocker`를 읽던 버그**다(`ADR-014`/GUARD-03이 고침). **상태 변경은 정당했고, 검증기가 잘못 실패시켰다.**
+  - v1에는 rollback이 없어 적용만 남고 성공 로그가 안 남았다. **06C-1의 v2는 rollback이 있으므로 재발하지 않는다. 레거시 1건이다.**
+  - `recovery inspect` 판정: `recoveryClass=L2`, `recommendedAction=quarantine-and-human-inbox`, `recoveryApplyReady=false`. **증거**: `outputs/recovery/DI0004-BLOCKED-CODEX/`(`stateMutated:false`, `logMutated:false`).
+- **왜 다른 안을 버렸나**:
+  - reconciliation에 `legacy-postapply-orphan` 코드를 신설해 warning 강등 → **검사를 약화한다.**
+  - 부트스트랩 선행조건 2(reconciliation exit 0) 완화 → **신뢰의 바닥을 어긋난 상태 위에 놓는다.**
+  - `GATE-MANIFEST`의 `handoff-integrity` expectedExit를 1로 변경 → **"상태가 어긋난 것이 정상"이라고 등재하는 것.** 그 검사가 죽는다.
+  - **셋 다 판정이 불편해서 기준을 옮기는 모양이다**(`CLAUDE.md` 금지사항 1번).
+- **되돌리는 법**: append한 **마지막 1줄을 제거**하면 정확히 이전 상태로 돌아간다. `WORKSTATE.json`은 **건드리지 않았다** — 되돌림에 필요한 것은 로그 1줄뿐이다.
+- **재발 방지**: v2(06C-1)의 rollback + preimage 복원이 이 오염 경로를 구조적으로 없앤다. **이 예외는 1회성이며, 같은 정리를 다시 하려면 새 결재가 필요하다.**

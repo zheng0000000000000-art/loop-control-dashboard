@@ -5,7 +5,7 @@
     { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
     { "path": "docs/verification/_template.md", "sha256": "15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69" },
     { "path": "docs/handoff/queue/directive-06C-1-statetransition-v2.md", "sha256": "b979d4f69abbf290642b6fff740c30a3b0bf8c5577e4191cb980b0130be06b3e" },
-    { "path": "docs/handoff/queue/directive-06C-1-R1-legacy-removal.md", "sha256": "36e0108d2bc027484f6e810b8e6baa5ada6cedc54d79706bc21c524923370483" },
+    { "path": "docs/handoff/queue/directive-06C-1-R1-legacy-removal.md", "sha256": "10ca04164426e8adda9ac0132db3b8496e3a465e74b3289f8c103a014655ce90" },
     { "path": "outputs/review/06C-1-R1.codex.md", "sha256": "ad447596c12b6bf55af5110911e15db5bef44974224131aed28c8d8974a226e5" }
   ],
   "readOrder": [

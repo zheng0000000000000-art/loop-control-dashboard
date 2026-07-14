@@ -6,7 +6,7 @@
     { "path": "docs/verification/_template.md", "sha256": "15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69" },
     { "path": "docs/handoff/queue/directive-06C-1-statetransition-v2.md", "sha256": "b979d4f69abbf290642b6fff740c30a3b0bf8c5577e4191cb980b0130be06b3e" },
     { "path": "outputs/review/06C-1.codex.md", "sha256": "4f705483003e3b02941d620b74597d009a75d1703ea600c143e593bdedbb6d60" },
-    { "path": "docs/handoff/RECOVERY.md", "sha256": "f7bcf9eccb5cad4cf37b61fc45f5682d5665c090bd074597f0e10d44d56dd069" }
+    { "path": "docs/handoff/RECOVERY.md", "sha256": "440a0a96202e4ab7ee84d8fbc7c0a513cb038dea9f2b46ed28f338313cd9e83f" }
   ],
   "readOrder": [
     "docs/context/RUNTIME-INDEX.md",

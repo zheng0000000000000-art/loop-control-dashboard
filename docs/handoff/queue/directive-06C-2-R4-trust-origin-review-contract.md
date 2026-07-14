@@ -4,10 +4,10 @@
   "requiredInputs": [
     { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
     { "path": "docs/verification/_template.md", "sha256": "15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69" },
-    { "path": "docs/handoff/queue/directive-06C-2-R3-trust-origin-reason-and-hooks.md", "sha256": "9909b97beb77d20f7841f72c7e9dfb41f32b26906e74403f8995e53822b92861" },
+    { "path": "docs/handoff/queue/directive-06C-2-R3-trust-origin-reason-and-hooks.md", "sha256": "444cdef48d808b06bb8349b3ad9a9f0c4700db1411e26dbf32673c352597347f" },
     { "path": "docs/verification/06c2-r3-trust-origin-reason-and-hooks.md", "sha256": "3d1094e95687f043210518ec1067d8854b20aa1d7d6246fab11bf7ef71eb86fe" },
     { "path": "outputs/review/06C-2-R3.codex.md", "sha256": "3ac99a4823cd4aea59ed9c444f61b8b1849a3d449513be2088ce376c620991b3" },
-    { "path": "server/StateApplierCli.cs", "sha256": "1b7eddf74f9b92e55d749531700cd48d4bfb9358453d5183012f5ff246ae0ce8" },
+    { "path": "server/StateApplierCli.cs", "sha256": "414ded71e2ef4cde27651c31a62a601d996f461a3cc116e08c7f0feb83fd1039" },
     { "path": "skills/common/directive-writing.md", "sha256": "f2f153dc8af933e402646d071e89cac9d52d50638447d26925d844ebad985024" },
     { "path": "skills/common/verification.md", "sha256": "9476af73b5c5347569d96c98de022f739eec3b77ec15317f37ea0beae53876ea" }
   ],

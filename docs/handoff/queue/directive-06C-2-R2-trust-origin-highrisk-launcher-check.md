@@ -8,7 +8,7 @@
     { "path": "docs/handoff/queue/directive-06C-2-R1-trust-origin-production-truth.md", "sha256": "a93b349e9d8d4ba1b14021036a3cb066db8511064000a91867c3e16f3e7df775" },
     { "path": "docs/verification/06c2-r1-trust-origin-production-truth.md", "sha256": "f5ffeeff29edf81704f7f48fe4bc0f2343f0be9dd59171960b83603bc3e51014" },
     { "path": "outputs/review/06C-2-R1.codex.md", "sha256": "86d2a854cb491eb96adfacad837d485161169879452ae437226443a9a39351d0" },
-    { "path": "server/StateApplierCli.cs", "sha256": "1b7eddf74f9b92e55d749531700cd48d4bfb9358453d5183012f5ff246ae0ce8" }
+    { "path": "server/StateApplierCli.cs", "sha256": "414ded71e2ef4cde27651c31a62a601d996f461a3cc116e08c7f0feb83fd1039" }
   ],
   "readOrder": [
     "docs/context/RUNTIME-INDEX.md",

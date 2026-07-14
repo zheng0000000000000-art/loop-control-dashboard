@@ -4,10 +4,10 @@
   "requiredInputs": [
     { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
     { "path": "docs/verification/_template.md", "sha256": "15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69" },
-    { "path": "docs/handoff/queue/directive-06C-2-R2-trust-origin-highrisk-launcher-check.md", "sha256": "50ae5b9ee62cbbd0741f5add1c383cd7b8e675bd6cffcd2cfbd154ca5fa59bc9" },
+    { "path": "docs/handoff/queue/directive-06C-2-R2-trust-origin-highrisk-launcher-check.md", "sha256": "5e343814547844287c54eb1eb625df083e846ee3811a64bcaa5369e830ae24e8" },
     { "path": "docs/verification/06c2-r2-trust-origin-highrisk-launcher-check.md", "sha256": "a4033e299051aa35018fb1987f0f5b7622c15ee7ffd1f640eae2dec660353195" },
     { "path": "outputs/review/06C-2-R2.codex.md", "sha256": "8b5e2a906a510431deeef62a9376ad9252f96a739ef9a1b4b0f4d3c83270119f" },
-    { "path": "server/StateApplierCli.cs", "sha256": "1b7eddf74f9b92e55d749531700cd48d4bfb9358453d5183012f5ff246ae0ce8" }
+    { "path": "server/StateApplierCli.cs", "sha256": "414ded71e2ef4cde27651c31a62a601d996f461a3cc116e08c7f0feb83fd1039" }
   ],
   "readOrder": [
     "docs/context/RUNTIME-INDEX.md",

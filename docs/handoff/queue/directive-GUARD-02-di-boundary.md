@@ -6,7 +6,7 @@
   "requiredInputs": [
     { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
     { "path": "docs/verification/_template.md", "sha256": "15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69" },
-    { "path": "docs/handoff/RECOVERY.md", "sha256": "f7bcf9eccb5cad4cf37b61fc45f5682d5665c090bd074597f0e10d44d56dd069" }
+    { "path": "docs/handoff/RECOVERY.md", "sha256": "440a0a96202e4ab7ee84d8fbc7c0a513cb038dea9f2b46ed28f338313cd9e83f" }
   ],
   "readOrder": [
     "docs/context/RUNTIME-INDEX.md",
