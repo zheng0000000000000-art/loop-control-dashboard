@@ -223,7 +223,10 @@ recovery inspect     제외(C1·C3 위반 — 실측): RecoveryCli.ExitForReport
                           quarantine pending 1건이면 1로 뒤집힌다. → §1-4″ 관찰로 간다.
 scope-check          제외: byproduct(outputs/**, dashboard/data/*)를 범위 이탈로 세어 항상 FAIL (CODEX-GATE-04 §5-1).
 di-completion-check  제외: 하위 검사를 --no-build(Debug)로 부르는 결함 — 다른 바이너리를 검사한다 (CODEX-GATE-04 §1).
-launch-check         제외: 현재 exit 1인데 원인 미규명 (검수자 실측 2026-07-15). 원인 전에 기대값을 정할 수 없다.
+launch-check         제외(구조적 — 2026-07-15 원인 규명, 앞선 "원인 미규명"을 정정한다):
+                          LaunchCheckCli.Run 은 `launch-check <taskId> <transportEvidencePath>` 를 요구한다.
+                          인자 없이 부르면 usage 실패로 exit 1이다. 고장난 게 아니다.
+                          per-launch 검사(발사 1건의 전송 증거 해시)라 repo-wide 게이트에 넣을 대상이 아니다.
 claim-check          제외: git grep이 untracked를 못 봐 MISMATCH 오탐 (CODEX-GATE-04 §4).
 e2e-usage · path-guard-check · call-integrity-check · template-sync-check · project-api-edge-check
                      baseline clean worktree에서 실측한 뒤 편입/제외를 판단하라.
