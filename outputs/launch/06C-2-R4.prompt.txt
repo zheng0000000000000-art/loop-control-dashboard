@@ -1,0 +1,15 @@
+너는 CORE_INFRA_EXECUTOR다.
+
+작업 지시서: docs/handoff/queue/directive-06C-2-R4-trust-origin-review-contract.md
+
+위 지시서를 먼저 읽고 그대로 수행하라.
+
+중요:
+- docs/directives/_header.md의 불변 제약을 따른다.
+- skills/common/directive-writing.md와 skills/common/verification.md를 반드시 읽고 verification 문서에 기록한다.
+- allowlist 밖 파일을 수정하지 않는다.
+- server/StateApplierCli.cs는 읽기만 하고 수정하지 않는다.
+- canonical trust-origin record를 만들지 않는다.
+- WORKSTATE.json 및 WORKSTATE.applier-log.jsonl을 수정하지 않는다.
+- approve/reject/import/push/merge/tag/commit을 하지 않는다.
+- 완료 후 docs/verification/06c2-r4-trust-origin-review-contract.md에 실측 결과와 게이트 JSON 한 줄을 기록한다.

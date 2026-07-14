@@ -1,0 +1,16 @@
+﻿{
+    "schemaVersion":  1,
+    "taskId":  "06C-2-R2",
+    "cliVersion":  "2.1.114 (Claude Code)",
+    "sourceSha256":  "b84edabe6505f3d003d0d4dac538d3bd1f78da1f0b254892cb5a81ba4852f7a3",
+    "payloadSha256":  "b84edabe6505f3d003d0d4dac538d3bd1f78da1f0b254892cb5a81ba4852f7a3",
+    "replaySha256":  "b84edabe6505f3d003d0d4dac538d3bd1f78da1f0b254892cb5a81ba4852f7a3",
+    "sourceByteLength":  1718,
+    "payloadByteLength":  1718,
+    "replayByteLength":  1718,
+    "replayEventCount":  1,
+    "pid":  22740,
+    "startedAt":  "2026-07-14T13:48:37.7318980+09:00",
+    "exitedAt":  "2026-07-14T14:02:48.2856986+09:00",
+    "verdict":  "TRANSPORT_VALID"
+}

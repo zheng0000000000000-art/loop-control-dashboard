@@ -1,6 +1,6 @@
 // trust-origin 신뢰 원점 부트스트랩 선언 CLI.
 // declare: 선행 10조건 검사 후 trust-origin record를 생성한다. WORKSTATE·applier-log는 수정하지 않는다.
-// --self-test: $TEMP 사본에서 5개 case를 in-process로 검증한다.
+// --self-test: $TEMP 사본에서 18개 case를 in-process로 검증한다.
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
@@ -150,43 +150,161 @@ internal static class TrustOriginCli
             return (null, 2);
         }
 
-        // 부분집합 검사: failures ⊆ knownExceptions. 명시되지 않은 failure → 선언 거부.
+        // 정확한 집합 검사: failures == knownExceptions. 미명시 failure 또는 extra known exception → 선언 거부.
         var failureSubjects = reconResult.Failures
             .Select(f => f.Subject).Where(s => !string.IsNullOrWhiteSpace(s))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var knownSubjects = knownExceptions.Select(e => e.Subject).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var unlisted = failureSubjects.Except(knownSubjects).ToList();
-        if (unlisted.Count > 0)
+        var extraKnown = knownSubjects.Except(failureSubjects).ToList();
+        if (unlisted.Count > 0 || extraKnown.Count > 0)
         {
             Console.Error.WriteLine(new JsonObject
             {
-                ["error"] = "명시되지 않은 reconciliation failure — 선언 거부",
-                ["code"] = "unlisted-reconciliation-failure",
+                ["error"] = "knownExceptions가 실제 failure와 정확히 일치하지 않음 — 선언 거부",
+                ["code"] = unlisted.Count > 0 ? "unlisted-reconciliation-failure" : "extra-known-exceptions",
                 ["unlistedSubjects"] = new JsonArray(unlisted.Select(s => (JsonNode?)s).ToArray()),
+                ["extraKnownSubjects"] = new JsonArray(extraKnown.Select(s => (JsonNode?)s).ToArray()),
             }.ToJsonString());
             return (null, 1);
         }
         return (reconResult, null);
     }
 
-    // 선행조건 1·3·4·9·10을 검사한다. 미충족 시 exit code 반환, 전부 충족 시 null.
+    // 선행조건 1·3·4·9·10을 검사한다. production 경로(precon=null)에서는 실제 확인을 수행한다. 미충족 시 exit code 반환.
     private static int? CheckAllPreconditions(string root, PreconOverride? precon)
     {
-        if (precon is not null && !precon.BuildVerified)
-            { WriteError("선행조건 1 미충족 — build exit 0 필요"); return 1; }
+        // 선행조건 1: production에서 실제 dotnet build 실행. 기본값 true 금지.
+        var buildOk = precon?.BuildVerified ?? CheckBuildProduction(root);
+        if (!buildOk)
+            { WriteError("선행조건 1 미충족 — clean build exit 0 필요 (dotnet build server -c Release -nologo)"); return 1; }
         var filesTracked = precon?.FilesTracked ?? CheckFilesTracked(root);
         if (!filesTracked)
             { WriteError("선행조건 3 미충족 — StateApplierCli.cs 또는 HandoffIntegrityChecker.cs가 git-tracked 상태가 아님"); return 1; }
         var noDirectMod = precon?.NoDirectMod ?? CheckNoDirectMod(root);
         if (!noDirectMod)
             { WriteError("선행조건 4 미충족 — WORKSTATE.json 또는 applier-log.jsonl가 working tree에서 직접 수정됨"); return 1; }
-        var autoOff = precon?.AutoLauncherOff ?? true;
+        // 선행조건 9: production에서 .claude/settings*.json hooks 확인. 기본값 true 금지.
+        var autoOff = precon?.AutoLauncherOff ?? CheckAutoLauncherOff(root);
         if (!autoOff)
-            { WriteError("선행조건 9 미충족 — 자동 launcher 비활성 확인 필요"); return 1; }
-        var highRiskClosed = precon?.HighRiskClosed ?? true;
+            { WriteError("선행조건 9 미충족 — 자동 launcher hooks 발견 또는 확인 불가"); return 1; }
+        // 선행조건 10: production에서 PHASE_CHANGE·RECOVERY·REPLAY 세 kind를 full envelope로 apply → trusted-human-receipt-required exit 1 확인. 기본값 true 금지.
+        var highRiskClosed = precon?.HighRiskClosed ?? CheckHighRiskClosed(root);
         if (!highRiskClosed)
-            { WriteError("선행조건 10 미충족 — high-risk transition fail-closed 확인 필요"); return 1; }
+            { WriteError("선행조건 10 미충족 — high-risk transition(PHASE_CHANGE/RECOVERY/REPLAY)이 fail-closed 되지 않음 또는 확인 불가"); return 1; }
         return null;
+    }
+
+    // 선행조건 1: dotnet build server -c Release -nologo 실행 후 exit 0 여부를 반환한다.
+    private static bool CheckBuildProduction(string root)
+    {
+        try
+        {
+            using var p = new Process();
+            p.StartInfo = new ProcessStartInfo("dotnet", "build server -c Release -nologo")
+            {
+                WorkingDirectory = root,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+            p.Start();
+            p.StandardOutput.ReadToEnd();
+            p.StandardError.ReadToEnd();
+            p.WaitForExit(120_000);
+            return p.ExitCode == 0;
+        }
+        catch { return false; }
+    }
+
+    // 선행조건 9: .claude/settings*.json에서 hooks 필드 유무로 자동 launcher 비활성을 판단한다. 파일 있음 + malformed JSON → fail-closed. hooks 필드가 존재하면 값이 무엇이든 fail-closed.
+    private static bool CheckAutoLauncherOff(string root)
+    {
+        foreach (var path in GetClaudeSettingsPaths(root))
+        {
+            if (!File.Exists(path)) continue;
+            try
+            {
+                var node = JsonNode.Parse(File.ReadAllText(path, new System.Text.UTF8Encoding(false)));
+                if (node is JsonObject obj && obj.ContainsKey("hooks")) return false;
+            }
+            catch { return false; } // 파싱 불가 → 확인 불가 → fail-closed
+        }
+        return true;
+    }
+
+    // 선행조건 9 보조: 검사 대상 Claude settings 경로 목록.
+    private static System.Collections.Generic.IEnumerable<string> GetClaudeSettingsPaths(string root)
+    {
+        yield return Path.Combine(root, ".claude", "settings.json");
+        yield return Path.Combine(root, ".claude", "settings.local.json");
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrEmpty(home))
+        {
+            yield return Path.Combine(home, ".claude", "settings.json");
+            yield return Path.Combine(home, ".claude", "settings.local.json");
+        }
+    }
+
+    // 선행조건 10: PHASE_CHANGE·RECOVERY·REPLAY 세 kind를 full envelope로 apply하여 모두 exit 1이고 trusted-human-receipt-required reason이 있는지 확인한다.
+    private static bool CheckHighRiskClosed(string root)
+    {
+        foreach (var kind in new[] { "PHASE_CHANGE", "RECOVERY", "REPLAY" })
+        {
+            var (exit, _, reasonMatched) = RunHighRiskEnvelopeCheck(kind);
+            if (exit != 1 || !reasonMatched) return false;
+        }
+        return true;
+    }
+
+    // 지정 kind의 full envelope로 state-transition apply를 실행하고 exit code·stderr 내용·reason 일치 여부를 반환한다.
+    // 주의: StateApplierCli.RunApply는 canonical repo root WORKSTATE를 로드한다. high-risk 분기는 그 이후 request/candidate 파일 읽기 전에 실행된다.
+    private static (int exit, string stderrText, bool reasonMatched) RunHighRiskEnvelopeCheck(string kind)
+    {
+        var tmpEnv = Path.Combine(Path.GetTempPath(), $"to-hr-{kind}-{Guid.NewGuid():N}.json");
+        try
+        {
+            // full envelope — 필수 필드 모두 포함. 플레이스홀더 해시·경로 OK: high-risk 분기는 파일 읽기 전에 반환한다.
+            File.WriteAllText(tmpEnv,
+                "{\"schemaVersion\":1,\"transitionKind\":\"" + kind + "\","
+                + "\"transitionId\":\"trust-origin-high-risk-check\","
+                + "\"expectedPreStateSha256\":\"0000000000000000000000000000000000000000000000000000000000000001\","
+                + "\"requestPath\":\"placeholder\","
+                + "\"requestSha256\":\"0000000000000000000000000000000000000000000000000000000000000002\","
+                + "\"effectiveAt\":\"2026-01-01T00:00:00Z\","
+                + "\"expectedPostStateSha256\":\"0000000000000000000000000000000000000000000000000000000000000003\","
+                + "\"candidatePath\":\"placeholder\"}",
+                new System.Text.UTF8Encoding(false));
+            var origErr = Console.Error;
+            var errSb = new StringBuilder();
+            using var errWriter = new System.IO.StringWriter(errSb);
+            Console.SetError(errWriter);
+            int exit;
+            try { exit = StateApplierCli.Run(["state-transition", "apply", "--envelope", tmpEnv]); }
+            finally { Console.SetError(origErr); }
+            var stderrText = errSb.ToString();
+            // stderr 각 줄을 JSON으로 파싱해 reason 또는 code 필드가 정확히 "trusted-human-receipt-required"인지 확인한다.
+            var reasonMatched = stderrText.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                .Any(line =>
+                {
+                    try
+                    {
+                        var node = JsonNode.Parse(line.Trim())?.AsObject();
+                        if (node is null) return false;
+                        var reason = node["reason"]?.GetValue<string>();
+                        var code = node["code"]?.GetValue<string>();
+                        return string.Equals(reason, "trusted-human-receipt-required", StringComparison.Ordinal)
+                            || string.Equals(code, "trusted-human-receipt-required", StringComparison.Ordinal);
+                    }
+                    catch { return false; }
+                });
+            return (exit, stderrText, reasonMatched);
+        }
+        catch { return (-1, "", false); }
+        finally
+        {
+            try { if (File.Exists(tmpEnv)) File.Delete(tmpEnv); } catch { }
+        }
     }
 
     // 선행조건 7: baseline commit hash를 반환한다. 시험은 TestPrecon, production은 git.
@@ -216,6 +334,7 @@ internal static class TrustOriginCli
             ["knownExceptions"] = BuildExceptionsArray(knownExceptions),
             ["normalTransitionReady"] = true, ["verifiedHumanApprovalReady"] = false,
             ["recoveryApplyReady"] = false, ["automatedExecutionReady"] = false,
+            ["phaseChangeReady"] = false, ["replayReady"] = false,
             ["declaredBy"] = new JsonObject
             {
                 ["actorType"] = "human", ["actorId"] = "bootstrap-operator",
@@ -243,7 +362,7 @@ internal static class TrustOriginCli
         return 0;
     }
 
-    // --self-test: $TEMP 사본에서 5개 case를 in-process로 검증한다.
+    // --self-test: $TEMP 사본에서 18개 case를 in-process로 검증한다.
     private static int RunSelfTest()
     {
         var tmpBase = Path.Combine(Path.GetTempPath(), $"to-selftest-{Guid.NewGuid():N}");
@@ -256,7 +375,7 @@ internal static class TrustOriginCli
         }
     }
 
-    // 임시 디렉토리에서 5개 case를 순서대로 실행하고 결과를 보고한다.
+    // 임시 디렉토리에서 18개 case를 순서대로 실행하고 결과를 보고한다.
     private static int RunSelfTestInDir(string tmpRoot)
     {
         var wsDir = Path.Combine(tmpRoot, "docs", "handoff");
@@ -286,12 +405,25 @@ internal static class TrustOriginCli
         var goodPrecon = new PreconOverride(true, true, true, "abc123def456abc123def456abc123def456abc1", true, true);
         var mismatches = new JsonArray();
         var caseResults = new JsonArray();
-        // 실행 순서: declare-ok → no-self-reference(declare-ok 결과 재사용) → unlisted-failure → redeclare → record-path-fixed
+        // 실행 순서: declare-ok → no-self-reference → extra-known-exception → unlisted-failure → redeclare → record-path-fixed → record-ready-flags-complete → build-verdict-not-forged → production-preconditions-not-default-true → high-risk 3종 → launcher-settings-malformed → launcher hooks 형태 5종
         RunCaseDeclareOk(tmpRoot, wsPath, logPath, recordPath, WsDirty, goodPrecon, caseResults, mismatches);
         RunCaseNoSelfReference(recordPath, caseResults, mismatches);
+        RunCaseExtraKnownException(tmpRoot, wsPath, logPath, recordPath, WsDirty, goodPrecon, caseResults, mismatches);
         RunCaseUnlistedFailure(tmpRoot, wsPath, logPath, recordPath, WsUnlisted, goodPrecon, caseResults, mismatches);
         RunCaseRedeclare(tmpRoot, wsPath, logPath, recordPath, WsClean, goodPrecon, caseResults, mismatches);
         RunCaseRecordPathFixed(tmpRoot, wsPath, logPath, recordPath, WsClean, goodPrecon, caseResults, mismatches);
+        RunCaseRecordReadyFlagsComplete(recordPath, caseResults, mismatches);
+        RunCaseBuildVerdictNotForged(tmpRoot, wsPath, logPath, recordPath, WsClean, goodPrecon, caseResults, mismatches);
+        RunCaseProductionPreconNotDefaultTrue(tmpRoot, wsPath, logPath, recordPath, WsClean, caseResults, mismatches);
+        RunCaseHighRiskFullEnvelope("PHASE_CHANGE", caseResults, mismatches);
+        RunCaseHighRiskFullEnvelope("RECOVERY", caseResults, mismatches);
+        RunCaseHighRiskFullEnvelope("REPLAY", caseResults, mismatches);
+        RunCaseLauncherSettingsMalformed(tmpRoot, caseResults, mismatches);
+        RunCaseLauncherSettingsHooksVariant(tmpRoot, "launcher-settings-hooks-empty-object", "{\"hooks\":{}}", false, caseResults, mismatches);
+        RunCaseLauncherSettingsHooksVariant(tmpRoot, "launcher-settings-hooks-array", "{\"hooks\":[]}", false, caseResults, mismatches);
+        RunCaseLauncherSettingsHooksVariant(tmpRoot, "launcher-settings-hooks-string", "{\"hooks\":\"x\"}", false, caseResults, mismatches);
+        RunCaseLauncherSettingsHooksVariant(tmpRoot, "launcher-settings-hooks-null", "{\"hooks\":null}", false, caseResults, mismatches);
+        RunCaseLauncherSettingsHooksVariant(tmpRoot, "launcher-settings-no-hooks", "{}", true, caseResults, mismatches);
         NonInteractiveOverride = false; TestPrecon = null;
         if (mismatches.Count == 0)
         {
@@ -408,6 +540,154 @@ internal static class TrustOriginCli
         if (!onlyCanonical) mismatches.Add(new JsonObject { ["case"] = "record-path-fixed",
             ["expected"] = "exit=0, 신규 파일 1개만 (canonical path)",
             ["actual"] = $"exit={exit},newFiles=[{string.Join(";", newFiles)}]" });
+    }
+
+    // case: extra-known-exception — knownExceptions가 실제 failure보다 많으면 선언 거부.
+    private static void RunCaseExtraKnownException(
+        string tmpRoot, string wsPath, string logPath, string recordPath,
+        string wsDirty, PreconOverride precon, JsonArray caseResults, JsonArray mismatches)
+    {
+        ResetFixture(wsPath, wsDirty, logPath, recordPath);
+        NonInteractiveOverride = true; TestPrecon = precon;
+        var exceptions = new List<KnownException>
+        {
+            new("state-transition-not-logged", "LISTED-TRANSITION", "fixture 알려진 오염", "fixture", "fixture"),
+            new("extra-never-observed", "FAKE-NEVER-OBSERVED", "실제 failure 없는 가짜 예외 — extra", "fixture", "fixture"),
+        };
+        var exit = RunDeclareCore(tmpRoot, exceptions);
+        var recCreated = File.Exists(recordPath);
+        var ok = exit == 1 && !recCreated;
+        caseResults.Add(new JsonObject { ["case"] = "extra-known-exception", ["exit"] = exit,
+            ["recordCreated"] = recCreated, ["pass"] = ok });
+        if (!ok) mismatches.Add(new JsonObject { ["case"] = "extra-known-exception",
+            ["expected"] = "exit=1 (extra known exception 거부), record 미생성",
+            ["actual"] = $"exit={exit},recordCreated={recCreated}" });
+    }
+
+    // case: record-ready-flags-complete — record에 phaseChangeReady:false, replayReady:false 존재.
+    private static void RunCaseRecordReadyFlagsComplete(string recordPath, JsonArray caseResults, JsonArray mismatches)
+    {
+        var recExists = File.Exists(recordPath);
+        bool hasPCR = false, hasRR = false, pcrFalse = false, rrFalse = false;
+        if (recExists)
+        {
+            try
+            {
+                var rec = JsonNode.Parse(File.ReadAllText(recordPath))?.AsObject();
+                hasPCR = rec?.ContainsKey("phaseChangeReady") ?? false;
+                hasRR = rec?.ContainsKey("replayReady") ?? false;
+                pcrFalse = rec?["phaseChangeReady"]?.GetValue<bool>() == false;
+                rrFalse = rec?["replayReady"]?.GetValue<bool>() == false;
+            }
+            catch { }
+        }
+        var ok = recExists && hasPCR && hasRR && pcrFalse && rrFalse;
+        caseResults.Add(new JsonObject { ["case"] = "record-ready-flags-complete",
+            ["recordExists"] = recExists, ["hasPhaseChangeReady"] = hasPCR, ["hasReplayReady"] = hasRR,
+            ["phaseChangeFalse"] = pcrFalse, ["replayFalse"] = rrFalse, ["pass"] = ok });
+        if (!ok) mismatches.Add(new JsonObject { ["case"] = "record-ready-flags-complete",
+            ["expected"] = "record에 phaseChangeReady:false, replayReady:false 존재",
+            ["actual"] = $"exists={recExists},hasPCR={hasPCR},hasRR={hasRR},pcrFalse={pcrFalse},rrFalse={rrFalse}" });
+    }
+
+    // case: build-verdict-not-forged — BuildVerified=false이면 exit 1, record 미생성.
+    private static void RunCaseBuildVerdictNotForged(
+        string tmpRoot, string wsPath, string logPath, string recordPath,
+        string wsClean, PreconOverride precon, JsonArray caseResults, JsonArray mismatches)
+    {
+        var badPrecon = precon with { BuildVerified = false };
+        ResetFixture(wsPath, wsClean, logPath, recordPath);
+        NonInteractiveOverride = true; TestPrecon = badPrecon;
+        var exit = RunDeclareCore(tmpRoot, []);
+        var recCreated = File.Exists(recordPath);
+        var ok = exit == 1 && !recCreated;
+        caseResults.Add(new JsonObject { ["case"] = "build-verdict-not-forged", ["exit"] = exit,
+            ["recordCreated"] = recCreated, ["pass"] = ok,
+            ["note"] = "BuildVerified=false → 선언 거부 → VERIFIED_PASS record 생성 불가" });
+        if (!ok) mismatches.Add(new JsonObject { ["case"] = "build-verdict-not-forged",
+            ["expected"] = "exit=1, record 미생성 (build 미확인 경로는 VERIFIED_PASS 기록 불가)",
+            ["actual"] = $"exit={exit},recordCreated={recCreated}" });
+    }
+
+    // case: production-preconditions-not-default-true — TestPrecon=null 시 production path가 기본 true로 통과하지 못함.
+    private static void RunCaseProductionPreconNotDefaultTrue(
+        string tmpRoot, string wsPath, string logPath, string recordPath,
+        string wsClean, JsonArray caseResults, JsonArray mismatches)
+    {
+        ResetFixture(wsPath, wsClean, logPath, recordPath);
+        NonInteractiveOverride = true; TestPrecon = null; // production 경로 강제
+        var exit = RunDeclareCore(tmpRoot, []);
+        var recCreated = File.Exists(recordPath);
+        // tmpRoot에는 dotnet 프로젝트 없음 → CheckBuildProduction 실패 → exit != 0
+        var ok = exit != 0 && !recCreated;
+        caseResults.Add(new JsonObject { ["case"] = "production-preconditions-not-default-true",
+            ["exit"] = exit, ["recordCreated"] = recCreated, ["pass"] = ok,
+            ["note"] = "TestPrecon=null: production path에서 build check 실행 — tmpRoot에 dotnet 프로젝트 없어 실패" });
+        if (!ok) mismatches.Add(new JsonObject { ["case"] = "production-preconditions-not-default-true",
+            ["expected"] = "exit!=0 (production precondition 실패), record 미생성",
+            ["actual"] = $"exit={exit},recordCreated={recCreated}" });
+    }
+
+    // case: high-risk-full-envelope-<kind> — full envelope로 고위험 전이를 apply → exit 1, trusted-human-receipt-required reason 일치.
+    private static void RunCaseHighRiskFullEnvelope(string kind, JsonArray caseResults, JsonArray mismatches)
+    {
+        var caseName = $"high-risk-full-envelope-{kind.ToLowerInvariant().Replace('_', '-')}";
+        var (exit, stderrText, reasonMatched) = RunHighRiskEnvelopeCheck(kind);
+        var ok = exit == 1 && reasonMatched;
+        caseResults.Add(new JsonObject { ["case"] = caseName, ["kind"] = kind, ["exit"] = exit,
+            ["reasonMatched"] = reasonMatched, ["pass"] = ok,
+            ["note"] = "full envelope → exit 1, reason 필드 정확 매칭. StateApplierCli.RunApply가 canonical WORKSTATE를 로드하나 high-risk 분기는 request/candidate 읽기 전에 실행된다." });
+        if (!ok) mismatches.Add(new JsonObject { ["case"] = caseName,
+            ["expected"] = "exit=1, reasonMatched=true (trusted-human-receipt-required)",
+            ["actual"] = $"exit={exit},reasonMatched={reasonMatched}" });
+    }
+
+    // case: launcher-settings-malformed — malformed settings.json이 있으면 CheckAutoLauncherOff → false (fail-closed).
+    private static void RunCaseLauncherSettingsMalformed(string tmpRoot, JsonArray caseResults, JsonArray mismatches)
+    {
+        var claudeDir = Path.Combine(tmpRoot, ".claude");
+        Directory.CreateDirectory(claudeDir);
+        var settingsPath = Path.Combine(claudeDir, "settings.json");
+        File.WriteAllText(settingsPath, "malformed-not-json", new System.Text.UTF8Encoding(false));
+        try
+        {
+            var result = CheckAutoLauncherOff(tmpRoot);
+            var ok = !result; // malformed → fail-closed → false
+            caseResults.Add(new JsonObject { ["case"] = "launcher-settings-malformed",
+                ["checkAutoLauncherOffResult"] = result, ["pass"] = ok,
+                ["note"] = "malformed settings.json → 확인 불가 → fail-closed(false)" });
+            if (!ok) mismatches.Add(new JsonObject { ["case"] = "launcher-settings-malformed",
+                ["expected"] = "false (malformed JSON → fail-closed)", ["actual"] = result.ToString() });
+        }
+        finally
+        {
+            try { File.Delete(settingsPath); } catch { }
+        }
+    }
+
+    // case: launcher-settings-hooks-variant — 다양한 hooks 값 형태로 CheckAutoLauncherOff 반환값을 검증한다.
+    private static void RunCaseLauncherSettingsHooksVariant(
+        string tmpRoot, string caseName, string settingsJson, bool expectedResult,
+        JsonArray caseResults, JsonArray mismatches)
+    {
+        var claudeDir = Path.Combine(tmpRoot, ".claude");
+        Directory.CreateDirectory(claudeDir);
+        var settingsPath = Path.Combine(claudeDir, "settings.json");
+        File.WriteAllText(settingsPath, settingsJson, new System.Text.UTF8Encoding(false));
+        try
+        {
+            var result = CheckAutoLauncherOff(tmpRoot);
+            var ok = result == expectedResult;
+            caseResults.Add(new JsonObject { ["case"] = caseName, ["settingsJson"] = settingsJson,
+                ["checkAutoLauncherOffResult"] = result, ["expectedResult"] = expectedResult, ["pass"] = ok });
+            if (!ok) mismatches.Add(new JsonObject { ["case"] = caseName,
+                ["expected"] = expectedResult.ToString().ToLowerInvariant(),
+                ["actual"] = result.ToString().ToLowerInvariant() });
+        }
+        finally
+        {
+            try { File.Delete(settingsPath); } catch { }
+        }
     }
 
     // 자기 시험용 fixture 초기화 — WORKSTATE·log를 고정값으로, record를 삭제.

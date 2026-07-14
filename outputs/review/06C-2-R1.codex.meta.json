@@ -1,0 +1,21 @@
+﻿{
+    "schemaVersion":  1,
+    "taskId":  "06C-2-R1",
+    "reviewer":  "codex",
+    "authMode":  "chatgpt-subscription",
+    "copyRoot":  "C:\\Users\\1\\AppData\\Local\\Temp\\codex-review-06C-2-R1-20260714134412",
+    "baseCommit":  "74b412623e330390bfa0c6621c3041e1b78c01b7",
+    "directive":  "directive-06C-2-R1-trust-origin-production-truth.md",
+    "startedAt":  "2026-07-14T13:44:13.2655206+09:00",
+    "exitedAt":  "2026-07-14T13:46:34.9437924+09:00",
+    "durationMs":  141596,
+    "codexExitCode":  0,
+    "note":  "codex exec의 exit code는 성공이 아니라 세션 종료다. 판정 근거로 쓰지 마라 — 최종 메시지를 읽어라.",
+    "sandboxHeld":  true,
+    "treeHashBefore":  "696d4e66d082648b2237c95028dc5783ee87f762207a55a4e0452d6762f04d8f",
+    "treeHashAfter":  "696d4e66d082648b2237c95028dc5783ee87f762207a55a4e0452d6762f04d8f",
+    "fileCountBefore":  904,
+    "fileCountAfter":  904,
+    "reviewOut":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\review\\06C-2-R1.codex.md",
+    "events":  "C:\\Users\\1\\Documents\\Local-First Workflow Dashboard\\outputs\\review\\06C-2-R1.codex.events.jsonl"
+}

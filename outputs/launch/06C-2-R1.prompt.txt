@@ -1,0 +1,30 @@
+너는 06C-2-R1 실행자다. 저장소 루트는 C:\Users\1\Documents\Local-First Workflow Dashboard 다. 현재 브랜치는 `wp/state-integrity`다. 브랜치를 바꾸지 마라.
+
+지금 할 일은 이것뿐이다: `docs/handoff/queue/directive-06C-2-R1-trust-origin-production-truth.md` 를 읽고 그대로 수행하라.
+
+먼저 아래 순서로 읽어라:
+1. `docs/context/RUNTIME-INDEX.md`
+2. `outputs/review/06C-2.codex.md`
+3. `docs/plan/wp/TRUST-ORIGIN-BOOTSTRAP.md`
+4. `docs/handoff/queue/directive-06C-2-trust-origin.md`
+5. `docs/handoff/queue/directive-06C-2-R1-trust-origin-production-truth.md`
+6. `docs/directives/_header.md`
+
+핵심 목표: `trust-origin declare`가 production 경로에서 검증하지 않은 것을 `VERIFIED_PASS`라고 기록하지 못하게 하라. 06C-2는 독립 Codex 검수에서 FAIL로 정정됐다. PASS였던 자기보고를 믿지 말고 `outputs/review/06C-2.codex.md`의 반려 조건을 닫아라.
+
+절대 금지:
+- canonical 저장소에 trust-origin record를 만들지 마라.
+- `WORKSTATE.json`·`WORKSTATE.applier-log.jsonl`을 수정하지 마라.
+- `TRUST-ORIGIN-BOOTSTRAP.md` 원문을 수정하지 마라.
+- git commit/push/tag 금지.
+- approve/reject/import 금지.
+- 브랜치 변경 금지.
+
+허용 파일은 지시서의 `## 허용 파일 (allowlist)` 안으로만 제한한다.
+
+완료 시 `docs/verification/06c2-r1-trust-origin-production-truth.md`를 작성하고, build/self-test/measure 결과와 extra known exception 반증, production 경로 검증 근거, canonical 무결 확인을 기록하라.
+
+한도나 중단이 임박하면 마지막 세 줄로만 보고하라:
+QUOTA_SIGNAL
+CHANGED: <지금까지 수정한 파일 목록>
+NEXT: <다음에 할 일 한 줄>

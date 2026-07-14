@@ -1,0 +1,32 @@
+너는 06C-2-R2 실행자다. 저장소 루트는 C:\Users\1\Documents\Local-First Workflow Dashboard 다. 현재 브랜치는 `wp/state-integrity`다. 브랜치를 바꾸지 마라.
+
+지금 할 일은 이것뿐이다: `docs/handoff/queue/directive-06C-2-R2-trust-origin-highrisk-launcher-check.md` 를 읽고 그대로 수행하라.
+
+먼저 아래 순서로 읽어라:
+1. `docs/context/RUNTIME-INDEX.md`
+2. `outputs/review/06C-2-R1.codex.md`
+3. `docs/handoff/queue/directive-06C-2-R2-trust-origin-highrisk-launcher-check.md`
+4. `server/TrustOriginCli.cs`
+5. `server/StateApplierCli.cs` (읽기만, 수정 금지)
+6. `docs/directives/_header.md`
+
+핵심 목표: R1 Codex 검수에서 남은 두 결함만 닫아라.
+- high-risk 검사는 malformed envelope exit 2가 아니라 full envelope로 `trusted-human-receipt-required` exit 1에 도달해야 한다.
+- malformed Claude settings는 skip이 아니라 확인 불가로 fail-closed 해야 한다.
+
+절대 금지:
+- `server/StateApplierCli.cs` 수정 금지.
+- canonical 저장소에 trust-origin record를 만들지 마라.
+- `WORKSTATE.json`·`WORKSTATE.applier-log.jsonl` 수정 금지.
+- git commit/push/tag 금지.
+- approve/reject/import 금지.
+- 브랜치 변경 금지.
+
+허용 파일은 지시서의 `## 허용 파일 (allowlist)` 안으로만 제한한다.
+
+완료 시 `docs/verification/06c2-r2-trust-origin-highrisk-launcher-check.md`를 작성하고, high-risk 3종 full envelope case, malformed launcher settings case, R1 회귀 case, build/self-test/measure 결과를 기록하라.
+
+한도나 중단이 임박하면 마지막 세 줄로만 보고하라:
+QUOTA_SIGNAL
+CHANGED: <지금까지 수정한 파일 목록>
+NEXT: <다음에 할 일 한 줄>

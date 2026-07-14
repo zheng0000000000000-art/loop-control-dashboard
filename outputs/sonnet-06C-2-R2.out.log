@@ -1,0 +1,17 @@
+﻿모든 작업이 완료됐습니다. 최종 검증 요약:
+
+---
+
+**06C-2-R2 실행 결과**
+
+**수정 파일**: `server/TrustOriginCli.cs`
+
+**닫은 결함 2개**:
+1. `CheckHighRiskClosed`: malformed envelope → full envelope로 교체. PHASE_CHANGE·RECOVERY·REPLAY 3종 모두 `trusted-human-receipt-required` exit 1 확인
+2. `CheckAutoLauncherOff`: catch 후 skip → `return false` (fail-closed)
+
+**self-test**: 13/13 PASS (R1 9개 회귀 없음, 신규 4개 모두 PASS)  
+**measure dev-pack**: violations=0 (시도 2 — 1차는 문자열 내 `{`가 brace 카운터 오인, `"malformed-not-json"`으로 교체)  
+**canonical record 미생성, WORKSTATE 무변경 확인**
+
+`{"gate":"dev-pack","violations":0,"attempt":2}`
