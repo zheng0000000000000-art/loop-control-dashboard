@@ -8,5 +8,6 @@ server-test.err.log
 dashboard/data/*/history/
 .claude/
 outbox/
+outputs/
 
 server/EXECUTOR_REPORT.md

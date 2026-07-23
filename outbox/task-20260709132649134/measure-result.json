@@ -1,5 +1,0 @@
-﻿{
-  "exitCode": 1,
-  "stdout": "C:\\Users\\1\\AppData\\Local\\Temp\\loop-dispatch-task-20260709132649134\\server\\Program.cs(913,62): error CS0206: 참조를 반환하지 않는 속성 또는 인덱서는 out 또는 ref 값으로 사용할 수 없음 [C:\\Users\\1\\AppData\\Local\\Temp\\loop-dispatch-task-20260709132649134\\server\\LocalFirstWorkflowDashboard.Server.csproj]\r\nC:\\Users\\1\\AppData\\Local\\Temp\\loop-dispatch-task-20260709132649134\\server\\Program.cs(943,62): error CS0206: 참조를 반환하지 않는 속성 또는 인덱서는 out 또는 ref 값으로 사용할 수 없음 [C:\\Users\\1\\AppData\\Local\\Temp\\loop-dispatch-task-20260709132649134\\server\\LocalFirstWorkflowDashboard.Server.csproj]\r\n",
-  "stderr": "\r\n빌드하지 못했습니다. 빌드 오류를 수정하고 다시 실행하세요.\r\n"
-}

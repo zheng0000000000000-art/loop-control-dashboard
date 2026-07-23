@@ -1,4 +1,0 @@
-너는 PROBE-00이다. 저장소 루트는 C:\Users\1\Documents\Local-First Workflow Dashboard 다. 이것은 컨텍스트 비용을 재는 고정 탐침이다. 매번 정확히 같은 일을 해야 측정이 의미가 있다.
-할 일은 딱 하나다: dotnet run --project server -c Release --no-build -- measure dev-pack 을 실행하고 결과를 한 줄로 보고하라.
-저장소를 탐색하지 마라. 다른 파일을 읽지 마라. 코드를 고치지 마라. 파일을 만들지 마라. git 명령을 쓰지 마라. 위 명령 하나만 실행하고 즉시 끝내라.
-보고 형식(이 한 줄만 출력하라): PROBE exit=<코드> violations=<개수>

@@ -1,6 +1,0 @@
-{
-  "phaseId": "P00",
-  "wpId": "WP-00",
-  "status": "verifying",
-  "nextActions": ["검수자가 STATE-01 검수 기준을 검증하고 state-transition으로 결과를 갱신한다"]
-}

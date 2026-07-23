@@ -1,1 +1,0 @@
-{"type":"user","message":{"role":"user","content":"task ID TRANSPORT-BOM-PROBE. 맨 첫 줄에 정확히 ACK-TRANSPORT-BOM-PROBE 라고 출력하라. 그 다음 docs/handoff/queue/directive-TRANSPORT-BOM-PROBE-launch-frame.md 를 읽고, 파일은 절대 수정하지 마라.\n"}}

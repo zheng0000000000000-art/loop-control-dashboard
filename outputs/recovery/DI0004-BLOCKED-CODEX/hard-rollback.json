@@ -1,9 +1,0 @@
-{
-  "schemaVersion": 1,
-  "kind": "HARD_ROLLBACK_EVIDENCE",
-  "workstatePath": "docs/handoff/WORKSTATE.json",
-  "applierLogPath": "docs/handoff/WORKSTATE.applier-log.jsonl",
-  "workstateSha256": "1a16bbc9caa981fac4b7c22bdb5ea0654e536e232f4f318d04ce8f61499daf5d",
-  "applierLogSha256": "cd8c92a5498b5888f9d930f05bd867701d07ba30046c98183cb24e4b6160ca93",
-  "automaticRollbackAllowed": false
-}

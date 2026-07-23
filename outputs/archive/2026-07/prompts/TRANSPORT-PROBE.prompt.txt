@@ -1,1 +1,0 @@
-transport receipt 검증용 프로브. 한글·"따옴표"·\역슬래시\·🔍emoji 포함. 이 메시지가 손상 없이 도착하면 "PROBE_OK"라고만 답하라.

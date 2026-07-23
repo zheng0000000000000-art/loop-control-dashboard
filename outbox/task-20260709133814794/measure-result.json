@@ -1,5 +1,0 @@
-﻿{
-  "exitCode": 0,
-  "stdout": "{\"projectId\":\"dev-pack\",\"violationCount\":0,\"proposalId\":\"proposal-1783603307620\",\"proposalLifecycle\":\"superseded\",\"createdBy\":{\"provider\":\"ollama\",\"model\":\"qwen3:8b\"},\"currentStage\":\"deviationCheck\",\"overallStatus\":\"completed\"}\r\n",
-  "stderr": ""
-}
