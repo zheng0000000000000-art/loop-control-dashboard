@@ -5,7 +5,7 @@
     { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
     { "path": "docs/verification/_template.md", "sha256": "15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69" },
     { "path": "docs/plan/wp/CODEX-HEADLESS-DISPATCH-CLEANUP-plan.md", "sha256": "a426289a54c4f8889512c53603773c8d4598193e750954f74f2556d4c010f944" },
-    { "path": "docs/handoff/decisions/ADR-015-harness-actor-substitution.md", "sha256": "df25d0e69be8debc5b4ea6d0b6ca5292179957b66f2154f902d6b33f4d7da0d3" }
+    { "path": "docs/handoff/decisions/ADR-015-harness-actor-substitution.md", "sha256": "377ae77f5dcfda7c6cfb08f9531a4ebe7cdd9ddee838ace3bf01148b8df9ef53" }
   ],
   "readOrder": [
     "docs/context/RUNTIME-INDEX.md",
@@ -29,7 +29,7 @@
 
 - actor: **미정** (`TRUSTED_BASELINE` 이후 사람이 배정. 05H/06H와 달리 코덱스 소유 영역이 아니다 — `server/OutboxManager.cs`는 dispatch 코어다)
 - 근거: `CODEX-HEADLESS-DISPATCH-CLEANUP-plan.md` §0.1 · §2.1
-- 관련: `ADR-015`(코덱스 헤드리스 진입점 부재) · `CODEX-HARNESS-LAUNCHER-minimal-contract.md`(이 지시서가 land된 뒤에 launcher가 이 통로를 연다)
+- 관련: `ADR-015`(**2026-07-26 종료** — 전제였던 헤드리스 진입점 부재가 해소됐다. §0의 정정 참조) · `CODEX-HARNESS-LAUNCHER-minimal-contract.md`(이 지시서가 land된 뒤에 launcher가 이 통로를 연다) · `server/ProgramVerifierCli.cs`(launcher 산출물을 판정할 쪽. 2026-07-26 구현)
 
 ---
 
@@ -44,9 +44,18 @@
 | 3 | tier-2 자동 승인이 켜져 있으면 그 `import_pending`이 자동 승인 경로로 들어간다 | `server/OutboxManager.cs:102` |
 | 4 | `SubscriptionCalls`가 codex를 **1**로 센다 → 하지 않은 구독 호출이 비용 meta에 남는다 | `server/OutboxManager.cs:339-345` |
 
-**호출 가능한 Codex 헤드리스 진입점은 없다**(ADR-015 실측: `where codex` 무결과, App Execution Alias 없음, 전역 npm 없음).
-없는 통로가 `import_pending`을 만든다 — 이것은 세션 브리프의 "게이트가 거짓말한 다섯 사례"와 같은 종류다.
-**검사가 없는 게 아니라, 대상이 없는데 PASS를 준다.**
+**이 저장소의 dispatch는 codex를 호출하지 않는다.** `DispatchExecutorCli`는 프로세스를 하나도 띄우지 않는
+결정론 스텁이고, `OutboxManager`에서 `codex`는 허용 라벨로만 존재한다(실측 2026-07-26).
+**배선되지 않은 통로가 `import_pending`을 만든다** — 이것은 세션 브리프의 "게이트가 거짓말한 다섯 사례"와
+같은 종류다. **검사가 없는 게 아니라, 대상이 없는데 PASS를 준다.**
+
+> **정정 (2026-07-26, 조율 세션).** 이 절은 원래 "호출 가능한 Codex 헤드리스 진입점은 없다(ADR-015 실측:
+> `where codex` 무결과, App Execution Alias 없음, 전역 npm 없음)"를 전제로 삼았다. **그 전제는 더 이상
+> 사실이 아니다** — `codex --version` → `codex-cli 0.144.3` (exit 0), `--help`에 `exec`·`review`가
+> 비대화형으로 있다. `ADR-015`는 이 실측을 근거로 2026-07-26 종료됐다.
+> **이 지시서의 요구사항은 바뀌지 않는다.** §0의 문제 1~4는 전부 "스텁이 성공처럼 보이는 결과를 만든다"에
+> 관한 것이고 그것은 그대로다. 달라진 것은 이유뿐이다 — **"부를 수 없다"가 아니라 "부르지 않는다"**.
+> 오히려 CLI가 실재하므로 이 fail-closed는 영구 차단이 아니라 **배선 전까지의 명시적 거절**이 된다.
 
 ## 1. 무엇을 하는가
 
@@ -55,7 +64,7 @@
 ```text
 POST dispatch { executor: "codex" }
   → 400  dispatch.executor_not_implemented
-     "codex executor has no callable headless entrypoint (ADR-015). dispatch is a deterministic stub, not an LLM router."
+     "codex executor is not wired: dispatch is a deterministic stub, not an LLM router."
 ```
 
 - **거절이지 지원 목록 삭제가 아니다.** `SupportedExecutors`에서 `codex`를 빼면 오류 메시지가
