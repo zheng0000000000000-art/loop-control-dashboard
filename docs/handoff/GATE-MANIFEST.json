@@ -106,6 +106,163 @@
           "note": "exit 1은 실패가 아니라 승격 심사 후보가 있다는 뜻이다. 기대값이다."
         }
       ]
+    },
+    {
+      "gateId": "WP-STATE-INTEGRITY-LAND",
+      "description": "WP-STATE-INTEGRITY 통합 land gate 중 기계가 판정할 수 있는 항목. 12번(clean replay A / trust-origin 부트스트랩 B)은 포함하지 않는다 — 사람 결재이며, 이 게이트가 PASS여도 TRUSTED_BASELINE이 선언되는 것은 아니다.",
+      "triggeredBy": "dotnet run --project server -- program-verify verify --gate WP-STATE-INTEGRITY-LAND (수동)",
+      "checks": [
+        {
+          "order": 1,
+          "command": "build-verify",
+          "args": [],
+          "expectedExit": 0,
+          "mutatesState": false,
+          "note": "land gate 1"
+        },
+        {
+          "order": 2,
+          "command": "state-transition",
+          "args": [
+            "--self-test"
+          ],
+          "expectedExit": 0,
+          "mutatesState": false,
+          "note": "land gate 2·4·5·8·9·10 — 19케이스(reconciliation-fail·candidate-toctou·FATAL 4분기·high-risk no-receipt 포함)"
+        },
+        {
+          "order": 3,
+          "command": "handoff-integrity",
+          "args": [],
+          "expectedExit": 0,
+          "mutatesState": false,
+          "note": "land gate 3 — at rest reconciliation"
+        },
+        {
+          "order": 4,
+          "command": "handoff-integrity",
+          "args": [
+            "--workstate",
+            "docs/qa/fixtures/reconciliation/fixture-a/workstate.json",
+            "--applier-log",
+            "docs/qa/fixtures/reconciliation/fixture-a/applier-log.jsonl"
+          ],
+          "expectedExit": 1,
+          "mutatesState": false,
+          "note": "land gate 6·7 — fixture-a"
+        },
+        {
+          "order": 5,
+          "command": "handoff-integrity",
+          "args": [
+            "--workstate",
+            "docs/qa/fixtures/reconciliation/fixture-b/workstate.json",
+            "--applier-log",
+            "docs/qa/fixtures/reconciliation/fixture-b/applier-log.jsonl"
+          ],
+          "expectedExit": 1,
+          "mutatesState": false,
+          "note": "land gate 6·7 — fixture-b"
+        },
+        {
+          "order": 6,
+          "command": "handoff-integrity",
+          "args": [
+            "--workstate",
+            "docs/qa/fixtures/reconciliation/fixture-c/workstate.json",
+            "--applier-log",
+            "docs/qa/fixtures/reconciliation/fixture-c/applier-log.jsonl"
+          ],
+          "expectedExit": 0,
+          "mutatesState": false,
+          "note": "land gate 6·7 — fixture-c"
+        },
+        {
+          "order": 7,
+          "command": "handoff-integrity",
+          "args": [
+            "--workstate",
+            "docs/qa/fixtures/reconciliation/fixture-d/workstate.json",
+            "--applier-log",
+            "docs/qa/fixtures/reconciliation/fixture-d/applier-log.jsonl"
+          ],
+          "expectedExit": 1,
+          "mutatesState": false,
+          "note": "land gate 6·7 — fixture-d"
+        },
+        {
+          "order": 8,
+          "command": "handoff-integrity",
+          "args": [
+            "--workstate",
+            "docs/qa/fixtures/reconciliation/fixture-e/workstate.json",
+            "--applier-log",
+            "docs/qa/fixtures/reconciliation/fixture-e/applier-log.jsonl"
+          ],
+          "expectedExit": 1,
+          "mutatesState": false,
+          "note": "land gate 6·7 — fixture-e"
+        },
+        {
+          "order": 9,
+          "command": "handoff-integrity",
+          "args": [
+            "--workstate",
+            "docs/qa/fixtures/reconciliation/fixture-malformed/workstate.json",
+            "--applier-log",
+            "docs/qa/fixtures/reconciliation/fixture-malformed/applier-log.jsonl"
+          ],
+          "expectedExit": 2,
+          "mutatesState": false,
+          "note": "land gate 6·7 — fixture-malformed"
+        },
+        {
+          "order": 10,
+          "command": "recovery",
+          "args": [
+            "--self-test"
+          ],
+          "expectedExit": 0,
+          "mutatesState": false,
+          "note": "RECOVERY fail-closed 자체 시험"
+        },
+        {
+          "order": 11,
+          "command": "trust-origin",
+          "args": [
+            "--self-test"
+          ],
+          "expectedExit": 0,
+          "mutatesState": false,
+          "note": "부트스트랩 선행 검증 자체 시험"
+        },
+        {
+          "order": 12,
+          "command": "measure",
+          "args": [
+            "dev-pack"
+          ],
+          "expectedExit": 0,
+          "mutatesState": true,
+          "note": "land gate 11"
+        },
+        {
+          "order": 13,
+          "command": "context-pack-integrity",
+          "args": [],
+          "expectedExit": 0,
+          "mutatesState": false,
+          "note": "발사 전 참조 stale 차단"
+        },
+        {
+          "order": 14,
+          "command": "doc-integrity",
+          "args": [],
+          "expectedExit": 0,
+          "mutatesState": false,
+          "note": "생성 문서와 실체 일치"
+        }
+      ]
     }
   ]
 }

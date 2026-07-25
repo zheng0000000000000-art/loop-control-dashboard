@@ -35,6 +35,28 @@
 | 4 | `doc-integrity` | `` | 0 | False |  |
 | 5 | `hs-scan` | `` | 1 | False | exit 1은 실패가 아니라 승격 심사 후보가 있다는 뜻이다. 기대값이다. |
 
+### WP-STATE-INTEGRITY-LAND
+
+- triggeredBy: dotnet run --project server -- program-verify verify --gate WP-STATE-INTEGRITY-LAND (수동)
+- description: WP-STATE-INTEGRITY 통합 land gate 중 기계가 판정할 수 있는 항목. 12번(clean replay A / trust-origin 부트스트랩 B)은 포함하지 않는다 — 사람 결재이며, 이 게이트가 PASS여도 TRUSTED_BASELINE이 선언되는 것은 아니다.
+
+| 순서 | 명령 | 인자 | 기대 exit | 상태 변경 | 비고 |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `build-verify` | `` | 0 | False | land gate 1 |
+| 2 | `state-transition` | `--self-test` | 0 | False | land gate 2·4·5·8·9·10 — 19케이스(reconciliation-fail·candidate-toctou·FATAL 4분기·high-risk no-receipt 포함) |
+| 3 | `handoff-integrity` | `` | 0 | False | land gate 3 — at rest reconciliation |
+| 4 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-a/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-a/applier-log.jsonl` | 1 | False | land gate 6·7 — fixture-a |
+| 5 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-b/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-b/applier-log.jsonl` | 1 | False | land gate 6·7 — fixture-b |
+| 6 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-c/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-c/applier-log.jsonl` | 0 | False | land gate 6·7 — fixture-c |
+| 7 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-d/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-d/applier-log.jsonl` | 1 | False | land gate 6·7 — fixture-d |
+| 8 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-e/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-e/applier-log.jsonl` | 1 | False | land gate 6·7 — fixture-e |
+| 9 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-malformed/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-malformed/applier-log.jsonl` | 2 | False | land gate 6·7 — fixture-malformed |
+| 10 | `recovery` | `--self-test` | 0 | False | RECOVERY fail-closed 자체 시험 |
+| 11 | `trust-origin` | `--self-test` | 0 | False | 부트스트랩 선행 검증 자체 시험 |
+| 12 | `measure` | `dev-pack` | 0 | True | land gate 11 |
+| 13 | `context-pack-integrity` | `` | 0 | False | 발사 전 참조 stale 차단 |
+| 14 | `doc-integrity` | `` | 0 | False | 생성 문서와 실체 일치 |
+
 ## Manifest 밖 등록 하네스
 
 | 명령 | 상태 |
@@ -47,6 +69,7 @@
 | `path-guard-check` | unlisted |
 | `project-api-edge-check` | unlisted |
 | `scope-check` | unlisted |
+| `state-transition-callsite-check` | unlisted |
 | `template-sync-check` | unlisted |
 
 ## 실행
