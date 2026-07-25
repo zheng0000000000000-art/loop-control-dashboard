@@ -1,6 +1,6 @@
 # ADR-015 — 코덱스 헤드리스 진입점 부재 기간의 harness 조각 대행 (ADR-002 한시 예외)
 
-- 상태: **승인됨 (사람 choi, 2026-07-13)**
+- 상태: **종료됨 (2026-07-26). 승인은 사람 choi, 2026-07-13.** 종료 근거와 남은 문제는 §6.
 - 범위: **`WP-STATE-INTEGRITY`의 harness 조각(`05H`·`06H`)에 한정.** 통합 branch `wp/state-integrity` 안에서만.
 - 관련: `ADR-002`(영역 소유권) · `ADR-014`(1회 예외, `blockers[]`) · `docs/plan/wp/WP-STATE-INTEGRITY-land-gate.md`
 
@@ -39,3 +39,41 @@
 ## 5. 되돌리는 법
 
 코덱스가 검증 가능한 헤드리스 경로로 복귀하거나, `TRUSTED_BASELINE` 이후 `CodexHarnessLauncher`가 구현되어 발사 규약을 통과하면 이 ADR은 자동 종료된다. 예외를 연장하려면 **새 ADR과 새 사람 결재**가 필요하다. `ADR-002`의 영역 소유권은 **그대로 유효하다.**
+
+## 6. 종료 (2026-07-26)
+
+- 주체: **사람** (저장소 git user `Jaehyuk`). 원 승인자는 `choi`로 기록되어 있다 — **동일인 여부는 확인하지 않았다.** 프록시로 단정하지 않는다.
+- 집행: Claude Opus 5(조율 세션). 판정 근거는 아래 실측이다.
+
+### 6.1 종료 근거 (실측 2026-07-26)
+
+**①§1의 전제가 사실로서 소멸했다.** ADR의 핵심 전제는 "호출 가능한 헤드리스 진입점 부재"였다.
+
+- `codex --version` → `codex-cli 0.144.3`, **exit 0**. Store 앱 번들이 아니라 CLI가 PATH에 있다.
+- `codex --help`에 `exec  Run Codex non-interactively`, `review  Run a code review non-interactively`가 있다. §1이 "없다"고 적은 바로 그 경로다.
+- 별도 저장소(`team-loop-lite-ai-learning`)에서 `codex exec -C <dir> --sandbox read-only -`로 **실제 리뷰를 반복 실행**했다. 종료 코드가 정상적으로 돌아왔고(APPROVE/REJECT 판정 9회), 계약 위반 시 exit 1로 거절됐다. **발사·판정·exit code 기록이 실증됐다.**
+
+**②예외가 덮던 범위의 일이 이미 인도됐다.** 예외는 `05H`·`06H`에 한정이었다.
+
+- `server/Harness/HandoffIntegrityCli.cs`, `server/Harness/HandoffIntegrityChecker.cs` 존재 — `06C-1`이 선행으로 요구하던 내부 checker다.
+- `docs/handoff/RECOVERY.md` 존재 — `06H`의 산출물이다.
+- 즉 이 예외가 지금 추가로 **허가하고 있는 작업이 없다.** 종료해도 정지되는 일이 없다.
+
+### 6.2 종료가 해결하지 **않는** 것 (숨기지 않는다)
+
+**이 저장소는 여전히 코덱스를 발사할 수 없다.** 원인이 바뀌었을 뿐이다.
+
+- `DispatchExecutorCli`는 **프로세스를 하나도 띄우지 않는다** — §1이 적은 결정론 스텁 그대로다.
+- `OutboxManager`에서 `codex`는 **허용 라벨로만** 존재한다(`SubscriptionCalls` 계산 등). 실제 호출부가 없다.
+- `CodexHarnessLauncher`는 `docs/plan/wp/CODEX-HARNESS-LAUNCHER-minimal-contract.md`에 **계약만 있고 구현이 없다**(`server/**/*.cs`에 해당 타입 없음).
+
+따라서 §2의 종료 조건 두 갈래 중 **(a) "검증 가능한 헤드리스 경로로 복귀"는 충족**되었고, **(b) "`CodexHarnessLauncher` 구현이 발사 규약을 통과"는 미충족**이다. 이 ADR은 (a)로 종료한다.
+
+**남는 문제**: `ADR-002`의 코덱스 배타 영역(`server/Harness/**`)은 그대로 유효한데, 이 저장소에는 그 영역에 일을 보낼 발사 경로가 없다. **차단 요인이 "CLI 부재"에서 "런처 미구현"으로 이동했다.** 다음에 그 영역의 작업이 생기면 같은 막다름을 만난다.
+
+- 이 종료는 그 문제를 **해결하지 않는다.** 새 예외가 필요하면 §5대로 **새 ADR과 새 사람 결재**가 필요하다 — 이 문서를 근거로 삼을 수 없다.
+- 권하는 해소책은 예외 연장이 아니라 **`CodexHarnessLauncher` 구현**이다. CLI가 실재하므로 이제 구현 가능한 일이 되었다.
+
+### 6.3 되돌리는 법
+
+이 절(§6)을 지우고 머리말의 상태 줄을 `승인됨 (사람 choi, 2026-07-13)`으로 되돌리면 예외가 복원된다. 다만 §6.1의 실측이 뒤집히지 않는 한 복원 근거가 없다 — `codex --version`이 실패하게 되면 그때 재검토한다.
