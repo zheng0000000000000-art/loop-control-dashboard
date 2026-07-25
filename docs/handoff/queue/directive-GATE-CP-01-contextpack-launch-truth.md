@@ -3,9 +3,7 @@
   "diId": "GATE-CP-01",
   "requiredInputs": [
     { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
-    { "path": "docs/verification/_template.md", "sha256": "15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69" },
-    { "path": "server/Harness/ContextPackIntegrityCli.cs", "sha256": "ab8de3a12b9a6ac528ab2e897445359d119582b27d43f09fa3233504a0322ba4" },
-    { "path": "outputs/launch/run-executor.ps1", "sha256": "0850185b2621cbddd1a52f2801808d742aa81b2747ccf36c708a1651a4c77b58" }
+    { "path": "docs/verification/_template.md", "sha256": "15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69" }
   ],
   "readOrder": [
     "docs/context/RUNTIME-INDEX.md",
@@ -20,6 +18,14 @@
 
 이 지시서는 `docs/directives/_header.md`의 불변 제약을 따른다.
 **DI 유형: `harness`** → positive·negative·결정성·격리 테스트 전부 필수(v9 §0.1).
+
+> **정정 (2026-07-26, 조율 세션).** `requiredInputs`에 `server/Harness/ContextPackIntegrityCli.cs`와
+> `outputs/launch/run-executor.ps1`이 들어 있었다. **둘 다 이 지시서의 allowlist, 즉 쓰기 대상이다.**
+> `_header.md`가 명시한 규칙을 어긴다 — *"작업 중 바뀌는 파일에 해시를 걸면 게이트가 자기 작업에
+> 걸려 넘어진다."* 실제로 이 지시서를 수행하는 순간 두 pin이 stale이 되어, **이 지시서가 고치려는
+> 하네스가 이 지시서를 막는다.** §0이 지적한 "영구히 빨간 게이트"의 더 날카로운 사례다.
+> 두 항목을 `requiredInputs`에서 뺐다. **`readOrder`에는 그대로 둔다** — 고칠 파일은 읽어야 한다.
+> 읽기 참조와 쓰기 대상을 가르는 것이지 참조를 없애는 것이 아니다.
 
 ---
 
