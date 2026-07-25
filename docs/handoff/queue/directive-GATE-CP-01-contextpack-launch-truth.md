@@ -5,7 +5,7 @@
     { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
     { "path": "docs/verification/_template.md", "sha256": "15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69" },
     { "path": "server/Harness/ContextPackIntegrityCli.cs", "sha256": "ab8de3a12b9a6ac528ab2e897445359d119582b27d43f09fa3233504a0322ba4" },
-    { "path": "outputs/launch/run-executor.ps1", "sha256": "bd49b26c8b58bfeda2ea041d9533950f76728f484ef85aaa06e5d0a3ec741e1f" }
+    { "path": "outputs/launch/run-executor.ps1", "sha256": "0850185b2621cbddd1a52f2801808d742aa81b2747ccf36c708a1651a4c77b58" }
   ],
   "readOrder": [
     "docs/context/RUNTIME-INDEX.md",

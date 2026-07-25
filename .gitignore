@@ -8,6 +8,18 @@ server-test.err.log
 dashboard/data/*/history/
 .claude/
 outbox/
-outputs/
 
 server/EXECUTOR_REPORT.md
+
+# outputs/ 는 생성 산출물이라 무시한다(da240dd). 다만 아래 셋은 생성물이 아니라
+# 규칙과 게이트가 이름으로 요구하는 실체다 — 같이 빠져서 규칙이 존재하지 않는 파일을
+# 가리키고 있었다(2026-07-26 복원).
+#   review-log/reviewer-log: CLAUDE.md가 지정한 append-only 기록(ADR-003 단일 기록자)
+#   run-executor.ps1: GATE-MANIFEST의 POST-EXECUTOR 트리거이자 GATE-CP-01의 requiredInput
+# 부모 디렉터리를 통째로 제외하면 하위를 되살릴 수 없으므로 내용만 제외하고 되짚는다.
+outputs/*
+!outputs/review-log.md
+!outputs/reviewer-log.md
+!outputs/launch/
+outputs/launch/*
+!outputs/launch/run-executor.ps1
