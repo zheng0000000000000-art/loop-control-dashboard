@@ -4,7 +4,7 @@
   "requiredInputs": [
     { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
     { "path": "docs/verification/_template.md", "sha256": "15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69" },
-    { "path": "server/Harness/HarnessRegistry.cs", "sha256": "568b8a790f32e5eaac99750fa1018e9f62ee14f42598de40297d3761c67e253a" }
+    { "path": "server/Harness/HarnessRegistry.cs", "sha256": "0955e215f8e131d05dcfb108772ed69a44e3e3240a0f68b4c197b5b9ea476383" }
   ],
   "readOrder": [
     "docs/context/RUNTIME-INDEX.md",
