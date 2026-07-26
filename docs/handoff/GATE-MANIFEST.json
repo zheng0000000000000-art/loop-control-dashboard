@@ -337,7 +337,7 @@
           "expectedExit": 1,
           "mutatesState": false,
           "order": 20,
-          "note": "반증 witness — outbox 근거 없는 조율자 직접 수정 커밋을 위반으로 보고하는지 확인한다. 실측 2026-07-27: exit 1, violations 2(nested-counter*.json). 짧은 sha가 아니라 전체 sha다 — 이력이 자라면 짧은 것은 모호해진다."
+          "note": "반증 witness — outbox 근거 없는 조율자 직접 수정 커밋을 위반으로 보고하는지 확인한다. 실측 2026-07-27(TERR-02 반입 후): exit 1, violations 3 — nested-counter 2건에 server/Harness/GateWitnessCheckCli.cs가 더해졌다. TERR-01 시절에는 2였다. 무관한 예전 발사의 패치가 면제 근거였던 것을 TERR-02가 걷어냈다. 짧은 sha가 아니라 전체 sha다 — 이력이 자라면 짧은 것은 모호해진다."
         },
         {
           "command": "territory-check",
@@ -351,6 +351,19 @@
           "mutatesState": false,
           "order": 21,
           "note": "반증 witness — 저장소에 없는 sha가 면제 목록에 남아 있으면 실패하는지 확인한다. CALLSITE-HISTORICAL과 같은 규칙이다. 실측 2026-07-27: exit 1, staleExceptions 1."
+        },
+        {
+          "command": "territory-check",
+          "args": [
+            "--dispositions",
+            "docs/qa/gate-witness/territory-non-imported",
+            "--commit",
+            "7feeb44d22039f3d92f934ca2dc6ba69bc0dd8f5"
+          ],
+          "expectedExit": 1,
+          "mutatesState": false,
+          "order": 22,
+          "note": "반증 witness — imported가 아닌 처분(rejected)의 패치가 영토 면제 근거로 쓰이지 않는지 확인한다(TERR-02). 실측 2026-07-27: exit 1, coveredByOutbox 0, violations 3. 짝 시험으로 갈랐다 — 같은 픽스처의 state만 imported로 뒤집으면 coveredByOutbox가 1이 되고 violations가 2가 된다. 즉 디렉터리를 안 읽는 것이 아니라 rejected라서 제외하는 것이다. 그 imported 쌍 픽스처는 docs/qa/가 코덱스 영토라 조율자가 만들 수 없어 등재하지 못했다 — 수동 확인으로 남아 있다(docs/verification/terr-02.md)."
         }
       ],
       "unregisteredChecks": [

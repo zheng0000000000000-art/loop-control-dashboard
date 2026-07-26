@@ -1,7 +1,9 @@
 {
   "launchId": "LAUNCH-TERR-02",
-  "state": "pending",
+  "state": "imported",
   "decidedAt": "2026-07-26",
-  "actor": "codex-launch (자동) — 처분은 사람이 정한다",
-  "note": "발사만 됐고 반입·폐기는 정해지지 않았다. launch-disposition이 위반으로 센다."
+  "actor": "조율 세션(Claude Opus 5) · 사람 지시로 반입",
+  "note": "사용자 지시로 반입. 조율자가 패치를 격리 클론에 붙여 직접 재실행했다. 핵심 반증은 exit code로 보이지 않아 수치로 판정했다 — --commit 7feeb44의 violations가 2에서 3이 되고 coveredByOutbox가 1에서 0이 됐다. rejected 처분 픽스처는 state 한 필드만 imported로 뒤집어 짝을 지었고, 읽기는 하되 rejected라서 제외하는 것이 맞았다. 게이트 증거 보고는 이 처분 기록 커밋에서 잰 것이며 반입 시점 판정이 아니다.",
+  "importCommit": "49a833efcf513d1f48d137d31db9891adabb84c7",
+  "gateReport": "docs/handoff/gate-evidence/LAUNCH-TERR-02.gate.json"
 }
