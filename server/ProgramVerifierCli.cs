@@ -1,3 +1,10 @@
+// ⚠ 게이트 실행은 server/Harness/DiCompletionCheckCli.cs와 겹친다(ADR-016). 이 파일이 먼저가
+// 아니다 — 그쪽이 먼저 있었고 조율 세션이 재발명 검색을 건너뛰어 중복이 생겼다. 지금 이쪽을
+// 쓰는 이유는 하나다: 그쪽은 `dotnet run --no-build`로 낡은 바이너리를 잰다(DiCompletionCheckCli.cs:155,
+// CODEX-GATE-04가 고칠 결함). 실측 2026-07-26 — 같은 게이트에서 그쪽 FAIL 3건, 이쪽 PASS 14/14,
+// 세 명령을 직접 돌리면 exit 0. CODEX-GATE-04가 착륙하면 게이트 실행은 그쪽에 넘기고
+// 여기에는 baselineCommit·worktreeCleanAtStart 기록과 transition request 생성만 남긴다.
+//
 // Program Verifier — 실행자가 낸 증거를 믿지 않고 게이트 검사를 직접 다시 돌려 판정한다.
 // CODEX-HARNESS-LAUNCHER-minimal-contract §2-6의 결속 상대다. Launcher는 transport와 기록만 하고,
 // 판정은 여기서 한다. 통과해도 canonical state는 건드리지 않는다 — transition request 후보만 낸다.
