@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1",
+  "actorRole": "HARNESS_EXECUTOR",
+  "transport": "codex-cli",
+  "launchId": "LAUNCH-NET8-01",
+  "diId": "NET8-01",
+  "baselineCommit": "fb19ea43096039edd3c9442f08d3f9f352d2cbd3",
+  "directivePath": "docs/directives/NET8-01-harness-json-options.md",
+  "directiveSha256": "52e9bbb5aaee7465f9946ca4baaaf0e087b6388563a6c8a003541c4489a9300b",
+  "contextPackPath": "docs/directives/NET8-01-harness-json-options.md",
+  "contextPackSha256": "52e9bbb5aaee7465f9946ca4baaaf0e087b6388563a6c8a003541c4489a9300b",
+  "allowedPaths": [
+    "server/Harness/**"
+  ],
+  "forbiddenActions": [
+    "commit",
+    "push",
+    "state-transition",
+    "pass",
+    "product-code-edit"
+  ],
+  "credentialRef": "none",
+  "timeoutSeconds": 1800,
+  "attempt": 1,
+  "maxAttempts": 1,
+  "workingCopyMode": "isolated-clean"
+}

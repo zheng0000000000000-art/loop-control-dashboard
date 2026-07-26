@@ -1210,3 +1210,25 @@ STATE-01   docs/context/RUNTIME-INDEX.md           missing
 `STATE-01`은 참조 파일 4개가 **없는 경로**라 재계산이 아니라 죽은 지시서로 보인다 —
 **하지만 그건 내 추측이고, 그 지시서를 열어보지는 않았다.** 정리되면
 `context-pack-integrity docs/directives`를 POST-COMMIT에 등재한다.
+
+## 2026-07-27 — NET8-01 반려, R1 대기
+
+**반려 사유: 패치가 컴파일되지 않았다.** `using System.Text.Json;`을 옵션 선언과 함께 지웠는데
+`LaunchDispositionCli.cs`·`LaunchCheckCli.cs`가 `JsonException`·`JsonSerializer`를 여전히 쓴다.
+로컬·리눅스 .NET 8 컨테이너 **양쪽에서 BUILD FAIL 7건**을 실측했다.
+
+**방향은 맞았다** — 19개 파일을 `HarnessJson.Options`로 정확히 갈아탔고 `scopeViolations`도 없다.
+**틀린 것은 마감이다.**
+
+**조율자 잘못 둘, R1에서 고쳤다.**
+1. `allowedPaths`를 `server/Harness/**`로만 열어 **작업 보고를 쓸 자리를 안 줬다.**
+   그래서 자진 신고도 게이트 결과도 없었다. R1은 `docs/qa/gate-witness/**`를 연다.
+2. TERR-01·TERR-02에서 코덱스가 **`build-verify`가 `NU1301`로 못 돈다고 정직하게 보고**했는데
+   내가 "환경 탓"으로 넘겼다. **그 결과 컴파일조차 안 되는 산출물이 나왔다.**
+   R1은 대체 빌드 수단 3가지를 주고 **"어느 것도 안 되면 산출물을 내지 마라"**를 못 박았다.
+
+**내 검증 절차 실수도 적어둔다**: 처음엔 `git clone`으로 컨테이너에 넘겨서 **커밋 안 된 패치가
+안 따라갔고**, 옛 코드 결과를 새 코드 결과로 볼 뻔했다. 클론에 커밋한 뒤 다시 재서 잡았다.
+R1 지시서에 그 함정을 경고로 넣었다.
+
+**발사 대기**: `docs/directives/NET8-01-R1-harness-json-options.md`

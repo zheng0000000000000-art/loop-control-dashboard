@@ -1,0 +1,8 @@
+{
+  "launchId": "LAUNCH-NET8-01",
+  "state": "rejected",
+  "decidedAt": "2026-07-26",
+  "actor": "조율 세션(Claude Opus 5) · 사람 지시로 반려",
+  "note": "패치가 컴파일되지 않는다. using System.Text.Json을 옵션 선언과 함께 지웠는데 LaunchDispositionCli.cs와 LaunchCheckCli.cs가 JsonException·JsonSerializer를 여전히 쓴다. 로컬과 리눅스 .NET 8 컨테이너 양쪽에서 BUILD FAIL 7건을 실측했다. 방향은 맞았다 — 19개 파일을 HarnessJson.Options로 정확히 갈아탔고 scopeViolations도 없다. 다만 조율자가 allowedPaths를 server/Harness/**로만 열어 작업 보고를 쓸 자리를 주지 않았고, 그래서 자진 신고도 게이트 결과도 없다 — 그것은 조율자 잘못이다. NET8-01-R1로 다시 쏜다.",
+  "reason": "build-failed: using System.Text.Json 제거로 LaunchDispositionCli.cs·LaunchCheckCli.cs가 컴파일되지 않는다(로컬·리눅스 .NET 8 양쪽 7건 실측)."
+}

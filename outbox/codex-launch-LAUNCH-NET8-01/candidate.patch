@@ -1,0 +1,721 @@
+diff --git a/server/Harness/BuildVerifyCli.cs b/server/Harness/BuildVerifyCli.cs
+index 203c11d..0590786 100644
+--- a/server/Harness/BuildVerifyCli.cs
++++ b/server/Harness/BuildVerifyCli.cs
+@@ -1,18 +1,10 @@
+ // dotnet build 종료 코드를 정본으로 삼고 임시 경로에서 실행하는 빌드 검증 하네스.
+ using System.Diagnostics;
+ using System.Text;
+-using System.Text.Encodings.Web;
+-using System.Text.Json;
+ using System.Text.Json.Nodes;
+ 
+ internal static class BuildVerifyCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // build-verify 진입점. exit 0=빌드 성공, 1=빌드 실패, 2=하네스 오류.
+     internal static int Run(string[] args)
+     {
+@@ -83,7 +75,7 @@ internal static class BuildVerifyCli
+                 ["note"] = "PASS/FAIL is decided only by dotnet build exit code. Text is diagnostic context.",
+             };
+ 
+-            Console.WriteLine(report.ToJsonString(JsonOptions));
++            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
+             return result.ExitCode == 0 ? 0 : 1;
+         }
+         catch (Exception ex)
+diff --git a/server/Harness/CallIntegrityCheckCli.cs b/server/Harness/CallIntegrityCheckCli.cs
+index a2dd330..0721105 100644
+--- a/server/Harness/CallIntegrityCheckCli.cs
++++ b/server/Harness/CallIntegrityCheckCli.cs
+@@ -1,18 +1,10 @@
+ // 리팩토링으로 이동한 함수의 정의 위치와 호출부 정합성을 확인하는 하네스 CLI.
+ // DI-R-01~04 수작업 QA를 기본 룰로 고정하고, 필요하면 인자로 단일 심볼도 검사한다.
+-using System.Text.Encodings.Web;
+-using System.Text.Json;
+ using System.Text.Json.Nodes;
+ using System.Text.RegularExpressions;
+ 
+ internal static class CallIntegrityCheckCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // call-integrity-check 진입점. exit 0=정의·호출 정합, 1=불일치, 2=사용법 오류.
+     internal static int Run(string[] args)
+     {
+@@ -49,7 +41,7 @@ internal static class CallIntegrityCheckCli
+                 ["rules"] = results,
+                 ["note"] = "Checks moved-method definitions, qualified call sites, and stale unqualified calls in the old owner file.",
+             };
+-            Console.WriteLine(report.ToJsonString(JsonOptions));
++            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
+             return failures == 0 ? 0 : 1;
+         }
+         catch (Exception ex)
+diff --git a/server/Harness/ClaimCheckCli.cs b/server/Harness/ClaimCheckCli.cs
+index 8cb4417..223fb99 100644
+--- a/server/Harness/ClaimCheckCli.cs
++++ b/server/Harness/ClaimCheckCli.cs
+@@ -1,18 +1,10 @@
+ // 실행자의 자기보고(문서의 "완료" 주장)를 실체(코드·커밋)와 대조하는 하네스 CLI.
+ // FIX-01은 문서가 완료를 주장하는데 코드에 심볼이 없는 상태로 3회 반복됐다. 그 수작업 대조를 코드로 고정한다.
+-using System.Text.Encodings.Web;
+-using System.Text.Json;
+ using System.Text.Json.Nodes;
+ using System.Text.RegularExpressions;
+ 
+ internal static class ClaimCheckCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // claim-check 진입점. exit 0=주장과 실체 일치, 1=불일치 존재, 2=오류.
+     internal static int Run(string[] args)
+     {
+@@ -75,7 +67,7 @@ internal static class ClaimCheckCli
+                 ["claims"] = claims,
+                 ["note"] = "주장과 실체의 대조만 한다. 문서 정정은 실행자·조율자·사람의 몫이다.",
+             };
+-            Console.WriteLine(report.ToJsonString(JsonOptions));
++            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
+             return mismatch == 0 ? 0 : 1;
+         }
+         catch (Exception ex)
+diff --git a/server/Harness/ContextPackIntegrityCli.cs b/server/Harness/ContextPackIntegrityCli.cs
+index 45e108b..0e5e57f 100644
+--- a/server/Harness/ContextPackIntegrityCli.cs
++++ b/server/Harness/ContextPackIntegrityCli.cs
+@@ -1,19 +1,12 @@
+ // 지시서 Context Pack의 참조 파일 존재와 해시 일치를 검사하는 하네스 CLI.
+ // 해시 갱신이나 스탬핑 없이 선언된 입력만 읽어 검증한다.
+ using System.Security.Cryptography;
+-using System.Text.Encodings.Web;
+ using System.Text.Json;
+ using System.Text.Json.Nodes;
+ using System.Text.RegularExpressions;
+ 
+ internal static class ContextPackIntegrityCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // context-pack-integrity 진입점이다. exit 0=정상 또는 skipped만 있음, 1=missing/stale, 2=사용법 또는 하네스 오류.
+     internal static int Run(string[] args)
+     {
+@@ -71,7 +64,7 @@ internal static class ContextPackIntegrityCli
+                 ["note"] = "Read-only check. Context Pack hashes are supplied by directive authors, not by this harness.",
+             };
+ 
+-            Console.WriteLine(report.ToJsonString(JsonOptions));
++            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
+             return failureCount == 0 ? 0 : 1;
+         }
+         catch (Exception ex)
+@@ -116,7 +109,7 @@ internal static class ContextPackIntegrityCli
+             ["harness"] = "context-pack-integrity",
+             ["mode"] = "emit-hashes",
+             ["directives"] = reports,
+-        }.ToJsonString(JsonOptions));
++        }.ToJsonString(HarnessJson.Options));
+         return reports.OfType<JsonObject>()
+             .SelectMany(report => (report["requiredInputs"] as JsonArray)?.OfType<JsonObject>() ?? [])
+             .Any(item => item["exists"]?.GetValue<bool>() != true) ? 1 : 0;
+diff --git a/server/Harness/DiCompletionCheckCli.cs b/server/Harness/DiCompletionCheckCli.cs
+index 5e57596..8a4278f 100644
+--- a/server/Harness/DiCompletionCheckCli.cs
++++ b/server/Harness/DiCompletionCheckCli.cs
+@@ -2,19 +2,12 @@
+ // 결과 증거는 outputs/gates 아래 JSON으로 남겨 다음 검수자가 재확인할 수 있게 한다.
+ using System.Diagnostics;
+ using System.Text;
+-using System.Text.Encodings.Web;
+ using System.Text.Json;
+ using System.Text.Json.Nodes;
+ using System.Text.RegularExpressions;
+ 
+ internal static class DiCompletionCheckCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // di-completion-check 진입점이다. exit 0=모든 기대 exit 일치, 1=불일치 또는 fail-closed.
+     internal static int Run(string[] args)
+     {
+@@ -82,7 +75,7 @@ internal static class DiCompletionCheckCli
+             report["note"] = "Pass/fail is decided by expectedExit versus actual exit code. stdout/stderr are diagnostic evidence.";
+ 
+             WriteEvidence(root, taskId, report);
+-            Console.WriteLine(report.ToJsonString(JsonOptions));
++            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
+             return failures.Count == 0 ? 0 : 1;
+         }
+         catch (JsonException ex)
+@@ -214,7 +207,7 @@ internal static class DiCompletionCheckCli
+             ["generated"] = DisplayPath(root, outputPath),
+             ["manifest"] = DisplayPath(root, manifestPath),
+             ["unlistedCount"] = unlisted.Count,
+-        }.ToJsonString(JsonOptions));
++        }.ToJsonString(HarnessJson.Options));
+         return 0;
+     }
+ 
+@@ -302,7 +295,7 @@ internal static class DiCompletionCheckCli
+         report["failureCount"] = 1;
+         report["failures"] = new JsonArray(Failure("", code, message));
+         WriteEvidence(root, taskId, report);
+-        Console.Error.WriteLine(report.ToJsonString(JsonOptions));
++        Console.Error.WriteLine(report.ToJsonString(HarnessJson.Options));
+         return 1;
+     }
+ 
+@@ -329,7 +322,7 @@ internal static class DiCompletionCheckCli
+         report["newestSource"] = freshness.NewestSource;
+         report["newestSourceWrittenAt"] = freshness.NewestSourceWrittenAt;
+         WriteEvidence(root, taskId, report);
+-        Console.Error.WriteLine(report.ToJsonString(JsonOptions));
++        Console.Error.WriteLine(report.ToJsonString(HarnessJson.Options));
+         return 2;
+     }
+ 
+@@ -340,7 +333,7 @@ internal static class DiCompletionCheckCli
+         Directory.CreateDirectory(dir);
+         var path = Path.Combine(dir, $"{SanitizeFileName(taskId)}.gate.json");
+         report["evidencePath"] = DisplayPath(root, path);
+-        File.WriteAllText(path, report.ToJsonString(JsonOptions), new UTF8Encoding(false));
++        File.WriteAllText(path, report.ToJsonString(HarnessJson.Options), new UTF8Encoding(false));
+     }
+ 
+     // 문서화된 CLI 인자만 값 규칙에 맞춰 해석한다.
+@@ -546,7 +539,7 @@ internal static class DiCompletionCheckCli
+                 ["critical"] = HarnessRegistry.RegisteredNames.Contains(command, StringComparer.OrdinalIgnoreCase)
+                     || command is "state-transition" or "projection" or "measure",
+             }).ToArray()),
+-        }.ToJsonString(JsonOptions));
++        }.ToJsonString(HarnessJson.Options));
+         return 0;
+     }
+ 
+diff --git a/server/Harness/DocIntegrityCli.cs b/server/Harness/DocIntegrityCli.cs
+index 4ac89f9..b646c1e 100644
+--- a/server/Harness/DocIntegrityCli.cs
++++ b/server/Harness/DocIntegrityCli.cs
+@@ -1,18 +1,11 @@
+ // 핵심 상태·큐 문서가 비원자적 쓰기로 조용히 잘렸는지 검사하는 하네스 CLI.
+ // STATUS.md·SONNET-QUEUE.md·CliRouter.cs가 각각 끝이 잘린 채 발견됐다(FAIL-2026-011).
+ // .cs는 빌드가 잡지만 .md/.json은 잡아주는 것이 없어 WORKSTATE.json이 잘리면 상태 원본이 조용히 소실된다.
+-using System.Text.Encodings.Web;
+ using System.Text.Json;
+ using System.Text.Json.Nodes;
+ 
+ internal static class DocIntegrityCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // 잘리면 피해가 큰 핵심 파일들.
+     private static readonly string[] CriticalJson =
+     {
+@@ -91,7 +84,7 @@ internal static class DocIntegrityCli
+                 ["files"] = results,
+                 ["note"] = "비원자적 쓰기로 조용히 잘린 파일을 검출한다. 복구는 사람·조율자의 몫.",
+             };
+-            Console.WriteLine(report.ToJsonString(JsonOptions));
++            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
+             return broken == 0 ? 0 : 1;
+         }
+         catch (Exception ex)
+diff --git a/server/Harness/E2EUsageCli.cs b/server/Harness/E2EUsageCli.cs
+index 0ad569f..9387486 100644
+--- a/server/Harness/E2EUsageCli.cs
++++ b/server/Harness/E2EUsageCli.cs
+@@ -1,16 +1,8 @@
+ // E2E 실사용 시나리오 하네스 — 인프로세스, 상태 변경 없음.
+-using System.Text.Encodings.Web;
+-using System.Text.Json;
+ using System.Text.Json.Nodes;
+ 
+ internal static class E2EUsageCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // e2e-usage CLI 진입점. 6개 시나리오를 인프로세스로 실행하고 JSON 결과를 출력한다. failCount>0이면 exit code 2.
+     internal static int Run(string[] args)
+     {
+@@ -42,7 +34,7 @@ internal static class E2EUsageCli
+             {
+                 ["scenarios"] = scenarios,
+                 ["failCount"] = failCount,
+-            }.ToJsonString(JsonOptions));
++            }.ToJsonString(HarnessJson.Options));
+ 
+             return failCount > 0 ? 2 : 0;
+         }
+@@ -53,7 +45,7 @@ internal static class E2EUsageCli
+                 ["error"] = error.Message,
+                 ["scenarios"] = new JsonArray(),
+                 ["failCount"] = -1,
+-            }.ToJsonString(JsonOptions));
++            }.ToJsonString(HarnessJson.Options));
+             return 2;
+         }
+     }
+diff --git a/server/Harness/GateCleanCli.cs b/server/Harness/GateCleanCli.cs
+index 7403117..00aeaa8 100644
+--- a/server/Harness/GateCleanCli.cs
++++ b/server/Harness/GateCleanCli.cs
+@@ -2,18 +2,10 @@
+ // raw git status는 줄바꿈 같은 표현 차이만으로 dirty가 되어 발사 게이트를 영구 잠근다(FAIL-2026-010).
+ using System.Diagnostics;
+ using System.Text;
+-using System.Text.Encodings.Web;
+-using System.Text.Json;
+ using System.Text.Json.Nodes;
+ 
+ internal static class GateCleanCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // gate-clean 진입점. exit 0=통과(실내용 변경 0), 1=실내용 변경 존재, 2=오류.
+     internal static int Run(string[] args)
+     {
+@@ -112,7 +104,7 @@ internal static class GateCleanCli
+                 ? $"표현만 다른 파일 {representationOnly}건 — 어떤 도구가 파일을 되쓰고 있다(FAIL-2026-010)."
+                 : null,
+         };
+-        Console.WriteLine(report.ToJsonString(JsonOptions));
++        Console.WriteLine(report.ToJsonString(HarnessJson.Options));
+         return contentDirty == 0 ? 0 : 1;
+     }
+ 
+@@ -131,7 +123,7 @@ internal static class GateCleanCli
+             ["statusFixture"] = Path.GetRelativePath(repoRoot, full).Replace('\\', '/'),
+             ["statusLength"] = porcelain.Length,
+             ["gate"] = dirty ? "DIRTY" : "CLEAN",
+-        }.ToJsonString(JsonOptions));
++        }.ToJsonString(HarnessJson.Options));
+         return dirty ? 1 : 0;
+     }
+ 
+@@ -204,7 +196,7 @@ internal static class GateCleanCli
+             ["caseCount"] = cases.Length,
+             ["mismatchCount"] = mismatchCount,
+             ["cases"] = results,
+-        }.ToJsonString(JsonOptions));
++        }.ToJsonString(HarnessJson.Options));
+         return mismatchCount == 0 ? 0 : 1;
+     }
+ }
+diff --git a/server/Harness/GateWitnessCheckCli.cs b/server/Harness/GateWitnessCheckCli.cs
+index 6fd2ffd..fbb4c41 100644
+--- a/server/Harness/GateWitnessCheckCli.cs
++++ b/server/Harness/GateWitnessCheckCli.cs
+@@ -1,17 +1,10 @@
+ // 게이트 매니페스트의 성공 검사마다 실패 반증 증거가 있는지 집계한다.
+ // 기본 모드는 관찰만 하며, 명시적으로 요구한 게이트만 누락을 차단한다.
+-using System.Text.Encodings.Web;
+ using System.Text.Json;
+ using System.Text.Json.Nodes;
+ 
+ internal static class GateWitnessCheckCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // gate-witness-check 진입점. exit 0=관찰 완료, 1=opt-in 게이트 누락, 2=입력 또는 실행 오류.
+     internal static int Run(string[] args)
+     {
+@@ -44,7 +37,7 @@ internal static class GateWitnessCheckCli
+                 ["harness"] = "gate-witness-check",
+                 ["gates"] = reports,
+                 ["totalUnwitnessed"] = totalUnwitnessed,
+-            }.ToJsonString(JsonOptions));
++            }.ToJsonString(HarnessJson.Options));
+             return blocking ? 1 : 0;
+         }
+         catch (Exception ex)
+@@ -82,7 +75,7 @@ internal static class GateWitnessCheckCli
+         {
+             ["harness"] = "gate-witness-count-output-fixture",
+             ["internalNegativeCases"] = count,
+-        }.ToJsonString(JsonOptions));
++        }.ToJsonString(HarnessJson.Options));
+         return 0;
+     }
+ 
+diff --git a/server/Harness/HandoffIntegrityCli.cs b/server/Harness/HandoffIntegrityCli.cs
+index d086763..1fb1f1d 100644
+--- a/server/Harness/HandoffIntegrityCli.cs
++++ b/server/Harness/HandoffIntegrityCli.cs
+@@ -1,18 +1,11 @@
+ // WORKSTATE handoff integrity harness.
+ // Checks that the current handoff record is backed by real files, hashes, and completion artifacts.
+ // --workstate + --applier-log 둘 다 지정 시 fixture 격리 모드: reconciliation+malformed+blockers만 실행.
+-using System.Text.Encodings.Web;
+ using System.Text.Json;
+ using System.Text.Json.Nodes;
+ 
+ internal static class HandoffIntegrityCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     private static readonly HashSet<string> DoneStatuses = new(StringComparer.OrdinalIgnoreCase)
+     {
+         "done", "completed", "complete", "pass", "passed",
+@@ -101,7 +94,7 @@ internal static class HandoffIntegrityCli
+                 ["fixtureMode"] = fixtureMode,
+                 ["verdict"] = "HARNESS_ERROR",
+                 ["failures"] = failures, ["warnings"] = warnings,
+-            }.ToJsonString(JsonOptions));
++            }.ToJsonString(HarnessJson.Options));
+             return 2;
+         }
+ 
+@@ -124,7 +117,7 @@ internal static class HandoffIntegrityCli
+             ["note"] = fixtureMode
+                 ? "Fixture isolation mode: reconciliation+blockers only."
+                 : "Full mode: changedFiles hash, completion, queue, reconciliation.",
+-        }.ToJsonString(JsonOptions));
++        }.ToJsonString(HarnessJson.Options));
+         return failures.Count == 0 ? 0 : 1;
+     }
+ 
+@@ -402,7 +395,7 @@ internal static class HandoffIntegrityCli
+                 ["selfTest"] = "handoff-integrity-pending",
+                 ["verdict"] = "PASS",
+                 ["casesRun"] = cases.Length,
+-            }.ToJsonString(JsonOptions));
++            }.ToJsonString(HarnessJson.Options));
+             return 0;
+         }
+ 
+@@ -412,7 +405,7 @@ internal static class HandoffIntegrityCli
+             ["verdict"] = "FAIL",
+             ["mismatchCount"] = mismatches.Count,
+             ["mismatches"] = mismatches,
+-        }.ToJsonString(JsonOptions));
++        }.ToJsonString(HarnessJson.Options));
+         return 1;
+     }
+ 
+diff --git a/server/Harness/HarnessJson.cs b/server/Harness/HarnessJson.cs
+new file mode 100644
+index 0000000..2ff9613
+--- /dev/null
++++ b/server/Harness/HarnessJson.cs
+@@ -0,0 +1,14 @@
++// 하네스 JSON 출력 형식과 .NET 8 형식 메타데이터 해석기를 한 곳에서 관리한다.
++using System.Text.Encodings.Web;
++using System.Text.Json;
++using System.Text.Json.Serialization.Metadata;
++
++internal static class HarnessJson
++{
++    internal static readonly JsonSerializerOptions Options = new()
++    {
++        WriteIndented = true,
++        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
++        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
++    };
++}
+diff --git a/server/Harness/HsScanCli.cs b/server/Harness/HsScanCli.cs
+index 365ea16..5309cd0 100644
+--- a/server/Harness/HsScanCli.cs
++++ b/server/Harness/HsScanCli.cs
+@@ -1,19 +1,11 @@
+ // 지식 승격 심사(HS-GATE)의 트리거를 기계가 탐지하는 하네스 CLI.
+ // 점수화(판단)는 하지 않는다 — 그건 skills/common/hs-gate.md(LLM)의 몫이다.
+ using System.Globalization;
+-using System.Text.Encodings.Web;
+-using System.Text.Json;
+ using System.Text.Json.Nodes;
+ using System.Text.RegularExpressions;
+ 
+ internal static class HsScanCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // 실패 '메커니즘'이 아니라 분류 꼬리표라 반복해도 승격 신호가 아니다(노이즈 차단).
+     private static readonly HashSet<string> MetaClasses = new(StringComparer.OrdinalIgnoreCase)
+     {
+@@ -86,7 +78,7 @@ internal static class HsScanCli
+                     ? "HS-GATE 수행 의무 — skills/common/hs-gate.md 절차로 점수화 후 HS-CANDIDATES.md에 기록"
+                     : "트리거 없음 — 이번 회차 심사 불요",
+             };
+-            Console.WriteLine(report.ToJsonString(JsonOptions));
++            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
+             return triggered ? 1 : 0;
+         }
+         catch (Exception ex)
+diff --git a/server/Harness/LaunchCheckCli.cs b/server/Harness/LaunchCheckCli.cs
+index 060fa18..e8fb002 100644
+--- a/server/Harness/LaunchCheckCli.cs
++++ b/server/Harness/LaunchCheckCli.cs
+@@ -1,18 +1,10 @@
+ // 발사 프롬프트 전송 증거의 해시와 replay 이벤트 수를 검사하는 하네스 CLI.
+ // 모델 출력이 아니라 CLI가 되돌린 user 메시지 바이트의 무결성만 판정한다.
+-using System.Text.Encodings.Web;
+-using System.Text.Json;
+ using System.Text.Json.Nodes;
+ using System.Text.RegularExpressions;
+ 
+ internal static class LaunchCheckCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     private static readonly Regex Sha256Pattern = new("^[0-9a-fA-F]{64}$", RegexOptions.Compiled);
+ 
+     // launch-check 진입점이다. exit 0=전송 증거 유효, 1=증거 누락 또는 불일치.
+@@ -352,7 +344,7 @@ internal static class LaunchCheckCli
+             ["note"] = "This verdict proves only byte-level transport integrity between payload and CLI replay.",
+         };
+ 
+-        Console.WriteLine(report.ToJsonString(JsonOptions));
++        Console.WriteLine(report.ToJsonString(HarnessJson.Options));
+         return valid ? 0 : 1;
+     }
+ 
+diff --git a/server/Harness/LaunchDispositionCli.cs b/server/Harness/LaunchDispositionCli.cs
+index 7706a5a..a2101e7 100644
+--- a/server/Harness/LaunchDispositionCli.cs
++++ b/server/Harness/LaunchDispositionCli.cs
+@@ -1,17 +1,9 @@
+ // 실행자 산출물 디렉터리의 처분 기록과 반입 게이트 연결을 검증한다.
+ // 기록 부재와 기록·실체 불일치를 디렉터리별 위반으로 집계한다.
+-using System.Text.Encodings.Web;
+-using System.Text.Json;
+ using System.Text.Json.Nodes;
+ 
+ internal static class LaunchDispositionCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // launch-disposition 진입점. exit 0=위반 없음, 1=위반 있음, 2=입력 또는 실행 오류.
+     internal static int Run(string[] args)
+     {
+@@ -40,7 +32,7 @@ internal static class LaunchDispositionCli
+                 ["launchCount"] = reports.Count,
+                 ["violations"] = violations,
+                 ["launches"] = reports,
+-            }.ToJsonString(JsonOptions));
++            }.ToJsonString(HarnessJson.Options));
+             return violations == 0 ? 0 : 1;
+         }
+         catch (Exception ex)
+diff --git a/server/Harness/PathGuardCheckCli.cs b/server/Harness/PathGuardCheckCli.cs
+index 03bd5f8..7b5bce8 100644
+--- a/server/Harness/PathGuardCheckCli.cs
++++ b/server/Harness/PathGuardCheckCli.cs
+@@ -1,17 +1,9 @@
+ // 경로 root 검사가 separator-bounded인지 확인하는 하네스 CLI.
+ // sibling-prefix escape 회귀(FAIL-2026-006/007)를 내장 케이스와 직접 입력으로 검증한다.
+-using System.Text.Encodings.Web;
+-using System.Text.Json;
+ using System.Text.Json.Nodes;
+ 
+ internal static class PathGuardCheckCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // path-guard-check 진입점. exit 0=모든 케이스 기대값 일치, 1=경계 실패, 2=사용법 오류.
+     internal static int Run(string[] args)
+     {
+@@ -50,7 +42,7 @@ internal static class PathGuardCheckCli
+                 ["cases"] = results,
+                 ["note"] = "Root containment must be full path equality or root plus directory separator, not raw prefix.",
+             };
+-            Console.WriteLine(report.ToJsonString(JsonOptions));
++            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
+             return failures == 0 ? 0 : 1;
+         }
+         catch (Exception ex)
+diff --git a/server/Harness/ProjectApiEdgeCheckCli.cs b/server/Harness/ProjectApiEdgeCheckCli.cs
+index 10fde83..462901c 100644
+--- a/server/Harness/ProjectApiEdgeCheckCli.cs
++++ b/server/Harness/ProjectApiEdgeCheckCli.cs
+@@ -1,17 +1,9 @@
+ // 프로젝트 조회 API의 엣지 입력이 500이 아니라 계약된 4xx로 거부되는지 확인한다.
+ // 실행 중인 서버를 대상으로 GET만 수행하며, 상태를 바꾸지 않는다.
+-using System.Text.Encodings.Web;
+-using System.Text.Json;
+ using System.Text.Json.Nodes;
+ 
+ internal static class ProjectApiEdgeCheckCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // project-api-edge-check 진입점. exit 0=모든 HTTP 상태 기대값 일치, 1=계약 위반, 2=사용법/실행 오류.
+     internal static int Run(string[] args)
+     {
+@@ -57,7 +49,7 @@ internal static class ProjectApiEdgeCheckCli
+                 ["verdict"] = failureCount == 0 ? "PASS" : "FAIL",
+                 ["checks"] = results,
+                 ["note"] = "Missing project read APIs must return 4xx, not 5xx. This harness performs GET requests only.",
+-            }.ToJsonString(JsonOptions));
++            }.ToJsonString(HarnessJson.Options));
+ 
+             return failureCount == 0 ? 0 : 1;
+         }
+@@ -67,7 +59,7 @@ internal static class ProjectApiEdgeCheckCli
+             {
+                 ["harness"] = "project-api-edge-check",
+                 ["error"] = error.Message,
+-            }.ToJsonString(JsonOptions));
++            }.ToJsonString(HarnessJson.Options));
+             return 2;
+         }
+     }
+diff --git a/server/Harness/ScopeCheckCli.cs b/server/Harness/ScopeCheckCli.cs
+index a8460a0..6005d69 100644
+--- a/server/Harness/ScopeCheckCli.cs
++++ b/server/Harness/ScopeCheckCli.cs
+@@ -1,8 +1,6 @@
+ // 지시서 allowlist와 파일 claim을 git 변경분에 대조하는 읽기 전용 하네스.
+ // 범위 밖 변경과 활성 claim 충돌을 보고만 하고 파일·프로세스는 수정하지 않는다.
+ using System.Diagnostics;
+-using System.Text.Encodings.Web;
+-using System.Text.Json;
+ using System.Text.Json.Nodes;
+ using System.Text.RegularExpressions;
+ 
+@@ -19,12 +17,6 @@ internal static class ScopeCheckCli
+         "**/*.pid",
+     ];
+ 
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // CLI 인자를 해석해 allowlist 대조와 claim 충돌 검사를 실행한다.
+     internal static int Run(string[] args)
+     {
+@@ -95,7 +87,7 @@ internal static class ScopeCheckCli
+                 ["note"] = "Read-only check. Out-of-scope files and active claim conflicts must be handled by the orchestrator or implementer.",
+             };
+ 
+-            Console.WriteLine(report.ToJsonString(JsonOptions));
++            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
+             return outOfScope.Count == 0 && conflictCount == 0 ? 0 : 1;
+         }
+         catch (Exception ex)
+diff --git a/server/Harness/StateTransitionCallsiteCheckCli.cs b/server/Harness/StateTransitionCallsiteCheckCli.cs
+index ff4f6e1..2bf8fe8 100644
+--- a/server/Harness/StateTransitionCallsiteCheckCli.cs
++++ b/server/Harness/StateTransitionCallsiteCheckCli.cs
+@@ -1,17 +1,9 @@
+ // state-transition 활성 경로에서 prepare/apply로 정렬되지 않은 옛 단일-샷 호출을 탐지한다.
+-using System.Text.Encodings.Web;
+-using System.Text.Json;
+ using System.Text.Json.Nodes;
+ using System.Text.RegularExpressions;
+ 
+ internal static class StateTransitionCallsiteCheckCli
+ {
+-    private static readonly JsonSerializerOptions WriteOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // 활성 경로로 간주하는 파일 확장자 — 역사적 증거 파일은 allowlist로 면제.
+     private static readonly string[] ActiveExtensions =
+     [
+@@ -33,7 +25,7 @@ internal static class StateTransitionCallsiteCheckCli
+             var root = GitTools.FindRepoRoot();
+             var result = ScanCallsites(root);
+ 
+-            Console.WriteLine(result.ToJsonString(WriteOptions));
++            Console.WriteLine(result.ToJsonString(HarnessJson.Options));
+             return result["legacyCallsiteCount"]?.GetValue<int>() == 0 ? 0 : 1;
+         }
+         catch (Exception ex)
+diff --git a/server/Harness/TemplateSyncCheckCli.cs b/server/Harness/TemplateSyncCheckCli.cs
+index ea0d413..ecc5a90 100644
+--- a/server/Harness/TemplateSyncCheckCli.cs
++++ b/server/Harness/TemplateSyncCheckCli.cs
+@@ -2,18 +2,10 @@
+ // 실제 저장소는 건드리지 않고 temp copy에서 dispatch-executor를 실행한다.
+ using System.Diagnostics;
+ using System.Text;
+-using System.Text.Encodings.Web;
+-using System.Text.Json;
+ using System.Text.Json.Nodes;
+ 
+ internal static class TemplateSyncCheckCli
+ {
+-    private static readonly JsonSerializerOptions JsonOptions = new()
+-    {
+-        WriteIndented = true,
+-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+-    };
+-
+     // template-sync-check 진입점. exit 0=템플릿 적용 후 빌드 성공, 1=동기화 실패, 2=하네스 오류.
+     internal static int Run(string[] args)
+     {
+@@ -52,7 +44,7 @@ internal static class TemplateSyncCheckCli
+                 ["buildStderrTail"] = Tail(build.Stderr, 1200),
+                 ["note"] = "Applies dispatch templates in a temp copy and uses build exit code as the source of truth.",
+             };
+-            Console.WriteLine(report.ToJsonString(JsonOptions));
++            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
+             return ok ? 0 : 1;
+         }
+         catch (Exception ex)
