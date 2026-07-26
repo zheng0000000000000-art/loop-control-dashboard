@@ -37,6 +37,10 @@
 | 6 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-a/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-a/applier-log.jsonl` | 1 | False | 반증 witness — 어긋난 상태를 실패로 보고하는지 확인한다(GWIT-01). 실측 2026-07-26: exit 1. |
 | 7 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-malformed/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-malformed/applier-log.jsonl` | 2 | False | 반증 witness — malformed 입력을 2로 구분하는지 확인한다. 실측 2026-07-26: exit 2. |
 | 8 | `context-pack-integrity` | `docs/qa/gate-witness/stale-pin-directive.md` | 1 | False | 반증 witness — 일부러 stale한 pin을 실패로 보고하는지 확인한다(GWIT-01). 실측 2026-07-26: exit 1. |
+| 9 | `gate-clean` | `--status-fixture docs/qa/gate-witness/gate-clean-dirty.status` | 1 | False | 반증 witness — 더러운 상태를 실패로 보고하는지 확인한다(GWIT-02). 실측 2026-07-26: exit 1. 내용을 비우면 0이 되는 것도 확인했다. |
+| 10 | `doc-integrity` | `--fixture docs/qa/gate-witness/doc-integrity-mismatch` | 1 | False | 반증 witness — 생성 문서와 원본이 어긋난 것을 실패로 보고하는지 확인한다(GWIT-02). 실측: exit 1. |
+| 11 | `gate-witness-check` | `` | 0 | False | 성공만 확인하는 검사를 센다(GWIT-01). requireFailureWitness가 켜진 게이트에서 반증 없는 검사가 있으면 exit 1. 이 게이트는 2026-07-26 기준 0건이다. |
+| 12 | `gate-witness-check` | `docs/qa/gate-witness/require-failure-witness.json` | 1 | False | 반증 witness — 반증 없는 검사가 있는 게이트를 실패로 보고하는지 확인한다(GWIT-01 §5). 실측 2026-07-26: exit 1. |
 
 ### WP-STATE-INTEGRITY-LAND
 
@@ -68,7 +72,6 @@
 | `claim-check` | unlisted |
 | `di-completion-check` | unlisted |
 | `e2e-usage` | unlisted |
-| `gate-witness-check` | unlisted |
 | `launch-check` | unlisted |
 | `path-guard-check` | unlisted |
 | `project-api-edge-check` | unlisted |

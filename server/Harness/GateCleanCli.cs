@@ -21,6 +21,15 @@ internal static class GateCleanCli
         try
         {
             var repoRoot = GitTools.FindRepoRoot();
+            var fixtureIndex = Array.FindIndex(args, a =>
+                string.Equals(a, "--status-fixture", StringComparison.OrdinalIgnoreCase));
+            if (fixtureIndex >= 0)
+            {
+                if (fixtureIndex + 1 >= args.Length || args[fixtureIndex + 1].StartsWith('-'))
+                    throw new ArgumentException("--status-fixture 뒤에 파일 경로가 필요합니다.");
+                return RunStatusFixture(repoRoot, args[fixtureIndex + 1]);
+            }
+
             var paths = args.Skip(1).Where(a => !a.StartsWith('-')).ToArray();
             if (paths.Length == 0) paths = new[] { "server" };
 
@@ -91,6 +100,25 @@ internal static class GateCleanCli
             Console.Error.WriteLine($"{{\"error\":\"gate-clean 실패: {ex.Message}\"}}");
             return 2;
         }
+    }
+
+    // 저장된 porcelain 출력만 읽어 clean·dirty를 판정한다.
+    private static int RunStatusFixture(string repoRoot, string fixtureArg)
+    {
+        var full = Path.GetFullPath(Path.IsPathRooted(fixtureArg)
+            ? fixtureArg
+            : Path.Combine(repoRoot, fixtureArg));
+        var porcelain = File.ReadAllText(full);
+        var dirty = porcelain.Length > 0;
+        Console.WriteLine(new JsonObject
+        {
+            ["harness"] = "gate-clean",
+            ["fixtureMode"] = true,
+            ["statusFixture"] = Path.GetRelativePath(repoRoot, full).Replace('\\', '/'),
+            ["statusLength"] = porcelain.Length,
+            ["gate"] = dirty ? "DIRTY" : "CLEAN",
+        }.ToJsonString(JsonOptions));
+        return dirty ? 1 : 0;
     }
 
     // 파일 판정 1건을 JSON 항목으로 만든다.

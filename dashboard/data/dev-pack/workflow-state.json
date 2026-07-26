@@ -1,20 +1,31 @@
 {
   "schemaVersion": 2,
   "projectName": "개발 팩 — 자기 검수 루프",
-  "currentStage": "deviationCheck",
-  "overallStatus": "completed",
-  "loopState": "aligned",
+  "currentStage": "changeReview",
+  "overallStatus": "warning",
+  "loopState": "running",
   "mode": "normal",
-  "suspendedTracks": [],
+  "suspendedTracks": [
+    {
+      "metricId": "maxFunctionLength",
+      "detectedAt": "2026-07-26T16:27:44.9820888+09:00",
+      "relatedProposalId": null,
+      "suspectConfidence": "temporal"
+    }
+  ],
   "loopIteration": 13,
   "stages": {
     "goals": "passed",
     "measure": "passed",
-    "deviationCheck": "passed",
-    "changeReview": "not_started",
-    "apply": "not_started"
+    "deviationCheck": "warning",
+    "changeReview": "pending_review",
+    "apply": "blocked"
   },
-  "blockInfo": {},
+  "blockInfo": {
+    "apply": {
+      "kind": "waiting"
+    }
+  },
   "stageDetails": {
     "goals": {
       "summary": "개발 팩은 저장소의 핵심 규칙을 측정하고 블루프린트 기준과 비교한다.",
@@ -36,7 +47,7 @@
       "issues": []
     },
     "deviationCheck": {
-      "summary": "측정 결과가 블루프린트 기준을 만족한다.",
+      "summary": "측정 결과에서 1개 괴리가 감지됐다.",
       "metrics": [
         {
           "label": "domainWordsInEngine",
@@ -100,10 +111,12 @@
         },
         {
           "label": "maxFunctionLength",
-          "value": "80 / 0~80"
+          "value": "85 / 0~80"
         }
       ],
-      "issues": []
+      "issues": [
+        "maxFunctionLength: 측정값 85이 기준 0~80을 벗어났다. 근거: server/Harness/GateCleanCli.cs:19-103"
+      ]
     },
     "changeReview": {
       "summary": "악화가 감지되어 1층 검토를 건너뛰고 사람 결재로 직행했다.",
@@ -114,21 +127,23 @@
         }
       ],
       "issues": [
-        "functionsWithoutComment: 0→7로 악화"
+        "maxFunctionLength: 80→85로 악화"
       ]
     },
     "apply": {
-      "summary": "아직 시작되지 않았다.",
+      "summary": "변경 승인이 완료될 때까지 차단된다.",
       "metrics": [
         {
           "label": "적용 상태",
-          "value": "대기"
+          "value": "차단됨"
         }
       ],
-      "issues": []
+      "issues": [
+        "이전 단계가 아직 완료되지 않았다."
+      ]
     }
   },
-  "lastUpdated": "2026-07-26T16:15:45.3868981+09:00",
+  "lastUpdated": "2026-07-26T16:27:44.9605413+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",

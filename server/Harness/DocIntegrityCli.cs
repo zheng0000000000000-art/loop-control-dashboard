@@ -40,19 +40,32 @@ internal static class DocIntegrityCli
         try
         {
             var root = GitTools.FindRepoRoot();
+            var fixtureIndex = Array.FindIndex(args, a =>
+                string.Equals(a, "--fixture", StringComparison.OrdinalIgnoreCase));
+            var fixtureMode = fixtureIndex >= 0;
+            if (fixtureMode && (fixtureIndex + 1 >= args.Length || args[fixtureIndex + 1].StartsWith('-')))
+                throw new ArgumentException("--fixture 뒤에 디렉터리 경로가 필요합니다.");
+            var checkRoot = fixtureMode
+                ? Path.GetFullPath(Path.IsPathRooted(args[fixtureIndex + 1])
+                    ? args[fixtureIndex + 1]
+                    : Path.Combine(root, args[fixtureIndex + 1]))
+                : root;
+            if (fixtureMode)
+                EnsureFixtureReadable(checkRoot);
+
             var results = new JsonArray();
             var broken = 0;
 
             foreach (var rel in CriticalJson)
             {
-                var (ok, reason) = CheckJson(Path.Combine(root, rel));
+                var (ok, reason) = CheckJson(Path.Combine(checkRoot, rel));
                 if (!ok) broken++;
                 results.Add(Entry(rel, "json", ok, reason));
             }
 
             foreach (var rel in CriticalDocs)
             {
-                var (ok, reason) = CheckMarkdown(Path.Combine(root, rel));
+                var (ok, reason) = CheckMarkdown(Path.Combine(checkRoot, rel));
                 if (!ok) broken++;
                 results.Add(Entry(rel, "markdown", ok, reason));
             }
@@ -60,6 +73,10 @@ internal static class DocIntegrityCli
             var report = new JsonObject
             {
                 ["harness"] = "doc-integrity",
+                ["fixtureMode"] = fixtureMode,
+                ["fixture"] = fixtureMode
+                    ? Path.GetRelativePath(root, checkRoot).Replace('\\', '/')
+                    : null,
                 ["checked"] = results.Count,
                 ["brokenCount"] = broken,
                 ["verdict"] = broken == 0 ? "INTACT" : "TRUNCATED",
@@ -73,6 +90,21 @@ internal static class DocIntegrityCli
         {
             Console.Error.WriteLine($"{{\"error\":\"doc-integrity 실패: {ex.Message}\"}}");
             return 2;
+        }
+    }
+
+    // 픽스처가 production과 같은 입력 목록을 모두 제공하며 읽을 수 있는지 확인한다.
+    private static void EnsureFixtureReadable(string fixtureRoot)
+    {
+        if (!Directory.Exists(fixtureRoot))
+            throw new DirectoryNotFoundException($"픽스처 디렉터리 없음: {fixtureRoot}");
+
+        foreach (var rel in CriticalJson.Concat(CriticalDocs))
+        {
+            var full = Path.Combine(fixtureRoot, rel);
+            if (!File.Exists(full))
+                throw new FileNotFoundException($"픽스처 파일 없음: {rel}", full);
+            using var stream = File.Open(full, FileMode.Open, FileAccess.Read, FileShare.Read);
         }
     }
 
