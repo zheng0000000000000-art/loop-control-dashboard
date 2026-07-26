@@ -930,3 +930,39 @@ self-test: "epoch 1 재선언이 거부되는지 검증한다" (:534)
 **남은 미확인 세 가지**(검증 문서 §미달에 적음): `InspectPending`이 reconciliation보다 먼저
 `idempotent`를 낼 수 있는 경로, self-test 개별 케이스의 출력 필드를 하나씩 열어보지 않은 점,
 그리고 13개 개정본 중 **초기 개정본의 대체된 항목은 의도적으로 제외**했다는 점.
+
+## 2026-07-26 — `DI-00-04`를 `blocked` → `verifying`으로 전이했다 (사람 지시)
+
+**정규 경로로만 했다.** `WORKSTATE.json`을 손으로 고치지 않았다 —
+`state-transition prepare` → `apply`(유일한 writer)를 썼다.
+
+```
+transitionId  DI0004-VERIFYING-20260726   kind NORMAL
+status        blocked → verifying          blockers 2 → 0
+appliedTransitions 20 → 21                 handoff-integrity → exit 0 (failureCount 0)
+```
+
+`blockers`는 **검수자가 2026-07-13에 쓴 것**이다. 조율자가 지운 것이 아니라,
+세 사유를 각각 실측해 해소를 확인한 뒤(`blocker-recheck-2026-07-26.md` ·
+`four-di-criteria-recheck.md`) **사람 지시로 전이했다.** `notes`에도 그렇게 적었다.
+**완료 판정이 아니라 `verifying`이며, `completed`로 가는 것은 별도 결재다.**
+
+### ★ 그 과정에서 아차 사고가 하나 났다 — 보고한다
+
+`apply --dry-run-flag`로 **먼저 시험하려다 실제 적용됐다.**
+
+```
+CLI 정식 철자는 --dry-run 이다 (StateApplierCli.cs:923)
+--dry-run-flag 는 내부 키 이름인데, 모르는 옵션으로 거부되지 않고 그대로 실제 apply가 됐다
+대조: --dry-run  → status idempotent · stateWritten false  (정상)
+      --bogus-flag → exit 2                                  (정상 거부)
+```
+
+**내 잘못이 먼저다** — 철자를 확인하지 않고 넘겼다.
+**그러나 시스템도 fail-closed가 아니다.** `--bogus-flag`는 exit 2로 막으면서,
+**안전장치처럼 보이는 이름**은 통과시키고 **상태를 실제로 쓴다.**
+결과가 의도와 같았을 뿐 **의도치 않은 상태 쓰기가 일어날 수 있는 표면**이다.
+
+**사람 판단이 필요한 것**: 내부 키 이름이 CLI 옵션으로 받아들여지는 것을 막을 것인가
+(`server/StateApplierCli.cs` = `server/` 루트, 조율자 영역). 특히 `dry-run` 계열은
+**틀리면 실제 쓰기가 되므로** 다른 옵션보다 위험하다.

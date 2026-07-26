@@ -20,3 +20,4 @@
 {"transitionId":"DI0004-BLOCKED-CODEX","result":"handoff-integrity-failed exit=1","exitCode":1,"at":"2026-07-12T14:02:29.9626015Z"}
 {"transitionId":"WP-STATE-INTEGRITY-INTAKE","result":"ok","exitCode":0,"at":"2026-07-13T12:30:21.8083529Z"}
 {"transitionId":"DI0004-BLOCKED-CODEX","result":"ok","exitCode":0,"at":"2026-07-14T16:04:38.7639609Z"}
+{"schemaVersion":2,"status":"success","result":"ok","exitCode":0,"transitionId":"DI0004-VERIFYING-20260726","transitionKind":"NORMAL","requestSha256":"e185afa519451aac206b418281003fccf3227bb785b26bb9b36d62b5b5c810aa","preStateSha256":"70558a68f8819b6261ba84dfe189c2eb9eac52f24b988eea5252c17dce8ac0d4","postStateSha256":"6b44be413a91becef8642efb09e505574dd792dfbe740ba46956d64651fcec2a","effectiveAt":"2026-07-26T12:54:29Z","transitionContractSha256":"bc5a9e6529fe655c4679b8e3e90b9e49cfbe95a48bce038bd276c72512b298aa","at":"2026-07-26T12:54:46Z"}

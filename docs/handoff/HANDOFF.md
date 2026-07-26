@@ -3,12 +3,8 @@
 # HANDOFF — 인수인계 문서
 
 ## 현재 위치
-- **diId**: DI-00-04  **phaseId**: P00  **status**: blocked
-- **갱신자**: reviewer  **갱신일**: 2026-07-13
-
-## 블로커
-- WP-STATE-INTEGRITY 미완: state-transition의 멱등이 reconciliation보다 먼저라 손 위조 transition-id가 통과한다(검수자 실증). --human-decision도 임의 파일이라 AI가 자기 승인을 위조할 수 있다. 상태 원본을 믿을 수 없으므로 DI 완료 판정 자체가 무의미하다. 05H+06C-1+06C-2+06H를 통합 branch에서 단일 land gate로 넘겨야 한다
-- DI-00-04의 즉시제작 2건(HS-GATE 누락 탐지 · prepare-model-handoff)은 코덱스 영역인데 코덱스 자동 루프가 중단됐다 — 사람이 수동 발사한다
+- **diId**: DI-00-04  **phaseId**: P00  **status**: verifying
+- **갱신자**: 조율 세션(Claude Opus 5) · 사람 지시  **갱신일**: 2026-07-26
 
 ## 변경 파일 (4개)
 - `server/OllamaExecutor.cs` [8e44f8dee83c0790…] — ParseNoteResponse에 2차 대소문자 무시 대조(OrdinalIgnoreCase) 추가. TryGenerateNote/TryGenerateTuningNote에 NormalizedActualMetricId 반환. Generate/GenerateForTuning에 normalizedMetricIds 수집. ExecutorGenerateResult에 NormalizedMetricIds 추가.
@@ -38,10 +34,11 @@
 - measureViolationsAfter: 0
 
 ## 다음 작업
-- ★ 자동 스케줄러 전부 중단됨(2026-07-13 사람 결정). 조율자 recursion1-result-check enabled=false. 자동 발사 금지 — 수동 dispatch만. 재개 조건: TRUSTED_BASELINE 선언
-- WP-STATE-INTEGRITY 단일 land gate: 05H(codex, reconciliation) -> 06C-1(sonnet, StateTransition v2) -> 06C-2(sonnet, trust-origin) -> 06H(codex, RECOVERY+fixture). 통합 branch에서 함께 land. 조각 land 금지
-- CODEX-GATE-02 폐기(05H와 중복). 살아남은 절반은 CODEX-GATE-04(di-completion-check가 Debug 바이너리를 실행한다 + CLI 계약 + GATE-MANIFEST 등재 + claim-check --untracked)
-- 사람 게이트: land gate 12번(clean replay 또는 trust-origin 부트스트랩 의식)은 사람이 직접 수행한다. push 60건+
+- land gate 12번(clean replay 또는 trust-origin 부트스트랩 의식)은 사람이 직접 수행한다 — 조율자·실행자가 대행하지 않는다
+- 차단 사유 3건은 2026-07-26 실측으로 해소됨: ①손 위조 transition-id 거부(apply rejected, stateWritten false) ②--human-decision 제거(removed-option) ③네 조각(05H·06C-1·06C-2·06H) 완료 기준 전부 일치. 근거: docs/verification/blocker-recheck-2026-07-26.md · four-di-criteria-recheck.md
+- 미확인 3건은 남아 있다: InspectPending이 reconciliation보다 먼저 idempotent를 낼 수 있는 경로, trust-origin self-test 개별 케이스의 출력 필드 확인, 아카이브 지시서의 NUL 바이트(grep이 건너뜀)
+- 게이트 판정의 정본은 di-completion-check다(ADR-016 §15). program-verify verify는 안내만 하고 exit 2다
+- 자동 발사 금지는 유지 — 수동 dispatch만. 발사 시 disposition.json이 pending으로 자동 생성되며 사람이 처분을 정할 때까지 POST-COMMIT이 빨갛다(DISPO-02, 의도된 동작)
 
 ## 재개 전 검증
 ```bash
@@ -52,4 +49,4 @@ dotnet run --project server -c Release -- verify-behavior
 ```
 
 ## 노트
-canonical 좌표는 v9 축(ADR-013). 완료: DI-00-01·02·03. DI-00-04는 판정문서 완료·즉시제작 2건 미완(코덱스). 2026-07-13: 외부 설계 WP-STATE-INTEGRITY 수령 — state-transition v2(reconciliation-먼저·결정적 candidate·rollback·transitionKind fail-closed) + trust-origin 부트스트랩. 검수자가 실측 주장 6/6 사실 확인. 로컬 큐 별칭: P0-01~07 · LEDGER-01~04 · STATE-01 · GUARD-01/02/03 · TRANSPORT-01 · RULES-01 · DIET-01.
+blockers는 검수자가 2026-07-13에 작성했다. 조율자가 지운 것이 아니라, 세 사유를 각각 실측해 해소를 확인한 뒤 사람 지시로 전이했다. 완료 판정이 아니라 verifying이며, completed로 가는 것은 별도 결재다.
