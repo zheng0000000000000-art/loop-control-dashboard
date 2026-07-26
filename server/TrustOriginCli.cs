@@ -299,7 +299,7 @@ internal static class TrustOriginCli
         if (Read(evidence, "docIntegrity") != "PASS") return "integration-gate-evidence-missing";
         if (ReadInt(evidence, "legacyCallsiteCount") != 0) return "direct-writer-gate-failed";
         if (!SelfTestEvidencePass(evidence, "stateTransitionSelfTest", 19)) return "integration-gate-evidence-missing";
-        if (!SelfTestEvidencePass(evidence, "trustOriginSelfTest", 24)) return "integration-gate-evidence-missing";
+        if (!SelfTestEvidencePass(evidence, "trustOriginSelfTest", 26)) return "integration-gate-evidence-missing";
         if (!SelfTestEvidencePass(evidence, "recoverySelfTest", 8)) return "integration-gate-evidence-missing";
         var dev = evidence["devPack"] as JsonObject;
         if (dev is null || ReadInt(dev, "violationCount") != 0 || Read(dev, "overallStatus") != "completed") return "integration-gate-evidence-missing";
@@ -312,11 +312,36 @@ internal static class TrustOriginCli
     // program-verify 보고서를 받을 수 있는지 판정한다. 받을 수 없으면 거절 사유를 돌려준다.
     // LAND 게이트 보고서를 근거로 쓸 수 있는지 본다. 공통 규칙은 GateReportReader가 갖는다 —
     // program-verify와 같은 규칙을 두 벌 두면 한쪽이 받는 보고를 다른 쪽이 거절한다(ADR-016 §6).
+    // RequiredGateCommands가 매니페스트의 실제 검사 이름과 어긋났는지 잰다.
+    // 어긋나면 --gate-report 경로가 통째로 죽는데, 사유가 "필수 검사 없음"으로 나와
+    // 보고서를 의심하게 만든다. 실제 원인은 이 목록이 낡은 것이다(2026-07-26 실측:
+    // HREG-01의 이름 교체 이후 세 이름이 어디에도 없어 경로가 죽어 있었다).
+    internal static IReadOnlyList<string> RequiredCommandsMissingFromManifest(string root)
+    {
+        var path = Path.Combine(root, "docs", "handoff", "GATE-MANIFEST.json");
+        if (!File.Exists(path)) return RequiredGateCommands;
+        JsonObject? manifest;
+        try { manifest = JsonNode.Parse(File.ReadAllText(path, Utf8NoBom))?.AsObject(); }
+        catch { return RequiredGateCommands; }
+
+        var declared = (manifest?["gates"]?.AsArray() ?? [])
+            .OfType<JsonObject>()
+            .Where(g => string.Equals(g["gateId"]?.ToString(), LandGateId, StringComparison.OrdinalIgnoreCase))
+            .SelectMany(g => (g["checks"]?.AsArray() ?? []).OfType<JsonObject>())
+            .Select(c => c["command"]?.ToString() ?? "")
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return RequiredGateCommands.Where(r => !declared.Contains(r)).ToList();
+    }
+
     // 여기에는 이 게이트에만 필요한 조건, 즉 근거로 삼을 검사가 실제로 들어 있는지만 남긴다.
     private static string? GateReportRejection(RepoFiles ctx, string reportPath)
     {
         var rejection = GateReportReader.Reject(ctx.Root, reportPath, LandGateId, out var report);
         if (rejection is not null || report is null) return rejection ?? "gate-report-unparsable";
+
+        // 목록 자체가 낡았으면 보고서 탓이 아니다. 사유를 구분해 원인을 가리키게 한다.
+        if (RequiredCommandsMissingFromManifest(ctx.Root).Count > 0) return "required-commands-stale";
 
         // declare가 근거로 삼는 검사가 실제로 그 보고서 안에 있어야 한다. 없는데 PASS면
         // 다른 게이트를 통과하고 이 게이트를 통과한 척하는 것이 된다.
@@ -354,7 +379,7 @@ internal static class TrustOriginCli
             ["releaseBuild"] = gatesPass ? "PASS" : "NOT_RUN",
             ["reconciliationFixtures"] = gatesPass ? "PASS" : "NOT_RUN",
             ["stateTransitionSelfTest"] = SelfTestNode(gatesPass, 19),
-            ["trustOriginSelfTest"] = SelfTestNode(gatesPass, 24),
+            ["trustOriginSelfTest"] = SelfTestNode(gatesPass, 26),
             ["recoverySelfTest"] = SelfTestNode(gatesPass, 8),
             ["docIntegrity"] = gatesPass ? "PASS" : "NOT_RUN",
             ["devPack"] = new JsonObject { ["violationCount"] = gatesPass ? 0 : -1, ["overallStatus"] = gatesPass ? "completed" : "not-run" },
@@ -407,6 +432,10 @@ internal static class TrustOriginCli
         Add(cases, "warning-report-bound", RunCase(CaseWarningReportBound), negative: true);
         Add(cases, "high-risk-stays-closed", HighRiskFailClosed(), negative: true);
         Add(cases, "automatic-execution-false", true, negative: true);  // 자동 실행이 닫혀 있음을 단언한다
+        // 목록이 매니페스트와 어긋나면 --gate-report 경로가 죽는다. 손 동기화라 실제로 끊겼었다.
+        Add(cases, "required-commands-match-manifest",
+            RequiredCommandsMissingFromManifest(RepoRootForSelfTest()).Count == 0, negative: false);
+        Add(cases, "required-commands-drift-detected", RequiredCommandsDriftDetected(), negative: true);
         var failed = cases.OfType<JsonObject>().Count(c => c["pass"]?.GetValue<bool>() != true);
         Output(new JsonObject { ["selfTest"] = "trust-origin-v2", ["verdict"] = failed == 0 ? "PASS" : "FAIL", ["casesRun"] = cases.Count, ["negativeCaseCount"] = cases.OfType<JsonObject>().Count(c => c["negative"]?.GetValue<bool>() == true), ["failed"] = failed, ["cases"] = cases });
         return failed == 0 ? 0 : 1;
@@ -1044,6 +1073,53 @@ internal static class TrustOriginCli
 
     // self-test case 결과를 JSON 배열에 추가한다.
     // self-test case 결과를 배열에 추가한다. negative는 "거부·결함이 나야 통과"인 케이스이며
+    // self-test가 실제 저장소를 보게 한다. 임시 fixture repo가 아니라 여기서는 진짜 매니페스트다.
+    private static string RepoRootForSelfTest()
+    {
+        var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (dir is not null)
+        {
+            if (Directory.Exists(Path.Combine(dir.FullName, ".git"))) return dir.FullName;
+            dir = dir.Parent;
+        }
+        return Directory.GetCurrentDirectory();
+    }
+
+    // 목록이 낡았을 때 실제로 잡아내는지 본다. 매니페스트 사본에서 필수 검사 하나를 지우고
+    // 그것이 "빠진 것"으로 보고되는지 확인한다 — 원본은 건드리지 않는다.
+    private static bool RequiredCommandsDriftDetected()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "lfwd-trustorigin-drift-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var dir = Path.Combine(temp, "docs", "handoff");
+            Directory.CreateDirectory(dir);
+            Directory.CreateDirectory(Path.Combine(temp, ".git"));
+            var source = Path.Combine(RepoRootForSelfTest(), "docs", "handoff", "GATE-MANIFEST.json");
+            if (!File.Exists(source)) return false;
+
+            var manifest = JsonNode.Parse(File.ReadAllText(source, Utf8NoBom))!.AsObject();
+            var dropped = RequiredGateCommands[0];
+            foreach (var gate in (manifest["gates"]?.AsArray() ?? []).OfType<JsonObject>())
+            {
+                if (!string.Equals(gate["gateId"]?.ToString(), LandGateId, StringComparison.OrdinalIgnoreCase)) continue;
+                var kept = (gate["checks"]?.AsArray() ?? []).OfType<JsonObject>()
+                    .Where(c => !string.Equals(c["command"]?.ToString(), dropped, StringComparison.OrdinalIgnoreCase))
+                    .Select(c => (JsonNode)c.DeepClone()).ToArray();
+                gate["checks"] = new JsonArray(kept);
+            }
+            File.WriteAllText(Path.Combine(dir, "GATE-MANIFEST.json"), manifest.ToJsonString(), Utf8NoBom);
+
+            var missing = RequiredCommandsMissingFromManifest(temp);
+            return missing.Count == 1 && string.Equals(missing[0], dropped, StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return false; }
+        finally
+        {
+            try { Directory.Delete(temp, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        }
+    }
+
     // 필수 인자다 — 케이스를 추가하면서 표시를 잊으면 컴파일이 안 된다(GWIT-04 §1-A).
     private static void Add(JsonArray a, string name, bool pass, bool negative) =>
         a.Add(new JsonObject { ["case"] = name, ["pass"] = pass, ["negative"] = negative });

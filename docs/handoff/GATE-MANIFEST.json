@@ -407,7 +407,7 @@
           "expectedExit": 0,
           "mutatesState": false,
           "note": "self-test가 거부 경로 20건을 확인한다(GWIT-04). negativeCaseCount로 출력하며 gate-witness-check가 실제 실행해 대조한다.",
-          "internalNegativeCases": 20
+          "internalNegativeCases": 21
         },
         {
           "order": 12,
