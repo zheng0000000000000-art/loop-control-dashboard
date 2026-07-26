@@ -4,7 +4,7 @@
   "requiredInputs": [
     { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
     { "path": "docs/verification/_template.md", "sha256": "15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69" },
-    { "path": "server/Harness/ContextPackIntegrityCli.cs", "sha256": "ab8de3a12b9a6ac528ab2e897445359d119582b27d43f09fa3233504a0322ba4" },
+    { "path": "server/Harness/ContextPackIntegrityCli.cs", "sha256": "8ae5412cadca68e2a8cabffff6b764870e587593715b28cc5f4b7f4e89f80206" },
     { "path": "server/Harness/LaunchCheckCli.cs", "sha256": "5e9f189766dd150eea5a3c37974022dbb55d9b1524f34f00c556160c9bef78f7" },
     { "path": "skills/common/directive-authoring.md", "sha256": "df41047823ebfc2bbcea2827c311b401500a364fcd4140aec5eb2db7c9cb7f45" }
   ],
