@@ -58,6 +58,10 @@ internal static class DiCompletionCheckCli
             var contractFailures = ValidateCliContract(root, warnings);
             foreach (var failure in contractFailures) failures.Add(failure?.DeepClone());
 
+            var freshness = BinaryFreshness.Measure(root);
+            if (freshness.Stale)
+                return RefuseStaleBinary(root, taskId, report, freshness, warnings);
+
             foreach (var check in checks.OfType<JsonObject>().OrderBy(ReadOrder))
             {
                 var result = RunCheck(root, check);
@@ -138,7 +142,7 @@ internal static class DiCompletionCheckCli
             Failure(command, "exit-mismatch", $"expected {expectedExit}, actual {result.ExitCode}"));
     }
 
-    // dotnet run이 현재 소스를 먼저 빌드한 뒤 하위 검사를 실행하게 한다.
+    // 현재 바이너리를 그대로 사용해 하위 검사를 실행한다.
     private static ProcessRunResult RunDotnetCommand(string root, string command, List<string> args)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -152,6 +156,7 @@ internal static class DiCompletionCheckCli
             StandardErrorEncoding = Encoding.UTF8,
         };
         psi.ArgumentList.Add("run");
+        psi.ArgumentList.Add("--no-build");
         psi.ArgumentList.Add("--project");
         psi.ArgumentList.Add("server");
         psi.ArgumentList.Add("--");
@@ -289,6 +294,33 @@ internal static class DiCompletionCheckCli
         WriteEvidence(root, taskId, report);
         Console.Error.WriteLine(report.ToJsonString(JsonOptions));
         return 1;
+    }
+
+    // 낡은 바이너리에서는 검사를 실행하지 않고 측정 불가 정보를 남긴다.
+    private static int RefuseStaleBinary(
+        string root,
+        string taskId,
+        JsonObject report,
+        BinaryFreshnessResult freshness,
+        JsonArray warnings)
+    {
+        report["verdict"] = "NOT-MEASURED";
+        report["gateVerdict"] = "NOT-MEASURED";
+        report["checkCount"] = 0;
+        report["failureCount"] = 0;
+        report["warningCount"] = warnings.Count;
+        report["checks"] = new JsonArray();
+        report["failures"] = new JsonArray();
+        report["warnings"] = warnings;
+        report["reason"] = "binary-stale";
+        report["error"] = "바이너리가 소스보다 낡아 게이트를 잴 수 없다. 먼저 빌드하라";
+        report["binaryPath"] = freshness.BinaryPath;
+        report["binaryWrittenAt"] = freshness.BinaryWrittenAt;
+        report["newestSource"] = freshness.NewestSource;
+        report["newestSourceWrittenAt"] = freshness.NewestSourceWrittenAt;
+        WriteEvidence(root, taskId, report);
+        Console.Error.WriteLine(report.ToJsonString(JsonOptions));
+        return 2;
     }
 
     // 증거 JSON을 outputs/gates 아래에 기록한다.

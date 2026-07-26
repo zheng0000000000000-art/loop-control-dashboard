@@ -1,9 +1,10 @@
 // ⚠ 게이트 실행은 server/Harness/DiCompletionCheckCli.cs와 겹친다(ADR-016). 이 파일이 먼저가
-// 아니다 — 그쪽이 먼저 있었고 조율 세션이 재발명 검색을 건너뛰어 중복이 생겼다. 지금 이쪽을
-// 쓰는 이유는 하나다: 그쪽은 `dotnet run --no-build`로 낡은 바이너리를 잰다(DiCompletionCheckCli.cs:155,
-// CODEX-GATE-04가 고칠 결함). 실측 2026-07-26 — 같은 게이트에서 그쪽 FAIL 3건, 이쪽 PASS 14/14,
-// 세 명령을 직접 돌리면 exit 0. CODEX-GATE-04가 착륙하면 게이트 실행은 그쪽에 넘기고
-// 여기에는 baselineCommit·worktreeCleanAtStart 기록과 transition request 생성만 남긴다.
+// 아니다 — 그쪽이 먼저 있었고 조율 세션이 재발명 검색을 건너뛰어 중복이 생겼다.
+// 이 자리에 있던 "그쪽은 --no-build로 낡은 바이너리를 잰다"는 설명은 **사실이 아니었다**
+// (ADR-016 §11: 그 인자는 없었고, 오히려 다시 빌드하다 자기 자신과 충돌했다). DICC-01이
+// 그쪽에도 같은 설계를 넣었으므로 **이제 두 러너의 실행 방식은 같다.** 어느 쪽을 정본으로
+// 둘지는 사람 결재로 남아 있다(ADR-016 §8). 남길 것은 baselineCommit·worktreeCleanAtStart
+// 기록과 transition request 생성이다.
 //
 // Program Verifier — 실행자가 낸 증거를 믿지 않고 게이트 검사를 직접 다시 돌려 판정한다.
 // CODEX-HARNESS-LAUNCHER-minimal-contract §2-6의 결속 상대다. Launcher는 transport와 기록만 하고,
@@ -75,7 +76,7 @@ internal static class ProgramVerifierCli
         // 자식이 그 파일을 덮을 수 없기 때문이다(ADR-016 §9·§10). 빌드가 이미 최신이면 통과하므로
         // 간헐적으로만 실패했다. 그래서 검사는 --no-build로 돌리되, 낡은 바이너리를 재는 일이
         // 없도록 소스가 더 새로우면 재지 않고 거부한다. 빌드는 호출자가 미리 한다.
-        var staleness = BinaryStaleness(root);
+        var staleness = BinaryFreshness.Measure(root);
         if (staleness.Stale)
         {
             Console.Error.WriteLine(new JsonObject
@@ -151,44 +152,6 @@ internal static class ProgramVerifierCli
     // 여기에 사본을 두면 두 러너가 갈려 같은 매니페스트에 다른 답을 낸다(ADR-016 §6).
     private static bool KnownCommand(string command)
         => HarnessRegistry.GateCommandNames.Contains(command);
-
-    // 돌고 있는 바이너리가 server 소스보다 낡았는지 잰다. 여기서 빌드하지 않는 이유는
-    // 이 프로세스가 곧 그 바이너리여서 자기 자신을 덮을 수 없기 때문이다.
-    private static (bool Stale, string BinaryPath, string BinaryWrittenAt, string NewestSource, string NewestSourceWrittenAt)
-        BinaryStaleness(string root)
-    {
-        var binaryPath = Environment.ProcessPath;
-        if (string.IsNullOrWhiteSpace(binaryPath) || !File.Exists(binaryPath))
-            return (false, binaryPath ?? "", "", "", "");
-
-        var binaryWrittenAt = File.GetLastWriteTimeUtc(binaryPath);
-        var serverDir = Path.Combine(root, "server");
-        var newestPath = "";
-        var newestWrittenAt = DateTime.MinValue;
-
-        foreach (var pattern in new[] { "*.cs", "*.csproj" })
-        {
-            foreach (var file in Directory.EnumerateFiles(serverDir, pattern, SearchOption.AllDirectories))
-            {
-                // bin/obj는 빌드 산출물이라 소스가 아니다. 넣으면 언제나 낡았다고 나온다.
-                var relative = Path.GetRelativePath(serverDir, file).Replace('\\', '/');
-                if (relative.StartsWith("bin/", StringComparison.OrdinalIgnoreCase)
-                    || relative.StartsWith("obj/", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var writtenAt = File.GetLastWriteTimeUtc(file);
-                if (writtenAt <= newestWrittenAt) continue;
-                newestWrittenAt = writtenAt;
-                newestPath = relative;
-            }
-        }
-
-        return (newestWrittenAt > binaryWrittenAt,
-            binaryPath,
-            binaryWrittenAt.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-            newestPath,
-            newestWrittenAt == DateTime.MinValue ? "" : newestWrittenAt.ToString("yyyy-MM-ddTHH:mm:ssZ"));
-    }
 
     // 검사 하나를 자식 프로세스로 돌린다. 출력 문자열로 성패를 세지 않고 exit code만 판정에 쓴다.
     private static CheckRun RunCheck(string root, CheckSpec spec)
