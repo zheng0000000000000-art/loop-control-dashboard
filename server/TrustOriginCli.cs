@@ -116,6 +116,11 @@ internal static class TrustOriginCli
                 ["evidenceRequired"] = evidenceRequired,
                 ["baselineCommit"] = Git(ctx.Root, "rev-parse HEAD").Trim(),
                 ["worktreeClean"] = clean,
+                // declare 선행조건을 밖에서 볼 수 있게 낸다. 안 보이면 상수인지 실측인지 알 수 없다 —
+                // 2026-07-26 감사에서 HighRiskFailClosed가 `=> true`인 것을 그래서 늦게 찾았다.
+                ["staleHistoricalEntries"] = new JsonArray(
+                    StaleHistoricalEntries(ctx.Root).Select(x => (JsonNode?)x).ToArray()),
+                ["automaticLauncherEnabled"] = AutomaticLauncherEnabled(ctx.Root),
                 ["buildVerdict"] = "NOT_RUN",
                 ["reconciliationMode"] = failures.Count == 0 ? "VERIFIED_CONSISTENT" : "DECLARED_LEGACY_GAP",
                 ["reconciliationExitCode"] = failures.Count == 0 ? 0 : 1,
@@ -1002,7 +1007,17 @@ internal static class TrustOriginCli
     private static bool HighRiskFailClosed() => StateApplierCli.HighRiskFailsClosed(RequiredHighRiskKinds);
 
     // 자동 launcher hook 활성화 여부를 보수적으로 감지한다.
-    private static bool AutomaticLauncherEnabled(string root) => File.Exists(Path.Combine(root, ".claude", "settings.json")) && File.ReadAllText(Path.Combine(root, ".claude", "settings.json")).Contains("\"hooks\"");
+    // 자동 launcher hook이 켜져 있는지 본다. 한 파일만 보면 다른 설정 파일의 hook을 놓친다
+    // (2026-07-26: settings.json 하나만 봤고, 그 파일이 없으면 무조건 통과였다).
+    // "hooks" 키가 보이면 켜진 것으로 본다 — 빈 객체여도 켜짐으로 읽는 보수적 판정을 유지한다.
+    private static readonly string[] LauncherSettingsFiles = ["settings.json", "settings.local.json"];
+
+    // 위 목록의 설정 파일 중 하나라도 hook을 담고 있으면 켜진 것으로 판정한다.
+    private static bool AutomaticLauncherEnabled(string root)
+        => LauncherSettingsFiles
+            .Select(name => Path.Combine(root, ".claude", name))
+            .Where(File.Exists)
+            .Any(path => { try { return File.ReadAllText(path).Contains("\"hooks\""); } catch { return true; } });
 
     // repo root에서 Trust Origin 관련 경로를 계산한다.
     private static RepoFiles Files(string root) => new(root, Path.Combine(root, "docs", "handoff", "WORKSTATE.json"), Path.Combine(root, "docs", "handoff", "WORKSTATE.applier-log.jsonl"), Path.Combine(root, RecordDirRel.Replace('/', Path.DirectorySeparatorChar)));
@@ -1073,7 +1088,18 @@ internal static class TrustOriginCli
             (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
 
     // active direct writer gate를 보수적으로 확인한다.
-    private static bool DirectWriterGatePass(string root) => LegacyCallsiteCount(root) == 0;
+    // legacy 직접 writer가 남아 있지 않은지 본다. 예외 목록이 낡으면 그 자체가 실패다 —
+    // 없는 파일을 면제 목록에 두면 나중에 그 경로에 파일이 생겼을 때 조용히 면제된다
+    // (2026-07-26 실측: 4건 중 2건이 이미 없는 파일이었다).
+    private static bool DirectWriterGatePass(string root)
+        => StaleHistoricalEntries(root).Count == 0 && LegacyCallsiteCount(root) == 0;
+
+    // 예외 목록에 있으나 실제로 없는 경로를 모은다.
+    internal static IReadOnlyList<string> StaleHistoricalEntries(string root)
+        => LoadHistoricalFiles(root)
+            .Where(rel => !File.Exists(Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar))))
+            .OrderBy(x => x, StringComparer.Ordinal)
+            .ToList();
 
     // legacy single-shot state-transition callsite 수를 계산한다.
     private static int LegacyCallsiteCount(string root)

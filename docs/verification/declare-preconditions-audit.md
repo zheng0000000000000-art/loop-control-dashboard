@@ -79,3 +79,58 @@ trust-origin inspect → JSON 객체 4개 (정상 1개)
 2. **①의 규칙 위반도 고치지 않았다.** 지금은 갈리지 않지만, `gate-clean`으로 바꾸면
    *"줄 끝 공백만 다른 트리에서 declare가 통과"* 하게 되어 **완화 방향**이다. 어느 쪽이 옳은지는 결재다.
 3. **⑦의 `casesRun`은 여전히 선언이다.** 오늘 표 하나로 모았을 뿐 실행으로 재지 않는다.
+
+---
+
+# 프록시 3건 정리 (append, 2026-07-26)
+
+## ② `direct-writer-gate-failed` — 낡은 예외 목록을 실패로 만든다
+
+`CALLSITE-HISTORICAL.json`의 면제 목록이 낡으면 **나중에 그 경로에 파일이 생겼을 때 조용히 면제된다.**
+
+```
+실측: 예외 4건 중 2건이 이미 없는 파일
+  outputs/review/06C-1.codex.md
+  outputs/review/06C-1-R1.codex.md
+```
+
+`DirectWriterGatePass = StaleHistoricalEntries(root).Count == 0 && LegacyCallsiteCount(root) == 0`.
+**정규식 스캔 자체는 그대로다** — 그건 별개 결정이다. 다만 **예외가 낡으면 통과하지 못한다.**
+
+## ③ `automatic-launcher-not-disabled` — 보는 파일을 넓혔다
+
+종전에는 `.claude/settings.json` **하나만** 봤고, 그 파일이 없으면 무조건 통과였다.
+`settings.local.json`도 본다. `"hooks"` 키가 보이면 켜진 것으로 읽는 **보수적 판정은 유지**했다
+(빈 객체여도 켜짐 — 완화하지 않았다).
+
+**실측**: `.claude/settings.local.json`에 `{"hooks":{}}`를 넣으면 `automaticLauncherEnabled` **True**,
+지우면 **False**. **종전 코드는 이 파일을 아예 보지 않았다.**
+
+## ① `worktree-not-clean` — 바꾸지 않기로 했다
+
+`gate-clean`으로 바꾸는 것이 CLAUDE.md의 문자에는 맞지만 **완화 방향**이다.
+`gate-clean`은 줄 끝 공백·BOM을 `representation-only`로 흘려보내는데, `declare`는
+**되돌릴 수 없는 1회성 선언**이라 가장 엄격한 판정이 맞다.
+
+**규칙의 취지는 "게이트가 표현 차이로 영구히 빨개지는 것"을 막는 것**이고(2026-07-11 데드락),
+`declare`는 게이트가 아니라 사람이 한 번 누르는 문이다. **그대로 둔다.**
+
+## ★ 선행조건을 `inspect`에 드러냈다
+
+```
+trust-origin inspect →  staleHistoricalEntries: ["outputs/review/06C-1-R1.codex.md", …]
+                        automaticLauncherEnabled: false
+```
+
+**안 보이면 상수인지 실측인지 알 수 없다.** `HighRiskFailClosed`가 `=> true`인 것을
+늦게 찾은 이유가 그것이다. 이제 두 조건은 밖에서 값을 볼 수 있다.
+
+## 지표는 만족했으나 목적은 미달인 부분
+
+1. **정규식 스캔은 그대로다.** 낡은 예외는 잡지만, *"표기가 다른 legacy callsite"* 는 여전히 못 잡는다.
+2. **`declare`를 끝까지 왕복시키지 못했다.** 기록이 이미 존재해 `trust-origin-already-established`에서
+   멈추고, 그것을 지우면 트리가 더러워져 첫 조건에서 멈춘다. **`inspect`로 값을 확인하는 데 그쳤다.**
+   *(폐기용 클론에서 기록을 지우고 커밋해 시도했으나 그 클론의 LAND가 1이 되어 증거를 못 만들었다.)*
+3. **`staleHistoricalEntries` 2건을 지우지 않았다.** 목록을 고치는 것은 **면제 범위를 바꾸는 일**이라
+   사람 결재다. 지금은 그 2건 때문에 `DirectWriterGatePass`가 **false**다 — 즉 `declare`는
+   이 조건에서도 막힌다. **막힌 상태를 그대로 드러내는 것이 이 수정의 목적이다.**

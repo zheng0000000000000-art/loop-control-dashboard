@@ -1,26 +1,26 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1785076504670",
-  "title": "함수 주석 추가",
+  "id": "proposal-1785078527769",
+  "title": "악화 롤백 제안: functionsWithoutComment",
   "lifecycle": "superseded",
+  "kind": "rollback",
   "createdBy": {
-    "provider": "ollama",
-    "model": "qwen3:8b"
+    "provider": "rule-engine",
+    "model": null
   },
-  "revisionOf": "proposal-1785076490679",
-  "summary": "함수 내부에 주석을 추가하여 유지보수성을 향상시키고자 합니다.",
-  "assumptions": [],
+  "revisionOf": null,
+  "summary": "직전에 충족되던 지표가 악화되어 자동 롤백을 제안한다. 체크리스트가 검토할 내용이 없어 1층을 건너뛰고 사람 결재로 직행한다.",
   "changes": [
     {
       "path": "functionsWithoutComment",
       "before": 1,
       "after": 0,
-      "note": "이 변경은 함수 내부에 주석을 추가하여 향후 유지보수성을 향상시키고자 하는 목적을 가지고 있습니다."
+      "note": "직전 승인 원인 미상 이후 functionsWithoutComment이 0→1로 악화됨. 되돌리거나 원인 조사 필요"
     }
   ],
   "impact": [
     {
-      "label": "위반 항목",
+      "label": "악화 항목",
       "value": "1"
     },
     {

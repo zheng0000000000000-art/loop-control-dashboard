@@ -1091,3 +1091,20 @@ private static bool HighRiskFailClosed() => true;      // TrustOriginCli.cs:993
 3. `IsWorktreeClean`을 `gate-clean`으로 바꿀 것인가 — **완화 방향**이라 단순한 규칙 준수 문제가 아니다.
 
 셋 다 `declare` 선행조건의 의미를 바꾸므로 결재다. **아무것도 바꾸지 않았다.**
+
+## 2026-07-26 — 선행조건 프록시 3건 정리 (①유지 ②③수정, 결재 1건 신설)
+
+- **②** `CALLSITE-HISTORICAL.json`의 면제 목록이 낡으면 **`DirectWriterGatePass`가 false**가 된다.
+  실측: **4건 중 2건이 이미 없는 파일**(`outputs/review/06C-1.codex.md`, `…-R1.codex.md`).
+  **지금 `declare`는 이 조건에서도 막힌다** — 막힌 상태를 드러내는 것이 목적이다.
+- **③** hook 설정을 `settings.json` 하나만 보던 것을 `settings.local.json`까지 넓혔다.
+  실측: 그 파일에 `{"hooks":{}}`를 넣으면 `automaticLauncherEnabled` **True**(종전엔 안 봤다).
+  보수적 판정(빈 객체도 켜짐)은 **유지** — 완화하지 않았다.
+- **①** `IsWorktreeClean`의 raw `git status`는 **그대로 둔다.** `gate-clean`으로 바꾸면 줄 끝 공백·BOM이
+  흘러가 **완화**된다. 규칙의 취지는 게이트가 표현 차이로 영구 적색이 되는 것을 막는 것이고,
+  `declare`는 게이트가 아니라 1회성 문이다.
+- **드러냄**: `trust-origin inspect`가 `staleHistoricalEntries`와 `automaticLauncherEnabled`를 낸다.
+  **안 보이면 상수인지 실측인지 알 수 없다** — `HighRiskFailClosed`를 늦게 찾은 이유다.
+
+**새 결재 1건**: `CALLSITE-HISTORICAL.json`의 없는 파일 2건을 **지울 것인가.**
+목록을 고치는 것은 **면제 범위 변경**이라 결재다. 지우기 전까지 `declare`는 이 조건에서 막힌다.
