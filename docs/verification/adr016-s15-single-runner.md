@@ -64,4 +64,16 @@ NormalizedContentHash 두 벌 → 하나 (NHASH-01)
    그 계약은 `{"command":"program-verify","critical":false}`만 기록하고 **하위 명령은 담지 않는다**
    (`--emit-cli-contract` 출력과 파일 양쪽 실측). `verify` → `request` 변화는 그 계약의 관심 밖이다.
    **미달로 적기 전에 확인했어야 했다** — 오늘 확인하지 않은 추정을 미달 항목으로 적어 이미 두 번 틀렸다.
-3. **클론에서 새 흐름을 안 돌렸다.** 조율자 트리에서만 왕복했다.
+3. ~~클론에서 새 흐름을 안 돌렸다~~ → **돌렸다.** 깨끗한 클론(baseline `c14f535`)에서:
+
+   ```
+   di-completion-check --gate WP-STATE-INTEGRITY-LAND --task flow   → exit 0
+   program-verify request --gate ... --report <그 보고>              → exit 0
+   trust-origin evidence --gate-report <그 보고>                     → exit 0
+   di-completion-check --gate POST-COMMIT --task pc                  → exit 0
+   ```
+
+   **새 흐름이 조율자 트리 밖에서도 끝까지 돈다.**
+
+4. **`POST-EXECUTOR`는 클론에서 새 흐름으로 안 돌렸다.** 더러운 트리를 만들어야 하고
+   앞서 `program-verify`로 한 번 확인했다. 러너가 바뀌었으므로 **다시 재지는 않았다.**
