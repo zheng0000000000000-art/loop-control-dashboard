@@ -114,6 +114,42 @@
           "expectedExit": 1,
           "mutatesState": false,
           "note": "exit 1은 실패가 아니라 승격 심사 후보가 있다는 뜻이다. 기대값이다."
+        },
+        {
+          "order": 6,
+          "command": "handoff-integrity",
+          "args": [
+            "--workstate",
+            "docs/qa/fixtures/reconciliation/fixture-a/workstate.json",
+            "--applier-log",
+            "docs/qa/fixtures/reconciliation/fixture-a/applier-log.jsonl"
+          ],
+          "expectedExit": 1,
+          "mutatesState": false,
+          "note": "반증 witness — 어긋난 상태를 실패로 보고하는지 확인한다(GWIT-01). 실측 2026-07-26: exit 1."
+        },
+        {
+          "order": 7,
+          "command": "handoff-integrity",
+          "args": [
+            "--workstate",
+            "docs/qa/fixtures/reconciliation/fixture-malformed/workstate.json",
+            "--applier-log",
+            "docs/qa/fixtures/reconciliation/fixture-malformed/applier-log.jsonl"
+          ],
+          "expectedExit": 2,
+          "mutatesState": false,
+          "note": "반증 witness — malformed 입력을 2로 구분하는지 확인한다. 실측 2026-07-26: exit 2."
+        },
+        {
+          "order": 8,
+          "command": "context-pack-integrity",
+          "args": [
+            "docs/qa/gate-witness/stale-pin-directive.md"
+          ],
+          "expectedExit": 1,
+          "mutatesState": false,
+          "note": "반증 witness — 일부러 stale한 pin을 실패로 보고하는지 확인한다(GWIT-01). 실측 2026-07-26: exit 1."
         }
       ],
       "unregisteredChecks": [
@@ -125,7 +161,8 @@
           "command": "claim-check",
           "reason": "scope-check·claim-check는 등재하지 않는다(CG04B, 2026-07-26). 둘 다 <diId|directivePath> 인자를 요구하는 지시서별 검사라 게이트 시점에 대상이 없고, 인자 없이 실행하면 사용법 오류로 exit 2다. 원본 CODEX-GATE-04 §3: '판정할 수 없는 검사는 넣지 마라 — 기대값을 정할 수 없으면 넣지 말고 note에 이유를 적어라.' 등재하려면 게이트가 대상 diId를 넘길 수 있어야 하며 그것은 별도 설계다."
         }
-      ]
+      ],
+      "requireFailureWitness": true
     },
     {
       "gateId": "WP-STATE-INTEGRITY-LAND",

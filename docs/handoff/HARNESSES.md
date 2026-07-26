@@ -34,6 +34,9 @@
 | 3 | `context-pack-integrity` | `` | 0 | False |  |
 | 4 | `doc-integrity` | `` | 0 | False |  |
 | 5 | `hs-scan` | `` | 1 | False | exit 1은 실패가 아니라 승격 심사 후보가 있다는 뜻이다. 기대값이다. |
+| 6 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-a/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-a/applier-log.jsonl` | 1 | False | 반증 witness — 어긋난 상태를 실패로 보고하는지 확인한다(GWIT-01). 실측 2026-07-26: exit 1. |
+| 7 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-malformed/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-malformed/applier-log.jsonl` | 2 | False | 반증 witness — malformed 입력을 2로 구분하는지 확인한다. 실측 2026-07-26: exit 2. |
+| 8 | `context-pack-integrity` | `docs/qa/gate-witness/stale-pin-directive.md` | 1 | False | 반증 witness — 일부러 stale한 pin을 실패로 보고하는지 확인한다(GWIT-01). 실측 2026-07-26: exit 1. |
 
 ### WP-STATE-INTEGRITY-LAND
 
@@ -65,6 +68,7 @@
 | `claim-check` | unlisted |
 | `di-completion-check` | unlisted |
 | `e2e-usage` | unlisted |
+| `gate-witness-check` | unlisted |
 | `launch-check` | unlisted |
 | `path-guard-check` | unlisted |
 | `project-api-edge-check` | unlisted |
