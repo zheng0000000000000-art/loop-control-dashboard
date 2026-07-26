@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-GCLEAN-01-R2",
+  "diId": "GCLEAN-01",
+  "baselineCommit": "70d010c1fb6541b8e82c5b4fe035bd5553af6979",
+  "startedAt": "2026-07-26T19:40:33Z",
+  "finishedAt": "2026-07-26T19:44:41Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "39ebd292610320610b64ab0d4dd9a01eb4f603acf1508d9d1c7dd086f1c53a67",
+  "stderrTail": "   internal static string FindRepoRoot()\n     {\n         var dir = new DirectoryInfo(Directory.GetCurrentDirectory());\n-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, \".git\")))\n+        while (dir is not null\n+            && !Directory.Exists(Path.Combine(dir.FullName, \".git\"))\n+            && !File.Exists(Path.Combine(dir.FullName, \".git\")))\n             dir = dir.Parent;\n         return dir?.FullName ?? Directory.GetCurrentDirectory();\n     }\n\ntokens used\n87,442",
+  "changedPaths": [
+    "server/Harness/GateCleanCli.cs",
+    "docs/qa/gate-witness/GCLEAN-01.md"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "7eb1de0e12c70b821522c57f4ba82b2a6fdca4e07a763c14e276471a79eec29b",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

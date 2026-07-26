@@ -53,6 +53,17 @@ internal static class GateCleanCli
     // 실제 git status를 수집해 내용 변경 여부를 판정하고 출력한다.
     private static int RunGitStatus(string repoRoot, string[] paths)
     {
+        var missingPaths = paths.Where(path => !TargetExists(repoRoot, path)).ToArray();
+        if (missingPaths.Length > 0)
+        {
+            Console.Error.WriteLine(new JsonObject
+            {
+                ["error"] = "검사 대상 경로가 없습니다.",
+                ["missingPaths"] = new JsonArray(missingPaths.Select(path => (JsonNode)path).ToArray()),
+            }.ToJsonString(JsonOptions));
+            return 2;
+        }
+
         var files = new JsonArray();
         var contentDirty = 0;
         var representationOnly = 0;
@@ -116,12 +127,31 @@ internal static class GateCleanCli
         return contentDirty == 0 ? 0 : 1;
     }
 
+    // 저장소 기준 검사 대상이 파일이나 디렉터리로 실제 존재하는지 확인한다.
+    private static bool TargetExists(string repoRoot, string path)
+    {
+        var full = Path.GetFullPath(Path.IsPathRooted(path)
+            ? path
+            : Path.Combine(repoRoot, path));
+        return File.Exists(full) || Directory.Exists(full);
+    }
+
     // 저장된 porcelain 출력만 읽어 clean·dirty를 판정한다.
     private static int RunStatusFixture(string repoRoot, string fixtureArg)
     {
         var full = Path.GetFullPath(Path.IsPathRooted(fixtureArg)
             ? fixtureArg
             : Path.Combine(repoRoot, fixtureArg));
+        if (!File.Exists(full))
+        {
+            Console.Error.WriteLine(new JsonObject
+            {
+                ["error"] = "status fixture 파일이 없습니다.",
+                ["missingPath"] = fixtureArg,
+            }.ToJsonString(JsonOptions));
+            return 2;
+        }
+
         var porcelain = File.ReadAllText(full);
         var dirty = porcelain.Length > 0;
         Console.WriteLine(new JsonObject
@@ -216,7 +246,9 @@ internal static class GitTools
     internal static string FindRepoRoot()
     {
         var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, ".git")))
+        while (dir is not null
+            && !Directory.Exists(Path.Combine(dir.FullName, ".git"))
+            && !File.Exists(Path.Combine(dir.FullName, ".git")))
             dir = dir.Parent;
         return dir?.FullName ?? Directory.GetCurrentDirectory();
     }

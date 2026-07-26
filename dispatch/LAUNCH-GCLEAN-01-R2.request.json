@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1",
+  "actorRole": "HARNESS_EXECUTOR",
+  "transport": "codex-cli",
+  "launchId": "LAUNCH-GCLEAN-01-R2",
+  "diId": "GCLEAN-01",
+  "baselineCommit": "70d010c1fb6541b8e82c5b4fe035bd5553af6979",
+  "directivePath": "docs/directives/GCLEAN-01-path-must-exist.md",
+  "directiveSha256": "01d2453046ae7911fcf21b086f44c523d4bd8bbb66faa91e490deac24ca63509",
+  "contextPackPath": "docs/directives/GCLEAN-01-path-must-exist.md",
+  "contextPackSha256": "01d2453046ae7911fcf21b086f44c523d4bd8bbb66faa91e490deac24ca63509",
+  "allowedPaths": [
+    "server/Harness/GateCleanCli.cs",
+    "docs/qa/gate-witness/**"
+  ],
+  "forbiddenActions": [
+    "commit",
+    "push",
+    "state-transition",
+    "pass",
+    "product-code-edit"
+  ],
+  "credentialRef": "none",
+  "timeoutSeconds": 1800,
+  "attempt": 1,
+  "maxAttempts": 1,
+  "workingCopyMode": "isolated-clean"
+}
