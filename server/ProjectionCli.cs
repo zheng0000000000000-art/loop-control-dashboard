@@ -97,7 +97,9 @@ internal static class ProjectionCli
             }
             else
             {
-                var hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(fullPath))).ToLowerInvariant();
+                // 원시 바이트로 해시하면 작업 트리의 줄바꿈에 묶여 기록이 그 기계에서만 참이 된다
+                // (2026-07-26: 클론에서 handoff-integrity가 hash-mismatch). 읽는 쪽과 같은 함수를 쓴다.
+                var hash = NormalizedContentHash.Compute(File.ReadAllBytes(fullPath)).ToLowerInvariant();
                 node["sha256"] = hash;
                 if (node["missing"] is not null)
                     node.Remove("missing");

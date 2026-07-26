@@ -127,7 +127,7 @@ internal static class OrchestratorObserverCli
             var full = Path.Combine(repoRoot, file);
             if (head is null || !File.Exists(full)) { contentDirty++; continue; }
 
-            if (NormalizedHash(head) == NormalizedHash(File.ReadAllBytes(full)))
+            if (NormalizedContentHash.Compute(head) == NormalizedContentHash.Compute(File.ReadAllBytes(full)))
                 representationOnly++;   // 내용 동일, 바이트만 다름 → 게이트 통과
             else
                 contentDirty++;
@@ -135,14 +135,6 @@ internal static class OrchestratorObserverCli
         return new CleanVerdict(contentDirty, representationOnly);
     }
 
-    // 표현 정규화: BOM 제거 → CRLF/CR을 LF로 → 줄 후행공백 제거 → 끝 개행 통일.
-    private static string NormalizedHash(byte[] raw)
-    {
-        var b = raw.Length >= 3 && raw[0] == 0xEF && raw[1] == 0xBB && raw[2] == 0xBF ? raw[3..] : raw;
-        var text = new UTF8Encoding(false).GetString(b).Replace("\r\n", "\n").Replace('\r', '\n');
-        var norm = string.Join("\n", text.Split('\n').Select(l => l.TrimEnd(' ', '\t'))).TrimEnd('\n') + "\n";
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(norm)));
-    }
 
     // git 바이너리 출력을 byte[]로 받는다. HEAD 파일 내용 비교 시 사용.
     private static byte[]? RunGitBytes(string repoRoot, string arguments)

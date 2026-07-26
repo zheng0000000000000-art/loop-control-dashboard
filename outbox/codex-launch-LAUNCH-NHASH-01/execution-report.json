@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-NHASH-01",
+  "diId": "NHASH-01",
+  "baselineCommit": "7be6d8029bb3af2a5b95f085fe42fdbd1ed1dfaa",
+  "startedAt": "2026-07-26T11:27:16Z",
+  "finishedAt": "2026-07-26T11:31:58Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "9c970345ea5c6a3eb53fd9abc9febcf39e97b0f3dfe8a7113ef8a13ffc535c28",
+  "stderrTail": "oding(false).GetString(bytes).Replace(\"\\r\\n\", \"\\n\").Replace('\\r', '\\n');\n+        var normalized = string.Join(\"\\n\", text.Split('\\n').Select(line => line.TrimEnd(' ', '\\t')))\n+            .TrimEnd('\\n') + \"\\n\";\n+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)));\n+    }\n+\n+    // UTF-8 BOM이 있는지 확인한다.\n+    internal static bool HasBom(byte[] bytes)\n+        => bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;\n+}\n\ntokens used\n106,467",
+  "changedPaths": [
+    "server/Harness/GateCleanCli.cs",
+    "server/Harness/HandoffIntegrityCli.cs",
+    "docs/qa/gate-witness/NHASH-01.md",
+    "docs/qa/gate-witness/NHashProbe/",
+    "server/Harness/NormalizedContentHash.cs"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "8e655b920066942f6cff1f0d22a804679e36190491986b064bb6102fa380718a",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

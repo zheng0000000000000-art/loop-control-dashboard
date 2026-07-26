@@ -1,7 +1,6 @@
 // WORKSTATE handoff integrity harness.
 // Checks that the current handoff record is backed by real files, hashes, and completion artifacts.
 // --workstate + --applier-log 둘 다 지정 시 fixture 격리 모드: reconciliation+malformed+blockers만 실행.
-using System.Security.Cryptography;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -252,7 +251,7 @@ internal static class HandoffIntegrityCli
             return entry;
         }
 
-        var actualHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(full))).ToLowerInvariant();
+        var actualHash = NormalizedContentHash.Compute(File.ReadAllBytes(full)).ToLowerInvariant();
         var normalizedExpected = expectedHash.Trim().ToLowerInvariant().Replace("sha256:", "");
         var matches = actualHash.Equals(normalizedExpected, StringComparison.OrdinalIgnoreCase);
         entry["actualSha256"] = actualHash;

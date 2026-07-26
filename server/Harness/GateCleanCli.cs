@@ -1,7 +1,6 @@
 // 트리 clean 여부를 '정규화된 내용 해시'로 판정하는 하네스 CLI.
 // raw git status는 줄바꿈 같은 표현 차이만으로 dirty가 되어 발사 게이트를 영구 잠근다(FAIL-2026-010).
 using System.Diagnostics;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -21,6 +20,8 @@ internal static class GateCleanCli
         try
         {
             var repoRoot = GitTools.FindRepoRoot();
+            if (args.Any(a => string.Equals(a, "--normalized-hash-self-test", StringComparison.OrdinalIgnoreCase)))
+                return RunNormalizedHashSelfTest();
             var fixtureIndex = Array.FindIndex(args, a =>
                 string.Equals(a, "--status-fixture", StringComparison.OrdinalIgnoreCase));
             if (fixtureIndex >= 0)
@@ -76,7 +77,7 @@ internal static class GateCleanCli
 
                 var work = File.ReadAllBytes(full);
                 var rawSame = head.AsSpan().SequenceEqual(work);
-                if (GitTools.NormalizedHash(head) == GitTools.NormalizedHash(work))
+                if (NormalizedContentHash.Compute(head) == NormalizedContentHash.Compute(work))
                 {
                     if (!rawSame) representationOnly++;
                     files.Add(MakeEntry(file, status,
@@ -142,8 +143,8 @@ internal static class GateCleanCli
         var reasons = new List<string>();
         if (CountCrlf(head) != CountCrlf(work))
             reasons.Add(CountCrlf(work) > CountCrlf(head) ? "LF→CRLF 재작성" : "CRLF→LF 재작성");
-        if (GitTools.HasBom(head) != GitTools.HasBom(work))
-            reasons.Add(GitTools.HasBom(work) ? "BOM 추가됨" : "BOM 제거됨");
+        if (NormalizedContentHash.HasBom(head) != NormalizedContentHash.HasBom(work))
+            reasons.Add(NormalizedContentHash.HasBom(work) ? "BOM 추가됨" : "BOM 제거됨");
         if (reasons.Count == 0) reasons.Add("후행공백/끝개행 차이");
         return string.Join(", ", reasons) + " — 내용 동일";
     }
@@ -156,9 +157,51 @@ internal static class GateCleanCli
             if (b[i] == 0x0A && b[i - 1] == 0x0D) n++;
         return n;
     }
+
+    // 정규화가 표현 차이만 제거하고 내용 차이는 보존하는지 네 가지 반증 사례로 확인한다.
+    private static int RunNormalizedHashSelfTest()
+    {
+        var utf8 = new UTF8Encoding(false);
+        var cases = new[]
+        {
+            (name: "crlf-vs-lf", left: utf8.GetBytes("alpha\r\nbeta\r\n"),
+                right: utf8.GetBytes("alpha\nbeta\n"), expectEqual: true),
+            (name: "content-change", left: utf8.GetBytes("alpha\nbeta\n"),
+                right: utf8.GetBytes("alpha\ngamma\n"), expectEqual: false),
+            (name: "trailing-whitespace", left: utf8.GetBytes("alpha  \nbeta\t\n"),
+                right: utf8.GetBytes("alpha\nbeta\n"), expectEqual: true),
+            (name: "bom-vs-no-bom", left: new byte[] { 0xEF, 0xBB, 0xBF }.Concat(utf8.GetBytes("alpha\n")).ToArray(),
+                right: utf8.GetBytes("alpha\n"), expectEqual: true),
+        };
+        var results = new JsonArray();
+        var mismatchCount = 0;
+        foreach (var test in cases)
+        {
+            var leftHash = NormalizedContentHash.Compute(test.left);
+            var rightHash = NormalizedContentHash.Compute(test.right);
+            var equal = leftHash == rightHash;
+            if (equal != test.expectEqual) mismatchCount++;
+            results.Add(new JsonObject
+            {
+                ["case"] = test.name,
+                ["expectedEqual"] = test.expectEqual,
+                ["actualEqual"] = equal,
+                ["leftSha256"] = leftHash.ToLowerInvariant(),
+                ["rightSha256"] = rightHash.ToLowerInvariant(),
+            });
+        }
+        Console.WriteLine(new JsonObject
+        {
+            ["harness"] = "normalized-hash-self-test",
+            ["caseCount"] = cases.Length,
+            ["mismatchCount"] = mismatchCount,
+            ["cases"] = results,
+        }.ToJsonString(JsonOptions));
+        return mismatchCount == 0 ? 0 : 1;
+    }
 }
 
-// 하네스들이 공유하는 git 읽기 전용 헬퍼와 표현 정규화.
+// 하네스들이 공유하는 git 읽기 전용 헬퍼.
 internal static class GitTools
 {
     // .git 디렉터리를 찾아 저장소 루트를 반환한다.
@@ -202,16 +245,4 @@ internal static class GitTools
         return bytes is null ? null : new UTF8Encoding(false).GetString(bytes);
     }
 
-    // UTF-8 BOM이 있는지 확인한다.
-    internal static bool HasBom(byte[] b)
-        => b.Length >= 3 && b[0] == 0xEF && b[1] == 0xBB && b[2] == 0xBF;
-
-    // 표현 차이를 제거한 내용 해시를 만든다: BOM 제거 → CRLF/CR을 LF로 → 줄 후행공백 제거 → 끝 개행 통일.
-    internal static string NormalizedHash(byte[] raw)
-    {
-        var b = HasBom(raw) ? raw[3..] : raw;
-        var text = new UTF8Encoding(false).GetString(b).Replace("\r\n", "\n").Replace('\r', '\n');
-        var norm = string.Join("\n", text.Split('\n').Select(l => l.TrimEnd(' ', '\t'))).TrimEnd('\n') + "\n";
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(norm)));
-    }
 }

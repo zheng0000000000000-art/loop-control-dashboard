@@ -273,12 +273,12 @@
     {
       "path": "server/OllamaExecutor.cs",
       "note": "ParseNoteResponse에 2차 대소문자 무시 대조(OrdinalIgnoreCase) 추가. TryGenerateNote/TryGenerateTuningNote에 NormalizedActualMetricId 반환. Generate/GenerateForTuning에 normalizedMetricIds 수집. ExecutorGenerateResult에 NormalizedMetricIds 추가.",
-      "sha256": "4eb15cee5726081c775f1f75a1a9b050da2c3b5675a78e811a0b5cf0134f3e4d"
+      "sha256": "8e44f8dee83c07901be0eb037fecd1a54b98ba1a84f5790f6af522e8460fab34"
     },
     {
       "path": "server/Program.cs",
       "note": "MetricIdNormalizedLogEntry 헬퍼 추가. ProposalGeneration에 NormalizationEntries 추가. GenerateProposalWithFallback/GenerateTuningProposalWithFallback 성공 경로에 normEntries 구성. 5개 콜러에서 NormalizationEntries 조건부 append.",
-      "sha256": "7e29ecd56a5a6107ba533e6e828fa8a35d1268d4897077b87271cf521b638246"
+      "sha256": "2356f0f8872973c0894ef3889fd44b2d65ca85f3b10c79737fdd00192d58e3c5"
     },
     {
       "path": "docs/verification/ledger04-metricid-normalization.md",

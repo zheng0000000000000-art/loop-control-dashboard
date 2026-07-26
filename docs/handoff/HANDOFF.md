@@ -11,8 +11,8 @@
 - DI-00-04의 즉시제작 2건(HS-GATE 누락 탐지 · prepare-model-handoff)은 코덱스 영역인데 코덱스 자동 루프가 중단됐다 — 사람이 수동 발사한다
 
 ## 변경 파일 (4개)
-- `server/OllamaExecutor.cs` [4eb15cee5726081c…] — ParseNoteResponse에 2차 대소문자 무시 대조(OrdinalIgnoreCase) 추가. TryGenerateNote/TryGenerateTuningNote에 NormalizedActualMetricId 반환. Generate/GenerateForTuning에 normalizedMetricIds 수집. ExecutorGenerateResult에 NormalizedMetricIds 추가.
-- `server/Program.cs` [7e29ecd56a5a6107…] — MetricIdNormalizedLogEntry 헬퍼 추가. ProposalGeneration에 NormalizationEntries 추가. GenerateProposalWithFallback/GenerateTuningProposalWithFallback 성공 경로에 normEntries 구성. 5개 콜러에서 NormalizationEntries 조건부 append.
+- `server/OllamaExecutor.cs` [8e44f8dee83c0790…] — ParseNoteResponse에 2차 대소문자 무시 대조(OrdinalIgnoreCase) 추가. TryGenerateNote/TryGenerateTuningNote에 NormalizedActualMetricId 반환. Generate/GenerateForTuning에 normalizedMetricIds 수집. ExecutorGenerateResult에 NormalizedMetricIds 추가.
+- `server/Program.cs` [2356f0f8872973c0…] — MetricIdNormalizedLogEntry 헬퍼 추가. ProposalGeneration에 NormalizationEntries 추가. GenerateProposalWithFallback/GenerateTuningProposalWithFallback 성공 경로에 normEntries 구성. 5개 콜러에서 NormalizationEntries 조건부 append.
 - `docs/verification/ledger04-metricid-normalization.md` [129c601ea657909d…] — LEDGER-04 작업 검증 문서 신규.
 - `docs/directives/LEDGER04-metricid-normalization.md` [fa6855c850db1c9f…] — 지시서 보관본.
 

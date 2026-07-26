@@ -1,0 +1,296 @@
+diff --git a/docs/qa/gate-witness/NHASH-01.md b/docs/qa/gate-witness/NHASH-01.md
+new file mode 100644
+index 0000000..1c97115
+--- /dev/null
++++ b/docs/qa/gate-witness/NHASH-01.md
+@@ -0,0 +1,79 @@
++# NHASH-01 gate witness
++
++- actor: HARNESS_EXECUTOR (codex)
++- date: 2026-07-26
++- direct-path reason: 지시서가 `server/Harness/**`를 ADR-002 배타 영역으로 지정하고 직접 실행을 요구했다.
++- referenced skills: `skills/common/**` 전체, 특히 `directive-writing.md`, `powershell-encoding.md`, `root-cause-diagnosis.md`, `verification.md`
++
++## 변경
++
++- `NormalizedContentHash.Compute` 한 곳으로 기존 `GateCleanCli` 정규화 규칙을 이동했다.
++- `GateCleanCli`와 `HandoffIntegrityCli`의 `changedFiles` 비교가 공용 정의를 호출한다.
++- BOM 제거, CRLF/CR의 LF 변환, 줄 후행 공백·탭 제거, 끝 개행 통일 규칙은 변경하지 않았다.
++- `gate-clean --normalized-hash-self-test`에 네 반증 사례를 추가했다.
++
++## 반증 시험 실측
++
++명령:
++
++`dotnet run --project docs/qa/gate-witness/NHashProbe/NHashProbe.csproj`
++
++결과: exit 0, `caseCount=4`, `mismatchCount=0`
++
++| 사례 | expectedEqual | actualEqual |
++| --- | ---: | ---: |
++| CRLF와 LF | true | true |
++| 한 글자 이상 내용 변경 | false | false |
++| 줄 끝 공백·탭만 변경 | true | true |
++| BOM 유무 | true | true |
++
++프로브는 사본 구현이 아니라 `server/Harness/NormalizedContentHash.cs`를 링크해 실행한다.
++
++## 제품 프로젝트 명령
++
++다음 명령은 모두 exit 1이었다.
++
++- `dotnet build server --no-restore`
++- `dotnet run --project server -- build-verify`
++- `dotnet run --project server -- gate-clean --normalized-hash-self-test`
++- `dotnet run --project server -- gate-clean --status-fixture docs/qa/gate-witness/gate-clean-dirty.status`
++- `dotnet run --project server -- gate-clean --status-fixture docs/qa/gate-witness/gate-clean-clean.status`
++- `dotnet run --project server -- gate-clean server`
++- `dotnet run --project server -- handoff-integrity`
++- `dotnet run --project server -- context-pack-integrity`
++- `dotnet run --project server -- measure dev-pack`
++
++공통 원인은 컴파일 오류가 아니라 복원 단계의 `NU1301`이다. 격리 환경에서
++`https://api.nuget.org/v3-index/repository-signatures/5.0.0/index.json`에 연결할 때
++SSL 인증에 사용할 인증서가 없었다. `--no-restore`도 같은 오류로 중단됐다.
++따라서 기존 두 status fixture의 exit·판정, `gate-clean server`, `build-verify`,
++`handoff-integrity`, context-pack stale pin, dev-pack violations는 본체에 진입하지 못해 실측되지 않았다.
++
++`handoff-integrity`는 쓰는 쪽 `ProjectionCli` 미반영 때문에 정상 실행 환경에서도 기존
++원시 바이트 스탬프와 정규화 해시가 어긋날 수 있는 단계다. 이번 실행의 exit 1은 그 예상
++불일치가 아니라 그보다 앞선 NuGet 복원 중단이다.
++
++{"gate":"dev-pack","violations":null,"attempt":1,"exitCode":1,"execution":"not-reached","reason":"NU1301 repository-signature SSL certificate unavailable"}
++
++## 정적 범위 확인
++
++- `GateCleanCli` 안의 기존 `NormalizedHash` 정의는 제거됐다.
++- `server/Harness/**`의 정규화 정의는 `NormalizedContentHash.Compute` 하나다.
++- 영역 밖 `server/OrchestratorObserverCli.cs`에는 기존 사본이 남아 있다. 지시서 §6에 따라
++  조율자가 같은 반입 변경에서 공용 정의로 교체해야 `server/**` 전체 정의가 하나가 된다.
++- `server/ProjectionCli.cs`, `server/OrchestratorObserverCli.cs`, `WORKSTATE.json`,
++  `GATE-MANIFEST.json`은 수정하지 않았다.
++
++## 미실측 및 후속
++
++- 복원이 가능한 환경에서 제품 프로젝트 명령 전부를 다시 실행해야 한다.
++- `context-pack-integrity`가 stale 경로를 출력하면 해당 경로를 큐 전체에서 검색해 실제 소유
++  지시서와 `requiredInputs`/`readOrder` 위치를 확인해야 한다. 이번에는 검사 본체가 실행되지 않아
++  stale 경로가 출력되지 않았고 소유자 검색 입력도 없었다.
++- 조율자는 `ProjectionCli` 쓰기 경로와 `OrchestratorObserverCli` 사본을 같은 공용 정의로 바꾸고
++  재스탬프한 뒤 깨끗한 클론에서 최종 프로그램 검증을 수행해야 한다.
++
++## 지표는 만족했으나 목적은 미달인 부분
++
++네 정규화 반증 사례는 실제 공용 구현으로 측정했다. 그러나 제품 프로젝트 복원이 중단되어
++기존 gate-clean 판정 보존과 handoff 전체 경로는 측정하지 못했다.
+diff --git a/docs/qa/gate-witness/NHashProbe/NHashProbe.csproj b/docs/qa/gate-witness/NHashProbe/NHashProbe.csproj
+new file mode 100644
+index 0000000..959d81f
+--- /dev/null
++++ b/docs/qa/gate-witness/NHashProbe/NHashProbe.csproj
+@@ -0,0 +1,13 @@
++<Project Sdk="Microsoft.NET.Sdk">
++  <PropertyGroup>
++    <OutputType>Exe</OutputType>
++    <TargetFramework>net10.0</TargetFramework>
++    <ImplicitUsings>enable</ImplicitUsings>
++    <Nullable>enable</Nullable>
++    <NuGetAudit>false</NuGetAudit>
++    <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
++  </PropertyGroup>
++  <ItemGroup>
++    <Compile Include="../../../../server/Harness/NormalizedContentHash.cs" Link="NormalizedContentHash.cs" />
++  </ItemGroup>
++</Project>
+diff --git a/docs/qa/gate-witness/NHashProbe/Program.cs b/docs/qa/gate-witness/NHashProbe/Program.cs
+new file mode 100644
+index 0000000..e70f459
+--- /dev/null
++++ b/docs/qa/gate-witness/NHashProbe/Program.cs
+@@ -0,0 +1,28 @@
++// 정규화 해시의 네 가지 반증 사례를 제품 프로젝트 복원과 독립적으로 실행한다.
++using System.Text;
++
++var utf8 = new UTF8Encoding(false);
++var cases = new[]
++{
++    (Name: "crlf-vs-lf", Left: utf8.GetBytes("alpha\r\nbeta\r\n"),
++        Right: utf8.GetBytes("alpha\nbeta\n"), ExpectedEqual: true),
++    (Name: "content-change", Left: utf8.GetBytes("alpha\nbeta\n"),
++        Right: utf8.GetBytes("alpha\ngamma\n"), ExpectedEqual: false),
++    (Name: "trailing-whitespace", Left: utf8.GetBytes("alpha  \nbeta\t\n"),
++        Right: utf8.GetBytes("alpha\nbeta\n"), ExpectedEqual: true),
++    (Name: "bom-vs-no-bom", Left: new byte[] { 0xEF, 0xBB, 0xBF }.Concat(utf8.GetBytes("alpha\n")).ToArray(),
++        Right: utf8.GetBytes("alpha\n"), ExpectedEqual: true),
++};
++
++var mismatches = 0;
++foreach (var test in cases)
++{
++    var left = NormalizedContentHash.Compute(test.Left);
++    var right = NormalizedContentHash.Compute(test.Right);
++    var actualEqual = left == right;
++    if (actualEqual != test.ExpectedEqual) mismatches++;
++    Console.WriteLine($"{test.Name}: expectedEqual={test.ExpectedEqual} actualEqual={actualEqual}");
++}
++
++Console.WriteLine($"caseCount={cases.Length} mismatchCount={mismatches}");
++return mismatches == 0 ? 0 : 1;
+diff --git a/server/Harness/GateCleanCli.cs b/server/Harness/GateCleanCli.cs
+index 1178544..0481404 100644
+--- a/server/Harness/GateCleanCli.cs
++++ b/server/Harness/GateCleanCli.cs
+@@ -1,7 +1,6 @@
+ // 트리 clean 여부를 '정규화된 내용 해시'로 판정하는 하네스 CLI.
+ // raw git status는 줄바꿈 같은 표현 차이만으로 dirty가 되어 발사 게이트를 영구 잠근다(FAIL-2026-010).
+ using System.Diagnostics;
+-using System.Security.Cryptography;
+ using System.Text;
+ using System.Text.Encodings.Web;
+ using System.Text.Json;
+@@ -21,6 +20,8 @@ internal static class GateCleanCli
+         try
+         {
+             var repoRoot = GitTools.FindRepoRoot();
++            if (args.Any(a => string.Equals(a, "--normalized-hash-self-test", StringComparison.OrdinalIgnoreCase)))
++                return RunNormalizedHashSelfTest();
+             var fixtureIndex = Array.FindIndex(args, a =>
+                 string.Equals(a, "--status-fixture", StringComparison.OrdinalIgnoreCase));
+             if (fixtureIndex >= 0)
+@@ -76,7 +77,7 @@ internal static class GateCleanCli
+ 
+                 var work = File.ReadAllBytes(full);
+                 var rawSame = head.AsSpan().SequenceEqual(work);
+-                if (GitTools.NormalizedHash(head) == GitTools.NormalizedHash(work))
++                if (NormalizedContentHash.Compute(head) == NormalizedContentHash.Compute(work))
+                 {
+                     if (!rawSame) representationOnly++;
+                     files.Add(MakeEntry(file, status,
+@@ -142,8 +143,8 @@ internal static class GateCleanCli
+         var reasons = new List<string>();
+         if (CountCrlf(head) != CountCrlf(work))
+             reasons.Add(CountCrlf(work) > CountCrlf(head) ? "LF→CRLF 재작성" : "CRLF→LF 재작성");
+-        if (GitTools.HasBom(head) != GitTools.HasBom(work))
+-            reasons.Add(GitTools.HasBom(work) ? "BOM 추가됨" : "BOM 제거됨");
++        if (NormalizedContentHash.HasBom(head) != NormalizedContentHash.HasBom(work))
++            reasons.Add(NormalizedContentHash.HasBom(work) ? "BOM 추가됨" : "BOM 제거됨");
+         if (reasons.Count == 0) reasons.Add("후행공백/끝개행 차이");
+         return string.Join(", ", reasons) + " — 내용 동일";
+     }
+@@ -156,9 +157,51 @@ internal static class GateCleanCli
+             if (b[i] == 0x0A && b[i - 1] == 0x0D) n++;
+         return n;
+     }
++
++    // 정규화가 표현 차이만 제거하고 내용 차이는 보존하는지 네 가지 반증 사례로 확인한다.
++    private static int RunNormalizedHashSelfTest()
++    {
++        var utf8 = new UTF8Encoding(false);
++        var cases = new[]
++        {
++            (name: "crlf-vs-lf", left: utf8.GetBytes("alpha\r\nbeta\r\n"),
++                right: utf8.GetBytes("alpha\nbeta\n"), expectEqual: true),
++            (name: "content-change", left: utf8.GetBytes("alpha\nbeta\n"),
++                right: utf8.GetBytes("alpha\ngamma\n"), expectEqual: false),
++            (name: "trailing-whitespace", left: utf8.GetBytes("alpha  \nbeta\t\n"),
++                right: utf8.GetBytes("alpha\nbeta\n"), expectEqual: true),
++            (name: "bom-vs-no-bom", left: new byte[] { 0xEF, 0xBB, 0xBF }.Concat(utf8.GetBytes("alpha\n")).ToArray(),
++                right: utf8.GetBytes("alpha\n"), expectEqual: true),
++        };
++        var results = new JsonArray();
++        var mismatchCount = 0;
++        foreach (var test in cases)
++        {
++            var leftHash = NormalizedContentHash.Compute(test.left);
++            var rightHash = NormalizedContentHash.Compute(test.right);
++            var equal = leftHash == rightHash;
++            if (equal != test.expectEqual) mismatchCount++;
++            results.Add(new JsonObject
++            {
++                ["case"] = test.name,
++                ["expectedEqual"] = test.expectEqual,
++                ["actualEqual"] = equal,
++                ["leftSha256"] = leftHash.ToLowerInvariant(),
++                ["rightSha256"] = rightHash.ToLowerInvariant(),
++            });
++        }
++        Console.WriteLine(new JsonObject
++        {
++            ["harness"] = "normalized-hash-self-test",
++            ["caseCount"] = cases.Length,
++            ["mismatchCount"] = mismatchCount,
++            ["cases"] = results,
++        }.ToJsonString(JsonOptions));
++        return mismatchCount == 0 ? 0 : 1;
++    }
+ }
+ 
+-// 하네스들이 공유하는 git 읽기 전용 헬퍼와 표현 정규화.
++// 하네스들이 공유하는 git 읽기 전용 헬퍼.
+ internal static class GitTools
+ {
+     // .git 디렉터리를 찾아 저장소 루트를 반환한다.
+@@ -202,16 +245,4 @@ internal static class GitTools
+         return bytes is null ? null : new UTF8Encoding(false).GetString(bytes);
+     }
+ 
+-    // UTF-8 BOM이 있는지 확인한다.
+-    internal static bool HasBom(byte[] b)
+-        => b.Length >= 3 && b[0] == 0xEF && b[1] == 0xBB && b[2] == 0xBF;
+-
+-    // 표현 차이를 제거한 내용 해시를 만든다: BOM 제거 → CRLF/CR을 LF로 → 줄 후행공백 제거 → 끝 개행 통일.
+-    internal static string NormalizedHash(byte[] raw)
+-    {
+-        var b = HasBom(raw) ? raw[3..] : raw;
+-        var text = new UTF8Encoding(false).GetString(b).Replace("\r\n", "\n").Replace('\r', '\n');
+-        var norm = string.Join("\n", text.Split('\n').Select(l => l.TrimEnd(' ', '\t'))).TrimEnd('\n') + "\n";
+-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(norm)));
+-    }
+ }
+diff --git a/server/Harness/HandoffIntegrityCli.cs b/server/Harness/HandoffIntegrityCli.cs
+index 48a6de7..cd4a657 100644
+--- a/server/Harness/HandoffIntegrityCli.cs
++++ b/server/Harness/HandoffIntegrityCli.cs
+@@ -1,7 +1,6 @@
+ // WORKSTATE handoff integrity harness.
+ // Checks that the current handoff record is backed by real files, hashes, and completion artifacts.
+ // --workstate + --applier-log 둘 다 지정 시 fixture 격리 모드: reconciliation+malformed+blockers만 실행.
+-using System.Security.Cryptography;
+ using System.Text.Encodings.Web;
+ using System.Text.Json;
+ using System.Text.Json.Nodes;
+@@ -252,7 +251,7 @@ internal static class HandoffIntegrityCli
+             return entry;
+         }
+ 
+-        var actualHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(full))).ToLowerInvariant();
++        var actualHash = NormalizedContentHash.Compute(File.ReadAllBytes(full)).ToLowerInvariant();
+         var normalizedExpected = expectedHash.Trim().ToLowerInvariant().Replace("sha256:", "");
+         var matches = actualHash.Equals(normalizedExpected, StringComparison.OrdinalIgnoreCase);
+         entry["actualSha256"] = actualHash;
+diff --git a/server/Harness/NormalizedContentHash.cs b/server/Harness/NormalizedContentHash.cs
+new file mode 100644
+index 0000000..44ae844
+--- /dev/null
++++ b/server/Harness/NormalizedContentHash.cs
+@@ -0,0 +1,20 @@
++// 하네스들이 파일 표현 차이를 같은 방식으로 제거해 내용 해시를 계산한다.
++using System.Security.Cryptography;
++using System.Text;
++
++internal static class NormalizedContentHash
++{
++    // BOM 제거, 줄바꿈 통일, 줄 후행공백 제거, 끝 개행 통일 후 SHA-256을 계산한다.
++    internal static string Compute(byte[] raw)
++    {
++        var bytes = HasBom(raw) ? raw[3..] : raw;
++        var text = new UTF8Encoding(false).GetString(bytes).Replace("\r\n", "\n").Replace('\r', '\n');
++        var normalized = string.Join("\n", text.Split('\n').Select(line => line.TrimEnd(' ', '\t')))
++            .TrimEnd('\n') + "\n";
++        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)));
++    }
++
++    // UTF-8 BOM이 있는지 확인한다.
++    internal static bool HasBom(byte[] bytes)
++        => bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;
++}
