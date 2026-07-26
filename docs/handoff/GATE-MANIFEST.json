@@ -60,6 +60,16 @@
           "mutatesState": false,
           "note": "실행자 직후에는 더러운 것이 정상이다. exit 1이 기대값이다."
         }
+      ],
+      "unregisteredChecks": [
+        {
+          "command": "scope-check",
+          "reason": "scope-check·claim-check는 등재하지 않는다(CG04B, 2026-07-26). 둘 다 <diId|directivePath> 인자를 요구하는 지시서별 검사라 게이트 시점에 대상이 없고, 인자 없이 실행하면 사용법 오류로 exit 2다. 원본 CODEX-GATE-04 §3: '판정할 수 없는 검사는 넣지 마라 — 기대값을 정할 수 없으면 넣지 말고 note에 이유를 적어라.' 등재하려면 게이트가 대상 diId를 넘길 수 있어야 하며 그것은 별도 설계다."
+        },
+        {
+          "command": "claim-check",
+          "reason": "scope-check·claim-check는 등재하지 않는다(CG04B, 2026-07-26). 둘 다 <diId|directivePath> 인자를 요구하는 지시서별 검사라 게이트 시점에 대상이 없고, 인자 없이 실행하면 사용법 오류로 exit 2다. 원본 CODEX-GATE-04 §3: '판정할 수 없는 검사는 넣지 마라 — 기대값을 정할 수 없으면 넣지 말고 note에 이유를 적어라.' 등재하려면 게이트가 대상 diId를 넘길 수 있어야 하며 그것은 별도 설계다."
+        }
       ]
     },
     {
@@ -104,6 +114,16 @@
           "expectedExit": 1,
           "mutatesState": false,
           "note": "exit 1은 실패가 아니라 승격 심사 후보가 있다는 뜻이다. 기대값이다."
+        }
+      ],
+      "unregisteredChecks": [
+        {
+          "command": "scope-check",
+          "reason": "scope-check·claim-check는 등재하지 않는다(CG04B, 2026-07-26). 둘 다 <diId|directivePath> 인자를 요구하는 지시서별 검사라 게이트 시점에 대상이 없고, 인자 없이 실행하면 사용법 오류로 exit 2다. 원본 CODEX-GATE-04 §3: '판정할 수 없는 검사는 넣지 마라 — 기대값을 정할 수 없으면 넣지 말고 note에 이유를 적어라.' 등재하려면 게이트가 대상 diId를 넘길 수 있어야 하며 그것은 별도 설계다."
+        },
+        {
+          "command": "claim-check",
+          "reason": "scope-check·claim-check는 등재하지 않는다(CG04B, 2026-07-26). 둘 다 <diId|directivePath> 인자를 요구하는 지시서별 검사라 게이트 시점에 대상이 없고, 인자 없이 실행하면 사용법 오류로 exit 2다. 원본 CODEX-GATE-04 §3: '판정할 수 없는 검사는 넣지 마라 — 기대값을 정할 수 없으면 넣지 말고 note에 이유를 적어라.' 등재하려면 게이트가 대상 diId를 넘길 수 있어야 하며 그것은 별도 설계다."
         }
       ]
     },

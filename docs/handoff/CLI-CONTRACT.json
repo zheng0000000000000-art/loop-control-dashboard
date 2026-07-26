@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "commands": [
+    {
+      "command": "build-verify",
+      "critical": true
+    },
+    {
+      "command": "call-integrity-check",
+      "critical": true
+    },
+    {
+      "command": "claim-check",
+      "critical": true
+    },
+    {
+      "command": "codex-launch",
+      "critical": false
+    },
+    {
+      "command": "context-pack-integrity",
+      "critical": true
+    },
+    {
+      "command": "di-completion-check",
+      "critical": true
+    },
+    {
+      "command": "dispatch-executor",
+      "critical": false
+    },
+    {
+      "command": "doc-integrity",
+      "critical": true
+    },
+    {
+      "command": "e2e-usage",
+      "critical": true
+    },
+    {
+      "command": "gate-clean",
+      "critical": true
+    },
+    {
+      "command": "handoff-integrity",
+      "critical": true
+    },
+    {
+      "command": "hs-scan",
+      "critical": true
+    },
+    {
+      "command": "launch-check",
+      "critical": true
+    },
+    {
+      "command": "measure",
+      "critical": true
+    },
+    {
+      "command": "orch-observe",
+      "critical": false
+    },
+    {
+      "command": "path-guard-check",
+      "critical": true
+    },
+    {
+      "command": "program-verify",
+      "critical": false
+    },
+    {
+      "command": "project-api-edge-check",
+      "critical": true
+    },
+    {
+      "command": "projection",
+      "critical": true
+    },
+    {
+      "command": "recovery",
+      "critical": false
+    },
+    {
+      "command": "refeedbacktest",
+      "critical": false
+    },
+    {
+      "command": "scope-check",
+      "critical": true
+    },
+    {
+      "command": "simtest",
+      "critical": false
+    },
+    {
+      "command": "simtune",
+      "critical": false
+    },
+    {
+      "command": "snapshot-behavior",
+      "critical": false
+    },
+    {
+      "command": "state-transition",
+      "critical": true
+    },
+    {
+      "command": "state-transition-callsite-check",
+      "critical": true
+    },
+    {
+      "command": "template-sync-check",
+      "critical": true
+    },
+    {
+      "command": "tier2test",
+      "critical": false
+    },
+    {
+      "command": "trust-origin",
+      "critical": false
+    },
+    {
+      "command": "verify-behavior",
+      "critical": false
+    }
+  ]
+}
