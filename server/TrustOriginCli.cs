@@ -357,9 +357,14 @@ internal static class TrustOriginCli
     private const string LandGateId = "WP-STATE-INTEGRITY-LAND";
 
     // declare가 PASS를 요구하는 항목을 실제로 잰 명령들. 보고서에 이것들이 없으면 근거가 아니다.
+    // declare가 근거로 삼아야 하는 검사 이름이다. **매니페스트의 실제 명령 이름과 같아야 한다.**
+    // HREG-01의 이름 교체(state-transition → state-transition-selftest 등) 때 이 목록이 갱신되지
+    // 않아, 이름 교체 이후 --gate-report 경로는 두 러너 모두에게 죽어 있었다(2026-07-26 실측:
+    // 양쪽 보고에서 state-transition·recovery·trust-origin 셋 다 없음). 이름을 바꾸면 여기도 바꿔라.
     private static readonly string[] RequiredGateCommands =
     [
-        "build-verify", "state-transition", "handoff-integrity", "recovery", "trust-origin", "measure", "doc-integrity",
+        "build-verify", "state-transition-selftest", "handoff-integrity", "recovery-selftest",
+        "trust-origin-selftest", "measure", "doc-integrity",
     ];
 
     // 현재 baseline에 대한 통합 evidence JSON을 만든다.

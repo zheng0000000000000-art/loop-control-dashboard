@@ -217,3 +217,16 @@ self-test 케이스 수(19/24/8)도 `declare`의 기대값과 일치한다. **�
 - **비용**: 발사마다 약 8 KB 늘어난다.
 - **되돌리는 법**: `.gitignore`의 그 블록을 `outbox/` 한 줄로 되돌리고 추적 파일을 `git rm --cached` 한다.
   되돌리면 `POST-COMMIT`은 이 기계에서만 통과한다.
+
+## 2026-07-26 (3) — `trust-origin`의 `RequiredGateCommands`를 실재 이름으로 정정
+
+- **주체**: 조율 세션(Claude Opus 5), 사람 지시(`ADR-016` §8 정리). 결재는 사람.
+- **근거 (실측)**: 목록이 `state-transition`·`recovery`·`trust-origin`을 요구하는데
+  매니페스트의 실제 이름은 `state-transition-selftest`·`recovery-selftest`·`trust-origin-selftest`다.
+  **양쪽 러너의 LAND 보고 모두 그 셋이 없다**(직접 대조). `HREG-01`의 이름 교체 때 이 목록이
+  갱신되지 않았고, 그 이후 `trust-origin evidence --gate-report`는 **두 러너 모두에게 죽어 있었다.**
+  이번 세션에 그 경로를 baseline change로 열어 놓고도 쓸 수 없는 상태였다.
+- **한 일**: 세 이름을 실재 이름으로 바꿨다. **요구 항목 수는 그대로 7개** — 완화가 아니라 정정이다.
+- **되돌리는 법**: 세 이름을 `-selftest` 없는 형태로 되돌린다. 되돌리면 경로가 다시 죽는다.
+- **남는 위험**: 이 목록은 매니페스트와 **손으로 동기화**된다. 이름을 또 바꾸면 또 끊긴다.
+  기계가 대조하게 하는 것이 근본 해결이며 별도 결재다.
