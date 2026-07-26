@@ -1,7 +1,8 @@
 {
   "launchId": "LAUNCH-GCLEAN-01-R1",
-  "state": "pending",
+  "state": "rejected",
   "decidedAt": "2026-07-26",
-  "actor": "codex-launch (자동) — 처분은 사람이 정한다",
-  "note": "발사만 됐고 반입·폐기는 정해지지 않았다. launch-disposition이 위반으로 센다."
+  "actor": "조율 세션(Claude Opus 5)",
+  "note": "실행자 잘못이 아니다. _header.md가 금지하는 것을 조율자가 어겼다 — 작업 중 바뀌는 파일에 해시를 걸면 게이트가 자기 작업에 걸려 넘어진다. 참조 입력을 _header.md 하나로 줄이고 R2로 다시 쏴 성공했다.",
+  "reason": "stale-required-input: 조율자가 계속 append하는 관찰 문서를 참조 입력 핀으로 걸어 해시가 어긋났다. 코덱스가 착수를 거부하고 요구·실제 해시를 둘 다 보고했으며 파일을 하나도 건드리지 않았다."
 }
