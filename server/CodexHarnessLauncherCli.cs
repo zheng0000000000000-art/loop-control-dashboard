@@ -159,7 +159,11 @@ internal static class CodexHarnessLauncherCli
             var allowed = Array(request, "allowedPaths");
             var violations = changed.Where(p => !allowed.Any(a => Matches(p, a))).ToList();
 
-            var patch = RunProcess(workdir, "git", ["--no-pager", "diff"], 120).Stdout;
+            // `git diff`만 쓰면 untracked 새 파일이 패치에서 빠진다. changedPaths는 status로
+            // 세므로 3개라고 보고하면서 패치에는 1개만 담기는 일이 실제로 났다(GWIT-01, 2026-07-26):
+            // 새 클래스가 빠진 채 그것을 참조하는 수정만 실려 빌드가 깨졌다. 전부 stage한 뒤 낸다.
+            RunProcess(workdir, "git", ["add", "-A"], 120);
+            var patch = RunProcess(workdir, "git", ["--no-pager", "diff", "--cached"], 120).Stdout;
             var evidence = new JsonObject
             {
                 ["schemaVersion"] = 1,
@@ -182,6 +186,14 @@ internal static class CodexHarnessLauncherCli
                 ["note"] = "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
             };
 
+            // 증거와 산출물이 어긋나면 실패다. changedPaths에 있는데 패치에 없는 경로가 있으면
+            // 반입하는 쪽이 조용히 반쪽짜리를 적용하게 된다 — 위 사고가 정확히 그것이었다.
+            var missingFromPatch = changed
+                .Where(p => !patch.Contains("/" + p, StringComparison.Ordinal)
+                    && !patch.Contains(" " + p, StringComparison.Ordinal))
+                .ToList();
+            evidence["pathsMissingFromPatch"] = new JsonArray(missingFromPatch.Select(p => (JsonNode)p!).ToArray());
+
             var outDir = Path.Combine(root, OutboxDirRel, "codex-launch-" + launchId);
             Directory.CreateDirectory(outDir);
             File.WriteAllText(Path.Combine(outDir, "candidate.patch"), patch, Utf8NoBom);
@@ -190,7 +202,7 @@ internal static class CodexHarnessLauncherCli
             evidence["outboxDir"] = Path.GetRelativePath(root, outDir).Replace('\\', '/');
             Output(evidence);
             // 범위를 벗어난 변경이 있으면 실행 자체가 실패다. 증거는 남기되 성공으로 적지 않는다.
-            return violations.Count > 0 ? 1 : run.ExitCode == 0 ? 0 : 1;
+            return violations.Count > 0 || missingFromPatch.Count > 0 ? 1 : run.ExitCode == 0 ? 0 : 1;
         }
         finally
         {
