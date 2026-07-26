@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "gates": [
+    {
+      "gateId": "GWIT-06-NON-JSON",
+      "requireFailureWitness": true,
+      "checks": [
+        {
+          "order": 1,
+          "command": "gate-witness-check",
+          "args": [
+            "--count-output-fixture",
+            "docs/qa/gate-witness/jsonlines-non-json-output.txt"
+          ],
+          "expectedExit": 0,
+          "internalNegativeCases": 1
+        }
+      ]
+    }
+  ]
+}

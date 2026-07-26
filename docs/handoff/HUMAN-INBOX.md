@@ -659,3 +659,17 @@ gate-witness-check []      | exp 0 | got 1   ← 실재 문제.
 
 **사람 판단이 필요한 것**: `ProgramVerifierCli`를 고칠 것인가(사전 빌드 1회 + `--no-build`),
 아니면 `di-completion-check`만 남기고 폐기할 것인가. ADR-016 §8이 이미 권위를 후자에 줬다.
+
+## 2026-07-26 — LAND의 requireFailureWitness를 켰다 (앞 항목 해소)
+
+`GWIT-06` 반입으로 `gate-witness-check`가 여러 줄 JSON을 읽는다.
+`state-transition-selftest`의 15건 주장이 **실행 증거로 확인**되고, 16·999 거짓 주장은 막힌다.
+
+```
+POST-EXECUTOR             13 / 13   미반증 0
+POST-COMMIT               12 / 12   미반증 0
+WP-STATE-INTEGRITY-LAND   18 / 18   미반증 0   ← 이제 검증한 0
+```
+
+앞 항목의 "믿은 0 vs 검증한 0" 구분은 **해소됐다.** 남은 사람 결재는
+`ProgramVerifierCli` 건(ADR-016 §9)뿐이다.

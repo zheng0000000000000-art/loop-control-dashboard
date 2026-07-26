@@ -459,7 +459,8 @@
           "expectedExit": 1,
           "mutatesState": false
         }
-      ]
+      ],
+      "requireFailureWitness": true
     }
   ]
 }

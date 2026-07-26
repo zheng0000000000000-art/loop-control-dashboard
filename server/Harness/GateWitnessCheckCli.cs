@@ -17,6 +17,10 @@ internal static class GateWitnessCheckCli
     {
         try
         {
+            if (args.Length == 3 &&
+                string.Equals(args[1], "--count-output-fixture", StringComparison.OrdinalIgnoreCase))
+                return RunCountOutputFixture(args[2]);
+
             var root = GitTools.FindRepoRoot();
             var manifestPath = ResolveManifestPath(root, args);
             var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))?.AsObject()
@@ -51,6 +55,34 @@ internal static class GateWitnessCheckCli
             }));
             return 2;
         }
+    }
+
+    // 저장된 stdout 픽스처에서 구조화 음성 사례 수를 읽어 파서 반증 시험을 지원한다.
+    private static int RunCountOutputFixture(string fixturePath)
+    {
+        var root = GitTools.FindRepoRoot();
+        var full = Path.GetFullPath(Path.IsPathRooted(fixturePath)
+            ? fixturePath
+            : Path.Combine(root, fixturePath));
+        if (!File.Exists(full))
+            throw new FileNotFoundException("output fixture not found", fixturePath);
+
+        var count = 0;
+        try
+        {
+            count = CountJsonCaseValues(File.ReadAllText(full));
+        }
+        catch (JsonException)
+        {
+            count = 0;
+        }
+
+        Console.WriteLine(new JsonObject
+        {
+            ["harness"] = "gate-witness-count-output-fixture",
+            ["internalNegativeCases"] = count,
+        }.ToJsonString(JsonOptions));
+        return 0;
     }
 
     // 선택 인자가 없으면 저장소의 표준 게이트 매니페스트를 사용한다.
@@ -153,13 +185,34 @@ internal static class GateWitnessCheckCli
 
         try
         {
-            var output = JsonNode.Parse(capturedOut.ToString());
-            return FindCaseCount(output);
+            return CountJsonCaseValues(capturedOut.ToString());
         }
         catch (JsonException)
         {
             return 0;
         }
+    }
+
+    // stdout의 모든 연속 JSON 값을 끝까지 읽고 알려진 카운터의 최댓값을 반환한다.
+    private static int CountJsonCaseValues(string output)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(output);
+        var offset = 0;
+        var maximum = 0;
+        while (offset < bytes.Length)
+        {
+            while (offset < bytes.Length &&
+                bytes[offset] is (byte)' ' or (byte)'\t' or (byte)'\r' or (byte)'\n')
+                offset++;
+            if (offset == bytes.Length)
+                break;
+
+            var reader = new Utf8JsonReader(bytes.AsSpan(offset));
+            var node = JsonNode.Parse(ref reader);
+            maximum = Math.Max(maximum, FindCaseCount(node));
+            offset += checked((int)reader.BytesConsumed);
+        }
+        return maximum;
     }
 
     // 알려진 구조화 카운터만 재귀적으로 읽어 문면 주장을 실행 증거와 분리한다.

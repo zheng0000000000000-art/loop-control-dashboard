@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "gates": [
+    {
+      "gateId": "GWIT-06-STATE-15",
+      "requireFailureWitness": true,
+      "checks": [
+        {
+          "order": 1,
+          "command": "state-transition-selftest",
+          "args": [],
+          "expectedExit": 0,
+          "internalNegativeCases": 15
+        },
+        {
+          "order": 2,
+          "command": "recovery-selftest",
+          "args": [],
+          "expectedExit": 0,
+          "internalNegativeCases": 7
+        },
+        {
+          "order": 3,
+          "command": "trust-origin-selftest",
+          "args": [],
+          "expectedExit": 0,
+          "internalNegativeCases": 20
+        }
+      ]
+    }
+  ]
+}
