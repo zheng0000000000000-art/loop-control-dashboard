@@ -62,3 +62,32 @@ claim-check  → {"error":"사용법: claim-check <diId>"}                      
    결함을 다음 지시서가 대신 만났다.
 4. 따라서 **`CG04B`는 1-A·1-B만 완료이고 §3의 완료 조건("계약에 있는 명령을 배선에서 하나 지우면
    게이트가 exit 1")은 미충족**이다. `CG04A-R1` 착륙 후 시험 1을 다시 돌려야 한다.
+
+---
+
+## 정정 (2026-07-26, 같은 세션) — 시험 1이 통과로 바뀌었다
+
+`CG04A-R1` 반입(`6a6bf9e`) 뒤 같은 시험을 다시 돌렸다. **위 §"반증 시험" 표의 시험 1 판정을
+실패에서 통과로 정정한다.** 원 기록은 지우지 않는다 — 그때는 실제로 실패였다.
+
+| # | 시험 | 이전 (`a29b80f` 시점) | 지금 (`6a6bf9e` 이후) |
+| --- | --- | --- | --- |
+| 1 | `critical` 배선 제거 후 게이트 | exit 1이지만 `harness-error`, `subject` 비어 있음 ❌ | **exit 1 · `cli-wiring-missing` · 명령 이름 있음** ✅ |
+| 2 | 배선 복구 | PASS ✅ | **`cli-wiring-missing` 0건** ✅ |
+| 4 | 두 개 동시 제거 | 미실시 | **둘 다 보고** ✅ |
+
+```json
+[{"subject": "recovery",     "critical": false, "code": "cli-wiring-missing", "message": "contract command is not wired"},
+ {"subject": "trust-origin", "critical": false, "code": "cli-wiring-missing", "message": "contract command is not wired"}]
+```
+
+**따라서 `CG04B` §3의 완료 조건 "계약에 있는 명령을 배선에서 하나 지우면 게이트가 exit 1"은
+이제 충족된다.** 목적 기준 *"배선이 사라지면 게이트가 그것을 말한다"*도 만족한다 — 이름이 나온다.
+
+### 그래도 남는 것 (완료 판정을 부풀리지 않는다)
+
+1. **`critical: true` 경로는 여전히 미검증이다.** 이번에 지운 `recovery`·`trust-origin`은 생성기가
+   `critical: false`로 분류했다. 원본 §2는 *"`critical: true`가 사라지면 **무조건 실패**"*를 요구하는데
+   그 경로를 통과시킨 시험이 없다. `critical: true`인 명령(예: `measure`·`projection`)으로 다시 재야 한다.
+2. **시험 3(계약에 없는 새 명령 → warning)을 돌리지 않았다.** 실패가 아니라 warning인지 미확인이다.
+3. 위 둘 때문에 **`CG04B`를 "전부 완료"로 적지 않는다.** §3의 해당 항목만 충족으로 정정한다.
