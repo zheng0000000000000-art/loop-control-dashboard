@@ -1,0 +1,74 @@
+# DISPO-01 반입 검증 — 실행자 산출물의 처분을 기록으로 요구한다
+
+- **주체(actor)**: 산출은 **코덱스**(`LAUNCH-DISPO-01`). 검증·반입은 **조율 세션(Claude Opus 5)**.
+  결재는 **사람**(git user `Jaehyuk`).
+- **날짜**: 2026-07-26 · 근거: `ADR-016` §14
+
+## 사용한 하네스 (명령 · exit code · 수치)
+
+| 명령 | exit | 수치 |
+| --- | --- | --- |
+| `codex-launch validate` / `launch --manual` | 0 / **0** | 변경 3, `scopeViolations` 0, 누락 0 |
+| `build-verify` (패치 후) | 0 | 오류 0 |
+| `launch-disposition outbox` | **1** | `launchCount` 16 · `violations` **16** (전부 `disposition-missing`) |
+| `measure dev-pack` | 0 | `{"gate":"dev-pack","violations":0,"attempt":1}` |
+| `doc-integrity` · `context-pack-integrity` · `handoff-integrity` | 0 | 착륙 **한 걸음** |
+
+`HarnessRegistry.cs:28`에 `launch-disposition` 등재됨 — 두 게이트 러너가 아는 명령이 됐다.
+
+## 반증 시험 (지시서 §4 — 8개 전부 실측, **사유까지 대조**)
+
+| # | 픽스처 | 기대 | exit | 사유 |
+| --- | --- | --- | --- | --- |
+| 1 | 패치 있음 · 기록 없음 | 위반 1 | **1** | `disposition-missing` |
+| 2 | `rejected` + `reason` | 위반 0 | **0** | — |
+| 3 | `imported` · 보고 파일 없음 | 위반 1 | **1** | `gate-report-not-found` |
+| 4 | `imported` · 보고의 launchId 다름 | 위반 1 | **1** | `gate-report-launch-id-mismatch` |
+| 5 | **`imported` · 보고가 반입보다 앞섬** | 위반 1 | **1** | **`gate-report-predates-import`** |
+| 6 | `imported` · 전부 정합 | 위반 0 | **0** | — |
+| 7 | `no-output` · 패치 빈 것 | 위반 0 | **0** | — |
+| 8 | **`no-output`인데 패치 있음** | 위반 1 | **1** | **`no-output-has-patch`** |
+
+**시험 5가 이 지시서의 핵심이다.** 반입 **전에** 잰 게이트 보고를 갖다 붙이는 것이 가장
+그럴듯한 거짓이고, 파일 존재만 보는 구현은 그걸 통과시킨다. 사유가 별도 코드로 나온다 —
+`gate-report-not-found`(3)와 구분된다는 것이 실제로 내용을 읽는다는 증거다.
+
+**시험 8은 반대 방향이다.** 기록이 실체보다 **적게** 말하는 경우도 위반이다.
+
+## 실제 저장소 실측 — 16건 전부 미기록
+
+```
+launchCount 16 | violations 16 | 전부 disposition-missing
+```
+
+반입한 것(`GWIT-05-R2`·`GWIT-06`·`HREG-02`·`DICC-01`…), 요청 형식 오류로 버린 것(`GWIT-05`),
+산출이 없던 것(`GWIT-04`)이 **파일로 전혀 구분되지 않는다.** 이제 그 사실이 수치로 나온다.
+
+## 지시서 §3의 예측이 하나 빗나갔다
+
+*"위반 15건"*이라고 적었는데 실측은 **16건**이다. 지시서를 쓴 시점의 15개에
+**이 지시서를 쏜 발사(`LAUNCH-DISPO-01`) 자신이 만든 디렉터리 하나**가 더해졌다.
+알 수 있었던 것이고, 예측을 고정 숫자로 적은 것이 잘못이다. **검사가 틀린 것이 아니다.**
+
+## 매니페스트에 등재하지 않았다 (§6 순서)
+
+지금 등재하면 **16건이 즉시 위반이라 영구 적색**이 되고, 그러면 아무도 안 본다(`FAIL-2026-010`).
+오늘 `POST-COMMIT`에서 실제로 겪었다. 순서는 **backfill → 등재**다.
+
+backfill은 **사람·조율자의 판단**이다. 실행자가 대신 정하지 않도록 지시서 §2에서 금지했고,
+코덱스는 기존 16개를 건드리지 않았다(`changedPaths` 실측).
+
+## 참조한 스킬
+
+`skills/common/directive-authoring.md` §7.
+
+## 지표는 만족했으나 목적은 미달인 부분
+
+1. **`disposition.json`이 하나도 없다.** 하네스는 만들었지만 **기록은 아직 없다.**
+   지금 상태는 *"구분되지 않는다"*를 *"구분되지 않는다고 세었다"*로 바꾼 것뿐이다.
+   backfill 전까지 실질은 그대로다.
+2. **`codex-launch`가 처분 기록을 요구하지 않는다.** 발사할 때 `state: "pending"`을 자동으로
+   남기게 하면 미기록 자체가 사라지는데, 그건 영역 밖이라 별도 결재로 남겼다(§6-3).
+3. **반입 여부를 하네스가 검증하지는 않는다.** `disposition.json`이 `imported`라고 말하면
+   그렇게 믿는다(다만 게이트 보고와의 정합은 확인한다). 패치가 실제로 적용됐는지는
+   diff로 추정할 수 없어 의도적으로 빼놓았다(§1-B) — **기록이 진실의 출처**라는 설계다.

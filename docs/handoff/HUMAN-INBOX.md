@@ -710,3 +710,24 @@ WP-STATE-INTEGRITY-LAND  di-completion-check PASS 18/18   program-verify PASS 18
 **사람 판단이 남은 것**: `ADR-016` §8의 정본 결정. 두 러너가 같은 답을 낸다는 것이
 둘 다 둬도 된다는 뜻은 아니다 — **같은 일을 하는 코드가 두 벌**이고 지금 같은 답을
 내는 건 방금 맞춰서다. 갈리면 §6의 사건이 다시 난다.
+
+## 2026-07-26 — launch-disposition 반입, backfill 대기 (새 항목)
+
+`DISPO-01` 반입으로 `launch-disposition` 하네스가 생겼다. 실측:
+
+```
+launch-disposition outbox → exit 1 | launchCount 16 | violations 16 (전부 disposition-missing)
+```
+
+**사람 판단이 필요한 것 (순서대로)**:
+
+1. **기존 16개의 `disposition.json`을 채운다.** 반입 여부는 사람이 안다.
+   `imported`면 `importCommit`과 그것을 판정한 `gateReport` 경로가 필요하다.
+   **실행자에게 시키지 않았다** — 처분은 결재이고 대행 금지다.
+2. backfill이 끝난 **뒤에** `GATE-MANIFEST.json`에 등재하고 반증 witness를 짝짓는다.
+   **먼저 등재하면 16건이 즉시 위반이라 영구 적색이 된다**(`FAIL-2026-010`).
+3. 그 뒤에 `codex-launch`가 발사 시점에 `state: "pending"`을 자동으로 남기게 할지 논의한다
+   (별도 결재, `server/CodexHarnessLauncherCli.cs`).
+
+**지금 상태의 한계**: 하네스는 있지만 기록이 없다. *"구분되지 않는다"*를
+*"구분되지 않는다고 세었다"*로 바꾼 것뿐이며, backfill 전까지 실질은 그대로다.
