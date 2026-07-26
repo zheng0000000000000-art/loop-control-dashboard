@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-CPX-01-R2",
+  "diId": "CPX-01",
+  "baselineCommit": "66f3a52df09029f78673458d168d85d77b01d1ef",
+  "startedAt": "2026-07-26T05:18:46Z",
+  "finishedAt": "2026-07-26T05:20:37Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "8488fed3318c44adebe0220fcc07b8fd458de761ea4ee3c5b59862bd8a7761f5",
+  "stderrTail": "     [\"pinnedBy\"] = pinned.DiId,\n+                    });\n+                }\n+            }\n+        }\n+\n+        return collisions;\n+    }\n+\n     // 지시서에서 context-pack 코드 펜스 내용을 추출한다.\n     private static string? ExtractContextPack(string text)\n     {\n@@ -334,6 +395,7 @@\n     int Stale,\n     int Ok,\n     int Skipped,\n-    int Warnings);\n+    int Warnings,\n+    int Overlaps);\n \n internal sealed record RequiredInputCheckResult(JsonObject Report, int Missing, int Stale, int Ok);\n\ntokens used\n59,911",
+  "changedPaths": [
+    "server/Harness/ContextPackIntegrityCli.cs"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "16538fa280d31d79627c27c764908566878e7db0b4e4f8308637ae4c85b42f97",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다."
+}

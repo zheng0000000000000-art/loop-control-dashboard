@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-HREG-01",
+  "diId": "HREG-01",
+  "baselineCommit": "2b13965e86e12d54b280327b11897f2187eca8a3",
+  "startedAt": "2026-07-26T06:25:44Z",
+  "finishedAt": "2026-07-26T06:31:58Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "dc878184972606473954dffef3a4a8a831b84ad9f96df22531197a3347f1c2b9",
+  "stderrTail": "grityCli.Run,\n         [\"di-completion-check\"] = DiCompletionCheckCli.Run,\n         [\"state-transition-callsite-check\"] = StateTransitionCallsiteCheckCli.Run,\n+        [\"state-transition-selftest\"] = _ => StateApplierCli.Run([\"state-transition\", \"--self-test\"]),\n+        [\"recovery-selftest\"] = _ => RecoveryCli.Run([\"recovery\", \"--self-test\"]),\n+        [\"trust-origin-selftest\"] = _ => TrustOriginCli.Run([\"trust-origin\", \"--self-test\"]),\n     };\n \n     // 등록된 하네스 이름 목록을 반환한다.\n\ntokens used\n90,344",
+  "changedPaths": [
+    "server/Harness/HarnessRegistry.cs"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "4740a3a713cc6a778191947f6c73bb36c2d51b903915549f18d0473a92290a2e",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다."
+}

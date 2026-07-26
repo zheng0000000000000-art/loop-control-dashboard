@@ -1,0 +1,9 @@
+{
+  "launchId": "LAUNCH-DISPO-03",
+  "state": "imported",
+  "decidedAt": "2026-07-26",
+  "actor": "조율 세션(Claude Opus 5) · 사람 지시",
+  "importCommit": "03190bc90ce1c23eecc6b358becf4c453f1053f6",
+  "gateReport": "docs/handoff/gate-evidence/LAUNCH-DISPO-03.gate.json",
+  "note": "런처가 남긴 pending을 처분으로 덮었다 — 사람이 정한 값이므로 런처는 다시 덮지 않는다. gateReport는 --out으로 썼다(셸 리다이렉트는 자기참조 충돌을 일으킨다)."
+}

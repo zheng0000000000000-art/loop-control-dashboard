@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-GWIT-03",
+  "diId": "GWIT-03",
+  "baselineCommit": "1d9dfdf078cd1874ef20a4a11c814739d39e89c2",
+  "startedAt": "2026-07-26T07:32:48Z",
+  "finishedAt": "2026-07-26T07:37:52Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "d88d512254760e634a09f4f011344821747462fb6962c42d1a1c0fc42c2b910f",
+  "stderrTail": "entationOnlyCount\"] = representationOnly,\n+            [\"gate\"] = contentDirty == 0 ? \"PASS\" : \"FAIL\",\n+            [\"files\"] = files,\n+            [\"hygieneWarning\"] = representationOnly > 0\n+                ? $\"표현만 다른 파일 {representationOnly}건 — 어떤 도구가 파일을 되쓰고 있다(FAIL-2026-010).\"\n+                : null,\n+        };\n+        Console.WriteLine(report.ToJsonString(JsonOptions));\n+        return contentDirty == 0 ? 0 : 1;\n     }\n \n     // 저장된 porcelain 출력만 읽어 clean·dirty를 판정한다.\n\ntokens used\n63,853",
+  "changedPaths": [
+    "server/Harness/GateCleanCli.cs"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "dcf58eb34d859fa177b162d74045ca8111f4d2416bba22ec55e55e975449970f",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

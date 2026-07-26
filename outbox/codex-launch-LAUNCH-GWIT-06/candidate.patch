@@ -1,0 +1,244 @@
+diff --git a/docs/qa/gate-witness/jsonlines-non-json-output.txt b/docs/qa/gate-witness/jsonlines-non-json-output.txt
+new file mode 100644
+index 0000000..0bac59e
+--- /dev/null
++++ b/docs/qa/gate-witness/jsonlines-non-json-output.txt
+@@ -0,0 +1 @@
++not-json
+diff --git a/docs/qa/gate-witness/jsonlines-non-json.json b/docs/qa/gate-witness/jsonlines-non-json.json
+new file mode 100644
+index 0000000..bcecc53
+--- /dev/null
++++ b/docs/qa/gate-witness/jsonlines-non-json.json
+@@ -0,0 +1,21 @@
++{
++  "schemaVersion": 1,
++  "gates": [
++    {
++      "gateId": "GWIT-06-NON-JSON",
++      "requireFailureWitness": true,
++      "checks": [
++        {
++          "order": 1,
++          "command": "gate-witness-check",
++          "args": [
++            "--count-output-fixture",
++            "docs/qa/gate-witness/jsonlines-non-json-output.txt"
++          ],
++          "expectedExit": 0,
++          "internalNegativeCases": 1
++        }
++      ]
++    }
++  ]
++}
+diff --git a/docs/qa/gate-witness/jsonlines-state-15.json b/docs/qa/gate-witness/jsonlines-state-15.json
+new file mode 100644
+index 0000000..0bca880
+--- /dev/null
++++ b/docs/qa/gate-witness/jsonlines-state-15.json
+@@ -0,0 +1,32 @@
++{
++  "schemaVersion": 1,
++  "gates": [
++    {
++      "gateId": "GWIT-06-STATE-15",
++      "requireFailureWitness": true,
++      "checks": [
++        {
++          "order": 1,
++          "command": "state-transition-selftest",
++          "args": [],
++          "expectedExit": 0,
++          "internalNegativeCases": 15
++        },
++        {
++          "order": 2,
++          "command": "recovery-selftest",
++          "args": [],
++          "expectedExit": 0,
++          "internalNegativeCases": 7
++        },
++        {
++          "order": 3,
++          "command": "trust-origin-selftest",
++          "args": [],
++          "expectedExit": 0,
++          "internalNegativeCases": 20
++        }
++      ]
++    }
++  ]
++}
+diff --git a/docs/qa/gate-witness/jsonlines-state-16.json b/docs/qa/gate-witness/jsonlines-state-16.json
+new file mode 100644
+index 0000000..44b2346
+--- /dev/null
++++ b/docs/qa/gate-witness/jsonlines-state-16.json
+@@ -0,0 +1,18 @@
++{
++  "schemaVersion": 1,
++  "gates": [
++    {
++      "gateId": "GWIT-06-STATE-16",
++      "requireFailureWitness": true,
++      "checks": [
++        {
++          "order": 1,
++          "command": "state-transition-selftest",
++          "args": [],
++          "expectedExit": 0,
++          "internalNegativeCases": 16
++        }
++      ]
++    }
++  ]
++}
+diff --git a/docs/qa/gate-witness/jsonlines-state-999.json b/docs/qa/gate-witness/jsonlines-state-999.json
+new file mode 100644
+index 0000000..1db55ad
+--- /dev/null
++++ b/docs/qa/gate-witness/jsonlines-state-999.json
+@@ -0,0 +1,18 @@
++{
++  "schemaVersion": 1,
++  "gates": [
++    {
++      "gateId": "GWIT-06-STATE-999",
++      "requireFailureWitness": true,
++      "checks": [
++        {
++          "order": 1,
++          "command": "state-transition-selftest",
++          "args": [],
++          "expectedExit": 0,
++          "internalNegativeCases": 999
++        }
++      ]
++    }
++  ]
++}
+diff --git a/docs/qa/gate-witness/jsonlines-truncated-output.txt b/docs/qa/gate-witness/jsonlines-truncated-output.txt
+new file mode 100644
+index 0000000..e5bcb32
+--- /dev/null
++++ b/docs/qa/gate-witness/jsonlines-truncated-output.txt
+@@ -0,0 +1,2 @@
++{"negativeCaseCount":15}
++{"negativeCaseCount":
+diff --git a/docs/qa/gate-witness/jsonlines-truncated.json b/docs/qa/gate-witness/jsonlines-truncated.json
+new file mode 100644
+index 0000000..fc69e7f
+--- /dev/null
++++ b/docs/qa/gate-witness/jsonlines-truncated.json
+@@ -0,0 +1,21 @@
++{
++  "schemaVersion": 1,
++  "gates": [
++    {
++      "gateId": "GWIT-06-TRUNCATED",
++      "requireFailureWitness": true,
++      "checks": [
++        {
++          "order": 1,
++          "command": "gate-witness-check",
++          "args": [
++            "--count-output-fixture",
++            "docs/qa/gate-witness/jsonlines-truncated-output.txt"
++          ],
++          "expectedExit": 0,
++          "internalNegativeCases": 1
++        }
++      ]
++    }
++  ]
++}
+diff --git a/server/Harness/GateWitnessCheckCli.cs b/server/Harness/GateWitnessCheckCli.cs
+index 3cd3270..a4bf5fb 100644
+--- a/server/Harness/GateWitnessCheckCli.cs
++++ b/server/Harness/GateWitnessCheckCli.cs
+@@ -17,6 +17,10 @@ internal static class GateWitnessCheckCli
+     {
+         try
+         {
++            if (args.Length == 3 &&
++                string.Equals(args[1], "--count-output-fixture", StringComparison.OrdinalIgnoreCase))
++                return RunCountOutputFixture(args[2]);
++
+             var root = GitTools.FindRepoRoot();
+             var manifestPath = ResolveManifestPath(root, args);
+             var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))?.AsObject()
+@@ -53,6 +57,34 @@ internal static class GateWitnessCheckCli
+         }
+     }
+ 
++    // 저장된 stdout 픽스처에서 구조화 음성 사례 수를 읽어 파서 반증 시험을 지원한다.
++    private static int RunCountOutputFixture(string fixturePath)
++    {
++        var root = GitTools.FindRepoRoot();
++        var full = Path.GetFullPath(Path.IsPathRooted(fixturePath)
++            ? fixturePath
++            : Path.Combine(root, fixturePath));
++        if (!File.Exists(full))
++            throw new FileNotFoundException("output fixture not found", fixturePath);
++
++        var count = 0;
++        try
++        {
++            count = CountJsonCaseValues(File.ReadAllText(full));
++        }
++        catch (JsonException)
++        {
++            count = 0;
++        }
++
++        Console.WriteLine(new JsonObject
++        {
++            ["harness"] = "gate-witness-count-output-fixture",
++            ["internalNegativeCases"] = count,
++        }.ToJsonString(JsonOptions));
++        return 0;
++    }
++
+     // 선택 인자가 없으면 저장소의 표준 게이트 매니페스트를 사용한다.
+     private static string ResolveManifestPath(string root, string[] args)
+     {
+@@ -153,8 +185,7 @@ internal static class GateWitnessCheckCli
+ 
+         try
+         {
+-            var output = JsonNode.Parse(capturedOut.ToString());
+-            return FindCaseCount(output);
++            return CountJsonCaseValues(capturedOut.ToString());
+         }
+         catch (JsonException)
+         {
+@@ -162,6 +193,28 @@ internal static class GateWitnessCheckCli
+         }
+     }
+ 
++    // stdout의 모든 연속 JSON 값을 끝까지 읽고 알려진 카운터의 최댓값을 반환한다.
++    private static int CountJsonCaseValues(string output)
++    {
++        var bytes = System.Text.Encoding.UTF8.GetBytes(output);
++        var offset = 0;
++        var maximum = 0;
++        while (offset < bytes.Length)
++        {
++            while (offset < bytes.Length &&
++                bytes[offset] is (byte)' ' or (byte)'\t' or (byte)'\r' or (byte)'\n')
++                offset++;
++            if (offset == bytes.Length)
++                break;
++
++            var reader = new Utf8JsonReader(bytes.AsSpan(offset));
++            var node = JsonNode.Parse(ref reader);
++            maximum = Math.Max(maximum, FindCaseCount(node));
++            offset += checked((int)reader.BytesConsumed);
++        }
++        return maximum;
++    }
++
+     // 알려진 구조화 카운터만 재귀적으로 읽어 문면 주장을 실행 증거와 분리한다.
+     private static int FindCaseCount(JsonNode? node)
+     {

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-DICC-01",
+  "diId": "DICC-01",
+  "baselineCommit": "1b3bb007f01ad2b4454ecf12c2a619aa3db65bdb",
+  "startedAt": "2026-07-26T09:47:48Z",
+  "finishedAt": "2026-07-26T09:49:30Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "79d75cc6bec3286fc9008fadebc3270f12b2fe0fb8039131cac4b4471db0568b",
+  "stderrTail": "yPath;\n+        report[\"binaryWrittenAt\"] = freshness.BinaryWrittenAt;\n+        report[\"newestSource\"] = freshness.NewestSource;\n+        report[\"newestSourceWrittenAt\"] = freshness.NewestSourceWrittenAt;\n+        WriteEvidence(root, taskId, report);\n+        Console.Error.WriteLine(report.ToJsonString(JsonOptions));\n+        return 2;\n+    }\n+\n     // 증거 JSON을 outputs/gates 아래에 기록한다.\n     private static void WriteEvidence(string root, string taskId, JsonObject report)\n     {\n\ntokens used\n84,429",
+  "changedPaths": [
+    "server/Harness/DiCompletionCheckCli.cs",
+    "server/Harness/BinaryFreshness.cs"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "58ed076dd46272ab92b8d668991e75dd492f993cea272f848d1c8c57ba3c1092",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

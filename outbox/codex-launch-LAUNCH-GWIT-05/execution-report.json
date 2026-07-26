@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-GWIT-05",
+  "diId": "GWIT-05",
+  "baselineCommit": "13b5e2f1ab537807abac297e58ccef87bd4cccc2",
+  "startedAt": "2026-07-26T08:30:05Z",
+  "finishedAt": "2026-07-26T08:35:28Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "3106f34d0d7ab6ca16fb389fa44155febfc39abf43478c2a17a284134ce1fc5f",
+  "stderrTail": "turn 2;\n             }\n \n+            if (fixtureMode && !Directory.Exists(fullProject))\n+            {\n+                Console.Error.WriteLine($\"{{\\\"error\\\":\\\"fixture directory not found: {project}\\\"}}\");\n+                return 2;\n+            }\n+\n             var tempRoot = Path.Combine(Path.GetTempPath(), \"lfwd-build-verify\", Guid.NewGuid().ToString(\"N\"));\n             var projectDir = File.Exists(fullProject)\n                 ? Path.GetDirectoryName(fullProject) ?? root\n\ntokens used\n78,109",
+  "changedPaths": [
+    "server/Harness/BuildVerifyCli.cs",
+    "docs/qa/gate-witness/build-verify-broken/",
+    "docs/qa/gate-witness/build-verify-ok/"
+  ],
+  "scopeViolations": [
+    "docs/qa/gate-witness/build-verify-broken/",
+    "docs/qa/gate-witness/build-verify-ok/"
+  ],
+  "candidatePatchSha256": "5cd42688768222021d7ff73395ddf5750bde18d21bf219094688782bef4b9227",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

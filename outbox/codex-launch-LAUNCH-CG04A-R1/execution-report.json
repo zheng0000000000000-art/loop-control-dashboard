@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-CG04A-R1",
+  "diId": "CG04A-R1",
+  "baselineCommit": "a29b80f6ea1245fec0593c052b7838ccf7b4137c",
+  "startedAt": "2026-07-26T06:10:03Z",
+  "finishedAt": "2026-07-26T06:12:14Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "483acea4cd293e7e15daf06342c237965e5346e50399e4c435550309330df396",
+  "stderrTail": "   failures.Add(new JsonObject\n+                {\n+                    [\"subject\"] = command,\n+                    [\"critical\"] = critical,\n+                    [\"code\"] = critical ? \"critical-cli-wiring-missing\" : \"cli-wiring-missing\",\n+                    [\"message\"] = \"contract command is not wired\",\n+                });\n+            }\n         }\n         foreach (var command in wired.Where(command => !contracted.Contains(command)))\n             warnings.Add(new JsonObject\n\ntokens used\n76,364",
+  "changedPaths": [
+    "server/Harness/DiCompletionCheckCli.cs"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "815af69c8f0923d741015fe395483e5135fd4291c8d2d58875433eeaa5b203fa",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다."
+}

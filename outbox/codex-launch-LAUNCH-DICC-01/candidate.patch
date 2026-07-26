@@ -1,0 +1,119 @@
+diff --git a/server/Harness/BinaryFreshness.cs b/server/Harness/BinaryFreshness.cs
+new file mode 100644
+index 0000000..59a7fc5
+--- /dev/null
++++ b/server/Harness/BinaryFreshness.cs
+@@ -0,0 +1,47 @@
++// 실행 중인 서버 바이너리와 서버 소스의 수정 시각을 비교한다.
++// bin/obj 산출물을 제외한 최신 C# 입력 파일을 진단 정보와 함께 반환한다.
++internal static class BinaryFreshness
++{
++    // 현재 프로세스 바이너리가 server 소스보다 낡았는지 잰다.
++    internal static BinaryFreshnessResult Measure(string root)
++    {
++        var binaryPath = Environment.ProcessPath;
++        if (string.IsNullOrWhiteSpace(binaryPath) || !File.Exists(binaryPath))
++            return new BinaryFreshnessResult(false, binaryPath ?? "", "", "", "");
++
++        var binaryWrittenAt = File.GetLastWriteTimeUtc(binaryPath);
++        var serverDir = Path.Combine(root, "server");
++        var newestPath = "";
++        var newestWrittenAt = DateTime.MinValue;
++
++        foreach (var pattern in new[] { "*.cs", "*.csproj" })
++        {
++            foreach (var file in Directory.EnumerateFiles(serverDir, pattern, SearchOption.AllDirectories))
++            {
++                var relative = Path.GetRelativePath(serverDir, file).Replace('\\', '/');
++                if (relative.StartsWith("bin/", StringComparison.OrdinalIgnoreCase)
++                    || relative.StartsWith("obj/", StringComparison.OrdinalIgnoreCase))
++                    continue;
++
++                var writtenAt = File.GetLastWriteTimeUtc(file);
++                if (writtenAt <= newestWrittenAt) continue;
++                newestWrittenAt = writtenAt;
++                newestPath = relative;
++            }
++        }
++
++        return new BinaryFreshnessResult(
++            newestWrittenAt > binaryWrittenAt,
++            binaryPath,
++            binaryWrittenAt.ToString("yyyy-MM-ddTHH:mm:ssZ"),
++            newestPath,
++            newestWrittenAt == DateTime.MinValue ? "" : newestWrittenAt.ToString("yyyy-MM-ddTHH:mm:ssZ"));
++    }
++}
++
++internal sealed record BinaryFreshnessResult(
++    bool Stale,
++    string BinaryPath,
++    string BinaryWrittenAt,
++    string NewestSource,
++    string NewestSourceWrittenAt);
+diff --git a/server/Harness/DiCompletionCheckCli.cs b/server/Harness/DiCompletionCheckCli.cs
+index 63a7074..2bba217 100644
+--- a/server/Harness/DiCompletionCheckCli.cs
++++ b/server/Harness/DiCompletionCheckCli.cs
+@@ -58,6 +58,10 @@ internal static class DiCompletionCheckCli
+             var contractFailures = ValidateCliContract(root, warnings);
+             foreach (var failure in contractFailures) failures.Add(failure?.DeepClone());
+ 
++            var freshness = BinaryFreshness.Measure(root);
++            if (freshness.Stale)
++                return RefuseStaleBinary(root, taskId, report, freshness, warnings);
++
+             foreach (var check in checks.OfType<JsonObject>().OrderBy(ReadOrder))
+             {
+                 var result = RunCheck(root, check);
+@@ -138,7 +142,7 @@ internal static class DiCompletionCheckCli
+             Failure(command, "exit-mismatch", $"expected {expectedExit}, actual {result.ExitCode}"));
+     }
+ 
+-    // dotnet run이 현재 소스를 먼저 빌드한 뒤 하위 검사를 실행하게 한다.
++    // 현재 바이너리를 그대로 사용해 하위 검사를 실행한다.
+     private static ProcessRunResult RunDotnetCommand(string root, string command, List<string> args)
+     {
+         var stopwatch = Stopwatch.StartNew();
+@@ -152,6 +156,7 @@ internal static class DiCompletionCheckCli
+             StandardErrorEncoding = Encoding.UTF8,
+         };
+         psi.ArgumentList.Add("run");
++        psi.ArgumentList.Add("--no-build");
+         psi.ArgumentList.Add("--project");
+         psi.ArgumentList.Add("server");
+         psi.ArgumentList.Add("--");
+@@ -291,6 +296,33 @@ internal static class DiCompletionCheckCli
+         return 1;
+     }
+ 
++    // 낡은 바이너리에서는 검사를 실행하지 않고 측정 불가 정보를 남긴다.
++    private static int RefuseStaleBinary(
++        string root,
++        string taskId,
++        JsonObject report,
++        BinaryFreshnessResult freshness,
++        JsonArray warnings)
++    {
++        report["verdict"] = "NOT-MEASURED";
++        report["gateVerdict"] = "NOT-MEASURED";
++        report["checkCount"] = 0;
++        report["failureCount"] = 0;
++        report["warningCount"] = warnings.Count;
++        report["checks"] = new JsonArray();
++        report["failures"] = new JsonArray();
++        report["warnings"] = warnings;
++        report["reason"] = "binary-stale";
++        report["error"] = "바이너리가 소스보다 낡아 게이트를 잴 수 없다. 먼저 빌드하라";
++        report["binaryPath"] = freshness.BinaryPath;
++        report["binaryWrittenAt"] = freshness.BinaryWrittenAt;
++        report["newestSource"] = freshness.NewestSource;
++        report["newestSourceWrittenAt"] = freshness.NewestSourceWrittenAt;
++        WriteEvidence(root, taskId, report);
++        Console.Error.WriteLine(report.ToJsonString(JsonOptions));
++        return 2;
++    }
++
+     // 증거 JSON을 outputs/gates 아래에 기록한다.
+     private static void WriteEvidence(string root, string taskId, JsonObject report)
+     {

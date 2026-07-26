@@ -1,0 +1,81 @@
+diff --git a/docs/qa/gate-witness/build-verify-broken/Program.cs b/docs/qa/gate-witness/build-verify-broken/Program.cs
+new file mode 100644
+index 0000000..b87983f
+--- /dev/null
++++ b/docs/qa/gate-witness/build-verify-broken/Program.cs
+@@ -0,0 +1,2 @@
++// 이 픽스처가 빌드 성공으로 뒤집히면 검사가 죽은 것이므로 고치지 마라.
++System.Console.WriteLine(MissingBuildWitnessSymbol);
+diff --git a/docs/qa/gate-witness/build-verify-broken/build-verify-broken.csproj b/docs/qa/gate-witness/build-verify-broken/build-verify-broken.csproj
+new file mode 100644
+index 0000000..b89d9f3
+--- /dev/null
++++ b/docs/qa/gate-witness/build-verify-broken/build-verify-broken.csproj
+@@ -0,0 +1,6 @@
++<Project Sdk="Microsoft.NET.Sdk">
++  <PropertyGroup>
++    <TargetFramework>net8.0</TargetFramework>
++    <OutputType>Exe</OutputType>
++  </PropertyGroup>
++</Project>
+diff --git a/docs/qa/gate-witness/build-verify-ok/Program.cs b/docs/qa/gate-witness/build-verify-ok/Program.cs
+new file mode 100644
+index 0000000..6b64a39
+--- /dev/null
++++ b/docs/qa/gate-witness/build-verify-ok/Program.cs
+@@ -0,0 +1,2 @@
++// 이 픽스처가 빌드 실패로 뒤집히면 검사가 죽은 것이므로 고치지 마라.
++System.Console.WriteLine("build witness");
+diff --git a/docs/qa/gate-witness/build-verify-ok/build-verify-ok.csproj b/docs/qa/gate-witness/build-verify-ok/build-verify-ok.csproj
+new file mode 100644
+index 0000000..b89d9f3
+--- /dev/null
++++ b/docs/qa/gate-witness/build-verify-ok/build-verify-ok.csproj
+@@ -0,0 +1,6 @@
++<Project Sdk="Microsoft.NET.Sdk">
++  <PropertyGroup>
++    <TargetFramework>net8.0</TargetFramework>
++    <OutputType>Exe</OutputType>
++  </PropertyGroup>
++</Project>
+diff --git a/server/Harness/BuildVerifyCli.cs b/server/Harness/BuildVerifyCli.cs
+index 80a68cc..2a2c2d5 100644
+--- a/server/Harness/BuildVerifyCli.cs
++++ b/server/Harness/BuildVerifyCli.cs
+@@ -14,13 +14,21 @@ internal static class BuildVerifyCli
+         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+     };
+ 
+-    // build-verify entry. exit 0=build passed, 1=build failed, 2=harness error.
++    // 빌드 검증을 실행하며 픽스처는 지정된 격리 프로젝트를 같은 방식으로 빌드한다.
+     internal static int Run(string[] args)
+     {
+         try
+         {
+             var root = GitTools.FindRepoRoot();
+-            var project = args.Length >= 2 ? args[1] : "server";
++            var fixtureMode = args.Length >= 2
++                && args[1].Equals("--fixture", StringComparison.OrdinalIgnoreCase);
++            if (fixtureMode && args.Length != 3)
++            {
++                Console.Error.WriteLine("{\"error\":\"usage: build-verify --fixture <directory>\"}");
++                return 2;
++            }
++
++            var project = fixtureMode ? args[2] : args.Length >= 2 ? args[1] : "server";
+             var fullProject = Path.GetFullPath(Path.IsPathRooted(project) ? project : Path.Combine(root, project));
+             if (!Directory.Exists(fullProject) && !File.Exists(fullProject))
+             {
+@@ -28,6 +36,12 @@ internal static class BuildVerifyCli
+                 return 2;
+             }
+ 
++            if (fixtureMode && !Directory.Exists(fullProject))
++            {
++                Console.Error.WriteLine($"{{\"error\":\"fixture directory not found: {project}\"}}");
++                return 2;
++            }
++
+             var tempRoot = Path.Combine(Path.GetTempPath(), "lfwd-build-verify", Guid.NewGuid().ToString("N"));
+             var projectDir = File.Exists(fullProject)
+                 ? Path.GetDirectoryName(fullProject) ?? root

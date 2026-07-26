@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-DICC-02",
+  "diId": "DICC-02",
+  "baselineCommit": "9809dbcd3d220c0430e87cd4f574e370a9e89878",
+  "startedAt": "2026-07-26T11:02:34Z",
+  "finishedAt": "2026-07-26T11:07:51Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "febe61e39e53fda2266e238dd4c8e8b34a02d001789cdf2fba61cfc75e3928f8",
+  "stderrTail": "l sealed record DiCompletionOptions(string GateId, string TaskId, string ManifestPath, string EmitDocPath, bool EmitCliContract);\n+internal sealed record DiCompletionOptions(string GateId, string TaskId, string LaunchId, string ManifestPath, string EmitDocPath, bool EmitCliContract);\n internal sealed record ProcessRunResult(int ExitCode, string Stdout, string Stderr, long DurationMs);\n internal sealed record CheckRunResult(JsonObject Report, bool Passed, JsonObject Failure);\n\ntokens used\n106,959",
+  "changedPaths": [
+    "server/Harness/DiCompletionCheckCli.cs",
+    "docs/qa/gate-witness/launch-disposition/case-18/",
+    "docs/qa/gate-witness/launch-disposition/case-19/",
+    "docs/qa/gate-witness/launch-disposition/case-20/"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "f9fed998e1cc661808db2b48d3211def9e79658e3c4e301e19265c02799eb3e1",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

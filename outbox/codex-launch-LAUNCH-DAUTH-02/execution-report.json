@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-DAUTH-02",
+  "diId": "DAUTH-02",
+  "baselineCommit": "784ace634896c2c8f1f458f64e61d4d6dba13ef8",
+  "startedAt": "2026-07-26T05:34:21Z",
+  "finishedAt": "2026-07-26T05:36:08Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "50c67e43931ee520a0b8b5f5ed06394cce7f4e1b60fb08f9ecf1ffed00c95766",
+  "stderrTail": "출물이\n+   틀렸다는 뜻이 아니라 ②가 남아 절차가 끝나지 않았다는 뜻일 수 있다. 원본 코드에 개행 하나를\n+   넣어도 같은 stale 실패가 나면 산출물 탓이 아니다.\n+5. **pin을 지워서 해결하지 마라.** 읽어야 할 참조를 없애는 것은 해결이 아니다. 참조 관계는\n+   유지하고 새 내용에 맞게 pin을 갱신하는 것이 답이다.\n+6. **해시는 프로그램이 계산한다.** 기존 §4의 절차를 따라 검사하는 프로그램으로 계산하고,\n+   사람이 손으로 옮겨 적지 마라.\n+7. **같은 파일을 여러 지시서가 쓰면 착륙 순서를 먼저 정한다.** 하나 착륙 → pin 갱신 → 다음\n+   순서로 진행한다. 순서를 정하지 않으면 나중에 착륙하는 쪽이 매번 남의 pin을 깨뜨린다.\n+\n+---\n+\n ## 완료 판정 (지시서를 내보내기 전 체크리스트)\n \n - [ ] **§0의 재발명 검색 3종**을 했다 (기능·다른 지시서·\"이미 있다\"는 주장)\n\ntokens used\n59,076",
+  "changedPaths": [
+    "skills/common/directive-authoring.md"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "6f2088e86a80195ee51e9f815478f830682fdcd545caa355e70168ee5538a1b9",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다."
+}

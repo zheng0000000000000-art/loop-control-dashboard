@@ -1,0 +1,8 @@
+{
+  "launchId": "LAUNCH-GWIT-05",
+  "state": "rejected",
+  "decidedAt": "2026-07-26",
+  "actor": "조율 세션(Claude Opus 5) · 사람 지시로 backfill",
+  "reason": "요청의 allowedPaths를 'docs/qa/gate-witness/'(끝 슬래시)로 적어 scopeViolations 2건이 나왔다. Matches는 ** 접미사나 정확 일치만 안다(CodexHarnessLauncherCli.cs:263) — 코덱스 산출이 아니라 요청 형식이 틀렸다. LAUNCH-GWIT-05-R2로 다시 쐈다. 이 산출이 반입되지 않았다는 근거: 이 패치가 만든 docs/qa/gate-witness/build-verify-broken/Program.cs가 저장소에 추가된 커밋이 없다(git log --diff-filter=A 실측). R2가 만든 Broken.cs는 b213b63에 있다.",
+  "note": "증거 디렉터리는 지우지 않고 남겼다."
+}

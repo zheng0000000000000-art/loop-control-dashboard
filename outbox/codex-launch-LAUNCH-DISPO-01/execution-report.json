@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-DISPO-01",
+  "diId": "DISPO-01",
+  "baselineCommit": "e7c03a9a2f3a4a4746a465d402ff7ca14be9733e",
+  "startedAt": "2026-07-26T10:04:24Z",
+  "finishedAt": "2026-07-26T10:09:15Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "0c4598d3dd5262a5154e34b90a499c60f90c68658c0aa80149beeddb310ac689",
+  "stderrTail": "y)\n+    {\n+        var patchPath = Path.Combine(directory, \"candidate.patch\");\n+        return File.Exists(patchPath) && new FileInfo(patchPath).Length > 0;\n+    }\n+\n+    // JSON 문자열 필드를 읽되 부재는 빈 문자열로 취급한다.\n+    private static string ReadRequired(JsonObject value, string name)\n+        => value[name]?.ToString() ?? \"\";\n+\n+    // 셸 인자에 안전한 전체 길이 Git 커밋 식별자인지 확인한다.\n+    private static bool IsCommitId(string value)\n+        => value.Length == 40 && value.All(Uri.IsHexDigit);\n+}\n\ntokens used\n103,916",
+  "changedPaths": [
+    "server/Harness/HarnessRegistry.cs",
+    "docs/qa/gate-witness/launch-disposition/",
+    "server/Harness/LaunchDispositionCli.cs"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "5259c8516da765c461454c58992e4a6d8d2835865e48582e89caa81e8106c4ed",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

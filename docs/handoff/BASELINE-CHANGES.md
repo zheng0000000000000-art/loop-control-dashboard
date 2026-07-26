@@ -195,3 +195,25 @@ self-test 케이스 수(19/24/8)도 `declare`의 기대값과 일치한다. **�
 - **비용**: 17개 합계 91 KB(평균 5 KB). 발사마다 하나씩 늘어난다.
 - **되돌리는 법**: `docs/handoff/gate-evidence/`를 지우고 17개 처분의 `gateReport`를
   `outputs/gates/backfill/<launchId>.gate.json`으로 되돌린다. 되돌리면 클론에서 다시 빨개진다.
+
+## 2026-07-26 (2) — `outbox/`가 통째로 미추적이었다. 처분 기록과 근거를 추적한다
+
+- **주체**: 조율 세션(Claude Opus 5), **사람 지시**("증거 보관부터 하자"). 결재는 사람.
+- **근거 (실측)**: 앞 항목에서 게이트 보고를 추적 경로로 옮긴 뒤 **깨끗한 클론에서 실행해 보니**
+
+  ```
+  클론에서 launch-disposition outbox → exit 2
+    {"error":"launch-disposition failed: launch root not found: outbox"}
+  .gitignore:10  outbox/        git ls-files outbox/ → 0개
+  ```
+
+  **처분 기록 19건이 전부 미추적이었다.** 게이트 보고만 옮겨서는 부족했고,
+  `POST-COMMIT`의 `launch-disposition ['outbox']`는 다른 어떤 기계에서도 통과할 수 없었다.
+- **한 일**: `outbox/`(통째 제외)를 `outbox/*` + 되짚기로 바꿔 세 종류만 추적한다.
+  `disposition.json`(13 KB) · `execution-report.json`(28 KB) · `candidate.patch`(118 KB), 합계 159 KB.
+  `outbox/task-*`는 그대로 제외된다(확인함).
+- **왜 셋 다인가**: 기록만 추적하면 근거가 없고, `no-output` 판정은 패치가 비었는지 보므로
+  패치가 없으면 그 검사가 클론에서 공허해진다. **기록과 근거는 같이 이동해야 한다.**
+- **비용**: 발사마다 약 8 KB 늘어난다.
+- **되돌리는 법**: `.gitignore`의 그 블록을 `outbox/` 한 줄로 되돌리고 추적 파일을 `git rm --cached` 한다.
+  되돌리면 `POST-COMMIT`은 이 기계에서만 통과한다.

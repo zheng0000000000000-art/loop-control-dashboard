@@ -1,0 +1,214 @@
+diff --git a/docs/qa/gate-witness/doc-integrity-mismatch/AGENT-GUIDE.md b/docs/qa/gate-witness/doc-integrity-mismatch/AGENT-GUIDE.md
+new file mode 100644
+index 0000000..299ef9b
+--- /dev/null
++++ b/docs/qa/gate-witness/doc-integrity-mismatch/AGENT-GUIDE.md
+@@ -0,0 +1 @@
++이 파일이 통과하기 시작하면 그 검사가 죽은 것이다. 고치지 마라.
+diff --git a/docs/qa/gate-witness/doc-integrity-mismatch/CLAUDE.md b/docs/qa/gate-witness/doc-integrity-mismatch/CLAUDE.md
+new file mode 100644
+index 0000000..299ef9b
+--- /dev/null
++++ b/docs/qa/gate-witness/doc-integrity-mismatch/CLAUDE.md
+@@ -0,0 +1 @@
++이 파일이 통과하기 시작하면 그 검사가 죽은 것이다. 고치지 마라.
+diff --git a/docs/qa/gate-witness/doc-integrity-mismatch/docs/STATUS.md b/docs/qa/gate-witness/doc-integrity-mismatch/docs/STATUS.md
+new file mode 100644
+index 0000000..7eac485
+--- /dev/null
++++ b/docs/qa/gate-witness/doc-integrity-mismatch/docs/STATUS.md
+@@ -0,0 +1,3 @@
++이 파일이 통과하기 시작하면 그 검사가 죽은 것이다. 고치지 마라.
++
++```
+diff --git a/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/HARNESSES.md b/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/HARNESSES.md
+new file mode 100644
+index 0000000..299ef9b
+--- /dev/null
++++ b/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/HARNESSES.md
+@@ -0,0 +1 @@
++이 파일이 통과하기 시작하면 그 검사가 죽은 것이다. 고치지 마라.
+diff --git a/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/HS-CANDIDATES.md b/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/HS-CANDIDATES.md
+new file mode 100644
+index 0000000..299ef9b
+--- /dev/null
++++ b/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/HS-CANDIDATES.md
+@@ -0,0 +1 @@
++이 파일이 통과하기 시작하면 그 검사가 죽은 것이다. 고치지 마라.
+diff --git a/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/HUMAN-INBOX.md b/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/HUMAN-INBOX.md
+new file mode 100644
+index 0000000..299ef9b
+--- /dev/null
++++ b/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/HUMAN-INBOX.md
+@@ -0,0 +1 @@
++이 파일이 통과하기 시작하면 그 검사가 죽은 것이다. 고치지 마라.
+diff --git a/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/SONNET-QUEUE.md b/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/SONNET-QUEUE.md
+new file mode 100644
+index 0000000..299ef9b
+--- /dev/null
++++ b/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/SONNET-QUEUE.md
+@@ -0,0 +1 @@
++이 파일이 통과하기 시작하면 그 검사가 죽은 것이다. 고치지 마라.
+diff --git a/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/WORKSTATE.json b/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/WORKSTATE.json
+new file mode 100644
+index 0000000..385f4f4
+--- /dev/null
++++ b/docs/qa/gate-witness/doc-integrity-mismatch/docs/handoff/WORKSTATE.json
+@@ -0,0 +1 @@
++{"fixtureWarning":"이 파일이 통과하기 시작하면 그 검사가 죽은 것이다. 고치지 마라"}
+diff --git a/docs/qa/gate-witness/doc-integrity-mismatch/docs/wiki/failures/index.md b/docs/qa/gate-witness/doc-integrity-mismatch/docs/wiki/failures/index.md
+new file mode 100644
+index 0000000..299ef9b
+--- /dev/null
++++ b/docs/qa/gate-witness/doc-integrity-mismatch/docs/wiki/failures/index.md
+@@ -0,0 +1 @@
++이 파일이 통과하기 시작하면 그 검사가 죽은 것이다. 고치지 마라.
+diff --git a/docs/qa/gate-witness/doc-integrity-mismatch/skills/common/directive-writing.md b/docs/qa/gate-witness/doc-integrity-mismatch/skills/common/directive-writing.md
+new file mode 100644
+index 0000000..299ef9b
+--- /dev/null
++++ b/docs/qa/gate-witness/doc-integrity-mismatch/skills/common/directive-writing.md
+@@ -0,0 +1 @@
++이 파일이 통과하기 시작하면 그 검사가 죽은 것이다. 고치지 마라.
+diff --git a/docs/qa/gate-witness/doc-integrity-mismatch/skills/common/hs-gate.md b/docs/qa/gate-witness/doc-integrity-mismatch/skills/common/hs-gate.md
+new file mode 100644
+index 0000000..299ef9b
+--- /dev/null
++++ b/docs/qa/gate-witness/doc-integrity-mismatch/skills/common/hs-gate.md
+@@ -0,0 +1 @@
++이 파일이 통과하기 시작하면 그 검사가 죽은 것이다. 고치지 마라.
+diff --git a/docs/qa/gate-witness/doc-integrity-mismatch/skills/common/verification.md b/docs/qa/gate-witness/doc-integrity-mismatch/skills/common/verification.md
+new file mode 100644
+index 0000000..299ef9b
+--- /dev/null
++++ b/docs/qa/gate-witness/doc-integrity-mismatch/skills/common/verification.md
+@@ -0,0 +1 @@
++이 파일이 통과하기 시작하면 그 검사가 죽은 것이다. 고치지 마라.
+diff --git a/docs/qa/gate-witness/gate-clean-clean.status b/docs/qa/gate-witness/gate-clean-clean.status
+new file mode 100644
+index 0000000..e69de29
+diff --git a/docs/qa/gate-witness/gate-clean-dirty.status b/docs/qa/gate-witness/gate-clean-dirty.status
+new file mode 100644
+index 0000000..2cea9ee
+--- /dev/null
++++ b/docs/qa/gate-witness/gate-clean-dirty.status
+@@ -0,0 +1 @@
++?? 이 파일이 통과하기 시작하면 그 검사가 죽은 것이다. 고치지 마라
+diff --git a/server/Harness/DocIntegrityCli.cs b/server/Harness/DocIntegrityCli.cs
+index 5a851a7..ddc5da7 100644
+--- a/server/Harness/DocIntegrityCli.cs
++++ b/server/Harness/DocIntegrityCli.cs
+@@ -40,19 +40,32 @@ internal static class DocIntegrityCli
+         try
+         {
+             var root = GitTools.FindRepoRoot();
++            var fixtureIndex = Array.FindIndex(args, a =>
++                string.Equals(a, "--fixture", StringComparison.OrdinalIgnoreCase));
++            var fixtureMode = fixtureIndex >= 0;
++            if (fixtureMode && (fixtureIndex + 1 >= args.Length || args[fixtureIndex + 1].StartsWith('-')))
++                throw new ArgumentException("--fixture 뒤에 디렉터리 경로가 필요합니다.");
++            var checkRoot = fixtureMode
++                ? Path.GetFullPath(Path.IsPathRooted(args[fixtureIndex + 1])
++                    ? args[fixtureIndex + 1]
++                    : Path.Combine(root, args[fixtureIndex + 1]))
++                : root;
++            if (fixtureMode)
++                EnsureFixtureReadable(checkRoot);
++
+             var results = new JsonArray();
+             var broken = 0;
+ 
+             foreach (var rel in CriticalJson)
+             {
+-                var (ok, reason) = CheckJson(Path.Combine(root, rel));
++                var (ok, reason) = CheckJson(Path.Combine(checkRoot, rel));
+                 if (!ok) broken++;
+                 results.Add(Entry(rel, "json", ok, reason));
+             }
+ 
+             foreach (var rel in CriticalDocs)
+             {
+-                var (ok, reason) = CheckMarkdown(Path.Combine(root, rel));
++                var (ok, reason) = CheckMarkdown(Path.Combine(checkRoot, rel));
+                 if (!ok) broken++;
+                 results.Add(Entry(rel, "markdown", ok, reason));
+             }
+@@ -60,6 +73,10 @@ internal static class DocIntegrityCli
+             var report = new JsonObject
+             {
+                 ["harness"] = "doc-integrity",
++                ["fixtureMode"] = fixtureMode,
++                ["fixture"] = fixtureMode
++                    ? Path.GetRelativePath(root, checkRoot).Replace('\\', '/')
++                    : null,
+                 ["checked"] = results.Count,
+                 ["brokenCount"] = broken,
+                 ["verdict"] = broken == 0 ? "INTACT" : "TRUNCATED",
+@@ -76,6 +93,21 @@ internal static class DocIntegrityCli
+         }
+     }
+ 
++    // 픽스처가 production과 같은 입력 목록을 모두 제공하며 읽을 수 있는지 확인한다.
++    private static void EnsureFixtureReadable(string fixtureRoot)
++    {
++        if (!Directory.Exists(fixtureRoot))
++            throw new DirectoryNotFoundException($"픽스처 디렉터리 없음: {fixtureRoot}");
++
++        foreach (var rel in CriticalJson.Concat(CriticalDocs))
++        {
++            var full = Path.Combine(fixtureRoot, rel);
++            if (!File.Exists(full))
++                throw new FileNotFoundException($"픽스처 파일 없음: {rel}", full);
++            using var stream = File.Open(full, FileMode.Open, FileAccess.Read, FileShare.Read);
++        }
++    }
++
+     // 검사 결과 1건을 JSON 항목으로 만든다.
+     private static JsonObject Entry(string path, string kind, bool ok, string reason)
+         => new()
+diff --git a/server/Harness/GateCleanCli.cs b/server/Harness/GateCleanCli.cs
+index 07eaf31..0e2f4e4 100644
+--- a/server/Harness/GateCleanCli.cs
++++ b/server/Harness/GateCleanCli.cs
+@@ -21,6 +21,15 @@ internal static class GateCleanCli
+         try
+         {
+             var repoRoot = GitTools.FindRepoRoot();
++            var fixtureIndex = Array.FindIndex(args, a =>
++                string.Equals(a, "--status-fixture", StringComparison.OrdinalIgnoreCase));
++            if (fixtureIndex >= 0)
++            {
++                if (fixtureIndex + 1 >= args.Length || args[fixtureIndex + 1].StartsWith('-'))
++                    throw new ArgumentException("--status-fixture 뒤에 파일 경로가 필요합니다.");
++                return RunStatusFixture(repoRoot, args[fixtureIndex + 1]);
++            }
++
+             var paths = args.Skip(1).Where(a => !a.StartsWith('-')).ToArray();
+             if (paths.Length == 0) paths = new[] { "server" };
+ 
+@@ -93,6 +102,25 @@ internal static class GateCleanCli
+         }
+     }
+ 
++    // 저장된 porcelain 출력만 읽어 clean·dirty를 판정한다.
++    private static int RunStatusFixture(string repoRoot, string fixtureArg)
++    {
++        var full = Path.GetFullPath(Path.IsPathRooted(fixtureArg)
++            ? fixtureArg
++            : Path.Combine(repoRoot, fixtureArg));
++        var porcelain = File.ReadAllText(full);
++        var dirty = porcelain.Length > 0;
++        Console.WriteLine(new JsonObject
++        {
++            ["harness"] = "gate-clean",
++            ["fixtureMode"] = true,
++            ["statusFixture"] = Path.GetRelativePath(repoRoot, full).Replace('\\', '/'),
++            ["statusLength"] = porcelain.Length,
++            ["gate"] = dirty ? "DIRTY" : "CLEAN",
++        }.ToJsonString(JsonOptions));
++        return dirty ? 1 : 0;
++    }
++
+     // 파일 판정 1건을 JSON 항목으로 만든다.
+     private static JsonObject MakeEntry(string file, string status, string verdict, string reason)
+         => new()

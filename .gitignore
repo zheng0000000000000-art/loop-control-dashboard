@@ -7,7 +7,15 @@ server-test.out.log
 server-test.err.log
 dashboard/data/*/history/
 .claude/
-outbox/
+# 실행자 산출물: 처분 기록과 그 근거는 추적한다. 기록이 저장소와 함께 이동하지 않으면
+# 그 기록은 만든 사람의 트리에서만 참이다(2026-07-26: 처분 19건이 전부 미추적이었다).
+# 부모를 통째로 제외하면 하위를 되살릴 수 없으므로 내용만 제외하고 되짚는다.
+outbox/*
+!outbox/codex-launch-*/
+outbox/codex-launch-*/*
+!outbox/codex-launch-*/disposition.json
+!outbox/codex-launch-*/execution-report.json
+!outbox/codex-launch-*/candidate.patch
 
 server/EXECUTOR_REPORT.md
 

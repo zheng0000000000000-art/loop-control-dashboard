@@ -1,0 +1,9 @@
+{
+  "launchId": "LAUNCH-HREG-01",
+  "state": "imported",
+  "decidedAt": "2026-07-26",
+  "actor": "조율 세션(Claude Opus 5) · 사람 지시로 backfill",
+  "importCommit": "b62b5cc7b65e671feb1d51c3648ac916ed463bad",
+  "gateReport": "docs/handoff/gate-evidence/LAUNCH-HREG-01.gate.json",
+  "note": "backfill 2026-07-26. 반입 당시에는 launchId를 담은 게이트 보고가 만들어지지 않았다 — outputs/gates/의 32개 보고 중 launchId를 담은 것이 0개였다. 여기 적힌 gateReport는 backfill 시점 HEAD에서 실제로 다시 잰 것이며, 반입 당시의 판정이 아니다. importCommit은 git에서 실측했다(신규 파일이 추가된 커밋, 또는 추가된 내용으로 찾은 커밋)."
+}

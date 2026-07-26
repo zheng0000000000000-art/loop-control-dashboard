@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-GWIT-04",
+  "diId": "GWIT-04",
+  "baselineCommit": "85205cdc58fecacbac400a5b011ac6bd0cfe7439",
+  "startedAt": "2026-07-26T07:49:36Z",
+  "finishedAt": "2026-07-26T07:50:57Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "7f5faeb60a7c7c803b3ff8078b3f04cf148876907cfd400ebf3235059ded790e",
+  "stderrTail": " 음성 여부를 전달받지 못합니다.\n\n따라서 허용된 `HarnessRegistry.cs`나 `GateWitnessCheckCli.cs`만 수정하면 이름 프록시 또는 수동 목록이 필요해져 §1-A를 위반합니다. 세 루트 CLI를 대상으로 하는 후속 지시서가 필요합니다.\n\n실행 시도는 NuGet 서명 인덱스의 TLS 인증 실패(`NU1301`, 인증서 없음)로 빌드 단계에서 중단됐습니다. 세 self-test와 `context-pack-integrity` 모두 이 사유로 exit 1이었으며 실행 JSON은 생성되지 않았습니다.\n\n변경 파일은 0개입니다. 커밋·push·상태 전환은 실행하지 않았습니다.\n\n참조한 스킬: `skills/common/` 전체. 직접 적용한 핵심 문서는 `directive-writing.md`, `directive-authoring.md` §7, `verification.md`, `powershell-encoding.md`입니다.\ntokens used\n60,627",
+  "changedPaths": [],
+  "scopeViolations": [],
+  "candidatePatchSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

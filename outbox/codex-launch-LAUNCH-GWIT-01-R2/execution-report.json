@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-GWIT-01-R2",
+  "diId": "GWIT-01",
+  "baselineCommit": "129d44d7ab91ab9f85659a6ec384649aa0ba30f1",
+  "startedAt": "2026-07-26T06:58:24Z",
+  "finishedAt": "2026-07-26T07:03:17Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "f44531f0bf23abf8e1afdfb8b202b52612f7fd440cbca1438d3ab7eab2ab022e",
+  "stderrTail": "api-edge-check\"] = ProjectApiEdgeCheckCli.Run,\n         [\"handoff-integrity\"] = HandoffIntegrityCli.Run,\n         [\"context-pack-integrity\"] = ContextPackIntegrityCli.Run,\n+        [\"gate-witness-check\"] = GateWitnessCheckCli.Run,\n         [\"di-completion-check\"] = DiCompletionCheckCli.Run,\n         [\"state-transition-callsite-check\"] = StateTransitionCallsiteCheckCli.Run,\n         [\"state-transition-selftest\"] = _ => StateApplierCli.Run([\"state-transition\", \"--self-test\"]),\n\ntokens used\n105,824",
+  "changedPaths": [
+    "server/Harness/HarnessRegistry.cs",
+    "docs/qa/gate-witness/",
+    "server/Harness/GateWitnessCheckCli.cs"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "154c006066c97c39e29ebf9a1f05c18406ee5983a70121fced68ce887621b943",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

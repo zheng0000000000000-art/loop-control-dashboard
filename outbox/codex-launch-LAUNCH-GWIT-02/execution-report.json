@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-GWIT-02",
+  "diId": "GWIT-02",
+  "baselineCommit": "fb0fd07c00a4e0d97996af6f6ac58bb594fcc73e",
+  "startedAt": "2026-07-26T07:17:01Z",
+  "finishedAt": "2026-07-26T07:24:29Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "45b3524c90b89ed652fc4c0bef0718f57429f7e78365ec174f769e869273d977",
+  "stderrTail": "ness\"] = \"gate-clean\",\n+            [\"fixtureMode\"] = true,\n+            [\"statusFixture\"] = Path.GetRelativePath(repoRoot, full).Replace('\\\\', '/'),\n+            [\"statusLength\"] = porcelain.Length,\n+            [\"gate\"] = dirty ? \"DIRTY\" : \"CLEAN\",\n+        }.ToJsonString(JsonOptions));\n+        return dirty ? 1 : 0;\n+    }\n+\n     // 파일 판정 1건을 JSON 항목으로 만든다.\n     private static JsonObject MakeEntry(string file, string status, string verdict, string reason)\n         => new()\n\ntokens used\n99,779",
+  "changedPaths": [
+    "server/Harness/DocIntegrityCli.cs",
+    "server/Harness/GateCleanCli.cs",
+    "docs/qa/gate-witness/doc-integrity-mismatch/",
+    "docs/qa/gate-witness/gate-clean-clean.status",
+    "docs/qa/gate-witness/gate-clean-dirty.status"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "ec69f152f497e81f6a29b03e01dcb24147e6344b6a47502f34690a3cad71662b",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

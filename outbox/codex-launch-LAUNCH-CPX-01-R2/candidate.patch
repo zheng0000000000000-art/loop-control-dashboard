@@ -1,0 +1,188 @@
+diff --git a/server/Harness/ContextPackIntegrityCli.cs b/server/Harness/ContextPackIntegrityCli.cs
+index b98730c..5533ca9 100644
+--- a/server/Harness/ContextPackIntegrityCli.cs
++++ b/server/Harness/ContextPackIntegrityCli.cs
+@@ -33,6 +33,7 @@ internal static class ContextPackIntegrityCli
+             var ok = 0;
+             var skipped = 0;
+             var warnings = 0;
++            var overlaps = 0;
+ 
+             foreach (var directive in directives)
+             {
+@@ -43,9 +44,11 @@ internal static class ContextPackIntegrityCli
+                 ok += result.Ok;
+                 skipped += result.Skipped;
+                 warnings += result.Warnings;
++                overlaps += result.Overlaps;
+             }
+ 
+-            var failureCount = missing + stale;
++            var crossDirectivePinCollisions = FindCrossDirectivePinCollisions(directives);
++            var failureCount = missing + stale + overlaps;
+             var report = new JsonObject
+             {
+                 ["harness"] = "context-pack-integrity",
+@@ -55,9 +58,11 @@ internal static class ContextPackIntegrityCli
+                 ["staleCount"] = stale,
+                 ["skippedCount"] = skipped,
+                 ["warningCount"] = warnings,
++                ["crossDirectivePinCollisionCount"] = crossDirectivePinCollisions.Count,
+                 ["failureCount"] = failureCount,
+                 ["verdict"] = failureCount == 0 ? "PASS" : "FAIL",
+                 ["directives"] = entries,
++                ["crossDirectivePinCollisions"] = crossDirectivePinCollisions,
+                 ["note"] = "Read-only check. Context Pack hashes are supplied by directive authors, not by this harness.",
+             };
+ 
+@@ -115,7 +120,7 @@ internal static class ContextPackIntegrityCli
+                 ["directive"] = relativeDirective,
+                 ["verdict"] = "skipped",
+                 ["reason"] = "Context Pack block not found",
+-            }, 0, 0, 0, 1, 0);
++            }, 0, 0, 0, 1, 0, 0);
+         }
+ 
+         JsonObject pack;
+@@ -138,20 +143,21 @@ internal static class ContextPackIntegrityCli
+         var allowlist = ParseAllowlist(text);
+         var inputs = new JsonArray();
+         var warnings = new JsonArray();
++        var failures = new JsonArray();
+         var missing = 0;
+         var stale = 0;
+         var ok = 0;
+ 
+         foreach (var item in requiredInputs.OfType<JsonObject>())
+         {
+-            var entry = CheckRequiredInput(root, item, allowlist, warnings);
++            var entry = CheckRequiredInput(root, item, allowlist, failures);
+             inputs.Add(entry.Report);
+             missing += entry.Missing;
+             stale += entry.Stale;
+             ok += entry.Ok;
+         }
+ 
+-        var failureCount = missing + stale;
++        var failureCount = missing + stale + failures.Count;
+         var report = new JsonObject
+         {
+             ["directive"] = relativeDirective,
+@@ -162,11 +168,13 @@ internal static class ContextPackIntegrityCli
+             ["missingCount"] = missing,
+             ["staleCount"] = stale,
+             ["warningCount"] = warnings.Count,
++            ["failureCount"] = failureCount,
+             ["requiredInputs"] = inputs,
++            ["failures"] = failures,
+             ["warnings"] = warnings,
+         };
+ 
+-        return new DirectiveCheckResult(report, missing, stale, ok, 0, warnings.Count);
++        return new DirectiveCheckResult(report, missing, stale, ok, 0, warnings.Count, failures.Count);
+     }
+ 
+     // 실패한 지시서 판정을 공통 결과로 만든다.
+@@ -179,10 +187,11 @@ internal static class ContextPackIntegrityCli
+             ["missingCount"] = code == "missing" ? 1 : 0,
+             ["staleCount"] = 0,
+             ["requiredInputs"] = new JsonArray(),
++            ["failures"] = new JsonArray(),
+             ["warnings"] = new JsonArray(),
+             ["error"] = message,
+         };
+-        return new DirectiveCheckResult(report, code == "missing" ? 1 : 0, 0, 0, 0, 0);
++        return new DirectiveCheckResult(report, code == "missing" ? 1 : 0, 0, 0, 0, 0, 0);
+     }
+ 
+     // requiredInputs 항목 하나의 파일 존재와 sha256 값을 검사한다.
+@@ -190,7 +199,7 @@ internal static class ContextPackIntegrityCli
+         string root,
+         JsonObject item,
+         List<string> allowlist,
+-        JsonArray warnings)
++        JsonArray failures)
+     {
+         var path = ReadString(item, "path").Replace('\\', '/');
+         var expected = NormalizeHash(ReadString(item, "sha256"));
+@@ -211,10 +220,10 @@ internal static class ContextPackIntegrityCli
+ 
+         if (AllowlistOverlaps(path, allowlist))
+         {
+-            warnings.Add(new JsonObject
++            failures.Add(new JsonObject
+             {
+                 ["path"] = path,
+-                ["code"] = "required-input-overlaps-allowlist",
++                ["code"] = "required-input-baseline-overlaps-own-allowlist",
+                 ["message"] = "requiredInputs should not overlap the directive allowlist",
+             });
+         }
+@@ -238,6 +247,58 @@ internal static class ContextPackIntegrityCli
+         return new RequiredInputCheckResult(report, 0, 0, 1);
+     }
+ 
++    // 선택된 지시서 사이에서 한 지시서의 쓰기 대상과 다른 지시서의 pin 충돌을 찾는다.
++    private static JsonArray FindCrossDirectivePinCollisions(List<string> directives)
++    {
++        var descriptions = new List<(string DiId, List<string> Allowlist, List<string> RequiredInputs)>();
++        foreach (var directive in directives)
++        {
++            var text = File.ReadAllText(directive);
++            var packText = ExtractContextPack(text);
++            if (packText is null) continue;
++
++            JsonObject? pack;
++            try
++            {
++                pack = JsonNode.Parse(packText) as JsonObject;
++            }
++            catch (JsonException)
++            {
++                continue;
++            }
++
++            if (pack is null) continue;
++            var requiredInputs = (pack["requiredInputs"] as JsonArray)?
++                .OfType<JsonObject>()
++                .Select(item => ReadString(item, "path").Replace('\\', '/'))
++                .Where(path => !string.IsNullOrWhiteSpace(path))
++                .Distinct(StringComparer.OrdinalIgnoreCase)
++                .ToList() ?? [];
++            descriptions.Add((ReadString(pack, "diId"), ParseAllowlist(text), requiredInputs));
++        }
++
++        var collisions = new JsonArray();
++        foreach (var writer in descriptions)
++        {
++            foreach (var pinned in descriptions.Where(item =>
++                !item.DiId.Equals(writer.DiId, StringComparison.OrdinalIgnoreCase)))
++            {
++                foreach (var path in pinned.RequiredInputs.Where(path => AllowlistOverlaps(path, writer.Allowlist)))
++                {
++                    collisions.Add(new JsonObject
++                    {
++                        ["code"] = "cross-directive-pin-collision",
++                        ["path"] = path,
++                        ["writtenBy"] = writer.DiId,
++                        ["pinnedBy"] = pinned.DiId,
++                    });
++                }
++            }
++        }
++
++        return collisions;
++    }
++
+     // 지시서에서 context-pack 코드 펜스 내용을 추출한다.
+     private static string? ExtractContextPack(string text)
+     {
+@@ -334,6 +395,7 @@ internal sealed record DirectiveCheckResult(
+     int Stale,
+     int Ok,
+     int Skipped,
+-    int Warnings);
++    int Warnings,
++    int Overlaps);
+ 
+ internal sealed record RequiredInputCheckResult(JsonObject Report, int Missing, int Stale, int Ok);

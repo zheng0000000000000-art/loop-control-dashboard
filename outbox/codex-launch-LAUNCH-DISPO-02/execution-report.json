@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-DISPO-02",
+  "diId": "DISPO-02",
+  "baselineCommit": "fcef8b8bd759f610302fe5873c89c636600c1501",
+  "startedAt": "2026-07-26T10:31:22Z",
+  "finishedAt": "2026-07-26T10:37:28Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "bbd3c50734bb418d63e141b3668a06312577f1d282c2f07386453b236283486d",
+  "stderrTail": "b2c06aee6901a1f6574c9..37daf2188ea0ae8abd3b818b1d56f05476acca48\n--- a/server/Harness/LaunchDispositionCli.cs\n+++ b/server/Harness/LaunchDispositionCli.cs\n@@ -103,6 +103,7 @@\n         var state = ReadRequired(disposition, \"state\");\n         return state switch\n         {\n+            \"pending\" => \"disposition-pending\",\n             \"rejected\" => string.IsNullOrWhiteSpace(ReadRequired(disposition, \"reason\"))\n                 ? \"rejection-reason-missing\"\n                 : null,\n\ntokens used\n71,701",
+  "changedPaths": [
+    "server/Harness/LaunchDispositionCli.cs",
+    "docs/qa/gate-witness/launch-disposition/case-09/",
+    "docs/qa/gate-witness/launch-disposition/case-10/",
+    "docs/qa/gate-witness/launch-disposition/case-11/",
+    "docs/qa/gate-witness/launch-disposition/case-12/",
+    "docs/qa/gate-witness/launch-disposition/case-13/",
+    "docs/qa/gate-witness/launch-disposition/reports/mixed-imported.json"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "2444c083a384ca60994023b8a9d9814c25de9f5a24cd2b2026d876f861969841",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

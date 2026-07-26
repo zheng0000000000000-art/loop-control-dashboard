@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-DISPO-03",
+  "diId": "DISPO-03",
+  "baselineCommit": "cfb88ec104091af121bcaaf38b50ec414dbbe8f8",
+  "startedAt": "2026-07-26T10:49:34Z",
+  "finishedAt": "2026-07-26T10:55:00Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "1c6ea4f5e4e4c80906c50fd72dae7ac7dd87f97b679f197c7af881d1565b72a2",
+  "stderrTail": "h (JsonException ex)\n+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)\n         {\n-            return $\"gate-report-invalid: {ex.Message}\";\n+            return $\"gate-report-unparsable: {ex.Message}\";\n+        }\n+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)\n+        {\n+            return $\"gate-report-unreadable: {ex.Message}\";\n         }\n \n         var reportLaunchId = ReadEquivalentLaunchId(report);\n\ntokens used\n72,472",
+  "changedPaths": [
+    "server/Harness/LaunchDispositionCli.cs",
+    "docs/qa/gate-witness/launch-disposition/case-14/",
+    "docs/qa/gate-witness/launch-disposition/case-15/",
+    "docs/qa/gate-witness/launch-disposition/case-16/",
+    "docs/qa/gate-witness/launch-disposition/case-17/"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "b61f1c061fd8a4cc8e68caa6be7e2fe8f9b35f3c3a6e28996b39ba709dd3760c",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

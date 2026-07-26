@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-GWIT-05-R2",
+  "diId": "GWIT-05",
+  "baselineCommit": "1a309e0b53148bb54c8827d8dfc57744b97688ee",
+  "startedAt": "2026-07-26T08:37:18Z",
+  "finishedAt": "2026-07-26T08:45:41Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "c4e8279a13226207ef071173e4050dad6245e1df5455ab33f53cde3c878f7021",
+  "stderrTail": "ontains(\"cannot access the file\", StringComparison.OrdinalIgnoreCase)\n@@ -121,7 +131,7 @@\n             || text.Contains(\"MSB3021\", StringComparison.OrdinalIgnoreCase)\n             || text.Contains(\"MSB3027\", StringComparison.OrdinalIgnoreCase);\n \n-    // Trims long command output while preserving the diagnostic tail.\n+    // 긴 명령 출력을 진단용 끝부분만 남겨 줄인다.\n     private static string Tail(string text, int maxChars)\n     {\n         var normalized = text.Replace(\"\\r\\n\", \"\\n\").Trim();\n\ntokens used\n102,665",
+  "changedPaths": [
+    "server/Harness/BuildVerifyCli.cs",
+    "docs/qa/gate-witness/build-verify-broken/",
+    "docs/qa/gate-witness/build-verify-ok/"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "584af6369df413dfcf9e12d0e5c7283255fc071f13b1fcfe332b6a52dc857759",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

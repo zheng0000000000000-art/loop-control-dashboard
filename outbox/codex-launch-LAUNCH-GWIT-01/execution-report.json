@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-GWIT-01",
+  "diId": "GWIT-01",
+  "baselineCommit": "d468ac93e7e3a22466bf9e510ebd067d81cd3c0e",
+  "startedAt": "2026-07-26T06:50:34Z",
+  "finishedAt": "2026-07-26T06:56:29Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "2dc823edd65e74ba450a2cacb380f2ff5b2d112b453e9f5f9e3b4b84ca572952",
+  "stderrTail": "istry.cs\nindex 00d744e4c75919e8f4744e8f65e09ea3e6430f54..2134d67af6051fc9c31ec94131ebc6e2f77d341e\n--- a/server/Harness/HarnessRegistry.cs\n+++ b/server/Harness/HarnessRegistry.cs\n@@ -6,6 +6,7 @@\n     {\n         [\"e2e-usage\"] = E2EUsageCli.Run,\n         [\"gate-clean\"] = GateCleanCli.Run,\n+        [\"gate-witness-check\"] = GateWitnessCheckCli.Run,\n         [\"hs-scan\"] = HsScanCli.Run,\n         [\"claim-check\"] = ClaimCheckCli.Run,\n         [\"doc-integrity\"] = DocIntegrityCli.Run,\n\ntokens used\n111,518",
+  "changedPaths": [
+    "server/Harness/HarnessRegistry.cs",
+    "docs/qa/gate-witness/",
+    "server/Harness/GateWitnessCheckCli.cs"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "55ce5589ab0c30d3701fc3a3b7e79689b0f75d7dc513b44c962031721d7e63c8",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다."
+}

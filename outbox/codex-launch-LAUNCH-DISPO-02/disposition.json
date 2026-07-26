@@ -1,0 +1,9 @@
+{
+  "launchId": "LAUNCH-DISPO-02",
+  "state": "imported",
+  "decidedAt": "2026-07-26",
+  "actor": "조율 세션(Claude Opus 5) · 사람 지시",
+  "importCommit": "960c95e4592aabc3361347d635f54ea1ca092665",
+  "gateReport": "docs/handoff/gate-evidence/LAUNCH-DISPO-02.gate.json",
+  "note": "이 발사는 런처가 pending을 자동 기록하기 전에 이뤄져 disposition-missing으로 잡혔다. 그 사실이 DISPO-02의 필요를 실물로 보여줬다. gateReport는 반입 커밋에서 실제로 잰 것이다."
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-HREG-02",
+  "diId": "HREG-02",
+  "baselineCommit": "9d105c0f73679cf71ace166122b0c4265ed0beb5",
+  "startedAt": "2026-07-26T09:19:11Z",
+  "finishedAt": "2026-07-26T09:25:13Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "33af055cbee9529c1760ed4165feb2296284d0cd6dc074a682b94384a85ba9ea",
+  "stderrTail": "Cli.Run,\n@@ -29,6 +35,10 @@\n     // 등록된 하네스 이름 목록을 반환한다.\n     internal static IReadOnlyCollection<string> RegisteredNames => Handlers.Keys.ToArray();\n \n+    // 게이트가 인식하는 내장 명령과 등록 하네스 이름 목록을 반환한다.\n+    internal static IReadOnlySet<string> GateCommandNames { get; }\n+        = BuiltInCommands.Concat(Handlers.Keys).ToHashSet(StringComparer.OrdinalIgnoreCase);\n+\n     // 이름이 표에 있으면 해당 하네스를 실행하고 exit code를 반환한다. 없으면 null을 반환한다.\n     internal static int? TryRun(string[] args)\n     {\n\ntokens used\n99,242",
+  "changedPaths": [
+    "server/Harness/DiCompletionCheckCli.cs",
+    "server/Harness/HarnessRegistry.cs",
+    "docs/qa/gate-witness/hreg-02-measure-command.json",
+    "docs/qa/gate-witness/hreg-02-unknown-command.json"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "0da4cfc652b71d0a544a1c92e29c871eb9cd611e5712b2da7974b3fe176b43fb",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

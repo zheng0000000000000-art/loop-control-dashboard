@@ -1,0 +1,9 @@
+{
+  "launchId": "LAUNCH-DICC-02",
+  "state": "imported",
+  "decidedAt": "2026-07-26",
+  "actor": "조율 세션(Claude Opus 5) · 사람 지시",
+  "importCommit": "2f54669dc63580b7820a758b9f741726b5c93326",
+  "gateReport": "docs/handoff/gate-evidence/LAUNCH-DICC-02.gate.json",
+  "note": "DICC-02는 launchId만 실었고 baselineCommit은 싣지 않았다. launch-disposition은 둘 다 보므로 (gate-report-baseline-invalid 실측) di-completion-check 보고는 아직 gateReport로 쓸 수 없다. 이 gateReport는 program-verify 산이다. 후속 지시서가 필요하다."
+}

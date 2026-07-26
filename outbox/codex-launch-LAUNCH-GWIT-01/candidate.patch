@@ -1,0 +1,12 @@
+diff --git a/server/Harness/HarnessRegistry.cs b/server/Harness/HarnessRegistry.cs
+index 00d744e..2134d67 100644
+--- a/server/Harness/HarnessRegistry.cs
++++ b/server/Harness/HarnessRegistry.cs
+@@ -6,6 +6,7 @@ internal static class HarnessRegistry
+     {
+         ["e2e-usage"] = E2EUsageCli.Run,
+         ["gate-clean"] = GateCleanCli.Run,
++        ["gate-witness-check"] = GateWitnessCheckCli.Run,
+         ["hs-scan"] = HsScanCli.Run,
+         ["claim-check"] = ClaimCheckCli.Run,
+         ["doc-integrity"] = DocIntegrityCli.Run,

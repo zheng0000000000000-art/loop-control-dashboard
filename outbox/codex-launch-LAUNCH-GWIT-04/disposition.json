@@ -1,0 +1,8 @@
+{
+  "launchId": "LAUNCH-GWIT-04",
+  "state": "no-output",
+  "decidedAt": "2026-07-26",
+  "actor": "조율 세션(Claude Opus 5) · 사람 지시로 backfill",
+  "reason": "candidate.patch가 빈 파일이다. 실행 보고에 따르면 코덱스가 NuGet 서명 인덱스 TLS 실패(NU1301)로 빌드 단계에서 멈췄고, 허용된 파일만으로는 §1-A를 만족할 수 없다고 판단해 변경 0개로 끝냈다.",
+  "note": "GWIT-04의 목적은 이후 조율자가 세 루트 CLI에 직접 적용해 달성했다."
+}

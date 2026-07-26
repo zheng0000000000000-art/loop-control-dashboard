@@ -1,0 +1,155 @@
+diff --git a/docs/qa/gate-witness/launch-disposition/case-14/codex-launch-REPORT-DIRECTORY/disposition.json b/docs/qa/gate-witness/launch-disposition/case-14/codex-launch-REPORT-DIRECTORY/disposition.json
+new file mode 100644
+index 0000000..ef764ee
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-14/codex-launch-REPORT-DIRECTORY/disposition.json
+@@ -0,0 +1,8 @@
++{
++  "launchId": "REPORT-DIRECTORY",
++  "state": "imported",
++  "decidedAt": "2026-07-26T00:00:00Z",
++  "actor": "fixture",
++  "importCommit": "990c0bae3b484cda2f9e33bb6164dc2014bed271",
++  "gateReport": "docs/qa/gate-witness/launch-disposition/case-14/report-directory"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-14/report-directory/.gitkeep b/docs/qa/gate-witness/launch-disposition/case-14/report-directory/.gitkeep
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-14/report-directory/.gitkeep
+@@ -0,0 +1 @@
++
+diff --git a/docs/qa/gate-witness/launch-disposition/case-15/codex-launch-REPORT-NON-JSON/disposition.json b/docs/qa/gate-witness/launch-disposition/case-15/codex-launch-REPORT-NON-JSON/disposition.json
+new file mode 100644
+index 0000000..a62d1f6
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-15/codex-launch-REPORT-NON-JSON/disposition.json
+@@ -0,0 +1,8 @@
++{
++  "launchId": "REPORT-NON-JSON",
++  "state": "imported",
++  "decidedAt": "2026-07-26T00:00:00Z",
++  "actor": "fixture",
++  "importCommit": "990c0bae3b484cda2f9e33bb6164dc2014bed271",
++  "gateReport": "docs/qa/gate-witness/launch-disposition/case-15/report.txt"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-15/report.txt b/docs/qa/gate-witness/launch-disposition/case-15/report.txt
+new file mode 100644
+index 0000000..6b7a9f4
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-15/report.txt
+@@ -0,0 +1 @@
++not json
+diff --git a/docs/qa/gate-witness/launch-disposition/case-16/codex-launch-DISPOSITION-NON-JSON/disposition.json b/docs/qa/gate-witness/launch-disposition/case-16/codex-launch-DISPOSITION-NON-JSON/disposition.json
+new file mode 100644
+index 0000000..6b7a9f4
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-16/codex-launch-DISPOSITION-NON-JSON/disposition.json
+@@ -0,0 +1 @@
++not json
+diff --git a/docs/qa/gate-witness/launch-disposition/case-17/codex-launch-BROKEN/disposition.json b/docs/qa/gate-witness/launch-disposition/case-17/codex-launch-BROKEN/disposition.json
+new file mode 100644
+index 0000000..6b7a9f4
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-17/codex-launch-BROKEN/disposition.json
+@@ -0,0 +1 @@
++not json
+diff --git a/docs/qa/gate-witness/launch-disposition/case-17/codex-launch-NORMAL-ONE/disposition.json b/docs/qa/gate-witness/launch-disposition/case-17/codex-launch-NORMAL-ONE/disposition.json
+new file mode 100644
+index 0000000..3955f2e
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-17/codex-launch-NORMAL-ONE/disposition.json
+@@ -0,0 +1,8 @@
++{
++  "launchId": "NORMAL-ONE",
++  "state": "imported",
++  "decidedAt": "2026-07-26T00:00:00Z",
++  "actor": "fixture",
++  "importCommit": "990c0bae3b484cda2f9e33bb6164dc2014bed271",
++  "gateReport": "docs/qa/gate-witness/launch-disposition/case-17/normal-one.json"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-17/codex-launch-NORMAL-TWO/disposition.json b/docs/qa/gate-witness/launch-disposition/case-17/codex-launch-NORMAL-TWO/disposition.json
+new file mode 100644
+index 0000000..bf4e156
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-17/codex-launch-NORMAL-TWO/disposition.json
+@@ -0,0 +1,8 @@
++{
++  "launchId": "NORMAL-TWO",
++  "state": "imported",
++  "decidedAt": "2026-07-26T00:00:00Z",
++  "actor": "fixture",
++  "importCommit": "990c0bae3b484cda2f9e33bb6164dc2014bed271",
++  "gateReport": "docs/qa/gate-witness/launch-disposition/case-17/normal-two.json"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-17/normal-one.json b/docs/qa/gate-witness/launch-disposition/case-17/normal-one.json
+new file mode 100644
+index 0000000..7397147
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-17/normal-one.json
+@@ -0,0 +1,4 @@
++{
++  "launchId": "NORMAL-ONE",
++  "baselineCommit": "e7c03a9a2f3a4a4746a465d402ff7ca14be9733e"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-17/normal-two.json b/docs/qa/gate-witness/launch-disposition/case-17/normal-two.json
+new file mode 100644
+index 0000000..ea467d7
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-17/normal-two.json
+@@ -0,0 +1,4 @@
++{
++  "launchId": "NORMAL-TWO",
++  "baselineCommit": "e7c03a9a2f3a4a4746a465d402ff7ca14be9733e"
++}
+diff --git a/server/Harness/LaunchDispositionCli.cs b/server/Harness/LaunchDispositionCli.cs
+index 37daf21..7706a5a 100644
+--- a/server/Harness/LaunchDispositionCli.cs
++++ b/server/Harness/LaunchDispositionCli.cs
+@@ -61,7 +61,7 @@ internal static class LaunchDispositionCli
+         var dispositionPath = Path.Combine(directory, "disposition.json");
+         string? reason = null;
+ 
+-        if (!File.Exists(dispositionPath))
++        if (!Path.Exists(dispositionPath))
+             reason = "disposition-missing";
+         else
+         {
+@@ -73,7 +73,11 @@ internal static class LaunchDispositionCli
+             }
+             catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+             {
+-                reason = $"disposition-invalid: {ex.Message}";
++                reason = $"disposition-unparsable: {ex.Message}";
++            }
++            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
++            {
++                reason = $"disposition-unreadable: {ex.Message}";
+             }
+         }
+ 
+@@ -131,7 +135,7 @@ internal static class LaunchDispositionCli
+         var reportPath = Path.GetFullPath(Path.IsPathRooted(gateReport)
+             ? gateReport
+             : Path.Combine(repoRoot, gateReport));
+-        if (!File.Exists(reportPath))
++        if (!Path.Exists(reportPath))
+             return "gate-report-not-found";
+ 
+         JsonObject report;
+@@ -140,9 +144,13 @@ internal static class LaunchDispositionCli
+             report = JsonNode.Parse(File.ReadAllText(reportPath))?.AsObject()
+                 ?? throw new JsonException("root must be an object");
+         }
+-        catch (JsonException ex)
++        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
++        {
++            return $"gate-report-unparsable: {ex.Message}";
++        }
++        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+         {
+-            return $"gate-report-invalid: {ex.Message}";
++            return $"gate-report-unreadable: {ex.Message}";
+         }
+ 
+         var reportLaunchId = ReadEquivalentLaunchId(report);

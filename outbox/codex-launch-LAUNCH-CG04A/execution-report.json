@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-CG04A",
+  "diId": "CG04A",
+  "baselineCommit": "f9031a8abc77fa583b2a30819466aba0d9a46e29",
+  "startedAt": "2026-07-26T05:54:16Z",
+  "finishedAt": "2026-07-26T05:57:40Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "9b89b0f2d7d631b11a04336ccbcacef6d465ec96ec5919aeaceb426a4d0f014a",
+  "stderrTail": "urn startedAt <= claimedAt\n+                ? new ClaimLiveness(true, \"alive\")\n+                : new ClaimLiveness(false, \"pid-reused\");\n         }\n         catch\n         {\n-            return false;\n+            return new ClaimLiveness(false, \"pid-dead\");\n         }\n     }\n \n@@ -311,4 +342,6 @@\n         JsonArray Conflicts,\n         JsonArray StaleClaims,\n         JsonArray UnknownAllowlistClaims);\n+\n+    private sealed record ClaimLiveness(bool Alive, string Reason);\n }\n\ntokens used\n118,613",
+  "changedPaths": [
+    "server/Harness/ClaimCheckCli.cs",
+    "server/Harness/ContextPackIntegrityCli.cs",
+    "server/Harness/DiCompletionCheckCli.cs",
+    "server/Harness/ScopeCheckCli.cs"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "f0fe715acc22f3473eb7fa5aa9ca9bbc8b2ffc32ec5b6e6d4090ba032fe48918",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다."
+}

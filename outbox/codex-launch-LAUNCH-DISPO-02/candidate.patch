@@ -1,0 +1,95 @@
+diff --git a/docs/qa/gate-witness/launch-disposition/case-09/codex-launch-PENDING/disposition.json b/docs/qa/gate-witness/launch-disposition/case-09/codex-launch-PENDING/disposition.json
+new file mode 100644
+index 0000000..9900e84
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-09/codex-launch-PENDING/disposition.json
+@@ -0,0 +1,6 @@
++{
++  "launchId": "PENDING",
++  "state": "pending",
++  "decidedAt": "2026-07-26T00:00:00Z",
++  "actor": "fixture"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-10/codex-launch-PENDING-NO-ACTOR/disposition.json b/docs/qa/gate-witness/launch-disposition/case-10/codex-launch-PENDING-NO-ACTOR/disposition.json
+new file mode 100644
+index 0000000..61faec3
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-10/codex-launch-PENDING-NO-ACTOR/disposition.json
+@@ -0,0 +1,5 @@
++{
++  "launchId": "PENDING-NO-ACTOR",
++  "state": "pending",
++  "decidedAt": "2026-07-26T00:00:00Z"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-11/codex-launch-PENDING-ID-MISMATCH/disposition.json b/docs/qa/gate-witness/launch-disposition/case-11/codex-launch-PENDING-ID-MISMATCH/disposition.json
+new file mode 100644
+index 0000000..9c0850d
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-11/codex-launch-PENDING-ID-MISMATCH/disposition.json
+@@ -0,0 +1,6 @@
++{
++  "launchId": "SOMEONE-ELSE",
++  "state": "pending",
++  "decidedAt": "2026-07-26T00:00:00Z",
++  "actor": "fixture"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-12/codex-launch-UNKNOWN-STATE/disposition.json b/docs/qa/gate-witness/launch-disposition/case-12/codex-launch-UNKNOWN-STATE/disposition.json
+new file mode 100644
+index 0000000..eae845e
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-12/codex-launch-UNKNOWN-STATE/disposition.json
+@@ -0,0 +1,6 @@
++{
++  "launchId": "UNKNOWN-STATE",
++  "state": "maybe",
++  "decidedAt": "2026-07-26T00:00:00Z",
++  "actor": "fixture"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-13/codex-launch-MIXED-IMPORTED/disposition.json b/docs/qa/gate-witness/launch-disposition/case-13/codex-launch-MIXED-IMPORTED/disposition.json
+new file mode 100644
+index 0000000..0fe7db3
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-13/codex-launch-MIXED-IMPORTED/disposition.json
+@@ -0,0 +1,8 @@
++{
++  "launchId": "MIXED-IMPORTED",
++  "state": "imported",
++  "decidedAt": "2026-07-26T00:00:00Z",
++  "actor": "fixture",
++  "importCommit": "990c0bae3b484cda2f9e33bb6164dc2014bed271",
++  "gateReport": "docs/qa/gate-witness/launch-disposition/reports/mixed-imported.json"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-13/codex-launch-MIXED-PENDING/disposition.json b/docs/qa/gate-witness/launch-disposition/case-13/codex-launch-MIXED-PENDING/disposition.json
+new file mode 100644
+index 0000000..8eb49d7
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-13/codex-launch-MIXED-PENDING/disposition.json
+@@ -0,0 +1,6 @@
++{
++  "launchId": "MIXED-PENDING",
++  "state": "pending",
++  "decidedAt": "2026-07-26T00:00:00Z",
++  "actor": "fixture"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/reports/mixed-imported.json b/docs/qa/gate-witness/launch-disposition/reports/mixed-imported.json
+new file mode 100644
+index 0000000..c18a7e3
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/reports/mixed-imported.json
+@@ -0,0 +1,4 @@
++{
++  "launchId": "MIXED-IMPORTED",
++  "baselineCommit": "e7c03a9a2f3a4a4746a465d402ff7ca14be9733e"
++}
+diff --git a/server/Harness/LaunchDispositionCli.cs b/server/Harness/LaunchDispositionCli.cs
+index 3dd909e..37daf21 100644
+--- a/server/Harness/LaunchDispositionCli.cs
++++ b/server/Harness/LaunchDispositionCli.cs
+@@ -103,6 +103,7 @@ internal static class LaunchDispositionCli
+         var state = ReadRequired(disposition, "state");
+         return state switch
+         {
++            "pending" => "disposition-pending",
+             "rejected" => string.IsNullOrWhiteSpace(ReadRequired(disposition, "reason"))
+                 ? "rejection-reason-missing"
+                 : null,

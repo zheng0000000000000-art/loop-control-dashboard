@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-GWIT-06",
+  "diId": "GWIT-06",
+  "baselineCommit": "2989c66c2161d92b8b4c45e496a909a7fdfb76eb",
+  "startedAt": "2026-07-26T08:58:25Z",
+  "finishedAt": "2026-07-26T09:03:08Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "79a2c131eacb76e1a7b5529510dd50b6a5dd2920df627fe514c3939f7f14e941",
+  "stderrTail": "      offset++;\n+            if (offset == bytes.Length)\n+                break;\n+\n+            var reader = new Utf8JsonReader(bytes.AsSpan(offset));\n+            var node = JsonNode.Parse(ref reader);\n+            maximum = Math.Max(maximum, FindCaseCount(node));\n+            offset += checked((int)reader.BytesConsumed);\n+        }\n+        return maximum;\n+    }\n+\n     // 알려진 구조화 카운터만 재귀적으로 읽어 문면 주장을 실행 증거와 분리한다.\n     private static int FindCaseCount(JsonNode? node)\n     {\n\ntokens used\n80,405",
+  "changedPaths": [
+    "server/Harness/GateWitnessCheckCli.cs",
+    "docs/qa/gate-witness/jsonlines-non-json-output.txt",
+    "docs/qa/gate-witness/jsonlines-non-json.json",
+    "docs/qa/gate-witness/jsonlines-state-15.json",
+    "docs/qa/gate-witness/jsonlines-state-16.json",
+    "docs/qa/gate-witness/jsonlines-state-999.json",
+    "docs/qa/gate-witness/jsonlines-truncated-output.txt",
+    "docs/qa/gate-witness/jsonlines-truncated.json"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "769781fccdb1d0bc3988cbca09ddceed5aecdfa4f9e4f48275f3dfa5792a6a72",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

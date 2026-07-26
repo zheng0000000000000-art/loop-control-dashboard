@@ -1,0 +1,142 @@
+diff --git a/docs/qa/gate-witness/launch-disposition/case-18/codex-launch-LAUNCH-X/disposition.json b/docs/qa/gate-witness/launch-disposition/case-18/codex-launch-LAUNCH-X/disposition.json
+new file mode 100644
+index 0000000..1de3f95
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-18/codex-launch-LAUNCH-X/disposition.json
+@@ -0,0 +1,8 @@
++{
++  "launchId": "LAUNCH-X",
++  "state": "imported",
++  "decidedAt": "2026-07-26T00:00:00Z",
++  "actor": "fixture",
++  "importCommit": "9809dbcd3d220c0430e87cd4f574e370a9e89878",
++  "gateReport": "docs/qa/gate-witness/launch-disposition/case-18/report.json"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-18/report.json b/docs/qa/gate-witness/launch-disposition/case-18/report.json
+new file mode 100644
+index 0000000..5dfb441
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-18/report.json
+@@ -0,0 +1,6 @@
++{
++  "harness": "di-completion-check",
++  "gateId": "POST-COMMIT",
++  "taskId": "dicc02-no-launch",
++  "baselineCommit": "9809dbcd3d220c0430e87cd4f574e370a9e89878"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-19/codex-launch-LAUNCH-X/disposition.json b/docs/qa/gate-witness/launch-disposition/case-19/codex-launch-LAUNCH-X/disposition.json
+new file mode 100644
+index 0000000..05e4d44
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-19/codex-launch-LAUNCH-X/disposition.json
+@@ -0,0 +1,8 @@
++{
++  "launchId": "LAUNCH-X",
++  "state": "imported",
++  "decidedAt": "2026-07-26T00:00:00Z",
++  "actor": "fixture",
++  "importCommit": "9809dbcd3d220c0430e87cd4f574e370a9e89878",
++  "gateReport": "docs/qa/gate-witness/launch-disposition/case-19/report.json"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-19/report.json b/docs/qa/gate-witness/launch-disposition/case-19/report.json
+new file mode 100644
+index 0000000..2fe5031
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-19/report.json
+@@ -0,0 +1,7 @@
++{
++  "harness": "di-completion-check",
++  "gateId": "POST-COMMIT",
++  "taskId": "dicc02-wrong-launch",
++  "launchId": "LAUNCH-Y",
++  "baselineCommit": "9809dbcd3d220c0430e87cd4f574e370a9e89878"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-20/codex-launch-LAUNCH-X/disposition.json b/docs/qa/gate-witness/launch-disposition/case-20/codex-launch-LAUNCH-X/disposition.json
+new file mode 100644
+index 0000000..2d53582
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-20/codex-launch-LAUNCH-X/disposition.json
+@@ -0,0 +1,8 @@
++{
++  "launchId": "LAUNCH-X",
++  "state": "imported",
++  "decidedAt": "2026-07-26T00:00:00Z",
++  "actor": "fixture",
++  "importCommit": "9809dbcd3d220c0430e87cd4f574e370a9e89878",
++  "gateReport": "docs/qa/gate-witness/launch-disposition/case-20/report.json"
++}
+diff --git a/docs/qa/gate-witness/launch-disposition/case-20/report.json b/docs/qa/gate-witness/launch-disposition/case-20/report.json
+new file mode 100644
+index 0000000..d3629ac
+--- /dev/null
++++ b/docs/qa/gate-witness/launch-disposition/case-20/report.json
+@@ -0,0 +1,7 @@
++{
++  "harness": "di-completion-check",
++  "gateId": "POST-COMMIT",
++  "taskId": "dicc02-matching-launch",
++  "launchId": "LAUNCH-X",
++  "baselineCommit": "9809dbcd3d220c0430e87cd4f574e370a9e89878"
++}
+diff --git a/server/Harness/DiCompletionCheckCli.cs b/server/Harness/DiCompletionCheckCli.cs
+index 2bba217..e9f71f4 100644
+--- a/server/Harness/DiCompletionCheckCli.cs
++++ b/server/Harness/DiCompletionCheckCli.cs
+@@ -31,7 +31,7 @@ internal static class DiCompletionCheckCli
+         var taskId = string.IsNullOrWhiteSpace(options.TaskId)
+             ? DateTime.Now.ToString("yyyyMMdd-HHmmss")
+             : SanitizeFileName(options.TaskId);
+-        var report = BuildBaseReport(options.GateId, manifestPath, taskId);
++        var report = BuildBaseReport(options.GateId, manifestPath, taskId, options.LaunchId);
+ 
+         try
+         {
+@@ -336,7 +336,7 @@ internal static class DiCompletionCheckCli
+     // CLI 인자를 기본값과 함께 해석한다.
+     private static DiCompletionOptions ParseArgs(string[] args)
+     {
+-        var options = new DiCompletionOptions("POST-EXECUTOR", "", "docs/handoff/GATE-MANIFEST.json", "", false);
++        var options = new DiCompletionOptions("POST-EXECUTOR", "", "", "docs/handoff/GATE-MANIFEST.json", "", false);
+         for (var i = 1; i < args.Length; i++)
+         {
+             var arg = args[i];
+@@ -344,6 +344,8 @@ internal static class DiCompletionCheckCli
+                 options = options with { GateId = args[++i] };
+             else if (arg.Equals("--task", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                 options = options with { TaskId = args[++i] };
++            else if (arg.Equals("--launch", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
++                options = options with { LaunchId = args[++i] };
+             else if (arg.Equals("--manifest", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                 options = options with { ManifestPath = args[++i] };
+             else if (arg.Equals("--emit-doc", StringComparison.OrdinalIgnoreCase))
+@@ -361,8 +363,9 @@ internal static class DiCompletionCheckCli
+     }
+ 
+     // 보고서 기본 필드를 만든다.
+-    private static JsonObject BuildBaseReport(string gateId, string manifestPath, string taskId)
+-        => new()
++    private static JsonObject BuildBaseReport(string gateId, string manifestPath, string taskId, string launchId)
++    {
++        var report = new JsonObject
+         {
+             ["harness"] = "di-completion-check",
+             ["gateId"] = gateId,
+@@ -371,6 +374,10 @@ internal static class DiCompletionCheckCli
+             ["createdAt"] = DateTimeOffset.Now.ToString("O"),
+             ["gateVerdict"] = "FAIL",
+         };
++        if (!string.IsNullOrWhiteSpace(launchId))
++            report["launchId"] = launchId;
++        return report;
++    }
+ 
+     // gateId에 맞는 gate 객체를 찾는다.
+     private static JsonObject? FindGate(JsonObject manifest, string gateId)
+@@ -552,6 +559,6 @@ internal static class DiCompletionCheckCli
+     }
+ }
+ 
+-internal sealed record DiCompletionOptions(string GateId, string TaskId, string ManifestPath, string EmitDocPath, bool EmitCliContract);
++internal sealed record DiCompletionOptions(string GateId, string TaskId, string LaunchId, string ManifestPath, string EmitDocPath, bool EmitCliContract);
+ internal sealed record ProcessRunResult(int ExitCode, string Stdout, string Stderr, long DurationMs);
+ internal sealed record CheckRunResult(JsonObject Report, bool Passed, JsonObject Failure);
