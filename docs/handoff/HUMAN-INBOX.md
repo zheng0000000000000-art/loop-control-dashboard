@@ -1181,3 +1181,32 @@ private static bool HighRiskFailClosed() => true;      // TrustOriginCli.cs:993
 **부수로 한 것**: 대기 지시서 `GATE-TRUTH-01`의 `HarnessRegistry.cs` 핀을 다시 계산했다.
 이번 반입이 그 파일에 `territory-check` 등록 한 줄을 더했기 때문이다. **전제에 영향 없다고
 판단한 것은 나이고, 그 지시서를 머리와 목적 절까지만 다시 읽었다.** 판단이 틀렸으면 되돌려라.
+
+## 2026-07-27 — `context-pack-integrity`가 `docs/directives/`를 안 본다 (커버리지 구멍)
+
+인자 없이 돌면 **`docs/handoff/queue/`만** 훑는다(`ResolveTargets`). **`docs/directives/`는 검사 밖이다** —
+오늘 쓴 TERR-01·TERR-02·NET8-01을 포함해 그 폴더의 지시서 전부가 한 번도 검사된 적이 없다.
+
+실제로 `NET8-01`의 참조 입력이 **stale이었는데 게이트는 초록이었다.** 해시를 박은 뒤 그 파일에
+내가 계속 append했기 때문이다. 발사 직전에 손으로 확인해서 잡았다 — **하네스가 잡은 게 아니다.**
+(2026-07-11에 "지시서가 삭제된 파일을 계속 가리켰다"를 사람이 손으로 발견한 것과 같은 모양이다.)
+
+**폴더를 인자로 주면 검사는 된다.** 실측: `context-pack-integrity docs/directives` → **exit 1**,
+`stale 2 · missing 4`.
+
+```
+LEDGER-02  docs/handoff/QUOTA-POLICY.md            stale
+FEAT-01    docs/directives/_header.md              stale
+STATE-01   docs/context/RUNTIME-INDEX.md           missing
+           docs/handoff/WORKSTATE.json             missing
+           server/ProjectionCli.cs                 missing
+           docs/plan/INTENT-DIGEST.md              missing
+```
+
+**그래서 지금 게이트에 등재하지 않았다** — 넣으면 영구 적색이고, 영구히 빨간 게이트는
+무시된다(FAIL-2026-010). 등재하려면 위 셋을 먼저 정리해야 한다.
+
+**결재 필요**: 이 셋을 ①핀 재계산 ②archive로 이동 ③삭제 중 무엇으로 처리할지.
+`STATE-01`은 참조 파일 4개가 **없는 경로**라 재계산이 아니라 죽은 지시서로 보인다 —
+**하지만 그건 내 추측이고, 그 지시서를 열어보지는 않았다.** 정리되면
+`context-pack-integrity docs/directives`를 POST-COMMIT에 등재한다.

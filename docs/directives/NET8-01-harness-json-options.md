@@ -3,7 +3,7 @@
   "diId": "NET8-01",
   "requiredInputs": [
     { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
-    { "path": "docs/verification/portability-linux-2026-07-27.md", "sha256": "534c8299b89bd754dfcabf32ce80a16418c2dbb47216e7fb29528b44ca899238" }
+    { "path": "docs/verification/portability-linux-2026-07-27.md", "sha256": "a9e60b10962ed17b77109ea5f4452c3f00451525bca142ba2b5ae073e9233d22" }
   ],
   "readOrder": [
     "docs/context/RUNTIME-INDEX.md",
