@@ -1099,7 +1099,12 @@ internal static class TrustOriginCli
             if (!File.Exists(source)) return false;
 
             var manifest = JsonNode.Parse(File.ReadAllText(source, Utf8NoBom))!.AsObject();
-            var dropped = RequiredGateCommands[0];
+            // 기준선이 이미 어긋나 있어도 성립해야 한다. 실제로 어긋난 저장소에서 이 케이스가
+            // 거짓 실패했다(2026-07-26 실측) — "빠진 게 정확히 1개"를 기대한 탓이다.
+            // 지금 실재하는 이름 하나를 골라, 그것을 지웠을 때 빠진 목록이 그만큼만 늘어나는지 본다.
+            var baseline = RequiredCommandsMissingFromManifest(RepoRootForSelfTest()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var dropped = RequiredGateCommands.FirstOrDefault(c => !baseline.Contains(c));
+            if (dropped is null) return false;
             foreach (var gate in (manifest["gates"]?.AsArray() ?? []).OfType<JsonObject>())
             {
                 if (!string.Equals(gate["gateId"]?.ToString(), LandGateId, StringComparison.OrdinalIgnoreCase)) continue;
@@ -1110,8 +1115,9 @@ internal static class TrustOriginCli
             }
             File.WriteAllText(Path.Combine(dir, "GATE-MANIFEST.json"), manifest.ToJsonString(), Utf8NoBom);
 
-            var missing = RequiredCommandsMissingFromManifest(temp);
-            return missing.Count == 1 && string.Equals(missing[0], dropped, StringComparison.OrdinalIgnoreCase);
+            var missing = RequiredCommandsMissingFromManifest(temp).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            // 지운 것 하나만 더 빠져야 한다 — 덜 잡아도, 더 잡아도 이 검사는 못 믿는다.
+            return missing.Contains(dropped) && missing.Count == baseline.Count + 1;
         }
         catch { return false; }
         finally
