@@ -131,3 +131,36 @@ handoff-integrity   SHA256.HashData(File.ReadAllBytes(full))                ← 
    **오늘 하지 않았다** — 별개 결정이고 diff가 크다.
 3. **클론에서 `POST-EXECUTOR`·`LAND`는 안 돌렸다.** 전자는 더러운 트리를 전제하고
    후자는 18개라 시간이 든다. **`POST-COMMIT` 하나만 초록을 확인했다.**
+
+---
+
+# 세 게이트 전부 클론에서 (append, 2026-07-26)
+
+앞 절의 미달 ③(*"클론에서 `POST-EXECUTOR`·`LAND`는 안 돌렸다"*)을 닫는다.
+클론 baseline `de8c477e`.
+
+| 게이트 | 클론 결과 | 비고 |
+| --- | --- | --- |
+| `POST-COMMIT` | **PASS 0 / 14** | `worktreeCleanAtStart` true |
+| `WP-STATE-INTEGRITY-LAND` | **PASS 0 / 18** | `worktreeCleanAtStart` true |
+| `POST-EXECUTOR` (깨끗한 트리) | **FAIL 1 / 13** | `gate-clean ['server'] exp 1 got 0` — **전제 불충족** |
+| `POST-EXECUTOR` (더럽힌 트리) | **PASS 0 / 13** | `server/executor-scratch.txt` 추가 후 |
+
+`POST-EXECUTOR`의 `gate-clean`은 **기대값이 1**이다 — 실행자가 방금 산출물을 냈고 아직 커밋 전인
+상태를 전제한다. 깨끗한 트리의 FAIL은 **결함이 아니라 맥락 불일치**이며, 유일한 실패가 정확히
+그 검사 하나라는 것이 그 증거다. 조건을 만들자 13개 전부 통과했다.
+
+**이제 세 게이트 모두 조율자 트리 밖에서 초록임이 실측됐다.** 이 세션 시작 시점에는
+`POST-COMMIT`이 조율자 트리에서조차 빨갰고(`gate-witness-check` 미반증 17건),
+클론에서는 `launch-disposition`이 아예 실행되지 못했다.
+
+## 지표는 만족했으나 목적은 미달인 부분
+
+1. **`POST-EXECUTOR`를 통과시킨 더러움은 미추적 텍스트 파일이지 소스 변경이 아니다.**
+   실행자가 실제로 만드는 `.cs` 변경이면 바이너리가 낡아 두 러너 모두 `NOT-MEASURED`로
+   거부한다(`ADR-016` §13). 실무 순서는 **산출 → 빌드 → 게이트**이고 그 순서는
+   낡음 판정이 강제하지만, *"빌드했는가"* 를 사람이 기억해야 한다.
+2. **클론은 로컬 경로에서 떴다.** 원격에서 새로 받은 것이 아니므로 `.git` 설정 차이나
+   LFS·서브모듈 같은 요소는 검증 범위 밖이다.
+3. **한 번의 클론에서만 쟀다.** 다른 OS·다른 `core.autocrlf` 설정에서는 안 돌려봤다.
+   `NHASH-01` 이후 해시가 정규화되므로 그쪽도 통과할 것으로 **예상**하지만 **실측은 아니다.**
