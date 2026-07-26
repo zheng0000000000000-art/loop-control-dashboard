@@ -981,3 +981,26 @@ CLI 정식 철자는 --dry-run 이다 (StateApplierCli.cs:923)
 
 **남은 것**: `ParseFlagMap`류의 *"값 없으면 continue"* 패턴이 **다른 CLI에도 있을 수 있다.**
 이번엔 `StateApplierCli`만 고쳤다. 상태를 쓰는 명령이 또 있다면 같은 사고가 가능하다.
+
+## 2026-07-26 — 오타 옵션이 조용히 무시된다. `di-completion-check`가 가장 위험하다
+
+`state-transition` 사고 뒤 CLI 전면을 조사했다(`docs/verification/cli-option-failopen-survey.md`).
+
+**미지 옵션을 검증하는 CLI는 `StateApplierCli` 하나뿐이다.** 나머지는 오타를 조용히 무시한다.
+
+| 명령 | 오타 | exit | 결과 |
+| --- | --- | --- | --- |
+| **`di-completion-check --manifest`** | `--manifestt` | **0** | **production을 쟀다** (checkCount 1 → 14, **PASS**) |
+| `trust-origin evidence --gate-report` | `--gate-reportt` | 0 | 증거가 조용히 `NOT_RUN`으로 격하 |
+| `codex-launch launch --manual` | `--manul` | — | **측정 못 함** — 코드상 fail-closed이나 실측 아님 |
+
+**첫 줄이 위험하다.** 픽스처를 쟀다고 믿는데 production을 쟀고 **exit 0**이다.
+오늘 반증 시험을 그 명령으로 여러 번 돌렸다 — **한 글자 차이로 결과가 뒤집힌다.**
+
+**사람 판단이 필요한 것**:
+
+1. **`di-completion-check`에 미지 옵션 검증을 넣을 것인가**(`server/Harness/` = **코덱스 영역**,
+   지시서 필요). 게이트 정본 러너이므로 우선순위가 높다.
+2. `trust-origin`·`codex-launch`(조율자 영역)도 같이 할 것인가.
+3. `--manual` 가드의 fail-closed를 **실제로 측정**할 것인가 — 측정 비용이
+   "잘못되면 코덱스 발사"다. 안전하게 재려면 가드를 요청 검증보다 **앞으로** 옮겨야 한다.
