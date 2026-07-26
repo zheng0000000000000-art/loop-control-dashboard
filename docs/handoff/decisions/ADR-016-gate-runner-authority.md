@@ -359,3 +359,73 @@ exit 2 · `NOT-MEASURED` · 검사 0개로 거부하고 "먼저 빌드하라"고
 실측: `outbox/codex-launch-*` **15개** 중 처분이 기록된 것 **0개**.
 반입한 것·버린 것(`LAUNCH-GWIT-05`)·산출이 없던 것(`LAUNCH-GWIT-04`)이 파일로 구분되지 않는다.
 `DISPO-01`이 그 부분을 맡는다.
+
+## §15 결정 (2026-07-26) — 게이트 판정의 정본은 `di-completion-check`다
+
+**결정 주체**: 사람(이 세션에서 명시적으로 선택). **§8을 확정한다.**
+
+### 무엇을 정했나
+
+- **게이트 판정의 정본은 `di-completion-check`.**
+- `program-verify`는 **게이트 실행을 버리고 전이 요청 생성만 남긴다**(보고를 읽어서).
+  이는 `ProgramVerifierCli.cs` 머리 주석에 원래 적혀 있던 계획이기도 하다.
+
+### 근거 (전부 실측)
+
+오늘 두 러너의 차이가 대부분 사라졌다 — 낡음 판정(`BinaryFreshness`), 명령 목록
+(`GateCommandNames`), `launchId`·`baselineCommit`·`worktreeCleanAtStart`가 모두 같아졌고
+세 게이트에서 같은 답을 냈다(§12·§13).
+
+남은 차이가 결정을 갈랐다:
+
+| | `program-verify` | `di-completion-check` |
+| --- | --- | --- |
+| `--manifest`(픽스처로 반증 시험) | **없음** | **있음** |
+| `HarnessRegistry` 등재 | 아님 | **네이티브** |
+| `--emit-doc`·`--emit-cli-contract` | 없음 | 있음 |
+| 전이 요청 생성 | **있음** | 없음 |
+
+**픽스처로 시험할 수 없는 판정기를 정본으로 둘 수 없다.** `DICC-02`가 실제로 그 이유로 실패했다.
+
+### 이 결정이 요구한 것 — 두 곳이 막고 있었다
+
+1. **`TrustOriginCli`가 `program-verify` 보고만 받았다**(`verifier != "program-verify"` → 거절).
+   두 러너의 보고는 **필드 이름만 다르다**(`verifier`/`harness`, `verdict`/`gateVerdict`).
+   **아는 러너 둘만** 받도록 고쳤다 — 아무 이름이나 받으면 모르는 산출을 통과로 적는 것이다.
+2. `GATE-MANIFEST.json`의 LAND `triggeredBy`를 `di-completion-check`로 바꿨다.
+
+### ★ 그러다 죽어 있던 경로를 찾았다
+
+`TrustOriginCli.RequiredGateCommands`가 **이름 교체 전 이름**을 요구하고 있었다.
+
+```
+요구:  state-transition        recovery        trust-origin
+실재:  state-transition-selftest  recovery-selftest  trust-origin-selftest
+양쪽 러너 LAND 보고 모두 그 셋이 없음 — 직접 대조
+```
+
+`HREG-01`의 이름 교체 이후 **`trust-origin evidence --gate-report`는 두 러너 모두에게 죽어 있었다.**
+이번 세션에 그 경로를 baseline change로 열어 놓고도 **정작 쓸 수 없는 상태**였다.
+이름을 실재와 맞췄다(요구 항목 수 7개 그대로 — **완화가 아니라 정정**).
+
+### 실측 결과
+
+```
+di-completion-check --gate WP-STATE-INTEGRITY-LAND   → exit 0
+trust-origin evidence --gate-report <그 보고>         → exit 0
+  releaseBuild=PASS · docIntegrity=PASS · reconciliationFixtures=PASS
+```
+
+**`NOT_RUN`이 아니다.** 세션 초반에 확인한 *"evidence는 언제나 `NOT_RUN`을 내고 declare는
+`NOT_RUN`을 언제나 거절한다"* 는 교착이 **끝에서 끝까지 풀렸다.**
+`declare`는 **사람 결재**이므로 돌리지 않았다.
+
+### 아직 하지 않은 것
+
+1. **`program-verify`는 여전히 게이트를 실행한다.** 결정은 실행 코드 제거까지 포함하는데
+   그 부분을 안 했다. **지금 상태는 "결정은 §15, 코드는 아직 둘 다"** 이며,
+   이것을 방치하면 이 저장소가 반복해 온 *"기록만 남기고 이행하지 않는다"* 가 된다.
+2. **`RequiredGateCommands`는 매니페스트와 손으로 동기화된다.** 이름을 또 바꾸면 또 끊긴다.
+   기계가 대조하게 하는 것이 근본 해결이며 별도 결재다.
+3. 기존 처분 21건의 `gateReport`는 전부 `program-verify` 산이다. 소급 재생성은 하지 않았다 —
+   그 보고들은 만들어진 시점에 유효했고, `launch-disposition`은 러너를 구분하지 않는다.

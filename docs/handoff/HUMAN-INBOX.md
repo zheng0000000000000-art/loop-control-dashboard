@@ -801,3 +801,18 @@ handoff-integrity   원시 바이트 SHA256        ← 안 받음
 3. 작업 트리를 `git add --renormalize .`로 맞출 것인가(그러면 지금 맞는 해시가 안 맞게 된다).
 
 **셋 중 무엇이 참인지 정하는 것이 먼저다. 나는 아무것도 바꾸지 않았다.**
+
+## 2026-07-26 — ADR-016 §8 확정(§15). 남은 것은 코드 정리다
+
+**결정**: 게이트 판정의 정본은 `di-completion-check`. `program-verify`는 전이 요청 생성만 남긴다.
+
+이 결정으로 두 곳을 풀었고(`trust-origin`의 verifier 수용, 매니페스트 `triggeredBy`),
+그 과정에서 **`RequiredGateCommands`가 이름 교체 이후 죽어 있던 것**을 찾아 정정했다.
+실측: `trust-origin evidence --gate-report` **exit 0**, `releaseBuild`/`docIntegrity`/
+`reconciliationFixtures` 전부 **PASS**(종전엔 언제나 `NOT_RUN`이었다).
+
+**남은 사람 판단**:
+1. `program-verify`에서 게이트 실행 코드를 **언제 제거할 것인가.** 지금은 결정과 코드가 어긋나 있다.
+   제거하면 `--out`으로 보고를 내던 현재 작업 흐름도 `di-completion-check --task`로 바뀐다.
+2. `RequiredGateCommands`를 매니페스트와 **기계가 대조**하게 할 것인가(코덱스 영역).
+3. `trust-origin declare`는 **돌리지 않았다.** 이제 근거가 만들어지므로 선언 여부는 결재다.
