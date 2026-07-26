@@ -1,0 +1,116 @@
+# 게이트를 이 컴퓨터 밖에서도 돌린다.
+# 2026-07-27까지 CI가 없어 모든 초록이 개발자 한 명의 로컬 값이었고, TargetFramework가 net8.0인데
+# RollForward로 .NET 10에서만 돌던 것을 아무도 몰랐다(measure가 .NET 8에서 죽었다).
+# 그래서 런타임을 컨테이너로 격리한다 — 이미지 안에 그 버전 하나뿐이라 "어느 런타임이 돌았나"가
+# 설정이 아니라 사실이 된다.
+name: gates
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: linux / ${{ matrix.sdk }}
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/dotnet/sdk:${{ matrix.sdk }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # "8.0"이 빠져 있는 것은 잊어서가 아니다. 2026-07-27 실측: .NET 8에서 hs-scan이
+        # TypeInfoResolver 미지정으로 exit 2를 내 POST-COMMIT이 FAIL이다. 아직 안 고쳤다.
+        # 지금 넣으면 이 다리는 영구 적색이 되고, 영구히 빨간 게이트는 무시된다(FAIL-2026-010).
+        # NET8-01 지시서가 server/Harness의 옵션을 한 벌로 모으고 **이 목록에 "8.0"을 넣는다.**
+        sdk: ["10.0"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # di-completion-check가 baselineCommit을 HEAD와 대조하고 gate-clean이 트리를 본다.
+      # 컨테이너 안에서 checkout 디렉터리 소유자가 달라 git이 dubious ownership으로 거절한다.
+      - name: git 신뢰 설정
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: 환경 기록
+        run: |
+          uname -a
+          dotnet --version
+          dotnet --list-runtimes
+          git --version
+          head -c 200 docs/handoff/WORKSTATE.json | grep -q $'\r' && echo "체크아웃: CRLF" || echo "체크아웃: LF"
+
+      - name: build
+        run: dotnet build server -v q --nologo
+
+      # 개별 하네스. 어느 것이 깨졌는지 로그에서 바로 보이게 한 줄씩 돌린다.
+      - name: 하네스
+        run: |
+          set -e
+          for c in "measure dev-pack" "state-transition --self-test" "recovery --self-test" \
+                   "trust-origin --self-test" "doc-integrity" "handoff-integrity" \
+                   "verify-behavior" "gate-witness-check" "state-transition-callsite-check" \
+                   "context-pack-integrity"; do
+            echo "--- $c"
+            dotnet run --project server --no-build -- $c > /dev/null
+          done
+
+      # 통합 게이트는 clean 트리에서 시작해야 한다 — 위 measure가 dashboard/data를 다시 썼다.
+      - name: LAND
+        run: |
+          git checkout -- . && git clean -fdq
+          dotnet run --project server --no-build -- di-completion-check --gate WP-STATE-INTEGRITY-LAND --task ci-land
+
+      - name: POST-COMMIT
+        run: |
+          git checkout -- . && git clean -fdq
+          dotnet run --project server --no-build -- di-completion-check --gate POST-COMMIT --task ci-post-commit
+
+  windows:
+    name: windows / 10.0
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: 환경 기록
+        shell: bash
+        run: dotnet --version && dotnet --list-runtimes && git --version
+
+      - name: build
+        shell: bash
+        run: dotnet build server -v q --nologo
+
+      - name: 하네스
+        shell: bash
+        run: |
+          set -e
+          for c in "measure dev-pack" "state-transition --self-test" "recovery --self-test" \
+                   "trust-origin --self-test" "doc-integrity" "handoff-integrity" \
+                   "verify-behavior" "gate-witness-check" "state-transition-callsite-check" \
+                   "context-pack-integrity"; do
+            echo "--- $c"
+            dotnet run --project server --no-build -- $c > /dev/null
+          done
+
+      - name: LAND
+        shell: bash
+        run: |
+          git checkout -- . && git clean -fdq
+          dotnet run --project server --no-build -- di-completion-check --gate WP-STATE-INTEGRITY-LAND --task ci-land
+
+      - name: POST-COMMIT
+        shell: bash
+        run: |
+          git checkout -- . && git clean -fdq
+          dotnet run --project server --no-build -- di-completion-check --gate POST-COMMIT --task ci-post-commit

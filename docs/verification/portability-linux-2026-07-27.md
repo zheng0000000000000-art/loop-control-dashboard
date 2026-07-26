@@ -72,3 +72,59 @@ TypeInfoResolver setting before being marked as read-only.
    같은 `JsonValue.Create` 패턴이 `OutboxManager`·`Tier2Approver`에도 있다 —
    **그 경로들은 미검증이다.** 게이트가 도는 경로만 쟀다.
 4. **`docker`가 있는 환경을 전제했다.** 다른 형태(맥·순수 리눅스 호스트)는 안 쟀다.
+
+---
+
+# append — CI 등재 (2026-07-27)
+
+## 무엇을 켰나
+
+`.github/workflows/gates.yml`. push·PR·수동 실행에서 돈다.
+
+- **linux**: `mcr.microsoft.com/dotnet/sdk:<ver>` **컨테이너 안에서** 돈다.
+  런타임을 `setup-dotnet`+환경변수로 고르지 않는 이유는 러너에 여러 SDK가 깔려 있어
+  **"어느 런타임이 돌았나"가 설정 문제로 남기 때문이다.** 이미지 안에 그 버전 하나뿐이면
+  그건 설정이 아니라 사실이 된다.
+- **windows / 10.0**: 이 저장소의 실제 개발 환경을 지킨다.
+
+각 잡: build → 하네스 10종 → LAND → POST-COMMIT. 통합 게이트 앞에서
+`git checkout -- . && git clean -fdq` — 앞선 `measure`가 `dashboard/data`를 다시 써서
+`gate-clean`(order 1)이 더러운 트리를 보게 되기 때문이다.
+
+**컨테이너에서 워크플로 단계를 그대로 예행했다.** YAML을 믿고 올리지 않았다.
+
+## CI가 즉시 두 번째 사례를 잡았다
+
+앞의 자진 신고 §3("measure 외의 서버 경로는 .NET 8에서 안 돌려봤다")이 **바로 실현됐다.**
+
+```
+POST-COMMIT FAIL (linux / .NET 8)
+  order 5  hs-scan  기대 1 / 실제 2
+  {"error":"hs-scan 실패: JsonSerializerOptions instance must specify a TypeInfoResolver..."}
+```
+
+`server/Harness/` 안 **17개 파일이 각자 같은 옵션을 만든다.** 지금 터지는 건 `hs-scan`
+하나지만 — 원시 타입이 아닌 `JsonValue`를 트리에 넣는 게 그것뿐이라서다 — 나머지 16개도
+같은 지뢰를 밟을 준비가 돼 있다.
+
+## .NET 8 다리를 지금 켜지 않은 이유
+
+**켜면 영구 적색이고, 영구히 빨간 게이트는 무시된다**(FAIL-2026-010).
+matrix에서 `"8.0"`을 빼되 **"잊어서 빠진 게 아니다"를 주석으로 박았다.**
+`NET8-01` 지시서가 옵션을 한 벌로 모으고 **그 목록에 `"8.0"`을 넣는다** — 다리는 초록으로 도착한다.
+
+## 왜 조율자가 직접 안 고쳤나
+
+`server/Harness/`는 ADR-002상 코덱스 영토다. 오늘 이미 세 번 침범했고
+(`TERR-01`이 그걸 막으려는 지시서다), **네 번째를 하면서 그 지시서를 쓰는 것은 앞뒤가 안 맞는다.**
+`Storage.cs`는 `server/` 루트라 조율자 몫이 맞아 직접 고쳤다.
+
+## 지표는 만족했으나 목적은 미달인 부분
+
+1. **CI가 실제로 GitHub에서 도는 것을 아직 못 봤다.** 컨테이너 예행은 했지만
+   Actions 실행은 push 이후에나 확인된다. **"YAML이 유효하고 단계가 로컬에서 통과한다"까지가
+   지금의 증거다.**
+2. **windows 잡은 예행하지 않았다.** 리눅스 컨테이너로만 돌려봤다. Windows 러너에서
+   `shell: bash`·`git clean` 동작은 미검증이다.
+3. **CI가 게이트 매니페스트에 없다.** CI 자체가 깨져도 로컬 게이트는 초록이다 —
+   `gate-witness-check`가 CI를 모른다. **CI를 지키는 것은 여전히 사람이다.**

@@ -1140,3 +1140,21 @@ private static bool HighRiskFailClosed() => true;      // TrustOriginCli.cs:993
    조율자가 코덱스 영토에 직접 쓴 것을 잡는 `territory-check` 하네스.
    **조율자가 직접 만들 수 없다**: `HarnessRegistry`가 `server/Harness/`에 있어서
    하네스 등록 자체가 영토 수정이다. 그래서 코덱스 몫이고, **병행의 첫 과제로 적합하다.**
+
+## 2026-07-27 — CI 등재 + 지시서 2건 대기
+
+`.github/workflows/gates.yml`을 넣었다. 리눅스는 **컨테이너 안에서** 돈다 — 러너에 여러 SDK가
+깔려 있으면 "어느 런타임이 돌았나"가 설정 문제로 남기 때문이다. 이미지 안에 하나뿐이면 사실이 된다.
+
+**CI가 곧바로 두 번째 .NET 8 사례를 잡았다**: `hs-scan`이 같은 `TypeInfoResolver` 이유로 exit 2.
+`server/Harness/` 안 **17개 파일이 각자 같은 옵션을 만든다.**
+
+**`.NET 8` 다리는 지금 켜지 않았다** — 켜면 영구 적색이고 영구히 빨간 게이트는 무시된다
+(FAIL-2026-010). matrix 주석에 "잊어서 빠진 게 아니다"를 박았다.
+
+**발사 대기 2건** (둘 다 사람 게이트, 순서 무관)
+1. `docs/directives/TERR-01-territory-check.md` — 조율자의 영토 침범을 잡는 하네스.
+2. `docs/directives/NET8-01-harness-json-options.md` — 하네스 JSON 옵션 한 벌로 모으고
+   **CI의 `.NET 8` 다리를 초록으로 켠다.**
+
+둘 다 **조율자가 직접 못 한다** — `HarnessRegistry`와 17개 파일이 전부 `server/Harness/`다.
