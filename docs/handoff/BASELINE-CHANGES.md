@@ -179,3 +179,19 @@ self-test 케이스 수(19/24/8)도 `declare`의 기대값과 일치한다. **�
 - **되돌리는 법**: `docs/handoff/GATE-MANIFEST.json`에서 위 3개 check 객체를 지운다.
   픽스처(`docs/qa/gate-witness/measure-violating/`, `behavior-snapshot-mismatch.json`)와
   CLI의 `--fixture` 분기는 남겨도 무해하다(기본 경로 동작 불변, 실측 확인).
+
+## 2026-07-26 — 처분 증거를 추적되는 경로로 옮겼다 (`docs/handoff/gate-evidence/`)
+
+- **주체**: 조율 세션(Claude Opus 5), **사람 지시**("증거 보관부터 하자"). 결재는 사람.
+- **근거**: `disposition.json`의 `gateReport` 17건이 전부 `outputs/gates/`를 가리켰는데
+  `.gitignore:20`의 `outputs/*`로 제외된다. `git ls-files outputs/`는 3개뿐이었다.
+  **새로 클론하면 17건 전부 `gate-report-not-found`이고 `POST-COMMIT`이 빨갛다.**
+  지금 초록인 것은 조율자 작업 트리에만 파일이 있어서였다 — 기록이 저장소와 함께 이동하지 않았다.
+- **한 일**: 참조된 보고 17개를 `docs/handoff/gate-evidence/<launchId>.gate.json`으로 복사하고
+  17개 처분의 `gateReport` 경로를 갱신했다. 원본은 `outputs/gates/`에 그대로 뒀다(임시 자리).
+  규칙은 `docs/handoff/gate-evidence/README.md`에 적었다.
+- **왜 `.gitignore`를 풀지 않았나**: `outputs/gates/`에는 임시 실행 결과가 쌓인다
+  (2026-07-26 하루에 32개). 전부 커밋하면 소음이다. **기록이 의존하는 것만** 추적한다.
+- **비용**: 17개 합계 91 KB(평균 5 KB). 발사마다 하나씩 늘어난다.
+- **되돌리는 법**: `docs/handoff/gate-evidence/`를 지우고 17개 처분의 `gateReport`를
+  `outputs/gates/backfill/<launchId>.gate.json`으로 되돌린다. 되돌리면 클론에서 다시 빨개진다.
