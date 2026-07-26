@@ -2539,3 +2539,23 @@
 - push 대기: 0건. 발사: 3건(수동). 전이·승인 대행 없음. QUOTA_SIGNAL: 미감지.
 
 <run-summary>dry-run 철자 사고에서 출발해 오타 옵션 fail-open을 CLI 열 곳에서 제거했다. di-completion-check --manifestt가 픽스처 대신 production을 재고 exit 0 PASS를 내던 것이 가장 위험했고, handoff-integrity --projection이 아무 일도 안 하면서 통과하던 것도 막았다. 미확인 3건을 전부 종결했다 — InspectPending의 거짓 OK는 사실이어서 reconciliation을 앞으로 옮겼고, HighRiskFailClosed는 상수여서 실제 apply 경로를 도는 검사로 바꿨으며(반증 3회 만에 통과), 아카이브 NUL은 0이 NUL로 쓰인 것이라 1:1 치환했다. 커밋에 거짓 수치를 적은 것도 자진 신고하고 명령에 measure 조건을 걸어 이후 세 번 막았다. four-di-criteria-recheck의 06C-2 결론도 미달로 정정했다. 최종 게이트 전부 통과, WORKSTATE는 verifying이며 남은 것은 사람의 land gate 12번뿐이다.</run-summary>
+## 조율자 2026-07-26 (4회차 — declare 선행조건 감사, review-log)
+
+- **성격**: 사람이 대화로 지시한 짧은 마무리 회차. **발사 없음.** 코드 변경은 조율자 직접 경로(`server/` 루트).
+- **한 일**: `HighRiskFailClosed()`가 `=> true` 상수였던 것을 계기로 **`DeclareCore`의 선행조건 11개를 전수 확인**했다.
+  `grep "=> true|false"` → **상수 반환 함수 없음**(그 하나가 유일했고 오늘 실제 검사로 바꿨다).
+  **8개는 실측**, 셋은 프록시다 — `IsWorktreeClean`(raw `git status`, CLAUDE.md:29 위반) ·
+  `DirectWriterGatePass`(정규식) · `AutomaticLauncherEnabled`(문자열 포함, **파일 없으면 통과**).
+  **셋 다 고치지 않고 결재로 올렸다** — `declare` 선행조건의 의미를 바꾸는 일이고,
+  특히 `IsWorktreeClean`을 `gate-clean`으로 바꾸는 것은 **완화 방향**이다.
+- **자진 신고 2건**:
+  ①`HighRiskFailClosed`를 실제 검사로 바꾸면서 **fixture JSON이 stdout으로 새어** `trust-origin inspect`가
+  JSON 4개를 냈다(정상 1개). 기계로 읽는 쪽이 깨진다. `Console.Out`을 돌려 막고 1개로 확인했다.
+  **상수였을 때는 없던 부작용이다 — 정확성을 얻으면서 새 표면이 생겼다.**
+  ②표현 차이를 만들려 한 CRLF 시험이 **무효**였다. 트리가 이미 CRLF라 `\r\r\n`이 되어 진짜 내용 변경이 됐다.
+  무효라고 적고 다시 쟀다.
+- **최종 게이트**: `POST-COMMIT` 0 · `LAND` 0 · `gate-witness-check` 0 · `launch-disposition` 0 ·
+  `trust-origin verify` 0 · self-test 3종 0 · `verify-behavior` 0. `WORKSTATE` `verifying`, blockers 0.
+- push 대기: 0건. 발사: 0건. 전이·승인 대행 없음. QUOTA_SIGNAL: 미감지.
+
+<run-summary>HighRiskFailClosed가 상수였던 것을 계기로 declare 선행조건 11개를 전수 확인했다. 상수 반환 함수는 이제 없고 8개는 실측이며 셋은 프록시다 — raw git status(규칙 위반), 정규식 callsite 매치, settings.json 문자열 포함(파일 없으면 통과). 셋 다 declare 선행조건의 의미를 바꾸므로 고치지 않고 결재로 올렸다. 확인 중 내가 만든 회귀 하나를 찾아 고쳤다 — 실제 검사로 바꾼 fixture 실행이 stdout을 오염시켜 trust-origin inspect가 JSON 4개를 냈다. 무효한 시험 하나도 그대로 적었다. 최종 게이트 전부 통과, 남은 것은 사람의 land gate 12번뿐이다.</run-summary>
