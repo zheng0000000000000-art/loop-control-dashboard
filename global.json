@@ -1,0 +1,7 @@
+{
+  "_comment": "SDK 하한선을 선언한다. 정확한 버전을 못 박지 않는 이유는 CI가 sdk:8.0과 sdk:10.0 컨테이너를 모두 돌기 때문이다 — 못 박으면 한쪽이 빌드조차 못 한다. latestMajor는 '설치된 것 중 가장 높은 것을 쓰되 8.0.100보다 낮으면 거부한다'는 뜻이다. 이것은 SDK(빌드 도구) 선언이지 런타임 선언이 아니다. 어느 런타임에서 도는지는 TargetFramework(net8.0) + RollForward + 그 기계에 깔린 런타임이 정한다 — 2026-07-27에 windows CI가 이름은 10.0인데 .NET 8에서 돌던 것이 그 차이다.",
+  "sdk": {
+    "version": "8.0.100",
+    "rollForward": "latestMajor"
+  }
+}
