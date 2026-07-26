@@ -1,0 +1,32 @@
+diff --git a/server/Harness/DiCompletionCheckCli.cs b/server/Harness/DiCompletionCheckCli.cs
+index 7a681c3..5e57596 100644
+--- a/server/Harness/DiCompletionCheckCli.cs
++++ b/server/Harness/DiCompletionCheckCli.cs
+@@ -19,11 +19,7 @@ internal static class DiCompletionCheckCli
+     internal static int Run(string[] args)
+     {
+         var root = GitTools.FindRepoRoot();
+-        if (!TryParseArgs(args, out var options, out var optionError))
+-        {
+-            Console.Error.WriteLine(optionError);
+-            return 2;
+-        }
++        if (!TryValidateArgs(args, out var options)) return 2;
+ 
+         var manifestPath = ResolvePath(root, options.ManifestPath);
+ 
+@@ -99,6 +95,14 @@ internal static class DiCompletionCheckCli
+         }
+     }
+ 
++    // 인자 검증 실패를 진단 출력으로 남기고 실행 가능 여부를 돌려준다.
++    private static bool TryValidateArgs(string[] args, out DiCompletionOptions options)
++    {
++        if (TryParseArgs(args, out options, out var error)) return true;
++        Console.Error.WriteLine(error);
++        return false;
++    }
++
+     // manifest 검사 하나를 별도 dotnet 프로세스로 실행해 실제 exit code를 캡처한다.
+     private static CheckRunResult RunCheck(string root, JsonObject check)
+     {

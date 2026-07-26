@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "id": "proposal-1785072105369",
   "title": "함수 길이 단축",
-  "lifecycle": "submitted",
+  "lifecycle": "superseded",
   "createdBy": {
     "provider": "ollama",
     "model": "qwen3:8b"
