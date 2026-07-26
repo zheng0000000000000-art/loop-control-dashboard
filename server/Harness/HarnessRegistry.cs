@@ -18,6 +18,7 @@ internal static class HarnessRegistry
         ["project-api-edge-check"] = ProjectApiEdgeCheckCli.Run,
         ["handoff-integrity"] = HandoffIntegrityCli.Run,
         ["context-pack-integrity"] = ContextPackIntegrityCli.Run,
+        ["gate-witness-check"] = GateWitnessCheckCli.Run,
         ["di-completion-check"] = DiCompletionCheckCli.Run,
         ["state-transition-callsite-check"] = StateTransitionCallsiteCheckCli.Run,
         ["state-transition-selftest"] = _ => StateApplierCli.Run(["state-transition", "--self-test"]),
