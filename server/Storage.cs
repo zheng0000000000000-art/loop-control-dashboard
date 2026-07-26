@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization.Metadata;
 
 public sealed class Storage
 {
@@ -23,10 +24,15 @@ public sealed class Storage
     private readonly ConcurrentDictionary<string, object> projectLocks = new();
 
     public string DataRoot { get; }
+    // TypeInfoResolver를 명시한다. 원시 타입이 아닌 값으로 만들어진 JsonValue가 트리에 섞이면
+    // 쓰는 시점에 resolver가 필요한데, .NET 8은 없으면 던지고 .NET 10은 기본값으로 넘어간다.
+    // 2026-07-27 실측: 리눅스+.NET 8에서 measure가 여기서 죽었다(measurement.json의 evidence 배열).
+    // 로컬은 net8.0 대상이지만 RollForward로 .NET 10에서 돌아 이 차이가 가려져 있었다.
     public JsonSerializerOptions JsonOptions { get; } = new()
     {
         WriteIndented = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
     };
 
     // 데이터 루트 경로를 저장한다.

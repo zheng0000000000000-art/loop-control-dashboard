@@ -30146,6 +30146,187 @@
         "subscriptionCalls": 0,
         "role": "runtime"
       }
+    },
+    {
+      "createdAt": "2026-07-27T01:42:56.5320648+09:00",
+      "event": "measure.completed",
+      "params": {
+        "providerId": "dev-pack-checks",
+        "violationCount": 1,
+        "durationMs": 374
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 13,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-27T01:42:56.5436572+09:00",
+      "event": "stage.warning",
+      "params": {
+        "stage": "deviationCheck",
+        "text": "블루프린트 대비 괴리가 감지됐다.",
+        "reasonCode": "checklist.blueprint_deviation"
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 13,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-27T01:42:56.5572984+09:00",
+      "event": "measurement.regressed",
+      "params": {
+        "metricId": "directiveAcceptanceCriteria",
+        "before": 6,
+        "after": 0,
+        "reasonCode": "checklist.metric_regressed"
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 13,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-27T01:42:56.5654497+09:00",
+      "event": "proposal.created",
+      "params": {
+        "proposalId": "proposal-1785084176558"
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 13,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-27T01:42:56.5726205+09:00",
+      "event": "review.routed",
+      "params": {
+        "proposalId": "proposal-1785084176558",
+        "reasonCode": "regression_direct_to_human",
+        "text": "악화 롤백은 체크리스트가 검토할 내용이 없어 1층을 건너뛰고 사람 결재로 직행한다."
+      },
+      "level": "warning",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 13,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-27T01:43:38.7333858+09:00",
+      "event": "measure.completed",
+      "params": {
+        "providerId": "dev-pack-checks",
+        "violationCount": 0,
+        "durationMs": 268
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 13,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-27T01:43:38.7453816+09:00",
+      "event": "track.resumed",
+      "params": {
+        "metricId": "directiveAcceptanceCriteria"
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 13,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-27T01:44:04.0197364+09:00",
+      "event": "measure.completed",
+      "params": {
+        "providerId": "dev-pack-checks",
+        "violationCount": 0,
+        "durationMs": 298
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 13,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
     }
   ]
 }

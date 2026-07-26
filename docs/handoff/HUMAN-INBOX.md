@@ -1122,3 +1122,21 @@ private static bool HighRiskFailClosed() => true;      // TrustOriginCli.cs:993
   기록을 남길 수 있는 것.
 - **여전히 사람 몫**: **완화** 방향(예: `IsWorktreeClean`을 `gate-clean`으로 바꾸는 것),
   `trust-origin declare` 실제 선언(**1회성·되돌릴 수 없다**), approve/reject/import, sonnet 발사.
+
+## 2026-07-27 — 이식성 실측 결과 + TERR-01 지시서 대기
+
+**다른 환경에서 돈다는 것은 이제 실측이다.** 리눅스 컨테이너에서 clone → build → 게이트 전부 초록
+(LAND 포함). 근거: `docs/verification/portability-linux-2026-07-27.md`.
+
+**CRLF는 문제가 아니었다**(NHASH-01이 이미 해결). 걸린 건 **런타임 버전**이었다 —
+`TargetFramework`는 `net8.0`인데 `RollForward=Major`로 로컬에선 .NET 10에서 돌고 있었고,
+**.NET 8에서는 `measure`가 죽었다**(`TypeInfoResolver` 미지정). `Storage.JsonOptions`에 한 줄로 고쳤다.
+대상 프레임워크는 **올리지 않았다** — 올리면 .NET 8 환경을 잘라내 이식성이 좁아진다.
+
+**결정 대기 2건**
+1. **CI를 만들 것인가.** 지금 이식성은 게이트가 아니라 **오늘 한 번의 기억**이다.
+   같은 실수가 다시 나면 아무도 못 잡는다.
+2. **`TERR-01` 지시서를 쏠 것인가** — `docs/directives/TERR-01-territory-check.md`.
+   조율자가 코덱스 영토에 직접 쓴 것을 잡는 `territory-check` 하네스.
+   **조율자가 직접 만들 수 없다**: `HarnessRegistry`가 `server/Harness/`에 있어서
+   하네스 등록 자체가 영토 수정이다. 그래서 코덱스 몫이고, **병행의 첫 과제로 적합하다.**
