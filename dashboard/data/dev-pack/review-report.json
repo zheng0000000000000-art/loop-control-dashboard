@@ -17927,6 +17927,126 @@
       ],
       "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
       "createdAt": "2026-07-26T22:19:33.3863264+09:00"
+    },
+    {
+      "id": "review-1785072046449",
+      "proposalId": "proposal-1785072037538",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "low",
+      "findings": [
+        {
+          "target": "maxFunctionLength",
+          "checkId": "note-nonempty",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "변경 항목의 note는 '함수 길이를 단축하여 가독성과 유지보수성을 향상시키고, 코드 표준에 부합하도록 수정합니다.'와 같이 비어 있지 않고 의미 있는 설명을 포함하고 있습니다.",
+          "comment": "변경 항목의 note는 '함수 길이를 단축하여 가독성과 유지보수성을 향상시키고, 코드 표준에 부합하도록 수정합니다.'와 같이 비어 있지 않고 의미 있는 설명을 포함하고 있습니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "maxFunctionLength",
+          "checkId": "after-matches-goal",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "after 값 [0,80]은 note의 '함수 길이를 단축하여 가독성과 유지보수성을 향상'하는 방향과 일치합니다.",
+          "comment": "after 값 [0,80]은 note의 '함수 길이를 단축하여 가독성과 유지보수성을 향상'하는 방향과 일치합니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "maxFunctionLength",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "변경 내용은 maxFunctionLength 설정과 관련되어 있어 blueprint 위반 해소와 직접적으로 관련됨",
+          "comment": "변경 내용은 maxFunctionLength 설정과 관련되어 있어 blueprint 위반 해소와 직접적으로 관련됨",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "createdAt": "2026-07-26T22:20:46.4505856+09:00"
+    },
+    {
+      "id": "review-1785072113804",
+      "proposalId": "proposal-1785072105369",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "low",
+      "findings": [
+        {
+          "target": "maxFunctionLength",
+          "checkId": "note-nonempty",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "note 필드는 '함수 길이를 단축하여 가독성과 유지보수성을 개선하고, 목표 범위 내로 조정하고자 함'이라는 의미 있는 설명을 포함하고 있음",
+          "comment": "note 필드는 '함수 길이를 단축하여 가독성과 유지보수성을 개선하고, 목표 범위 내로 조정하고자 함'이라는 의미 있는 설명을 포함하고 있음",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "maxFunctionLength",
+          "checkId": "after-matches-goal",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "after 값 [0,80]은 note에서 언급한 '목표 범위 내로 조정'과 일치함",
+          "comment": "after 값 [0,80]은 note에서 언급한 '목표 범위 내로 조정'과 일치함",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "maxFunctionLength",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "변경 제안은 maxFunctionLength에 대한 명확한 개선을 목표로 하며, blueprint 위반과 무관한 항목은 포함되어 있지 않음",
+          "comment": "변경 제안은 maxFunctionLength에 대한 명확한 개선을 목표로 하며, blueprint 위반과 무관한 항목은 포함되어 있지 않음",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "createdAt": "2026-07-26T22:21:53.8046515+09:00"
     }
   ]
 }

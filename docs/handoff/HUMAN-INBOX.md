@@ -1004,3 +1004,20 @@ CLI 정식 철자는 --dry-run 이다 (StateApplierCli.cs:923)
 2. `trust-origin`·`codex-launch`(조율자 영역)도 같이 할 것인가.
 3. `--manual` 가드의 fail-closed를 **실제로 측정**할 것인가 — 측정 비용이
    "잘못되면 코덱스 발사"다. 안전하게 재려면 가드를 요청 검증보다 **앞으로** 옮겨야 한다.
+
+## 2026-07-26 — 정정: 커밋 `3a0ed01`의 `violations:0`은 거짓이다
+
+`DICC-04` 반입 커밋 메시지에 `{"gate":"dev-pack","violations":0,"attempt":1}`이라고 적었는데
+**실측은 1이었다.** 커밋 직전 출력에 `measure=1`이 찍혔는데도 명령 체인이 이어지게 뒀다.
+**오늘 두 번째 같은 실수다.**
+
+```
+measure dev-pack → violationCount 1
+  maxFunctionLength = 82 · band [0,80] · server/Harness/DiCompletionCheckCli.cs:19-100
+```
+
+**원인은 내 지시서 누락**이다. `DICC-04`의 지표 기준에 `measure dev-pack → 0`을 넣지 않았다.
+실행자는 적힌 것을 지켰다.
+
+**그 파일은 코덱스 배타 영역이라 내가 못 고친다.** `DICC-04-R1`을 즉시 발행했다.
+**그때까지 `POST-COMMIT`·`LAND`가 빨갛다**(실측 exit 1) — 숨기지 않는다.
