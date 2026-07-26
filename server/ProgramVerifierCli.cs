@@ -39,7 +39,7 @@ internal static class ProgramVerifierCli
         var sub = args.Length > 1 ? args[1] : "";
         if (string.Equals(sub, "verify", StringComparison.OrdinalIgnoreCase)) return Verify(args, emitRequest: false);
         if (string.Equals(sub, "request", StringComparison.OrdinalIgnoreCase)) return Verify(args, emitRequest: true);
-        Console.Error.WriteLine("{\"error\":\"사용법: program-verify verify|request --gate <gateId> [--launch <launchId>]\"}");
+        Console.Error.WriteLine("{\"error\":\"사용법: program-verify verify|request --gate <gateId> [--launch <launchId>] [--out <path>]\"}");
         return 2;
     }
 
@@ -108,8 +108,24 @@ internal static class ProgramVerifierCli
         if (passed && emitRequest) requestPath = WriteRequest(root, gateId, launchId, report);
         report["transitionRequestPath"] = requestPath;
 
+        var outPath = ReadOption(args, "--out");
+        if (!string.IsNullOrWhiteSpace(outPath)) WriteReportFile(root, outPath, report);
+
         Console.WriteLine(report.ToJsonString(JsonOptions));
         return passed ? 0 : 1;
+    }
+
+    // 보고를 파일로 쓴다. 검사가 **전부 끝난 뒤에만** 쓰고, 임시 파일에 쓴 다음 옮긴다.
+    // 셸 리다이렉트로 같은 일을 하면 실행 내내 그 경로가 열려 있어, 그 파일을 읽는 검사가
+    // "파일에 접근할 수 없다"로 죽는다(2026-07-26 실측: launch-disposition이 자기 gateReport를
+    // 읽다 exit 2). 쓰는 시점을 검사 뒤로 미루는 것이 그 충돌을 구조적으로 없앤다.
+    private static void WriteReportFile(string root, string outPath, JsonObject report)
+    {
+        var full = Path.IsPathRooted(outPath) ? outPath : Path.Combine(root, outPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+        var temp = full + ".tmp";
+        File.WriteAllText(temp, report.ToJsonString(JsonOptions), Utf8NoBom);
+        File.Move(temp, full, overwrite: true);
     }
 
     // 매니페스트에서 게이트 하나의 검사 목록을 읽는다. 없는 게이트는 예외로 올려 fail-closed 시킨다.
