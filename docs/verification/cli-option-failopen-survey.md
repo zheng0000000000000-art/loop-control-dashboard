@@ -61,3 +61,51 @@
    **코드 판독을 실측으로 적지 않는다.**
 3. **모든 CLI를 다 훑지 않았다.** `i + 1` 경계 패턴이 있는 곳을 grep으로 찾아
    **결과가 위험한 넷만** 실측했다. `measure`·`build-verify` 등은 안 봤다.
+
+---
+
+# 조치 (append, 2026-07-26) — 세 CLI 전부 오타를 거부한다
+
+조사 당시 *"아무것도 고치지 않았다"* 고 적은 것을 닫는다.
+
+| CLI | 영역 | 조치 |
+| --- | --- | --- |
+| `state-transition` | `server/` 루트 | 직접(사고 직후) — 값 없는 후행 옵션·내부 키 이름 거부 |
+| `di-completion-check` | `server/Harness/` | **`DICC-04` + `R1`** (코덱스) |
+| `trust-origin` · `codex-launch` | `server/` 루트 | 직접 — `CliOptions.Validate` 공용 검증기 |
+
+**검증 규칙의 정의는 `server/CliOptions.cs` 하나다.** 오늘 같은 종류의 중복을 네 번 없앴고
+(`BuiltInCommands`·`BinaryFreshness`·`NormalizedContentHash`·게이트 보고 수용 규칙),
+다섯 번째를 만들지 않으려고 공용으로 뽑았다.
+
+## 실측
+
+| # | 명령 | 기대 | 실측 |
+| --- | --- | --- | --- |
+| 1 | `trust-origin evidence --gate-reportt <보고>` | 거부 | **exit 2 · `unknown-option: --gate-reportt`** |
+| 2 | `trust-origin evidence --outt <파일>` | 거부 | **exit 2 · `unknown-option`** |
+| 3 | `trust-origin evidence --out` (값 없이) | 거부 | **exit 2 · `missing-option-value: --out`** |
+| 4 | `trust-origin evidence --out <파일> --gate-report <보고>` (대조군) | **0** | **0** (깨끗한 트리에서 재측정) |
+| 5 | `trust-origin --self-test` · `inspect` | 0 | **0 / 0** |
+| 6 | `codex-launch validate --requestt <파일>` | 거부 | **exit 2 · `unknown-option`** |
+| **7** | **`codex-launch launch --request <유효> --manul`** | **거부** | **exit 2 · `unknown-option: --manul`** |
+
+### 7이 이 조치의 값이다
+
+조사 때 *"측정하지 못했다"* 고 적은 항목이다. `--manual` 가드는 **요청 검증 뒤**에 있어,
+가드에 도달하려면 모든 검증을 통과하는 요청이 필요했고 **가드가 fail-open이면 코덱스가
+실제로 발사**되므로 잴 수 없었다.
+
+**이제 옵션 검증이 요청 검증보다 앞선다.** 안전장치를 닮은 오타가 조용히 무시되지 않고,
+그 사실을 **발사 없이 확인할 수 있다.** *"재려면 위험을 감수해야 하는 안전장치"* 는
+안전장치가 아니었다.
+
+## 지표는 만족했으나 목적은 미달인 부분
+
+1. **`--manual` 가드 자체의 fail-closed는 여전히 실측이 아니다.** 오타는 이제 막히지만,
+   *"가드가 실제로 발사를 막는가"* 를 재려면 유효한 요청으로 가드에 도달해야 한다.
+   **막힌 것은 오타이지 가드가 아니다.** 구분해서 적는다.
+2. **값이 `--`로 시작하는 경우를 값 없음으로 본다.** 경로가 `--`로 시작할 일은 없다고
+   판단했지만, 그런 입력이 있으면 거부된다.
+3. **다른 CLI는 여전히 검증하지 않는다.** `measure`·`build-verify`·`gate-clean` 등은
+   조사에서 *"결과가 위험한 넷"* 에 들지 않아 손대지 않았다.
