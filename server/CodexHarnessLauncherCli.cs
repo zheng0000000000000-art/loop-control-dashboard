@@ -61,8 +61,8 @@ internal static class CodexHarnessLauncherCli
 
         // 계약 §83: 실제 자동 발사는 AUTOMATED_EXECUTION_READY에서만 허용된다. 그 전에는
         // 수동 dispatch만이다. 사람이 --manual로 명시하지 않으면 쏘지 않는다.
-        if (launch && !HasFlag(args, "manual") && !AutomatedExecutionReady(root))
-            return Error("automated-execution-not-ready", 2);
+        var guardRejection = LaunchGuardRejection(args, root);
+        if (launch && guardRejection is not null) return Error(guardRejection, 2);
 
         if (!launch)
         {
@@ -71,12 +71,27 @@ internal static class CodexHarnessLauncherCli
                 ["command"] = "codex-launch validate",
                 ["launchId"] = Str(request, "launchId"),
                 ["verdict"] = "ACCEPTED",
-                ["note"] = "요청이 계약을 만족한다. 실행은 launch가 한다 — 이 명령은 아무것도 실행하지 않았다.",
+                // 같은 인자로 launch하면 가드가 막는지를 여기서 답한다. 이것이 없으면 가드를 재려고
+                // 실제 발사를 걸어야 했다(2026-07-26: PATH에서 codex를 빼는 우회로 겨우 쟀다).
+                // 재려면 위험을 감수해야 하는 안전장치는 안전장치가 아니다.
+                ["wouldLaunch"] = guardRejection is null,
+                ["launchBlockedBy"] = guardRejection,
+                ["manualFlag"] = HasFlag(args, "manual"),
+                ["automatedExecutionReady"] = AutomatedExecutionReady(root),
+                ["note"] = "요청이 계약을 만족한다. 실행은 launch가 한다 — 이 명령은 아무것도 실행하지 않았다. "
+                    + "wouldLaunch는 같은 인자로 launch했을 때 가드가 통과시키는지를 뜻하며, 요청의 유효성과는 별개다.",
             });
             return 0;
         }
         return Launch(root, request);
     }
+
+    // 지금 이 인자로 launch하면 가드가 막는지 본다. 막으면 사유, 아니면 null.
+    // launch와 validate가 같은 함수를 쓰게 해서 "보고한 것과 실제가 다른" 경우를 없앤다.
+    private static string? LaunchGuardRejection(string[] args, string root)
+        => !HasFlag(args, "manual") && !AutomatedExecutionReady(root)
+            ? "automated-execution-not-ready"
+            : null;
 
     // 요청이 계약을 만족하는지 본다. 만족하면 null, 아니면 거절 사유다 — 모르는 것은 통과가 아니다.
     private static string? RequestRejection(string root, JsonObject request)

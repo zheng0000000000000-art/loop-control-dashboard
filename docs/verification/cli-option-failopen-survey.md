@@ -175,3 +175,49 @@ PATH="$NOCODEX" codex-launch launch --request <유효한 요청> --manual   # �
 2. **`.git/worktrees/` 누적의 원인을 확인하지 않았다.** 읽기 전용으로 보이나 실측하지 않았다.
 3. **이 방법은 PATH 조작에 의존한다.** 더 나은 설계는 `validate`가 *"이 요청이 지금 발사될 수 있는가"* 를
    함께 보고하는 것이다 — 그러면 위험 없이 언제나 잴 수 있다. **제안일 뿐 구현하지 않았다.**
+
+---
+
+# `validate`가 가드 판정을 보고한다 (append, 2026-07-26)
+
+앞 절의 미달 ③(*"제안일 뿐 구현하지 않았다"*)을 닫는다.
+
+## 무엇을 했나
+
+`codex-launch validate` 출력에 **같은 인자로 `launch`했을 때 가드가 통과시키는지**를 담았다.
+
+```json
+{ "verdict": "ACCEPTED",
+  "wouldLaunch": false,
+  "launchBlockedBy": "automated-execution-not-ready",
+  "manualFlag": false,
+  "automatedExecutionReady": false }
+```
+
+가드 판정은 `LaunchGuardRejection` **한 함수**이고 `launch`와 `validate`가 **같은 것을 쓴다** —
+*"보고한 것과 실제가 다른"* 경우를 구조적으로 없앤다.
+
+## 실측 — 예측과 실제를 대조했다
+
+| 인자 | `validate`의 예측 | 실제 `launch` (codex 없는 PATH) |
+| --- | --- | --- |
+| 플래그 없음 | `wouldLaunch: false` · `automated-execution-not-ready` | **`automated-execution-not-ready`** (가드가 막음) |
+| `--manual` | `wouldLaunch: true` · `launchBlockedBy: null` | **`codex-executable-not-found`** (Launch까지 진행) |
+
+**일치한다.** 이제 **PATH 조작 없이, 발사 없이** 가드 상태를 알 수 있다.
+
+## `verdict`와 `wouldLaunch`를 분리했다
+
+`wouldLaunch: false`여도 `validate`는 **exit 0**이고 `verdict`는 `ACCEPTED`다.
+**요청이 계약을 만족하는가**와 **지금 쏠 수 있는가**는 다른 질문이기 때문이다.
+섞으면 기존 사용처(발사 전 `validate` → exit 0 기대)가 깨지고,
+*"요청이 잘못됐다"* 와 *"아직 쏘면 안 된다"* 가 같은 신호가 된다.
+
+회귀: 낡은 baseline 요청 → `baseline-commit-mismatch` 유지, `--requestt` → `unknown-option` 유지.
+
+## 지표는 만족했으나 목적은 미달인 부분
+
+1. **`automatedExecutionReady`가 true인 경우는 여전히 안 쟀다.** 지금 보고되는 `wouldLaunch`는
+   그 값이 false인 상태에서만 검증됐다. **true로 바꾸려면 기록을 고쳐야 하고 사람 결재다.**
+2. **`validate`가 가드를 읽는다는 것은 신뢰 원점 기록을 읽는다는 뜻이다.** 읽기 전용이지만
+   `validate`의 부작용 범위가 조금 넓어졌다.
