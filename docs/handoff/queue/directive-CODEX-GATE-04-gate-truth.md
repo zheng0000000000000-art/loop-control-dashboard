@@ -1,5 +1,22 @@
 # CODEX-GATE-04 — 게이트가 진실을 말하게 (CODEX-GATE-02의 살아남은 절반)
 
+> **분할됨 (2026-07-26, 조율 세션). 이 지시서를 그대로 발사하지 마라.**
+>
+> allowlist가 코덱스 영역을 걸쳐서 **어느 실행자도 수행할 수 없었다.**
+> `server/Harness/**` 4개는 `ADR-002` 코덱스 배타이고, `docs/handoff/*.json` 2개는 그 밖이다.
+> `CodexHarnessLauncher`는 `allowed-paths-outside-codex-territory`로 거절하고(exit 2),
+> 거절을 지나쳐도 코덱스가 착수를 거부한다 — 2026-07-26 첫 실사격에서 실제로 그랬다.
+>
+> - **`CG04A`** (`directive-CG04A-harness-truth.md`) — §1·§4·§5-1·§5-2·§5-4 + §2의 **검사기**.
+>   코덱스 영역 안에서만 닫힌다. **먼저 한다.**
+> - **`CG04B`** (`directive-CG04B-contract-and-registration.md`) — §2의 **계약 데이터** + §3 등재.
+>   조율자가 한다. **A 착륙 뒤에만 가능하다** — 계약 초기값은 A가 만드는 `--emit-cli-contract`로
+>   생성해야 "손으로 적지 마라"(§2)를 지킬 수 있고, 등재는 A가 `scope-check` 잡음을 걷어낸 뒤에만
+>   기대값을 정할 수 있다(§3).
+>
+> **아래 본문은 근거로 그대로 둔다.** 두 지시서가 §·실측을 승계하므로 지우지 않는다.
+> 폐기가 아니라 분할이다.
+
 ```context-pack
 {
   "diId": "CODEX-GATE-04",
