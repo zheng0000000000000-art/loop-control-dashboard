@@ -311,3 +311,32 @@ launch-disposition ['outbox'] exp 0 got 1     (gate-report-not-found)
 2. **`di-completion-check`에는 `--out`이 없다.** `DISPO-03` §6에 별도 지시서로 남겼다.
 3. **`gate-report-unreadable` 메시지에 예외 원문이 그대로 실린다.** 절대 경로가 노출되고
    길다. 사유 코드로 판정하면 되지만 출력이 지저분하다 — 고치지 않았다.
+
+---
+
+# 정정 (2026-07-26) — `di-completion-check --out`은 필요 없었다
+
+앞 절들에서 두 번 *"`di-completion-check`에는 `--out`이 없어 같은 자기참조 충돌이 가능하다"*고
+적었다(`DISPO-03` §6, 이 문서 미달 ②). **전제를 확인하지 않고 쓴 문장이었고, 틀렸다.**
+
+| 확인한 것 | 실측 |
+| --- | --- |
+| 출력 경로를 정할 수 있는가 | **된다.** `--task dispo-probe` → `outputs/gates/dispo-probe.gate.json`, exit 0 |
+| 증거를 언제 쓰는가 | **검사가 끝난 뒤**(`DiCompletionCheckCli.cs:82`) |
+| 자기참조 충돌이 나는가 | **안 난다.** 실행 중 그 경로를 열어 두지 않는다 |
+
+`program-verify`가 충돌한 이유는 **stdout을 셸로 리다이렉트해야 했기 때문**이다.
+그쪽은 처음부터 파일을 자기가 쓴다. **같은 문제가 아니었다.**
+
+## 대신 진짜 결함을 찾았다
+
+`di-completion-check` 보고에 **`launchId`가 없다**(최상위 키 12개 확인).
+`launch-disposition`은 `gateReport`의 `launchId`가 발사와 같은지 본다.
+그러므로 **그 보고는 `gateReport`로 쓸 수 없다.**
+
+`ADR-016` §8은 게이트 권위를 `di-completion-check`에 줬다. 그런데 **권위 있는 러너로 판정하면
+그 판정을 처분에 기록할 수 없다.** 규칙과 도구가 반대를 가리키고, 사람은 기록되는 쪽을 쓰게 된다.
+`DICC-02`가 이것을 맡는다.
+
+**교훈**: "같은 결함이 저기도 있을 것"이라는 추정을 **미달 항목으로 두 번 적었다.**
+자진 신고는 좋지만 **확인하지 않은 추정을 사실처럼 적으면 그것도 잘못된 기록**이다.
