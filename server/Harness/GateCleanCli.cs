@@ -19,6 +19,14 @@ internal static class GateCleanCli
     {
         try
         {
+            // 오타 난 픽스처 옵션이 실제 git status 검사로 빠지는 것을 막는다.
+            var optionFailure = CliOptions.Validate(args, 1, ["status-fixture"], ["normalized-hash-self-test"]);
+            if (optionFailure is not null)
+            {
+                Console.Error.WriteLine(new JsonObject { ["error"] = optionFailure }.ToJsonString());
+                return 2;
+            }
+
             var repoRoot = GitTools.FindRepoRoot();
             if (args.Any(a => string.Equals(a, "--normalized-hash-self-test", StringComparison.OrdinalIgnoreCase)))
                 return RunNormalizedHashSelfTest();

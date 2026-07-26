@@ -30,6 +30,14 @@ internal static class ScopeCheckCli
     {
         try
         {
+            // actor·claims 옵션 오타와 값 누락을 범위 검사 전에 거부한다.
+            var optionFailure = CliOptions.Validate(args, 2, ["actor", "claims"], []);
+            if (optionFailure is not null)
+            {
+                Console.Error.WriteLine(new JsonObject { ["error"] = optionFailure }.ToJsonString());
+                return 2;
+            }
+
             if (args.Length < 2)
             {
                 Console.Error.WriteLine("{\"error\":\"usage: scope-check <directivePath|diId> [--actor <actor>] [--claims <claimsPath>]\"}");

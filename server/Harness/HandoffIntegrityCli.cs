@@ -23,6 +23,18 @@ internal static class HandoffIntegrityCli
     {
         try
         {
+            // 픽스처 옵션 오타와 projection 명령 혼동을 실제 검사 전에 거부한다.
+            var optionFailure = CliOptions.Validate(
+                args, 1, ["workstate", "applier-log", "pending-transition"], ["self-test"]);
+            if (optionFailure is not null)
+            {
+                var guidance = args.Any(a => string.Equals(a, "--projection", StringComparison.OrdinalIgnoreCase))
+                    ? " projection은 별도 명령이다."
+                    : "";
+                Console.Error.WriteLine(new JsonObject { ["error"] = optionFailure + guidance }.ToJsonString());
+                return 2;
+            }
+
             if (args.Any(a => string.Equals(a, "--pending-transition", StringComparison.OrdinalIgnoreCase)))
             {
                 Console.Error.WriteLine("{\"error\":\"pending-not-allowed-on-cli\",\"code\":\"pending-not-allowed-on-cli\"}");

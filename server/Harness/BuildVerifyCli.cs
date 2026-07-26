@@ -18,6 +18,14 @@ internal static class BuildVerifyCli
     {
         try
         {
+            // 오타 난 픽스처 옵션이 기본 server 빌드로 빠지는 것을 막는다.
+            var optionFailure = CliOptions.Validate(args, 1, ["fixture"], []);
+            if (optionFailure is not null)
+            {
+                Console.Error.WriteLine(new JsonObject { ["error"] = optionFailure }.ToJsonString());
+                return 2;
+            }
+
             var root = GitTools.FindRepoRoot();
             var fixtureMode = args.Length >= 2
                 && string.Equals(args[1], "--fixture", StringComparison.OrdinalIgnoreCase);

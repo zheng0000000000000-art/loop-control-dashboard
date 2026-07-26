@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-HOPT-01",
+  "diId": "HOPT-01",
+  "baselineCommit": "6c3e19229cf766495b978eed420857efdae5d2cc",
+  "startedAt": "2026-07-26T13:57:20Z",
+  "finishedAt": "2026-07-26T14:03:00Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "1bc24e5812bb66571cc6aabd0173daf2fb17c5662d50fac48a5b6c0b3b5e9613",
+  "stderrTail": "       var optionFailure = CliOptions.Validate(args, 2, [\"actor\", \"claims\"], []);\n+            if (optionFailure is not null)\n+            {\n+                Console.Error.WriteLine(new JsonObject { [\"error\"] = optionFailure }.ToJsonString());\n+                return 2;\n+            }\n+\n             if (args.Length < 2)\n             {\n                 Console.Error.WriteLine(\"{\\\"error\\\":\\\"usage: scope-check <directivePath|diId> [--actor <actor>] [--claims <claimsPath>]\\\"}\");\n\ntokens used\n122,097",
+  "changedPaths": [
+    "server/Harness/BuildVerifyCli.cs",
+    "server/Harness/DocIntegrityCli.cs",
+    "server/Harness/GateCleanCli.cs",
+    "server/Harness/HandoffIntegrityCli.cs",
+    "server/Harness/ScopeCheckCli.cs",
+    "docs/qa/gate-witness/HOPT-01.md"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "a92f35b7780d7c7c15173f66e6d1e7a13283460fa9a02398f0c4941156aad6a2",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

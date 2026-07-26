@@ -39,6 +39,14 @@ internal static class DocIntegrityCli
     {
         try
         {
+            // 오타 난 픽스처 옵션이 production 문서 검사로 빠지는 것을 막는다.
+            var optionFailure = CliOptions.Validate(args, 1, ["fixture"], []);
+            if (optionFailure is not null)
+            {
+                Console.Error.WriteLine(new JsonObject { ["error"] = optionFailure }.ToJsonString());
+                return 2;
+            }
+
             var root = GitTools.FindRepoRoot();
             var fixtureIndex = Array.FindIndex(args, a =>
                 string.Equals(a, "--fixture", StringComparison.OrdinalIgnoreCase));
