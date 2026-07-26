@@ -141,11 +141,34 @@ GATE-MANIFEST internalNegativeCases: 20          → 21
 
 ## 지표는 만족했으나 목적은 미달인 부분
 
-1. **`required-commands-stale` 사유가 실제로 나오는 것을 보지 못했다.** 그 분기를 타려면
-   매니페스트를 실제로 어긋나게 해야 하는데 하지 않았다. **탐지 함수는 음성 케이스로
-   실측했지만, 그 함수를 `GateReportRejection`에 배선한 부분은 시험하지 않았다.**
-   오늘 "중간 지표로 결론 내지 마라"를 여러 번 배웠는데 여기서 그 선을 넘지 않았다고
-   말하기 어렵다.
+1. ~~`required-commands-stale` 배선을 시험하지 않았다~~ → **시험했다.** 클론에서
+   `state-transition-selftest` → `…-renamed`로 **HREG-01식 이름 교체를 재현**했다.
+
+   | 상태 | `trust-origin evidence --gate-report` |
+   | --- | --- |
+   | 정상 | **exit 0** |
+   | 이름 교체 후 (같은 보고·같은 HEAD) | **exit 2 · `{"error":"required-commands-stale"}`** |
+
+   **사유가 원인을 가리킨다.** 종전 같으면 `gate-report-missing-required-check`가 나와
+   보고서를 의심하게 만들었을 자리다.
+
+### ★ 그 시험이 시험의 결함을 잡았다
+
+첫 실행에서 `required-commands-drift-detected`가 **거짓 실패**했다.
+*"빠진 것이 정확히 1개"* 를 기대했는데 이미 하나가 빠져 있어 2가 된 것이다 —
+**기준선이 깨끗하다고 가정한 시험**이었다.
+
+지금 실재하는 이름 하나를 골라, 지웠을 때 빠진 목록이 **그만큼만** 늘어나는지 보게 고쳤다.
+고친 뒤 어긋난 클론에서 다시 재니:
+
+```
+required-commands-match-manifest  → pass False   (목록이 낡았다 — 맞는 보고)
+required-commands-drift-detected  → pass True    (탐지기는 작동한다)
+```
+
+**두 케이스가 서로 독립이 됐다.** 하나는 *"목록이 낡았다"*, 다른 하나는 *"탐지기가 산다"*를
+말한다. 배선을 안 재고 넘어갔으면 이 케이스는 **실제 드리프트가 났을 때 원인을 거꾸로**
+가리켰을 것이다.
 2. **`SelfTestNode`/`SelfTestEvidencePass`의 상수 두 개는 여전히 손 동기화다.**
    케이스를 더하는 사람이 셋을 다 기억해야 한다. `cases.Count`를 그대로 쓰는 쪽이 옳지만
    **증거 검사 쪽이 "몇 개여야 한다"를 주장하는 것이 설계 의도**일 수 있어 건드리지 않았다.
