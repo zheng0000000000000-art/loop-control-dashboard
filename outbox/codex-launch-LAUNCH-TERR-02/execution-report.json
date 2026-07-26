@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-TERR-02",
+  "diId": "TERR-02",
+  "baselineCommit": "9a5f184e44aa25c0f2317fb6ef03c0e69242088e",
+  "startedAt": "2026-07-26T17:49:57Z",
+  "finishedAt": "2026-07-26T17:55:09Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "5bf2805f0cc09d8b344f747d1c1cf3ace5f8e64cf6e86d45ff280f4a9cb9878f",
+  "stderrTail": "eturn patches.ToArray();\n+    }\n+\n+    // outbox candidate.patch 경로인지 판정한다.\n+    private static bool IsCandidatePatch(string path)\n+    {\n+        var normalized = path.Replace('\\\\', '/');\n+        return normalized.StartsWith(\"outbox/\", StringComparison.Ordinal)\n+            && normalized.EndsWith(\"/candidate.patch\", StringComparison.Ordinal);\n+    }\n+\n     // unified diff의 파일 헤더가 대상 경로를 가리키는지 확인한다.\n     private static bool PatchContainsPath(string patch, string path)\n     {\n\ntokens used\n86,304",
+  "changedPaths": [
+    "server/Harness/TerritoryCheckCli.cs",
+    "docs/qa/gate-witness/TERR-02.md",
+    "docs/qa/gate-witness/territory-non-imported/"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "ed0447b4e3e0308ca21bad528d17a6a3e8b35d203037b25e7146a3581d197c58",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

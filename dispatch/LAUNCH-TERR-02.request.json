@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1",
+  "actorRole": "HARNESS_EXECUTOR",
+  "transport": "codex-cli",
+  "launchId": "LAUNCH-TERR-02",
+  "diId": "TERR-02",
+  "baselineCommit": "9a5f184e44aa25c0f2317fb6ef03c0e69242088e",
+  "directivePath": "docs/directives/TERR-02-import-binding.md",
+  "directiveSha256": "67add6de1bc5c287fd75fbd0e99233a1605a74937e324aaaa549b8e9819344a8",
+  "contextPackPath": "docs/directives/TERR-02-import-binding.md",
+  "contextPackSha256": "67add6de1bc5c287fd75fbd0e99233a1605a74937e324aaaa549b8e9819344a8",
+  "allowedPaths": [
+    "server/Harness/TerritoryCheckCli.cs",
+    "docs/qa/gate-witness/**"
+  ],
+  "forbiddenActions": [
+    "commit",
+    "push",
+    "state-transition",
+    "pass",
+    "product-code-edit"
+  ],
+  "credentialRef": "none",
+  "timeoutSeconds": 1800,
+  "attempt": 1,
+  "maxAttempts": 1,
+  "workingCopyMode": "isolated-clean"
+}

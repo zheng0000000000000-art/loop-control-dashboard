@@ -12,13 +12,14 @@ internal static class TerritoryCheckCli
     {
         try
         {
-            var optionFailure = CliOptions.Validate(args, 1, ["commit", "ledger"], []);
+            var optionFailure = CliOptions.Validate(args, 1, ["commit", "ledger", "dispositions"], []);
             if (optionFailure is not null) return Error(optionFailure);
 
             var root = GitTools.FindRepoRoot();
             var requestedCommit = Option(args, "commit") ?? "HEAD";
             var ledgerOption = Option(args, "ledger");
             var ledgerPath = ledgerOption ?? DefaultLedger;
+            var dispositionsRoot = Option(args, "dispositions");
             var commit = Git(root, "rev-parse", "--verify", requestedCommit + "^{commit}").Trim();
             var territoryPaths = ChangedPaths(root, commit)
                 .Where(CodexTerritory.Contains)
@@ -31,7 +32,7 @@ internal static class TerritoryCheckCli
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Order(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-            var patches = LoadTrackedPatches(root);
+            var patches = LoadCommitBoundPatches(root, commit, dispositionsRoot);
             var coveredByOutbox = territoryPaths
                 .Where(path => patches.Any(patch => PatchContainsPath(patch, path)))
                 .ToArray();
@@ -83,12 +84,62 @@ internal static class TerritoryCheckCli
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-    // 추적 중인 candidate.patch 내용을 읽는다.
-    private static string[] LoadTrackedPatches(string root) =>
-        Git(root, "ls-files", "outbox/*/candidate.patch")
+    // 커밋이 추가한 패치와 그 커밋에 imported로 결속된 패치만 읽는다.
+    private static string[] LoadCommitBoundPatches(string root, string commit, string? dispositionsRoot)
+    {
+        var addedPatches = AddedPatchPaths(root, commit)
+            .Select(path => Git(root, "show", commit + ":" + path))
+            .ToList();
+        addedPatches.AddRange(LoadImportedPatches(root, commit, dispositionsRoot));
+        return addedPatches.ToArray();
+    }
+
+    // 지정 커밋에서 새로 추가된 candidate.patch 경로를 읽는다.
+    private static string[] AddedPatchPaths(string root, string commit) =>
+        Git(root, "diff-tree", "--no-commit-id", "--name-status", "-r", commit)
             .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(path => File.ReadAllText(Path.Combine(root, path)))
+            .Select(line => line.Split('\t', 2))
+            .Where(parts => parts.Length == 2
+                && string.Equals(parts[0], "A", StringComparison.Ordinal)
+                && IsCandidatePatch(parts[1]))
+            .Select(parts => parts[1].Replace('\\', '/'))
             .ToArray();
+
+    // imported 처분 중 importCommit이 대상 커밋과 같은 패치만 읽는다.
+    private static string[] LoadImportedPatches(string root, string commit, string? dispositionsRoot)
+    {
+        var dispositionPaths = dispositionsRoot is null
+            ? Git(root, "ls-files", "outbox/*/disposition.json")
+                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(path => Path.Combine(root, path))
+            : Directory.Exists(Path.GetFullPath(Path.Combine(root, dispositionsRoot)))
+                ? Directory.EnumerateFiles(
+                    Path.GetFullPath(Path.Combine(root, dispositionsRoot)),
+                    "disposition.json",
+                    SearchOption.AllDirectories)
+                : throw new InvalidOperationException("dispositions-not-found");
+
+        var patches = new List<string>();
+        foreach (var dispositionPath in dispositionPaths)
+        {
+            var disposition = JsonNode.Parse(File.ReadAllText(dispositionPath));
+            if (!string.Equals(disposition?["state"]?.GetValue<string>(), "imported", StringComparison.Ordinal)
+                || !string.Equals(disposition?["importCommit"]?.GetValue<string>(), commit, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var patchPath = Path.Combine(Path.GetDirectoryName(dispositionPath)!, "candidate.patch");
+            if (File.Exists(patchPath)) patches.Add(File.ReadAllText(patchPath));
+        }
+        return patches.ToArray();
+    }
+
+    // outbox candidate.patch 경로인지 판정한다.
+    private static bool IsCandidatePatch(string path)
+    {
+        var normalized = path.Replace('\\', '/');
+        return normalized.StartsWith("outbox/", StringComparison.Ordinal)
+            && normalized.EndsWith("/candidate.patch", StringComparison.Ordinal);
+    }
 
     // unified diff의 파일 헤더가 대상 경로를 가리키는지 확인한다.
     private static bool PatchContainsPath(string patch, string path)

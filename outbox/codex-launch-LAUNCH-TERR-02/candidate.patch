@@ -1,0 +1,252 @@
+diff --git a/docs/qa/gate-witness/TERR-02.md b/docs/qa/gate-witness/TERR-02.md
+new file mode 100644
+index 0000000..2f126c3
+--- /dev/null
++++ b/docs/qa/gate-witness/TERR-02.md
+@@ -0,0 +1,126 @@
++# TERR-02 작업 보고
++
++## 주체
++
++- HARNESS_EXECUTOR (Codex)
++- 직접 경로 사유: 사용자 지시가 허용한 코덱스 영토
++  `server/Harness/TerritoryCheckCli.cs`, `docs/qa/gate-witness/**` 안에서만 산출물을 작성했다.
++- 커밋·push·상태 전이·결재·반입은 수행하지 않았다.
++
++## 변경
++
++- 자기 증명은 대상 커밋의 `git diff-tree --name-status`에서 `A`인
++  `outbox/*/candidate.patch`만 근거로 사용한다.
++- 처분 결속은 `state == imported`이고 `importCommit`이 대상 커밋과 같은 처분의
++  `candidate.patch`만 근거로 사용한다.
++- 사람 면제와 HEAD 한 커밋 판정 범위는 유지했다.
++- `--dispositions` 격리 입력을 추가하고, `rejected` 처분이 같은 커밋과 경로를 주장해도
++  면제되지 않는 반증 픽스처를 만들었다.
++- 영토 정본은 기존 `CodexTerritory.Contains`만 사용했다.
++- 반입자가 갱신할 `GATE-MANIFEST.json` order 20 note의 수치는 `violations 2`에서
++  `violations 3`으로 바뀌어야 한다.
++
++## 사용한 하네스와 결과
++
++```text
++territory-check --commit 7feeb44d22039f3d92f934ca2dc6ba69bc0dd8f5
++exit 1
++territoryPaths: 3
++coveredByOutbox: 0
++violations: 3
++violationPaths:
++  docs/qa/gate-witness/nested-counter-output.json
++  docs/qa/gate-witness/nested-counter.json
++  server/Harness/GateWitnessCheckCli.cs
++
++territory-check
++exit 0
++commit: 9a5f184e44aa25c0f2317fb6ef03c0e69242088e
++territoryPaths: 0
++violations: 0
++
++territory-check --commit ea52a91441ed32ce7a8ad44ca572d3803b0d441a
++exit 0
++TERR-01 importCommit: ea52a91441ed32ce7a8ad44ca572d3803b0d441a
++territoryPaths: 4
++coveredByOutbox: 4
++violations: 0
++
++territory-check --commit 774c349a57d659d3eac390613858c6dddb6dfcbe
++exit 0
++TERR-01 처분 기록 커밋: 774c349a57d659d3eac390613858c6dddb6dfcbe
++territoryPaths: 0
++violations: 0
++
++territory-check --ledger docs/qa/gate-witness/territory-stale-ledger.json
++  --commit 7feeb44d22039f3d92f934ca2dc6ba69bc0dd8f5
++exit 1
++territoryPaths: 3
++staleExceptions: 1
++violations: 4
++
++territory-check --dispositions docs/qa/gate-witness/territory-non-imported
++  --commit 7feeb44d22039f3d92f934ca2dc6ba69bc0dd8f5
++exit 1
++fixture state: rejected
++territoryPaths: 3
++coveredByOutbox: 0
++violations: 3
++
++territory-check --committ HEAD
++exit 2
++error: unknown-option: --committ
++
++verify-behavior
++exit 0
++behaviorEqual: true
++
++scope-check docs/directives/TERR-02-import-binding.md --actor codex
++exit 0
++changedFileCount: 2
++outOfScopeCount: 0
++claimConflictCount: 0
++
++gate-witness-check
++exit 0
++totalUnwitnessed: 0
++```
++
++`build-verify`는 exit 1이었다. 격리 빌드가 NuGet 원본의 TLS 인증서 부재로 `NU1301`에서
++중단됐다. 같은 소스를 설치된 net10 타기팅 팩과 로컬 복원 자산으로 빌드한
++`dotnet build server -p:TargetFramework=net10.0 --no-restore`는 exit 0,
++경고 0개, 오류 0개였다.
++
++필수 원문 명령 `dotnet run --project server -- measure dev-pack`도 같은 `NU1301`로 exit 1이었다.
++로컬 복원 자산을 쓰는
++`dotnet run --project server -p:TargetFramework=net10.0 --no-restore --no-build -- measure dev-pack`은
++exit 0, `violationCount: 0`, `overallStatus: completed`였다. 측정이 쓴 영토 밖 런타임 JSON
++5개는 즉시 HEAD blob과 같은 바이트로 되돌렸고 최종 `git diff --stat`에는 남지 않았다.
++
++{"gate":"dev-pack","violations":0,"attempt":1}
++
++## 참조한 스킬
++
++- `skills/common/directive-authoring.md`
++- `skills/common/directive-writing.md`
++- `skills/common/executor-launch.md`
++- `skills/common/hs-gate.md`
++- `skills/common/powershell-encoding.md`
++- `skills/common/root-cause-diagnosis.md`
++- `skills/common/verification.md`
++
++변경 경로와 일치하는 `skills/domains/` 트리거가 없어 도메인 스킬은 읽지 않았다.
++
++## 자진 신고
++
++- `build-verify`와 필수 원문 측정 명령의 환경 실패를 숨기지 않고 대체 실행과 구분했다.
++- `--dispositions`는 반증 픽스처를 저장소의 실제 outbox와 격리하기 위한 읽기 입력이다.
++  기본 실행은 계속 추적 중인 `outbox/*/disposition.json`만 읽는다.
++- 사람 면제 ledger와 판정 대상 HEAD 한 커밋 범위는 바꾸지 않았다.
++
++## 지표는 만족했으나 목적은 미달인 부분
++
++없음. 핵심 반증에서 과거의 무관한 패치는 면제 근거에서 빠졌고, TERR-01 정상 반입 커밋은
++그 커밋이 추가한 패치로 covered 4/4를 유지했으며, `rejected` 처분 픽스처는 covered 0으로
++남았다. 단, 위에 공개한 NuGet 인증서 환경 때문에 `build-verify`와 원문 측정 명령의 exit 0
++지표는 이 격리 사본에서 충족되지 않았다.
+diff --git a/docs/qa/gate-witness/territory-non-imported/candidate.patch b/docs/qa/gate-witness/territory-non-imported/candidate.patch
+new file mode 100644
+index 0000000..0ff35f1
+--- /dev/null
++++ b/docs/qa/gate-witness/territory-non-imported/candidate.patch
+@@ -0,0 +1,5 @@
++--- a/server/Harness/GateWitnessCheckCli.cs
+++++ b/server/Harness/GateWitnessCheckCli.cs
++@@ -1,1 +1,1 @@
++-// 반증 전
+++// 반증 후
+diff --git a/docs/qa/gate-witness/territory-non-imported/disposition.json b/docs/qa/gate-witness/territory-non-imported/disposition.json
+new file mode 100644
+index 0000000..2eb38d0
+--- /dev/null
++++ b/docs/qa/gate-witness/territory-non-imported/disposition.json
+@@ -0,0 +1,6 @@
++{
++  "launchId": "TERR-02-NON-IMPORTED",
++  "state": "rejected",
++  "importCommit": "7feeb44d22039f3d92f934ca2dc6ba69bc0dd8f5",
++  "note": "imported가 아닌 처분은 영토 면제 근거가 아님을 보이는 반증 픽스처"
++}
+diff --git a/server/Harness/TerritoryCheckCli.cs b/server/Harness/TerritoryCheckCli.cs
+index 632f33f..db65496 100644
+--- a/server/Harness/TerritoryCheckCli.cs
++++ b/server/Harness/TerritoryCheckCli.cs
+@@ -12,13 +12,14 @@ internal static class TerritoryCheckCli
+     {
+         try
+         {
+-            var optionFailure = CliOptions.Validate(args, 1, ["commit", "ledger"], []);
++            var optionFailure = CliOptions.Validate(args, 1, ["commit", "ledger", "dispositions"], []);
+             if (optionFailure is not null) return Error(optionFailure);
+ 
+             var root = GitTools.FindRepoRoot();
+             var requestedCommit = Option(args, "commit") ?? "HEAD";
+             var ledgerOption = Option(args, "ledger");
+             var ledgerPath = ledgerOption ?? DefaultLedger;
++            var dispositionsRoot = Option(args, "dispositions");
+             var commit = Git(root, "rev-parse", "--verify", requestedCommit + "^{commit}").Trim();
+             var territoryPaths = ChangedPaths(root, commit)
+                 .Where(CodexTerritory.Contains)
+@@ -31,7 +32,7 @@ internal static class TerritoryCheckCli
+                 .Distinct(StringComparer.OrdinalIgnoreCase)
+                 .Order(StringComparer.OrdinalIgnoreCase)
+                 .ToArray();
+-            var patches = LoadTrackedPatches(root);
++            var patches = LoadCommitBoundPatches(root, commit, dispositionsRoot);
+             var coveredByOutbox = territoryPaths
+                 .Where(path => patches.Any(patch => PatchContainsPath(patch, path)))
+                 .ToArray();
+@@ -83,13 +84,63 @@ internal static class TerritoryCheckCli
+             .Distinct(StringComparer.OrdinalIgnoreCase)
+             .ToArray();
+ 
+-    // 추적 중인 candidate.patch 내용을 읽는다.
+-    private static string[] LoadTrackedPatches(string root) =>
+-        Git(root, "ls-files", "outbox/*/candidate.patch")
++    // 커밋이 추가한 패치와 그 커밋에 imported로 결속된 패치만 읽는다.
++    private static string[] LoadCommitBoundPatches(string root, string commit, string? dispositionsRoot)
++    {
++        var addedPatches = AddedPatchPaths(root, commit)
++            .Select(path => Git(root, "show", commit + ":" + path))
++            .ToList();
++        addedPatches.AddRange(LoadImportedPatches(root, commit, dispositionsRoot));
++        return addedPatches.ToArray();
++    }
++
++    // 지정 커밋에서 새로 추가된 candidate.patch 경로를 읽는다.
++    private static string[] AddedPatchPaths(string root, string commit) =>
++        Git(root, "diff-tree", "--no-commit-id", "--name-status", "-r", commit)
+             .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+-            .Select(path => File.ReadAllText(Path.Combine(root, path)))
++            .Select(line => line.Split('\t', 2))
++            .Where(parts => parts.Length == 2
++                && string.Equals(parts[0], "A", StringComparison.Ordinal)
++                && IsCandidatePatch(parts[1]))
++            .Select(parts => parts[1].Replace('\\', '/'))
+             .ToArray();
+ 
++    // imported 처분 중 importCommit이 대상 커밋과 같은 패치만 읽는다.
++    private static string[] LoadImportedPatches(string root, string commit, string? dispositionsRoot)
++    {
++        var dispositionPaths = dispositionsRoot is null
++            ? Git(root, "ls-files", "outbox/*/disposition.json")
++                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
++                .Select(path => Path.Combine(root, path))
++            : Directory.Exists(Path.GetFullPath(Path.Combine(root, dispositionsRoot)))
++                ? Directory.EnumerateFiles(
++                    Path.GetFullPath(Path.Combine(root, dispositionsRoot)),
++                    "disposition.json",
++                    SearchOption.AllDirectories)
++                : throw new InvalidOperationException("dispositions-not-found");
++
++        var patches = new List<string>();
++        foreach (var dispositionPath in dispositionPaths)
++        {
++            var disposition = JsonNode.Parse(File.ReadAllText(dispositionPath));
++            if (!string.Equals(disposition?["state"]?.GetValue<string>(), "imported", StringComparison.Ordinal)
++                || !string.Equals(disposition?["importCommit"]?.GetValue<string>(), commit, StringComparison.OrdinalIgnoreCase))
++                continue;
++
++            var patchPath = Path.Combine(Path.GetDirectoryName(dispositionPath)!, "candidate.patch");
++            if (File.Exists(patchPath)) patches.Add(File.ReadAllText(patchPath));
++        }
++        return patches.ToArray();
++    }
++
++    // outbox candidate.patch 경로인지 판정한다.
++    private static bool IsCandidatePatch(string path)
++    {
++        var normalized = path.Replace('\\', '/');
++        return normalized.StartsWith("outbox/", StringComparison.Ordinal)
++            && normalized.EndsWith("/candidate.patch", StringComparison.Ordinal);
++    }
++
+     // unified diff의 파일 헤더가 대상 경로를 가리키는지 확인한다.
+     private static bool PatchContainsPath(string patch, string path)
+     {

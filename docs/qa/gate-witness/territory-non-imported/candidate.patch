@@ -1,0 +1,5 @@
+--- a/server/Harness/GateWitnessCheckCli.cs
++++ b/server/Harness/GateWitnessCheckCli.cs
+@@ -1,1 +1,1 @@
+-// 반증 전
++// 반증 후
