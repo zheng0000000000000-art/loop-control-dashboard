@@ -20,6 +20,9 @@ internal static class HarnessRegistry
         ["context-pack-integrity"] = ContextPackIntegrityCli.Run,
         ["di-completion-check"] = DiCompletionCheckCli.Run,
         ["state-transition-callsite-check"] = StateTransitionCallsiteCheckCli.Run,
+        ["state-transition-selftest"] = _ => StateApplierCli.Run(["state-transition", "--self-test"]),
+        ["recovery-selftest"] = _ => RecoveryCli.Run(["recovery", "--self-test"]),
+        ["trust-origin-selftest"] = _ => TrustOriginCli.Run(["trust-origin", "--self-test"]),
     };
 
     // 등록된 하네스 이름 목록을 반환한다.
