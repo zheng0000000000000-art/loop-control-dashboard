@@ -62,7 +62,7 @@ internal static class DiCompletionCheckCli
             foreach (var warning in MutatingWarnings(checks)) warnings.Add(warning);
             foreach (var warning in UnlistedHarnessWarnings(manifest)) warnings.Add(warning);
             var contractFailures = ValidateCliContract(root, warnings);
-            foreach (var failure in contractFailures) failures.Add(failure);
+            foreach (var failure in contractFailures) failures.Add(failure?.DeepClone());
 
             foreach (var check in checks.OfType<JsonObject>().OrderBy(ReadOrder))
             {
@@ -446,9 +446,16 @@ internal static class DiCompletionCheckCli
             if (string.IsNullOrWhiteSpace(command)) continue;
             contracted.Add(command);
             if (!wired.Contains(command))
-                failures.Add(Failure(command, item?["critical"]?.GetValue<bool>() == true
-                    ? "critical-cli-wiring-missing"
-                    : "cli-wiring-missing", "contract command is not wired"));
+            {
+                var critical = item?["critical"]?.GetValue<bool>() == true;
+                failures.Add(new JsonObject
+                {
+                    ["subject"] = command,
+                    ["critical"] = critical,
+                    ["code"] = critical ? "critical-cli-wiring-missing" : "cli-wiring-missing",
+                    ["message"] = "contract command is not wired",
+                });
+            }
         }
         foreach (var command in wired.Where(command => !contracted.Contains(command)))
             warnings.Add(new JsonObject
