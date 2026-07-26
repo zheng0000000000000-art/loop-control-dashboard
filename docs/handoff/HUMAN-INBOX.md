@@ -1071,3 +1071,23 @@ private static bool HighRiskFailClosed() => true;      // TrustOriginCli.cs:993
 
 **사람 판단이 필요한 것**: `HighRiskFailClosed()`를 실제 검사로 바꿀 것인가, 제거하고
 `state-transition-selftest` 통과에 위임할 것인가. **`declare` 선행조건 변경이므로 결재다.**
+
+## 2026-07-26 — `12-B` 선행조건 11개 전수 확인 (사람 결재 3건)
+
+`HighRiskFailClosed`가 상수였던 것을 계기로 전부 확인했다
+(`docs/verification/declare-preconditions-audit.md`). **상수 반환 함수는 이제 없다.**
+
+11개 중 **8개는 실측**, 나머지가 문제다:
+
+| 조건 | 방식 | 문제 |
+| --- | --- | --- |
+| `worktree-not-clean` | `raw git status` | **CLAUDE.md:29가 금지한 방식.** 지금은 갈리지 않는다(`.gitattributes` 덕) |
+| `direct-writer-gate-failed` | **정규식** 매치 | *"정규식 매치는 증거가 아니다"* — 표기가 다르면 안 잡힌다 |
+| `automatic-launcher-not-disabled` | `.claude/settings.json`에 `"hooks"` 문자열 | **파일이 없으면 통과.** 실측: **이 저장소에 그 파일이 없다** |
+
+**사람 판단이 필요한 것**:
+1. `automatic-launcher-not-disabled`가 **부재를 안전으로 읽는 것**을 그대로 둘 것인가.
+2. `direct-writer-gate-failed`의 정규식 프록시를 실측으로 바꿀 것인가.
+3. `IsWorktreeClean`을 `gate-clean`으로 바꿀 것인가 — **완화 방향**이라 단순한 규칙 준수 문제가 아니다.
+
+셋 다 `declare` 선행조건의 의미를 바꾸므로 결재다. **아무것도 바꾸지 않았다.**
