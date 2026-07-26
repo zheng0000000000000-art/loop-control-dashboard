@@ -634,6 +634,11 @@ internal static class StateApplierCli
         // 요구 목록은 부르는 쪽이 준다.
         if (requiredKinds.Count == 0) return false;
         var root = Path.Combine(Path.GetTempPath(), $"st-highrisk-{Guid.NewGuid():N}");
+        // fixture 실행이 prepare/apply JSON을 stdout에 쏟는다. 부르는 쪽(trust-origin inspect 등)의
+        // 출력이 JSON 하나여야 하므로 이 구간의 출력을 삼킨다 — 2026-07-26에 inspect가 JSON 4개를 냈다.
+        var originalOut = Console.Out;
+        using var swallowed = new StringWriter();
+        Console.SetOut(swallowed);
         try
         {
             var ctx = InitSelfTestRoot(root);
@@ -644,7 +649,11 @@ internal static class StateApplierCli
             // 확인하지 못한 것은 통과가 아니다.
             return false;
         }
-        finally { try { if (Directory.Exists(root)) Directory.Delete(root, true); } catch { } }
+        finally
+        {
+            Console.SetOut(originalOut);
+            try { if (Directory.Exists(root)) Directory.Delete(root, true); } catch { }
+        }
     }
 
     // self-test root를 구성하고 모든 06C-1 fixture를 실행한다.
