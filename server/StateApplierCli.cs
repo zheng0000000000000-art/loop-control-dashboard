@@ -193,10 +193,14 @@ internal static class StateApplierCli
         if (!ValidateEnvelopeStatic(envelope, out var staticFailure))
             return WriteResult(envelope, new ApplyResult("rejected", 1, false, false, PendingExists(ctx, envelope), staticFailure));
 
-        var pendingExit = InspectPending(ctx, envelope);
-        if (pendingExit is not null) return WriteResult(envelope, pendingExit);
+        // RECOVERY.md의 불변식: "reconciliation before any apply decision".
+        // 종전에는 InspectPending이 먼저였고, pending 저널·상태 해시·로그 성공을 모두 위조하면
+        // reconciliation이 깨진 저장소에서도 idempotent(exit 0)가 나왔다(2026-07-26 실측).
+        // 상태를 쓰지는 않으므로 위조된 전이는 아니지만, 거짓 OK다 — 판정 전에 먼저 잰다.
         var recon = RunReconciliation(ctx);
         if (recon.ExitCode != 0) return WriteResult(envelope, recon);
+        var pendingExit = InspectPending(ctx, envelope);
+        if (pendingExit is not null) return WriteResult(envelope, pendingExit);
         var existing = CheckExistingTransition(ctx, envelope, recon);
         if (existing is not null) return WriteResult(envelope, existing);
         if (HighRiskKinds.Contains(envelope.TransitionKind))

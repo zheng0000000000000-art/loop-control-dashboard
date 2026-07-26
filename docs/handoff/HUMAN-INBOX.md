@@ -1042,3 +1042,32 @@ launch --manual       →  codex-executable-not-found      ← 통과해 Launch�
 **곁가지**: `.git/worktrees/`에 낡은 메타데이터 **28건**이 쌓였고 `git worktree prune`이
 `Permission denied`로 지우지 못한다. `git worktree list`는 정상이고 게이트도 통과하므로
 동작에는 영향이 없다. **발사마다 1건씩 는다는 사실만 남긴다.**
+
+## 2026-07-26 — 미확인 3건을 실측했다. ①③은 해소, ②는 사람 결재
+
+`docs/verification/three-unverified-closed.md`. 위조 시험은 **전부 클론에서** 했다.
+
+| # | 항목 | 결과 |
+| --- | --- | --- |
+| ① | `InspectPending`이 reconciliation보다 먼저 `idempotent` | **사실이었다.** 셋(pending·상태해시·로그)을 위조하니 reconciliation이 깨진 저장소에서 **exit 0 `idempotent`**가 나왔다. `RECOVERY.md`의 불변식 *"reconciliation before any apply decision"* 을 코드가 어기고 있었다. **`RunReconciliation`을 앞으로 옮겨 exit 1로 막았고, 정상 재적용은 `idempotent` exit 0 유지.** |
+| ③ | 아카이브 NUL 바이트 | **원인: `0`이 NUL로 쓰였다**(`<NUL>5H·<NUL>6C-1…`). 4파일 × 4바이트. **pin 대상 44개 중 해당 없음**을 확인하고 `NUL→'0'` 1:1 치환. grep이 이제 읽는다. |
+| ② | self-test 개별 출력 필드 | **미달. 그리고 더 깊은 것을 찾았다** ↓ |
+
+### ★ ② — `HighRiskFailClosed()`가 상수다
+
+```csharp
+private static bool HighRiskFailClosed() => true;      // TrustOriginCli.cs:993
+```
+
+`DeclareCore`의 선행조건 `if (!HighRiskFailClosed()) return Fail(...)` 는 **결코 실패하지 않는다.**
+`trust-origin` self-test의 `high-risk-stays-closed` 케이스도 항상 통과한다.
+`06C-2-R3/R4`가 요구한 `reasonMatched` 필드도 출력에 없고, high-risk 케이스는 3종이 아니라 1개다.
+
+**다만 성질 자체는 검증된다** — `state-transition-selftest`에
+`phase-change-no-receipt`·`recovery-no-receipt`·`replay-no-receipt` 세 음성 케이스가 있고
+그것이 **LAND 게이트 검사**다. **실질 위험은 없고, `trust-origin` 쪽 주장이 공허한 것이다.**
+
+**정정**: `four-di-criteria-recheck.md`에서 06C-2를 *"전부 일치"* 라고 결론한 것은 **과했다.**
+
+**사람 판단이 필요한 것**: `HighRiskFailClosed()`를 실제 검사로 바꿀 것인가, 제거하고
+`state-transition-selftest` 통과에 위임할 것인가. **`declare` 선행조건 변경이므로 결재다.**

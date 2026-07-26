@@ -40,7 +40,7 @@
 | 인수 없음 | 2 usage | **2** |
 | `verify-behavior` | `behaviorEqual:true` | **0 / true** |
 | `measure dev-pack` | violations 0 | **0** |
-| high-risk 3종이 exit 1 + reason 정확 매칭 | self-test 안 | **self-test 통과에 포함**(`high-risk-stays-closed`) |
+| high-risk 3종이 exit 1 + reason 정확 매칭 | self-test 안 | ~~통과에 포함~~ → **미달**(2026-07-26 정정, §아래) |
 
 **전부 일치.** 다만 아래 §미달 ①을 함께 읽어라.
 
@@ -79,3 +79,21 @@
 `grep`이 바이너리로 판정하고 내용을 건너뛴다(실측: 8,736바이트 중 NUL 4개, UTF-8로는 정상 디코딩됨).
 **아카이브를 `grep`으로 훑는 도구·사람은 이 파일들을 못 본다.** 오늘 이 대조를 파이썬으로 읽어서 했다.
 고치지 않았다 — 아카이브 수정은 범위 밖이고, 사실만 남긴다.
+
+---
+
+## 정정 (2026-07-26) — 06C-2의 high-risk 항목은 미달이다
+
+위에서 *"self-test 통과에 포함"* 으로 적고 **전부 일치**라고 결론했다. **과했다.**
+실측(`docs/verification/three-unverified-closed.md` §②):
+
+- `trust-origin --self-test` 케이스 출력의 키는 `case`·`pass`·`negative` 뿐이다.
+  `R3`가 요구한 `reasonMatched` 같은 필드가 **없다.**
+- high-risk 케이스는 **1개**(`high-risk-stays-closed`)이지 *"3종"* 이 아니다.
+- 그 케이스가 부르는 `HighRiskFailClosed()`는 **`=> true` 상수**다.
+
+**성질 자체는 `state-transition-selftest`의 세 음성 케이스로 검증된다**(LAND 게이트 검사).
+**실질 위험은 없으나, 완료 기준으로 보면 미달이고 `trust-origin` 쪽 주장은 공허하다.**
+
+*전체 통과를 개별 항목의 증거로 쓴 것이 잘못이었다 — 그 위험은 원문 §미달 ②에 이미 적어 두고도
+결론에는 반영하지 않았다.*
