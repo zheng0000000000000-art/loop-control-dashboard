@@ -1,0 +1,4 @@
+{
+  "_comment": "조율자가 코덱스 영토(CodexTerritory.Roots)에 직접 쓴 커밋의 사람 승인 목록. sha + reason. territory-check가 HEAD 커밋만 보므로 여기 없는 커밋은 판정 대상이 아니다. 저장소에 없는 sha가 남으면 stale-exception으로 실패한다. 2026-07-27 이전의 직접 수정은 넣지 않았다 — BASELINE-CHANGES.md와 verification 문서에 이미 기록돼 있다.",
+  "exceptions": []
+}

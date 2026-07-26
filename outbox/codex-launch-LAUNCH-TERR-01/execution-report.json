@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-TERR-01",
+  "diId": "TERR-01",
+  "baselineCommit": "4852f0315fdd5c9668a1f6b0677ace7dc616f985",
+  "startedAt": "2026-07-26T17:29:17Z",
+  "finishedAt": "2026-07-26T17:35:15Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "eb4a58295ff22e34562e2f593bb0470a8105fd82e1fde32ebfec978111305dd9",
+  "stderrTail": ");\n+        return stdout;\n+    }\n+\n+    // 문자열 배열을 JSON 배열로 바꾼다.\n+    private static JsonArray JsonArray(IEnumerable<string> values) =>\n+        new(values.Select(value => (JsonNode?)value).ToArray());\n+\n+    // 입력 오류를 JSON으로 출력한다.\n+    private static int Error(string message)\n+    {\n+        Console.Error.WriteLine(new JsonObject { [\"error\"] = message }.ToJsonString());\n+        return 2;\n+    }\n+\n+    private sealed record TerritoryException(string Sha, string Reason);\n+}\n\ntokens used\n117,893",
+  "changedPaths": [
+    "dashboard/data/dev-pack/measurement.json",
+    "dashboard/data/dev-pack/patch-proposal.json",
+    "dashboard/data/dev-pack/review-report.json",
+    "dashboard/data/dev-pack/run-log.json",
+    "dashboard/data/dev-pack/workflow-state.json",
+    "server/Harness/HarnessRegistry.cs",
+    "docs/qa/gate-witness/TERR-01.md",
+    "docs/qa/gate-witness/territory-stale-ledger.json",
+    "server/Harness/TerritoryCheckCli.cs"
+  ],
+  "scopeViolations": [
+    "dashboard/data/dev-pack/measurement.json",
+    "dashboard/data/dev-pack/patch-proposal.json",
+    "dashboard/data/dev-pack/review-report.json",
+    "dashboard/data/dev-pack/run-log.json",
+    "dashboard/data/dev-pack/workflow-state.json"
+  ],
+  "candidatePatchSha256": "bf36a347e9769cb5b2f49f64c0a491b39a6e9991c3f2445fe7e5e50fad455cda",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": [
+    "dashboard/data/dev-pack/measurement.json",
+    "dashboard/data/dev-pack/patch-proposal.json",
+    "dashboard/data/dev-pack/review-report.json",
+    "dashboard/data/dev-pack/run-log.json",
+    "dashboard/data/dev-pack/workflow-state.json"
+  ]
+}

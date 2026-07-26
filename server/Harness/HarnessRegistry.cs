@@ -28,6 +28,7 @@ internal static class HarnessRegistry
         ["launch-disposition"] = LaunchDispositionCli.Run,
         ["di-completion-check"] = DiCompletionCheckCli.Run,
         ["state-transition-callsite-check"] = StateTransitionCallsiteCheckCli.Run,
+        ["territory-check"] = TerritoryCheckCli.Run,
         ["state-transition-selftest"] = _ => StateApplierCli.Run(["state-transition", "--self-test"]),
         ["recovery-selftest"] = _ => RecoveryCli.Run(["recovery", "--self-test"]),
         ["trust-origin-selftest"] = _ => TrustOriginCli.Run(["trust-origin", "--self-test"]),

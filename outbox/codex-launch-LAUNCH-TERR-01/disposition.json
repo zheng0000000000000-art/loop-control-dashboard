@@ -1,0 +1,7 @@
+{
+  "launchId": "LAUNCH-TERR-01",
+  "state": "pending",
+  "decidedAt": "2026-07-26",
+  "actor": "codex-launch (자동) — 처분은 사람이 정한다",
+  "note": "발사만 됐고 반입·폐기는 정해지지 않았다. launch-disposition이 위반으로 센다."
+}
