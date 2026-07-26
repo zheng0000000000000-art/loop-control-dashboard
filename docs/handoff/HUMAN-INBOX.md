@@ -1108,3 +1108,17 @@ private static bool HighRiskFailClosed() => true;      // TrustOriginCli.cs:993
 
 **새 결재 1건**: `CALLSITE-HISTORICAL.json`의 없는 파일 2건을 **지울 것인가.**
 목록을 고치는 것은 **면제 범위 변경**이라 결재다. 지우기 전까지 `declare`는 이 조건에서 막힌다.
+
+## 2026-07-27 — 어제 올린 결재 1건 닫음 (위임 실행)
+
+`CALLSITE-HISTORICAL.json`의 없는 파일 2건 삭제 건은 **사용자가 재량을 위임**하여 조율자가 실행했다.
+근거·되돌리는 법은 `BASELINE-CHANGES.md` 2026-07-27 항목에 있다.
+핵심: **옮긴 게 아니라 지워진 것**임을 blob 해시와 디스크 전체 탐색으로 갈랐고,
+**스캔 결과는 삭제 전후 동일**(`legacyFailures = []`)이라 게이트를 통과시키려 기준을 고친 경우가 아니다.
+
+**위임의 범위를 이렇게 잡았다** — 다음 세션도 같은 선을 쓴다.
+
+- **재량으로 한다**: 면제·판정이 **좁아지는(엄격해지는)** 방향, 파일 하나로 되돌아가는 변경,
+  기록을 남길 수 있는 것.
+- **여전히 사람 몫**: **완화** 방향(예: `IsWorktreeClean`을 `gate-clean`으로 바꾸는 것),
+  `trust-origin declare` 실제 선언(**1회성·되돌릴 수 없다**), approve/reject/import, sonnet 발사.

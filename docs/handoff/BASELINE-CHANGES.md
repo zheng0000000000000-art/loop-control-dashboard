@@ -230,3 +230,43 @@ self-test 케이스 수(19/24/8)도 `declare`의 기대값과 일치한다. **�
 - **되돌리는 법**: 세 이름을 `-selftest` 없는 형태로 되돌린다. 되돌리면 경로가 다시 죽는다.
 - **남는 위험**: 이 목록은 매니페스트와 **손으로 동기화**된다. 이름을 또 바꾸면 또 끊긴다.
   기계가 대조하게 하는 것이 근본 해결이며 별도 결재다.
+
+## 2026-07-27 — CALLSITE-HISTORICAL.json 면제 2건 삭제
+
+### ① 주체
+사용자가 재량을 위임했고("이런 류는 너의 재량껏"), **조율자(Claude)가 실행**했다.
+어제(2026-07-26) 결재로 올렸던 항목이고, 그 항목을 닫는다.
+
+### ② 근거
+면제 목록의 4건 중 2건이 **실재하지 않는 경로**였다.
+
+```
+outputs/review/06C-1.codex.md
+outputs/review/06C-1-R1.codex.md
+```
+
+**"옮긴 것인가 지운 것인가"를 먼저 갈랐다** — `763226a`에서 archive 이동으로 끊긴 경로를
+*정정*한 전례가 있어, 같은 경우면 삭제가 아니라 경로 수정이 맞기 때문이다. 실측:
+
+- `git log --follow`: 둘 다 `da240dd`(archive generated workflow artifacts)에서 삭제됨
+- `da240dd^`의 blob 해시(`4fee60b…`, `0c1c44b…`)가 **HEAD 트리 어디에도 없다** → 이름만 바뀐 게 아니다
+- `outputs/*`가 gitignore라 git 이력만으로는 부족해 **디스크 전체를 훑었다** → 없다. `outputs/review/`는 빈 디렉터리다
+
+**방향은 엄격해지는 쪽이다.** 면제를 *좁힌다.* 지금까지 스캔되던 것이 스캔에서 빠지는 일은 없다.
+효과는 하나뿐 — 누가 나중에 저 경로에 파일을 만들면 **조용히 면제되지 않고 스캔된다.**
+파일 머리 주석의 결재 조건은 "**새 파일 추가** 시"이고, 이건 추가가 아니라 삭제다.
+
+**동작이 바뀌지 않았음을 실측했다**: `legacyFailures = []`, `state-transition-callsite-check` exit 0
+(삭제 전후 동일). 즉 **게이트를 통과시키려고 기준을 고친 것이 아니다** — 스캔 결과는 그대로고,
+`staleHistoricalEntries`만 2 → 0이 되어 `DirectWriterGatePass`가 열렸다.
+
+### ③ 되돌리는 법
+`docs/handoff/CALLSITE-HISTORICAL.json`의 `historicalFiles`에 두 줄을 다시 넣는다.
+
+```
+"outputs/review/06C-1.codex.md",
+"outputs/review/06C-1-R1.codex.md"
+```
+
+되돌리면 `trust-origin inspect`의 `staleHistoricalEntries`가 다시 2건이 되고
+`DirectWriterGatePass`가 false로 닫힌다. 코드 변경은 없어 되돌리기는 이 파일 한 개다.
