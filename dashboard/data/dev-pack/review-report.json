@@ -17807,6 +17807,66 @@
       ],
       "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
       "createdAt": "2026-07-26T16:28:32.1944437+09:00"
+    },
+    {
+      "id": "review-1785051084433",
+      "proposalId": "proposal-1785051076054",
+      "verdict": "approved",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "low",
+      "findings": [
+        {
+          "target": "maxFunctionLength",
+          "checkId": "note-nonempty",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "변경 항목의 note는 의미 있는 설명을 포함하고 있습니다.",
+          "comment": "변경 항목의 note는 의미 있는 설명을 포함하고 있습니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "maxFunctionLength",
+          "checkId": "after-matches-goal",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "after 값 [0,80]은 note에 언급된 함수 길이를 줄이는 목표와 일치한다.",
+          "comment": "after 값 [0,80]은 note에 언급된 함수 길이를 줄이는 목표와 일치한다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "maxFunctionLength",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "변경 제안은 함수 길이를 줄이고 읽기 및 유지보수 용이성을 높이는 데 초점이 맞춰져 있어 blueprint 위반 해소와 관련되어 있음.",
+          "comment": "변경 제안은 함수 길이를 줄이고 읽기 및 유지보수 용이성을 높이는 데 초점이 맞춰져 있어 blueprint 위반 해소와 관련되어 있음.",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트를 통과했다. 사람 최종 결재가 필요하다.",
+      "createdAt": "2026-07-26T16:31:24.4345762+09:00"
     }
   ]
 }

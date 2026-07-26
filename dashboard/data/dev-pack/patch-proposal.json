@@ -1,14 +1,14 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1785050903663",
-  "title": "함수 길이 줄이기",
+  "id": "proposal-1785051076054",
+  "title": "함수 길이 감소 및 재구조화",
   "lifecycle": "submitted",
   "createdBy": {
     "provider": "ollama",
     "model": "qwen3:8b"
   },
-  "revisionOf": "proposal-1785050864982",
-  "summary": "함수 길이를 줄여 가독성과 유지보수성을 개선합니다.",
+  "revisionOf": "proposal-1785050903663",
+  "summary": "함수 길이를 줄이고 읽기 및 유지보수를 용이하게 하기 위해 특정 구간의 코드를 재구조화합니다.",
   "assumptions": [],
   "changes": [
     {
@@ -18,7 +18,7 @@
         0,
         80
       ],
-      "note": "함수 길이를 줄여 가독성과 유지보수성을 개선하고자 함"
+      "note": "함수 길이를 줄여 읽기와 유지보수의 용이성을 높이기 위해, 특정 구간의 코드를 재구조화하는 것이 목표이다."
     }
   ],
   "impact": [
