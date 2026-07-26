@@ -112,6 +112,15 @@
           ],
           "expectedExit": 1,
           "mutatesState": false
+        },
+        {
+          "command": "build-verify",
+          "args": [
+            "--fixture",
+            "docs/qa/gate-witness/build-verify-broken"
+          ],
+          "expectedExit": 1,
+          "mutatesState": false
         }
       ],
       "unregisteredChecks": [
@@ -437,6 +446,15 @@
             "strict-pack",
             "--fixture",
             "docs/qa/gate-witness/measure-violating"
+          ],
+          "expectedExit": 1,
+          "mutatesState": false
+        },
+        {
+          "command": "build-verify",
+          "args": [
+            "--fixture",
+            "docs/qa/gate-witness/build-verify-broken"
           ],
           "expectedExit": 1,
           "mutatesState": false

@@ -1,5 +1,4 @@
-// Build verification harness.
-// Uses dotnet build exit code as the source of truth and writes outputs to a temp directory to avoid locked apphost files.
+// dotnet build 종료 코드를 정본으로 삼고 임시 경로에서 실행하는 빌드 검증 하네스.
 using System.Diagnostics;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -14,17 +13,27 @@ internal static class BuildVerifyCli
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    // build-verify entry. exit 0=build passed, 1=build failed, 2=harness error.
+    // build-verify 진입점. exit 0=빌드 성공, 1=빌드 실패, 2=하네스 오류.
     internal static int Run(string[] args)
     {
         try
         {
             var root = GitTools.FindRepoRoot();
-            var project = args.Length >= 2 ? args[1] : "server";
+            var fixtureMode = args.Length >= 2
+                && string.Equals(args[1], "--fixture", StringComparison.OrdinalIgnoreCase);
+            if (fixtureMode && args.Length < 3)
+                throw new ArgumentException("--fixture 뒤에 디렉터리 경로가 필요합니다.");
+
+            var project = fixtureMode ? args[2] : args.Length >= 2 ? args[1] : "server";
             var fullProject = Path.GetFullPath(Path.IsPathRooted(project) ? project : Path.Combine(root, project));
             if (!Directory.Exists(fullProject) && !File.Exists(fullProject))
             {
                 Console.Error.WriteLine($"{{\"error\":\"project path not found: {project}\"}}");
+                return 2;
+            }
+            if (fixtureMode && !Directory.Exists(fullProject))
+            {
+                Console.Error.WriteLine($"{{\"error\":\"fixture directory not found: {project}\"}}");
                 return 2;
             }
 
@@ -52,6 +61,7 @@ internal static class BuildVerifyCli
             var report = new JsonObject
             {
                 ["harness"] = "build-verify",
+                ["fixtureMode"] = fixtureMode,
                 ["project"] = Path.GetRelativePath(root, fullProject).Replace('\\', '/'),
                 ["buildProject"] = Path.Combine(tempProjectDir, projectFileName),
                 ["configuration"] = "Release",
@@ -75,7 +85,7 @@ internal static class BuildVerifyCli
         }
     }
 
-    // Runs a child process and captures exit code plus stdout/stderr.
+    // 자식 프로세스를 실행하고 종료 코드와 표준출력·표준오류를 수집한다.
     private static (int ExitCode, string Stdout, string Stderr) RunProcess(string fileName, string arguments, string workingDirectory)
     {
         var psi = new ProcessStartInfo(fileName, arguments)
@@ -94,7 +104,7 @@ internal static class BuildVerifyCli
         return (process.ExitCode, stdout, stderr);
     }
 
-    // Copies project sources to temp while skipping build artifacts that can be locked or stale.
+    // 잠기거나 낡을 수 있는 빌드 산출물은 제외하고 프로젝트 소스를 임시 경로에 복사한다.
     private static void CopyDirectory(string sourceDir, string targetDir)
     {
         Directory.CreateDirectory(targetDir);
@@ -113,7 +123,7 @@ internal static class BuildVerifyCli
         }
     }
 
-    // Classifies common file-lock build failures without using it as the pass/fail source.
+    // 성공·실패 판정에는 쓰지 않고 흔한 파일 잠금 오류만 분류한다.
     private static bool LooksLocked(string text)
         => text.Contains("being used by another process", StringComparison.OrdinalIgnoreCase)
             || text.Contains("cannot access the file", StringComparison.OrdinalIgnoreCase)
@@ -121,7 +131,7 @@ internal static class BuildVerifyCli
             || text.Contains("MSB3021", StringComparison.OrdinalIgnoreCase)
             || text.Contains("MSB3027", StringComparison.OrdinalIgnoreCase);
 
-    // Trims long command output while preserving the diagnostic tail.
+    // 긴 명령 출력을 진단용 끝부분만 남겨 줄인다.
     private static string Tail(string text, int maxChars)
     {
         var normalized = text.Replace("\r\n", "\n").Trim();

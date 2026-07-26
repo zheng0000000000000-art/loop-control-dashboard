@@ -635,3 +635,18 @@ gate-witness-check []      | exp 0 | got 1   ← 실재 문제.
 
 **사람 판단이 필요한 것**: 그때까지 POST-COMMIT을 빨간 채로 둘 것인가, 아니면
 `POST-EXECUTOR`의 `requireFailureWitness`를 잠시 내려 둘 것인가. 후자는 기준 변경이다.
+
+## 2026-07-26 — POST-COMMIT 적색 해소 + LAND는 여전히 못 켠다
+
+앞 항목(POST-COMMIT 적색)은 `GWIT-05` 반입으로 해소됐다. `gate-witness-check` exit 0,
+`totalUnwitnessed` 0(13/13, 12/12, 18/18).
+
+**다만 LAND의 `requireFailureWitness`는 켜지 못했다.** 켜 보니 `state-transition-selftest`가
+반증 없음으로 잡혔는데, 그 검사의 `internalNegativeCases: 15` 주장은 **옳다**.
+원인은 `GateWitnessCheckCli.CountInternalNegativeCases`가 `JsonNode.Parse`로 한 덩어리를
+기대하는데 그 self-test만 JSON 객체를 46개 흘린다는 것이다(나머지 둘은 1개).
+파싱 실패를 0건으로 세고 주장을 기각한다.
+
+**사람 판단이 필요한 것**: `server/Harness/GateWitnessCheckCli.cs`를 JSON Lines도 읽게 고치는
+후속 지시서(코덱스 영역)를 낼 것인가. 그 전까지 LAND의 `totalUnwitnessed 0`은
+**검증한 0이 아니라 믿은 0**이다 — 플래그가 꺼져 있으면 주장을 그대로 신뢰한다.
