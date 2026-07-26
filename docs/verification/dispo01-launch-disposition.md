@@ -141,3 +141,66 @@ POST-COMMIT + launch-disposition ['docs/qa/gate-witness/.../case-01']        exp
    시작하고 사람이 손으로 채워야 한다. 발사 시점 `state: "pending"` 자동 기록은 별도 결재다.
 3. **`no-output` 사유는 실행 보고의 서술을 옮긴 것이다.** `candidate.patch`가 빈 파일이라는 것은
    실측이지만, *왜* 비었는지(NU1301 TLS 실패)는 **코덱스의 자기보고**다. 내가 재현하지 않았다.
+
+---
+
+# DISPO-02 (append, 2026-07-26) — `pending`을 알게 하고 런처가 자동으로 남긴다
+
+## 반증 시험 (지시서 §4 — 6개 전부 실측, 사유까지)
+
+| # | 픽스처 | 기대 | exit | 사유 |
+| --- | --- | --- | --- | --- |
+| 1 | `pending` 정상 | 위반 1, 새 사유 | **1** | **`disposition-pending`** |
+| 2 | `pending` · `actor` 없음 | 또 다른 사유 | **1** | **`actor-missing`** |
+| 3 | `pending` · launchId 불일치 | 불일치 사유 | **1** | **`launch-id-mismatch`** |
+| 4 | 알 수 없는 state | 변화 없음 | **1** | `state-invalid` |
+| 5 | `pending` 1 + 정상 `imported` 1 | **위반 1** | **1** | `disposition-pending` 하나만 |
+| 6 | 기존 case-01~08 | 이전과 동일 | **1,0,1,1,1,0,0,1** | 동일 |
+
+**사유가 셋 다 다르다**(1·2·3). 필드를 실제로 읽는다는 증거이며, *"기록이 없다"* 와
+*"아직 안 정했다"* 가 출력에서 구분된다 — 지시서 §0의 목적이다.
+
+**시험 5가 세는 방식을 잡았다.** 2도 0도 아닌 1이다.
+
+## 런처 (§6-1, 조율자 몫)
+
+`codex-launch`가 발사 성공 시 `disposition.json`을 `state: "pending"`으로 남긴다.
+**이미 파일이 있으면 덮지 않는다** — 실측으로 확인(`LAUNCH-GWIT-05`의 `rejected` 유지).
+
+## ★ 이 반입 자체가 필요성을 실물로 보여줬다
+
+`DISPO-02`를 쏘자 outbox가 **17건**이 되고 `LAUNCH-DISPO-02` 하나가 `disposition-missing`으로
+잡혔다. 런처가 아직 안 고쳐진 시점의 발사였기 때문이다. **검사가 자기를 만든 발사를 잡았다.**
+
+## 그리고 순서 하나를 더 드러냈다
+
+`LAUNCH-DISPO-02`의 처분을 정하려고 게이트 보고를 먼저 만들려 했더니 **FAIL 1/14**였다.
+사유는 `launch-disposition ['outbox']`가 그 시점에 위반을 냈기 때문이다.
+
+**처분을 정하기 전에는 게이트가 통과할 수 없다.** 의도한 강제 방향이 실물로 확인됐다.
+처분을 먼저 쓰고 다시 재서 **PASS 0/14**를 얻었다.
+
+### 자기참조 충돌 하나 — 임시 경로로 우회했다
+
+두 번째 시도도 FAIL이었는데 사유가 달랐다:
+
+```
+launch-disposition ['outbox'] exp 0 got 2
+  "The process cannot access the file ... LAUNCH-DISPO-02.gate.json"
+```
+
+`disposition.json`이 가리키는 `gateReport` 파일에 **그 게이트 실행의 stdout을 직접 리다이렉트**하고
+있었다. 검사가 읽으려는 파일을 같은 실행이 쓰고 있었다. **임시 경로에 재고 PASS를 확인한 뒤
+복사**해서 풀었다.
+
+**남는 성질**: `gateReport`가 가리키는 경로에 게이트 출력을 직접 쓰면 그 게이트가 실패한다.
+하네스가 막지는 않는다 — 운영 관례로 남는다.
+
+## 지표는 만족했으나 목적은 미달인 부분
+
+1. **`pending` 유예가 없다.** 발사 후 사람이 처분을 정할 때까지 `POST-COMMIT`이 빨갛다.
+   의도한 것이지만 **운영 감각을 바꾸므로 `HUMAN-INBOX`에 결재로 올렸다.**
+2. **자기참조 충돌을 코드가 막지 않는다.** `gateReport` 경로에 직접 리다이렉트하면 실패하는데,
+   그 사실을 아는 방법은 이 문서뿐이다.
+3. **`LAUNCH-DISPO-02`의 `gateReport`는 반입 커밋에서 잰 진짜 측정이다** — backfill 14건과 달리
+   그 발사에 대응하는 시점의 판정이다. 앞으로의 발사도 이 모양이어야 한다.
