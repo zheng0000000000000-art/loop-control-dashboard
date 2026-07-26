@@ -81,6 +81,10 @@ internal static class ProgramVerifierCli
         {
             Console.Error.WriteLine(new JsonObject
             {
+                // di-completion-check와 같은 낱말을 쓴다. 못 잰 것은 FAIL이 아니며,
+                // verdict를 아예 안 내면 소비자가 판정을 읽을 수 없다(2026-07-26 대조에서 드러남).
+                ["gateId"] = gateId,
+                ["verdict"] = "NOT-MEASURED",
                 ["error"] = "바이너리가 소스보다 낡아 게이트를 잴 수 없다. 먼저 빌드하라",
                 ["binaryPath"] = staleness.BinaryPath,
                 ["binaryWrittenAt"] = staleness.BinaryWrittenAt,

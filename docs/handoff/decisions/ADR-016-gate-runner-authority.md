@@ -323,3 +323,24 @@ error MSB3021: ... LocalFirstWorkflowDashboard.Server.exe ...
 
 남은 차이: `program-verify`는 `--manifest`를 해석하지 않는다(`ProgramVerifierCli.cs:115`).
 픽스처 매니페스트로는 대조할 수 없고 실제 게이트 id로만 가능하다.
+
+## §13 (2026-07-26) — 세 게이트 전부 대조했다. 그리고 어긋남 하나를 더 찾아 고쳤다
+
+`POST-EXECUTOR`는 `gate-clean` 기대값이 1이라 **더러운 트리에서만** 통과한다.
+`server/` 아래에 미추적 파일을 두어 그 조건을 만들고 대조했다.
+
+| 게이트 | `di-completion-check` | `program-verify` |
+| --- | --- | --- |
+| `POST-COMMIT` | PASS 12/12 | PASS 12/12 |
+| `POST-EXECUTOR` | PASS 13/13 | PASS 13/13 |
+| `WP-STATE-INTEGRITY-LAND` | PASS 18/18 | PASS 18/18 |
+
+**소스가 더러운 경우**(실행자가 실제로 만드는 상태)는 둘 다 **exit 2 · `NOT-MEASURED` · 검사 0개**다.
+바뀐 소스로 빌드하지 않은 채 게이트를 돌리면 **바뀌기 전 바이너리를 재는 것**이므로 판정이 아니다.
+
+**그 대조에서 어긋남을 하나 더 찾았다.** 결정은 같았지만 `program-verify`는 `verdict` 필드를
+아예 내지 않았다(error 객체만). 소비자가 판정을 읽을 수 없다 — **§6이 난 자리가 이런 어긋남이다.**
+`gateId` + `verdict: "NOT-MEASURED"`를 같이 내도록 고쳐 낱말까지 맞췄다.
+
+**§8의 정본 결정은 여전히 유효하다.** 세 게이트가 일치한다는 것이 두 벌을 유지해도 된다는
+뜻은 아니다. 오늘만 어긋남을 두 번 찾아 맞췄다(`BuiltInCommands`, `verdict` 부재).
