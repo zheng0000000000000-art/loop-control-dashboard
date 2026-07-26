@@ -885,3 +885,22 @@ self-test: "epoch 1 재선언이 거부되는지 검증한다" (:534)
 - 승계 경로는 만들지 않는다. *"지금은 필요 없다"* 이지 *"영원히 안 만든다"* 가 아니다.
 
 **이 결재 항목은 닫혔다.**
+
+## 2026-07-26 — `DI-00-04` 차단 사유 두 개를 실측했다. 둘 다 해소됐다
+
+13일째 `blocked`인 `WORKSTATE`의 `blockers` 두 건을 **깨끗한 클론에서 위조 시험으로** 다시 쟀다
+(`docs/verification/blocker-recheck-2026-07-26.md`). **실제 `WORKSTATE.json`은 건드리지 않았다.**
+
+| 차단 사유 | 실측 |
+| --- | --- |
+| ① 손 위조 transition-id가 통과한다 | **통과하지 않는다.** `apply` → `rejected` exit 1, `stateWritten false`, 사유 `reconciliation-failed: FORGED-BY-HAND-0001:state-transition-not-logged`. reconciliation이 멱등보다 **먼저** 돈다 |
+| ② `--human-decision` 위조로 AI 자기 승인 | **경로 없음.** `removed-option: --human-decision` exit 2. 고위험 전이는 `trusted-human-receipt-required`로 아예 거부 |
+
+**사람 판단이 필요한 것**:
+
+1. **`blockers` 두 건을 해소로 정리할 것인가.** `WORKSTATE`를 옮기는 것은 **상태 전이 = 사람 결재**이고,
+   `blockers`를 쓴 주체는 **검수자**다. 조율자가 지우지 않았다.
+2. **남은 조건 하나는 아직 안 쟀다** — *"05H+06C-1+06C-2+06H를 통합 branch에서 단일 land gate로"*.
+   **그 네 조각이 이 브랜치에 다 들어와 있는지 확인이 필요하다.** LAND 18/18은 그 증거가 아니다.
+3. `InspectPending`이 reconciliation보다 먼저 `idempotent`를 낼 수 있는 경로는 **재보지 않았다.**
+   `stateWritten: false`라 위조된 상태 변경은 아니지만, *"거짓 OK"* 는 가능하다.
