@@ -18,7 +18,7 @@ internal static class CliRouter
     [
         "snapshot-behavior", "verify-behavior", "dispatch-executor", "orch-observe",
         "measure", "simtest", "simtune", "refeedbacktest", "tier2test",
-        "projection", "state-transition", "trust-origin", "recovery", "program-verify",
+        "projection", "state-transition", "trust-origin", "recovery", "program-verify", "codex-launch",
     ];
 
     // CLI 紐낅졊??遺꾧린?쒕떎. ?대떦 紐낅졊???놁쑝硫?null??諛섑솚?????쒕쾭濡?吏꾪뻾?쒕떎.
@@ -64,6 +64,10 @@ internal static class CliRouter
         // trust-origin 부트스트랩 선언 CLI — HarnessRegistry 미등록 (일반 write command).
         if (args.Length > 0 && string.Equals(args[0], "trust-origin", StringComparison.OrdinalIgnoreCase))
             return TrustOriginCli.Run(args);
+
+        // CodexHarnessLauncher — 격리 사본에서 codex를 돌리고 증거만 남긴다. 판정하지 않는다.
+        if (args.Length > 0 && string.Equals(args[0], "codex-launch", StringComparison.OrdinalIgnoreCase))
+            return CodexHarnessLauncherCli.Run(args);
 
         // Program Verifier — 게이트 검사를 직접 재실행해 판정한다. WORKSTATE는 쓰지 않는다.
         if (args.Length > 0 && string.Equals(args[0], "program-verify", StringComparison.OrdinalIgnoreCase))

@@ -114,7 +114,7 @@
         }
       ],
       "issues": [
-        "skillDomainViolations: 0→1로 악화"
+        "functionsWithoutComment: 0→7로 악화"
       ]
     },
     "apply": {
@@ -128,7 +128,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-26T13:40:59.1041207+09:00",
+  "lastUpdated": "2026-07-26T13:51:16.4170790+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
