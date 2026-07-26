@@ -1,0 +1,441 @@
+{
+  "harness": "di-completion-check",
+  "gateId": "POST-COMMIT",
+  "taskId": "LAUNCH-TERR-02",
+  "manifest": "C:/Users/1/Documents/Local-First Workflow Dashboard/docs/handoff/GATE-MANIFEST.json",
+  "createdAt": "2026-07-27T03:01:03.8493375+09:00",
+  "baselineCommit": "3dd222d59ce8a5fb9ffcdcf2895a088586fcdb97",
+  "worktreeCleanAtStart": true,
+  "gateVerdict": "FAIL",
+  "launchId": "LAUNCH-TERR-02",
+  "checkCount": 22,
+  "failureCount": 1,
+  "warningCount": 16,
+  "verdict": "FAIL",
+  "checks": [
+    {
+      "order": 1,
+      "command": "gate-clean",
+      "args": [
+        "server"
+      ],
+      "expectedExit": 0,
+      "mutatesState": false,
+      "actualExit": 0,
+      "durationMs": 692,
+      "startedAt": "2026-07-27T03:01:03.8813078+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"gate-clean\",\n  \"paths\": [\n    \"server\"\n  ],\n  \"contentDirtyCount\": 0,\n  \"representationOnlyCount\": 0,\n  \"gate\": \"PASS\",\n  \"files\": [],\n  \"hygieneWarning\": null\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 2,
+      "command": "handoff-integrity",
+      "args": [],
+      "expectedExit": 0,
+      "mutatesState": false,
+      "actualExit": 0,
+      "durationMs": 719,
+      "startedAt": "2026-07-27T03:01:04.5754863+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "requestSha256\": null,\n        \"preStateSha256\": null,\n        \"postStateSha256\": null,\n        \"transitionContractSha256\": null\n      },\n      \"STATE-01-REVIEW-002\": {\n        \"exists\": true,\n        \"schemaVersion\": 1,\n        \"requestSha256\": null,\n        \"preStateSha256\": null,\n        \"postStateSha256\": null,\n        \"transitionContractSha256\": null\n      },\n      \"STATE-01-REVIEW-003\": {\n        \"exists\": true,\n        \"schemaVersion\": 1,\n        \"requestSha256\": null,\n        \"preStateSha256\": null,\n        \"postStateSha256\": null,\n        \"transitionContractSha256\": null\n      },\n      \"TEST-DI0001-2\": {\n        \"exists\": true,\n        \"schemaVersion\": 1,\n        \"requestSha256\": null,\n        \"preStateSha256\": null,\n        \"postStateSha256\": null,\n        \"transitionContractSha256\": null\n      },\n      \"TEST-DI0001-4\": {\n        \"exists\": true,\n        \"schemaVersion\": 1,\n        \"requestSha256\": null,\n        \"preStateSha256\": null,\n        \"postStateSha256\": null,\n        \"transitionContractSha256\": null\n      },\n      \"TEST-DI0001-9\": {\n        \"exists\": true,\n        \"schemaVersion\": 1,\n        \"requestSha256\": null,\n        \"preStateSha256\": null,\n        \"postStateSha256\": null,\n        \"transitionContractSha256\": null\n      },\n      \"TEST-DI0001-RESTORE\": {\n        \"exists\": true,\n        \"schemaVersion\": 1,\n        \"requestSha256\": null,\n        \"preStateSha256\": null,\n        \"postStateSha256\": null,\n        \"transitionContractSha256\": null\n      },\n      \"WP-STATE-INTEGRITY-INTAKE\": {\n        \"exists\": true,\n        \"schemaVersion\": 1,\n        \"requestSha256\": null,\n        \"preStateSha256\": null,\n        \"postStateSha256\": null,\n        \"transitionContractSha256\": null\n      }\n    }\n  },\n  \"changedFiles\": [\n    {\n      \"path\": \"server/OllamaExecutor.cs\",\n      \"exists\": true,\n      \"hashField\": \"sha256\",\n      \"hashMatches\": true,\n      \"actualSha256\": \"8e44f8dee83c07901be0eb037fecd1a54b98ba1a84f5790f6af522e8460fab34\"\n    },\n    {\n      \"path\": \"server/Program.cs\",\n      \"exists\": true,\n      \"hashField\": \"sha256\",\n      \"hashMatches\": true,\n      \"actualSha256\": \"2356f0f8872973c0894ef3889fd44b2d65ca85f3b10c79737fdd00192d58e3c5\"\n    },\n    {\n      \"path\": \"docs/verification/ledger04-metricid-normalization.md\",\n      \"exists\": true,\n      \"hashField\": \"sha256\",\n      \"hashMatches\": true,\n      \"actualSha256\": \"129c601ea657909d5d95a7e44d6daee69d2b3076a604e1c868610fbc67baa8e6\"\n    },\n    {\n      \"path\": \"docs/directives/LEDGER04-metricid-normalization.md\",\n      \"exists\": true,\n      \"hashField\": \"sha256\",\n      \"hashMatches\": true,\n      \"actualSha256\": \"fa6855c850db1c9fec592d87ec348fb1fec8ee2e901d16e102f1a8a93868a0d5\"\n    }\n  ],\n  \"failures\": [],\n  \"warnings\": [\n    {\n      \"subject\": \"TEST-DI0001-2\",\n      \"code\": \"duplicate-success-in-log\",\n      \"message\": \"id 'TEST-DI0001-2' appears 2 times (v1 entries, contract binding unverifiable)\"\n    }\n  ],\n  \"note\": \"Full mode: changedFiles hash, completion, queue, reconciliation.\"\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 3,
+      "command": "context-pack-integrity",
+      "args": [],
+      "expectedExit": 0,
+      "mutatesState": false,
+      "actualExit": 0,
+      "durationMs": 750,
+      "startedAt": "2026-07-27T03:01:05.2954162+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69\"\n        }\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    },\n    {\n      \"directive\": \"docs/handoff/queue/directive-NHASH-01-normalized-hash-single-source.md\",\n      \"diId\": \"NHASH-01\",\n      \"verdict\": \"ok\",\n      \"requiredInputCount\": 2,\n      \"okCount\": 2,\n      \"missingCount\": 0,\n      \"staleCount\": 0,\n      \"warningCount\": 0,\n      \"failureCount\": 0,\n      \"requiredInputs\": [\n        {\n          \"path\": \"docs/directives/_header.md\",\n          \"verdict\": \"ok\",\n          \"expectedSha256\": \"b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee\",\n          \"actualSha256\": \"b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee\"\n        },\n        {\n          \"path\": \"docs/verification/_template.md\",\n          \"verdict\": \"ok\",\n          \"expectedSha256\": \"15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69\",\n          \"actualSha256\": \"15f1b6dbdb703c94d6d7259b9417e17f438c980fad25b50b7ed96bc4da354b69\"\n        }\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    }\n  ],\n  \"crossDirectivePinCollisions\": [\n    {\n      \"code\": \"cross-directive-pin-collision\",\n      \"path\": \"server/Harness/ContextPackIntegrityCli.cs\",\n      \"writtenBy\": \"CG04A\",\n      \"pinnedBy\": \"DLINT-01\"\n    },\n    {\n      \"code\": \"cross-directive-pin-collision\",\n      \"path\": \"server/Harness/ContextPackIntegrityCli.cs\",\n      \"writtenBy\": \"CODEX-GATE-04\",\n      \"pinnedBy\": \"DLINT-01\"\n    },\n    {\n      \"code\": \"cross-directive-pin-collision\",\n      \"path\": \"server/Harness/HarnessRegistry.cs\",\n      \"writtenBy\": \"DISPO-01\",\n      \"pinnedBy\": \"GATE-TRUTH-01\"\n    },\n    {\n      \"code\": \"cross-directive-pin-collision\",\n      \"path\": \"server/Harness/ContextPackIntegrityCli.cs\",\n      \"writtenBy\": \"GATE-CP-01\",\n      \"pinnedBy\": \"DLINT-01\"\n    },\n    {\n      \"code\": \"cross-directive-pin-collision\",\n      \"path\": \"server/Harness/HarnessRegistry.cs\",\n      \"writtenBy\": \"GWIT-01\",\n      \"pinnedBy\": \"GATE-TRUTH-01\"\n    },\n    {\n      \"code\": \"cross-directive-pin-collision\",\n      \"path\": \"server/Harness/ContextPackIntegrityCli.cs\",\n      \"writtenBy\": \"HOPT-01\",\n      \"pinnedBy\": \"DLINT-01\"\n    },\n    {\n      \"code\": \"cross-directive-pin-collision\",\n      \"path\": \"server/Harness/LaunchCheckCli.cs\",\n      \"writtenBy\": \"HOPT-01\",\n      \"pinnedBy\": \"DLINT-01\"\n    },\n    {\n      \"code\": \"cross-directive-pin-collision\",\n      \"path\": \"server/Harness/HarnessRegistry.cs\",\n      \"writtenBy\": \"HOPT-01\",\n      \"pinnedBy\": \"GATE-TRUTH-01\"\n    },\n    {\n      \"code\": \"cross-directive-pin-collision\",\n      \"path\": \"server/Harness/HarnessRegistry.cs\",\n      \"writtenBy\": \"HREG-01\",\n      \"pinnedBy\": \"GATE-TRUTH-01\"\n    },\n    {\n      \"code\": \"cross-directive-pin-collision\",\n      \"path\": \"server/Harness/HarnessRegistry.cs\",\n      \"writtenBy\": \"HREG-02\",\n      \"pinnedBy\": \"GATE-TRUTH-01\"\n    }\n  ],\n  \"note\": \"Read-only check. Context Pack hashes are supplied by directive authors, not by this harness.\"\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 4,
+      "command": "doc-integrity",
+      "args": [],
+      "expectedExit": 0,
+      "mutatesState": false,
+      "actualExit": 0,
+      "durationMs": 733,
+      "startedAt": "2026-07-27T03:01:06.0462625+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"doc-integrity\",\n  \"fixtureMode\": false,\n  \"fixture\": null,\n  \"checked\": 12,\n  \"brokenCount\": 0,\n  \"verdict\": \"INTACT\",\n  \"files\": [\n    {\n      \"path\": \"docs/handoff/WORKSTATE.json\",\n      \"kind\": \"json\",\n      \"verdict\": \"intact\",\n      \"reason\": \"파싱 성공\"\n    },\n    {\n      \"path\": \"docs/STATUS.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"docs/handoff/SONNET-QUEUE.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"docs/handoff/HUMAN-INBOX.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"docs/handoff/HS-CANDIDATES.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"docs/wiki/failures/index.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"docs/handoff/HARNESSES.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"skills/common/hs-gate.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"skills/common/verification.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"skills/common/directive-writing.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"AGENT-GUIDE.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"CLAUDE.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    }\n  ],\n  \"note\": \"비원자적 쓰기로 조용히 잘린 파일을 검출한다. 복구는 사람·조율자의 몫.\"\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 5,
+      "command": "hs-scan",
+      "args": [],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 725,
+      "startedAt": "2026-07-27T03:01:06.7797052+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"hs-scan\",\n  \"triggered\": true,\n  \"lastGate\": \"2026-07-14 01:30\",\n  \"failureCaseCount\": 19,\n  \"signals\": [\n    \"S4 반복 구성요소: executor-orchestration 9회\",\n    \"S4 반복 구성요소: verification-harness 3회\",\n    \"S3 정기: 마지막 심사 후 13.1일 경과\"\n  ],\n  \"candidates\": [\n    {\n      \"signal\": \"S4\",\n      \"component\": \"executor-orchestration\",\n      \"occurrences\": 9,\n      \"cases\": [\n        \"FAIL-2026-004\",\n        \"FAIL-2026-005\",\n        \"FAIL-2026-008\",\n        \"FAIL-2026-010\",\n        \"FAIL-2026-012\",\n        \"FAIL-2026-013\",\n        \"FAIL-2026-016\",\n        \"FAIL-2026-017\",\n        \"FAIL-2026-019\"\n      ],\n      \"suggestedType\": \"하네스\",\n      \"why\": \"같은 구성요소에서 9회 실패 — 회귀 하네스 후보\"\n    },\n    {\n      \"signal\": \"S4\",\n      \"component\": \"verification-harness\",\n      \"occurrences\": 3,\n      \"cases\": [\n        \"FAIL-2026-014\",\n        \"FAIL-2026-015\",\n        \"FAIL-2026-018\"\n      ],\n      \"suggestedType\": \"하네스\",\n      \"why\": \"같은 구성요소에서 3회 실패 — 회귀 하네스 후보\"\n    }\n  ],\n  \"action\": \"HS-GATE 수행 의무 — skills/common/hs-gate.md 절차로 점수화 후 HS-CANDIDATES.md에 기록\"\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 6,
+      "command": "handoff-integrity",
+      "args": [
+        "--workstate",
+        "docs/qa/fixtures/reconciliation/fixture-a/workstate.json",
+        "--applier-log",
+        "docs/qa/fixtures/reconciliation/fixture-a/applier-log.jsonl"
+      ],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 676,
+      "startedAt": "2026-07-27T03:01:07.5058320+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"handoff-integrity\",\n  \"workstate\": \"docs/qa/fixtures/reconciliation/fixture-a/workstate.json\",\n  \"applierLog\": \"docs/qa/fixtures/reconciliation/fixture-a/applier-log.jsonl\",\n  \"fixtureMode\": true,\n  \"diId\": \"DI-TEST-A\",\n  \"status\": \"blocked\",\n  \"changedFileCount\": 0,\n  \"failureCount\": 1,\n  \"warningCount\": 0,\n  \"verdict\": \"FAIL\",\n  \"reconciliation\": {\n    \"appliedTransitionCount\": 2,\n    \"successfulLogEntryCount\": 3,\n    \"successfulLogIdCount\": 3,\n    \"duplicateSuccessLogCount\": 0,\n    \"logSchemaVersions\": {\n      \"v1\": 3\n    },\n    \"pendingExemptionApplied\": false,\n    \"reconciliation\": \"FAIL\",\n    \"lookupSuccess\": {\n      \"TEST-DI0001-1\": {\n        \"exists\": true,\n        \"schemaVersion\": 1,\n        \"requestSha256\": null,\n        \"preStateSha256\": null,\n        \"postStateSha256\": null,\n        \"transitionContractSha256\": null\n      },\n      \"TEST-DI0001-2\": {\n        \"exists\": true,\n        \"schemaVersion\": 1,\n        \"requestSha256\": null,\n        \"preStateSha256\": null,\n        \"postStateSha256\": null,\n        \"transitionContractSha256\": null\n      },\n      \"TEST-DI0001-3\": {\n        \"exists\": true,\n        \"schemaVersion\": 1,\n        \"requestSha256\": null,\n        \"preStateSha256\": null,\n        \"postStateSha256\": null,\n        \"transitionContractSha256\": null\n      }\n    }\n  },\n  \"changedFiles\": [],\n  \"failures\": [\n    {\n      \"subject\": \"TEST-DI0001-2\",\n      \"code\": \"log-transition-missing-from-state\",\n      \"message\": \"id 'TEST-DI0001-2' is in successful log but missing from appliedTransitions (mid-incident state)\"\n    }\n  ],\n  \"warnings\": [],\n  \"note\": \"Fixture isolation mode: reconciliation+blockers only.\"\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 7,
+      "command": "handoff-integrity",
+      "args": [
+        "--workstate",
+        "docs/qa/fixtures/reconciliation/fixture-malformed/workstate.json",
+        "--applier-log",
+        "docs/qa/fixtures/reconciliation/fixture-malformed/applier-log.jsonl"
+      ],
+      "expectedExit": 2,
+      "mutatesState": false,
+      "actualExit": 2,
+      "durationMs": 654,
+      "startedAt": "2026-07-27T03:01:08.1828953+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"handoff-integrity\",\n  \"workstate\": \"docs/qa/fixtures/reconciliation/fixture-malformed/workstate.json\",\n  \"fixtureMode\": true,\n  \"verdict\": \"HARNESS_ERROR\",\n  \"failures\": [],\n  \"warnings\": []\n}",
+      "stderrTail": "{\"harness-error\":\"workstate-malformed\",\"subject\":\"workstate.appliedTransitions[TRANS-MAL-001].appliedAt\",\"message\":\"appliedAt is missing or not a valid UTC RFC3339 timestamp: ''\"}"
+    },
+    {
+      "order": 8,
+      "command": "context-pack-integrity",
+      "args": [
+        "docs/qa/gate-witness/stale-pin-directive.md"
+      ],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 677,
+      "startedAt": "2026-07-27T03:01:08.8376379+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"context-pack-integrity\",\n  \"checkedDirectiveCount\": 1,\n  \"okCount\": 0,\n  \"missingCount\": 0,\n  \"staleCount\": 1,\n  \"skippedCount\": 0,\n  \"warningCount\": 0,\n  \"crossDirectivePinCollisionCount\": 0,\n  \"failureCount\": 1,\n  \"verdict\": \"FAIL\",\n  \"directives\": [\n    {\n      \"directive\": \"docs/qa/gate-witness/stale-pin-directive.md\",\n      \"diId\": \"WITNESS-STALE\",\n      \"verdict\": \"failed\",\n      \"requiredInputCount\": 1,\n      \"okCount\": 0,\n      \"missingCount\": 0,\n      \"staleCount\": 1,\n      \"warningCount\": 0,\n      \"failureCount\": 1,\n      \"requiredInputs\": [\n        {\n          \"path\": \"docs/directives/_header.md\",\n          \"verdict\": \"stale\",\n          \"expectedSha256\": \"0000000000000000000000000000000000000000000000000000000000000000\",\n          \"actualSha256\": \"b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee\",\n          \"reason\": \"sha256 does not match current file content\"\n        }\n      ],\n      \"failures\": [],\n      \"warnings\": []\n    }\n  ],\n  \"crossDirectivePinCollisions\": [],\n  \"note\": \"Read-only check. Context Pack hashes are supplied by directive authors, not by this harness.\"\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 9,
+      "command": "gate-clean",
+      "args": [
+        "--status-fixture",
+        "docs/qa/gate-witness/gate-clean-dirty.status"
+      ],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 660,
+      "startedAt": "2026-07-27T03:01:09.5153874+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"gate-clean\",\n  \"fixtureMode\": true,\n  \"statusFixture\": \"docs/qa/gate-witness/gate-clean-dirty.status\",\n  \"statusLength\": 40,\n  \"gate\": \"DIRTY\"\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 10,
+      "command": "doc-integrity",
+      "args": [
+        "--fixture",
+        "docs/qa/gate-witness/doc-integrity-mismatch"
+      ],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 658,
+      "startedAt": "2026-07-27T03:01:10.1756954+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"doc-integrity\",\n  \"fixtureMode\": true,\n  \"fixture\": \"docs/qa/gate-witness/doc-integrity-mismatch\",\n  \"checked\": 12,\n  \"brokenCount\": 1,\n  \"verdict\": \"TRUNCATED\",\n  \"files\": [\n    {\n      \"path\": \"docs/handoff/WORKSTATE.json\",\n      \"kind\": \"json\",\n      \"verdict\": \"intact\",\n      \"reason\": \"파싱 성공\"\n    },\n    {\n      \"path\": \"docs/STATUS.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"TRUNCATED\",\n      \"reason\": \"코드펜스가 닫히지 않음 — 잘림\"\n    },\n    {\n      \"path\": \"docs/handoff/SONNET-QUEUE.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"docs/handoff/HUMAN-INBOX.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"docs/handoff/HS-CANDIDATES.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"docs/wiki/failures/index.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"docs/handoff/HARNESSES.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"skills/common/hs-gate.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"skills/common/verification.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"skills/common/directive-writing.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"AGENT-GUIDE.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    },\n    {\n      \"path\": \"CLAUDE.md\",\n      \"kind\": \"markdown\",\n      \"verdict\": \"intact\",\n      \"reason\": \"무결\"\n    }\n  ],\n  \"note\": \"비원자적 쓰기로 조용히 잘린 파일을 검출한다. 복구는 사람·조율자의 몫.\"\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 11,
+      "command": "gate-witness-check",
+      "args": [],
+      "expectedExit": 0,
+      "mutatesState": false,
+      "actualExit": 0,
+      "durationMs": 17104,
+      "startedAt": "2026-07-27T03:01:10.8340485+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"gate-witness-check\",\n  \"gates\": [\n    {\n      \"gateId\": \"POST-EXECUTOR\",\n      \"checkCount\": 13,\n      \"witnessedCount\": 13,\n      \"unwitnessedCount\": 0,\n      \"unwitnessed\": []\n    },\n    {\n      \"gateId\": \"POST-COMMIT\",\n      \"checkCount\": 22,\n      \"witnessedCount\": 22,\n      \"unwitnessedCount\": 0,\n      \"unwitnessed\": []\n    },\n    {\n      \"gateId\": \"WP-STATE-INTEGRITY-LAND\",\n      \"checkCount\": 18,\n      \"witnessedCount\": 18,\n      \"unwitnessedCount\": 0,\n      \"unwitnessed\": []\n    }\n  ],\n  \"totalUnwitnessed\": 0\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 12,
+      "command": "gate-witness-check",
+      "args": [
+        "docs/qa/gate-witness/require-failure-witness.json"
+      ],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 682,
+      "startedAt": "2026-07-27T03:01:27.9387130+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"gate-witness-check\",\n  \"gates\": [\n    {\n      \"gateId\": \"GWIT-01-NEGATIVE\",\n      \"checkCount\": 1,\n      \"witnessedCount\": 0,\n      \"unwitnessedCount\": 1,\n      \"unwitnessed\": [\n        {\n          \"order\": 1,\n          \"command\": \"gate-witness-check\"\n        }\n      ]\n    }\n  ],\n  \"totalUnwitnessed\": 1\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 13,
+      "command": "launch-disposition",
+      "args": [
+        "outbox"
+      ],
+      "expectedExit": 0,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 1220,
+      "startedAt": "2026-07-27T03:01:28.6209970+09:00",
+      "verdict": "FAIL",
+      "stdoutTail": "se,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-DICC-03\",\n      \"directory\": \"codex-launch-LAUNCH-DICC-03\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-DICC-04\",\n      \"directory\": \"codex-launch-LAUNCH-DICC-04\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-DICC-04-R1\",\n      \"directory\": \"codex-launch-LAUNCH-DICC-04-R1\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-DISPO-01\",\n      \"directory\": \"codex-launch-LAUNCH-DISPO-01\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-DISPO-02\",\n      \"directory\": \"codex-launch-LAUNCH-DISPO-02\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-DISPO-03\",\n      \"directory\": \"codex-launch-LAUNCH-DISPO-03\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-GWIT-01\",\n      \"directory\": \"codex-launch-LAUNCH-GWIT-01\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-GWIT-01-R2\",\n      \"directory\": \"codex-launch-LAUNCH-GWIT-01-R2\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-GWIT-02\",\n      \"directory\": \"codex-launch-LAUNCH-GWIT-02\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-GWIT-03\",\n      \"directory\": \"codex-launch-LAUNCH-GWIT-03\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-GWIT-04\",\n      \"directory\": \"codex-launch-LAUNCH-GWIT-04\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-GWIT-05\",\n      \"directory\": \"codex-launch-LAUNCH-GWIT-05\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-GWIT-05-R2\",\n      \"directory\": \"codex-launch-LAUNCH-GWIT-05-R2\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-GWIT-06\",\n      \"directory\": \"codex-launch-LAUNCH-GWIT-06\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-HOPT-01\",\n      \"directory\": \"codex-launch-LAUNCH-HOPT-01\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-HREG-01\",\n      \"directory\": \"codex-launch-LAUNCH-HREG-01\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-HREG-02\",\n      \"directory\": \"codex-launch-LAUNCH-HREG-02\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-NHASH-01\",\n      \"directory\": \"codex-launch-LAUNCH-NHASH-01\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-TERR-01\",\n      \"directory\": \"codex-launch-LAUNCH-TERR-01\",\n      \"violation\": false,\n      \"reason\": null\n    },\n    {\n      \"launchId\": \"LAUNCH-TERR-02\",\n      \"directory\": \"codex-launch-LAUNCH-TERR-02\",\n      \"violation\": true,\n      \"reason\": \"gate-report-not-found\"\n    }\n  ]\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 14,
+      "command": "launch-disposition",
+      "args": [
+        "docs/qa/gate-witness/launch-disposition/case-01"
+      ],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 631,
+      "startedAt": "2026-07-27T03:01:29.8417179+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"launch-disposition\",\n  \"root\": \"docs/qa/gate-witness/launch-disposition/case-01\",\n  \"launchCount\": 1,\n  \"violations\": 1,\n  \"launches\": [\n    {\n      \"launchId\": \"MISSING\",\n      \"directory\": \"codex-launch-MISSING\",\n      \"violation\": true,\n      \"reason\": \"disposition-missing\"\n    }\n  ]\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 15,
+      "command": "gate-witness-check",
+      "args": [
+        "docs/qa/gate-witness/internal-claim-understated.json"
+      ],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 989,
+      "startedAt": "2026-07-27T03:01:30.4734585+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"gate-witness-check\",\n  \"gates\": [\n    {\n      \"gateId\": \"GWIT-UNDERCLAIM\",\n      \"checkCount\": 1,\n      \"witnessedCount\": 0,\n      \"unwitnessedCount\": 1,\n      \"unwitnessed\": [\n        {\n          \"order\": 1,\n          \"command\": \"state-transition-selftest\"\n        }\n      ]\n    }\n  ],\n  \"totalUnwitnessed\": 1\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 16,
+      "command": "gate-witness-check",
+      "args": [
+        "docs/qa/gate-witness/nested-counter.json"
+      ],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 649,
+      "startedAt": "2026-07-27T03:01:31.4627282+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"gate-witness-check\",\n  \"gates\": [\n    {\n      \"gateId\": \"GWIT-NESTED-COUNTER\",\n      \"checkCount\": 1,\n      \"witnessedCount\": 0,\n      \"unwitnessedCount\": 1,\n      \"unwitnessed\": [\n        {\n          \"order\": 1,\n          \"command\": \"gate-witness-check\"\n        }\n      ]\n    }\n  ],\n  \"totalUnwitnessed\": 1\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 17,
+      "command": "gate-witness-check",
+      "args": [
+        "docs/qa/gate-witness/jsonlines-non-json.json"
+      ],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 664,
+      "startedAt": "2026-07-27T03:01:32.1123743+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"gate-witness-check\",\n  \"gates\": [\n    {\n      \"gateId\": \"GWIT-06-NON-JSON\",\n      \"checkCount\": 1,\n      \"witnessedCount\": 0,\n      \"unwitnessedCount\": 1,\n      \"unwitnessed\": [\n        {\n          \"order\": 1,\n          \"command\": \"gate-witness-check\"\n        }\n      ]\n    }\n  ],\n  \"totalUnwitnessed\": 1\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 18,
+      "command": "gate-witness-check",
+      "args": [
+        "docs/qa/gate-witness/jsonlines-truncated.json"
+      ],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 661,
+      "startedAt": "2026-07-27T03:01:32.7769425+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\n  \"harness\": \"gate-witness-check\",\n  \"gates\": [\n    {\n      \"gateId\": \"GWIT-06-TRUNCATED\",\n      \"checkCount\": 1,\n      \"witnessedCount\": 0,\n      \"unwitnessedCount\": 1,\n      \"unwitnessed\": [\n        {\n          \"order\": 1,\n          \"command\": \"gate-witness-check\"\n        }\n      ]\n    }\n  ],\n  \"totalUnwitnessed\": 1\n}",
+      "stderrTail": ""
+    },
+    {
+      "order": 19,
+      "command": "territory-check",
+      "args": [],
+      "expectedExit": 0,
+      "mutatesState": false,
+      "actualExit": 0,
+      "durationMs": 806,
+      "startedAt": "2026-07-27T03:01:33.4383977+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\"harness\":\"territory-check\",\"commit\":\"3dd222d59ce8a5fb9ffcdcf2895a088586fcdb97\",\"territoryPaths\":[],\"coveredByOutbox\":[],\"exempted\":[],\"staleExceptions\":[],\"violations\":0,\"violationPaths\":[]}",
+      "stderrTail": ""
+    },
+    {
+      "order": 20,
+      "command": "territory-check",
+      "args": [
+        "--commit",
+        "7feeb44d22039f3d92f934ca2dc6ba69bc0dd8f5"
+      ],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 784,
+      "startedAt": "2026-07-27T03:01:34.2455038+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\"harness\":\"territory-check\",\"commit\":\"7feeb44d22039f3d92f934ca2dc6ba69bc0dd8f5\",\"territoryPaths\":[\"docs/qa/gate-witness/nested-counter-output.json\",\"docs/qa/gate-witness/nested-counter.json\",\"server/Harness/GateWitnessCheckCli.cs\"],\"coveredByOutbox\":[],\"exempted\":[],\"staleExceptions\":[],\"violations\":3,\"violationPaths\":[\"docs/qa/gate-witness/nested-counter-output.json\",\"docs/qa/gate-witness/nested-counter.json\",\"server/Harness/GateWitnessCheckCli.cs\"]}",
+      "stderrTail": ""
+    },
+    {
+      "order": 21,
+      "command": "territory-check",
+      "args": [
+        "--ledger",
+        "docs/qa/gate-witness/territory-stale-ledger.json",
+        "--commit",
+        "7feeb44d22039f3d92f934ca2dc6ba69bc0dd8f5"
+      ],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 806,
+      "startedAt": "2026-07-27T03:01:35.0302922+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\"harness\":\"territory-check\",\"commit\":\"7feeb44d22039f3d92f934ca2dc6ba69bc0dd8f5\",\"territoryPaths\":[\"docs/qa/gate-witness/nested-counter-output.json\",\"docs/qa/gate-witness/nested-counter.json\",\"server/Harness/GateWitnessCheckCli.cs\"],\"coveredByOutbox\":[],\"exempted\":[],\"staleExceptions\":[\"0000000000000000000000000000000000000001\"],\"violations\":4,\"violationPaths\":[\"docs/qa/gate-witness/nested-counter-output.json\",\"docs/qa/gate-witness/nested-counter.json\",\"server/Harness/GateWitnessCheckCli.cs\"]}",
+      "stderrTail": ""
+    },
+    {
+      "order": 22,
+      "command": "territory-check",
+      "args": [
+        "--dispositions",
+        "docs/qa/gate-witness/territory-non-imported",
+        "--commit",
+        "7feeb44d22039f3d92f934ca2dc6ba69bc0dd8f5"
+      ],
+      "expectedExit": 1,
+      "mutatesState": false,
+      "actualExit": 1,
+      "durationMs": 741,
+      "startedAt": "2026-07-27T03:01:35.8366862+09:00",
+      "verdict": "PASS",
+      "stdoutTail": "{\"harness\":\"territory-check\",\"commit\":\"7feeb44d22039f3d92f934ca2dc6ba69bc0dd8f5\",\"territoryPaths\":[\"docs/qa/gate-witness/nested-counter-output.json\",\"docs/qa/gate-witness/nested-counter.json\",\"server/Harness/GateWitnessCheckCli.cs\"],\"coveredByOutbox\":[],\"exempted\":[],\"staleExceptions\":[],\"violations\":3,\"violationPaths\":[\"docs/qa/gate-witness/nested-counter-output.json\",\"docs/qa/gate-witness/nested-counter.json\",\"server/Harness/GateWitnessCheckCli.cs\"]}",
+      "stderrTail": ""
+    }
+  ],
+  "failures": [
+    {
+      "subject": "launch-disposition",
+      "code": "exit-mismatch",
+      "message": "expected 0, actual 1"
+    }
+  ],
+  "warnings": [
+    {
+      "command": "call-integrity-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "claim-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "di-completion-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "e2e-usage",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "launch-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "path-guard-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "project-api-edge-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "scope-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "state-transition-callsite-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "template-sync-check",
+      "code": "unlisted",
+      "message": "등록된 하네스가 manifest 게이트에 없다."
+    },
+    {
+      "command": "gate-witness-check",
+      "code": "cli-contract-unlisted",
+      "message": "실재 배선이 CLI 계약에 없다."
+    },
+    {
+      "command": "launch-disposition",
+      "code": "cli-contract-unlisted",
+      "message": "실재 배선이 CLI 계약에 없다."
+    },
+    {
+      "command": "recovery-selftest",
+      "code": "cli-contract-unlisted",
+      "message": "실재 배선이 CLI 계약에 없다."
+    },
+    {
+      "command": "state-transition-selftest",
+      "code": "cli-contract-unlisted",
+      "message": "실재 배선이 CLI 계약에 없다."
+    },
+    {
+      "command": "territory-check",
+      "code": "cli-contract-unlisted",
+      "message": "실재 배선이 CLI 계약에 없다."
+    },
+    {
+      "command": "trust-origin-selftest",
+      "code": "cli-contract-unlisted",
+      "message": "실재 배선이 CLI 계약에 없다."
+    }
+  ],
+  "note": "Pass/fail is decided by expectedExit versus actual exit code. stdout/stderr are diagnostic evidence.",
+  "evidencePath": "outputs/gates/LAUNCH-TERR-02.gate.json"
+}
