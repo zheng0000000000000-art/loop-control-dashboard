@@ -31,7 +31,8 @@ internal static class DiCompletionCheckCli
         var taskId = string.IsNullOrWhiteSpace(options.TaskId)
             ? DateTime.Now.ToString("yyyyMMdd-HHmmss")
             : SanitizeFileName(options.TaskId);
-        var report = BuildBaseReport(options.GateId, manifestPath, taskId, options.LaunchId);
+        var attribution = CaptureStartAttribution(root);
+        var report = BuildBaseReport(options.GateId, manifestPath, taskId, options.LaunchId, attribution);
 
         try
         {
@@ -362,8 +363,48 @@ internal static class DiCompletionCheckCli
         return options;
     }
 
+    // 측정 시작 시점의 HEAD와 워크트리 청결 상태를 함께 잡는다.
+    private static StartAttribution CaptureStartAttribution(string root)
+    {
+        var baselineCommit = RunGitForAttribution(root, "rev-parse", "HEAD");
+        var status = RunGitForAttribution(root, "status", "--porcelain");
+        return new StartAttribution(baselineCommit ?? "", status is not null && string.IsNullOrWhiteSpace(status));
+    }
+
+    // 귀속 정보용 Git 명령을 실행하며 알 수 없는 값은 null로 남긴다.
+    private static string? RunGitForAttribution(string root, params string[] args)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("git")
+            {
+                WorkingDirectory = root,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
+            };
+            foreach (var arg in args) psi.ArgumentList.Add(arg);
+            using var process = Process.Start(psi);
+            if (process is null) return null;
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            return process.ExitCode == 0 ? output.Trim() : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     // 보고서 기본 필드를 만든다.
-    private static JsonObject BuildBaseReport(string gateId, string manifestPath, string taskId, string launchId)
+    private static JsonObject BuildBaseReport(
+        string gateId,
+        string manifestPath,
+        string taskId,
+        string launchId,
+        StartAttribution attribution)
     {
         var report = new JsonObject
         {
@@ -372,6 +413,8 @@ internal static class DiCompletionCheckCli
             ["taskId"] = taskId,
             ["manifest"] = manifestPath.Replace('\\', '/'),
             ["createdAt"] = DateTimeOffset.Now.ToString("O"),
+            ["baselineCommit"] = attribution.BaselineCommit,
+            ["worktreeCleanAtStart"] = attribution.WorktreeCleanAtStart,
             ["gateVerdict"] = "FAIL",
         };
         if (!string.IsNullOrWhiteSpace(launchId))
@@ -560,5 +603,6 @@ internal static class DiCompletionCheckCli
 }
 
 internal sealed record DiCompletionOptions(string GateId, string TaskId, string LaunchId, string ManifestPath, string EmitDocPath, bool EmitCliContract);
+internal sealed record StartAttribution(string BaselineCommit, bool WorktreeCleanAtStart);
 internal sealed record ProcessRunResult(int ExitCode, string Stdout, string Stderr, long DurationMs);
 internal sealed record CheckRunResult(JsonObject Report, bool Passed, JsonObject Failure);

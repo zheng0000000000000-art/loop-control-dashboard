@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-DICC-03",
+  "diId": "DICC-03",
+  "baselineCommit": "d403d7cab010adcc96b8ff2dd724eb0f36ff46aa",
+  "startedAt": "2026-07-26T11:43:39Z",
+  "finishedAt": "2026-07-26T11:50:53Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "57483ba67f9f96da7dbe7eaecca2a7165a89c312a22d3e2cc4404f782329a9cb",
+  "stderrTail": "\",\r\n-  \"baselineCommit\": \"d403d7cab010adcc96b8ff2dd724eb0f36ff46aa\",\r\n-  \"worktreeCleanAtStart\": false,\r\n-  \"gateVerdict\": \"FAIL\",\r\n-  \"launchId\": \"LAUNCH-PROBE\",\r\n-  \"verdict\": \"FAIL-CLOSED\",\r\n-  \"failureCount\": 1,\r\n-  \"failures\": [\r\n-    {\r\n-      \"subject\": \"\",\r\n-      \"code\": \"manifest-missing\",\r\n-      \"message\": \"manifest not found: docs/handoff/GATE-MANIFEST.json\"\r\n-    }\r\n-  ],\r\n-  \"evidencePath\": \"outputs/gates/LAUNCH-PROBE.gate.json\"\r\n-}\n\\ No newline at end of file\n\ntokens used\n132,931",
+  "changedPaths": [
+    "server/Harness/DiCompletionCheckCli.cs",
+    "docs/qa/gate-witness/DICC-03.md"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "7422695a56137f370f06e070ab9880d3d46772c1f8875d344d364a5307700c09",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

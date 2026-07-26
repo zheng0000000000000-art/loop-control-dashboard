@@ -405,3 +405,58 @@ di-completion-check 보고 키: ... launchId 있음 ... baselineCommit 없음
 
 `DICC-02`가 더한 `launchId`는 옳고 필요하다 — **다만 충분하지 않다.**
 `baselineCommit`을 더하는 후속 지시서가 필요하다.
+
+---
+
+# DICC-03 (append, 2026-07-26) — 권위 있는 러너의 보고를 실제로 왕복시켰다
+
+앞 정정(*"`DICC-02`는 절반만 고쳤다"*)을 닫는다.
+
+## ★ 시험 1 — 픽스처가 아니라 **실물**로 왕복
+
+`DICC-02`가 실패한 지점이 여기였다. 이번에는 **조율자가 직접** 돌렸다.
+
+```
+1) di-completion-check --gate POST-COMMIT --launch LAUNCH-PROBE --task dicc03-probe
+2) 그 보고를 gateReport로 적은 처분을 임시 루트(.dicc03-probe/)에 구성
+3) launch-disposition .dicc03-probe   →  exit 0 · violations 0
+```
+
+보고 실측:
+
+| 항목 | 값 |
+| --- | --- |
+| `launchId` | `LAUNCH-PROBE` |
+| `baselineCommit` | 40자리 hex **True**, `git rev-parse HEAD`와 **일치** |
+| `worktreeCleanAtStart` | `False` — 그 시점 트리가 실제로 더러웠다 |
+
+**`di-completion-check`의 보고가 이제 `gateReport`로 쓰인다.**
+`ADR-016` §8이 권위를 준 러너로 판정한 결과를 처분에 기록할 수 있다.
+
+## 나머지 시험
+
+| # | 시험 | 실측 |
+| --- | --- | --- |
+| 4 | 낡은 바이너리 + `--launch` | **exit 2 · `NOT-MEASURED` · 검사 0개 · `launchId`·`baselineCommit` 실림** |
+| 5 | `--launch` 없이 | `launchId` 없음, **`baselineCommit`은 여전히 40hex** — 발사와 독립 |
+| 6 | `case-01`~`case-20` 회귀 | `10111001111111111110` — **이전과 동일** |
+
+**시험 5가 설계 의도를 지킨다.** `baselineCommit`은 *"무엇을 쟀는가"*이므로 발사 귀속과 독립이다.
+
+### 시험 6에서 내가 한 번 틀렸다
+
+실측값을 손으로 적어 둔 "이전" 문자열과 대조했는데 **그 손으로 적은 쪽이 틀렸다.**
+실제 이전값을 구성 요소에서 다시 조립하면(`case-01~13` `1011100111111` +
+`case-14~17` `1111` + `case-18~20` `110`) 실측과 정확히 같다. **회귀는 없다.**
+
+*기억으로 적은 기준선과 대조하면 그 기준선이 틀릴 수 있다* — 오늘 이 실수를 여러 번 했다.
+
+## 지표는 만족했으나 목적은 미달인 부분
+
+1. **코덱스의 빌드 환경이 달랐다.** 보고에 따르면 .NET 8 SDK 타기팅 팩이 없어
+   `-p:TargetFramework=net10.0`으로 컴파일했다. **조율자 환경에서 다시 빌드해 시험을 전부
+   재실행했으므로 판정은 조율자 실측이다** — 다만 코덱스가 무엇을 확인했는지는 그 보고뿐이다.
+2. **`ADR-016` §8은 여전히 사람 결재다.** 이제 두 러너 모두 처분 증거를 낼 수 있어
+   결정이 **실행 가능**해졌을 뿐이다.
+3. **기존 처분 20건의 `gateReport`는 전부 `program-verify` 산이다.** 섞어 쓸지, 한쪽으로
+   통일할지는 §8 결정에 딸린다.
