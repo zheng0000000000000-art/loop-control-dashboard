@@ -1021,3 +1021,24 @@ measure dev-pack → violationCount 1
 
 **그 파일은 코덱스 배타 영역이라 내가 못 고친다.** `DICC-04-R1`을 즉시 발행했다.
 **그때까지 `POST-COMMIT`·`LAND`가 빨갛다**(실측 exit 1) — 숨기지 않는다.
+
+## 2026-07-26 — `--manual` 가드를 실측했다 (앞 항목 해소)
+
+*"재려면 코덱스 발사를 걸어야 한다"* 던 항목을 **비용 0으로** 닫았다
+(`docs/verification/cli-option-failopen-survey.md`).
+
+`Launch`가 시작 직후 `ResolveExecutable("codex")`로 fail-fast한다는 점을 이용했다.
+**PATH에서 codex만 빼고** 유효한 요청으로 두 번 돌리면 분기가 오류 코드로 갈린다.
+
+```
+launch (플래그 없음)  →  automated-execution-not-ready   ← 가드가 막았다
+launch --manual       →  codex-executable-not-found      ← 통과해 Launch까지 갔다
+```
+
+**남은 것**: `automatedExecutionReady`가 **true**인 상태에서는 재지 않았다.
+지금 기록은 false라 가드가 항상 참이 된다. true 상태를 만들려면 기록을 바꿔야 하고
+**그것은 사람 결재**다.
+
+**곁가지**: `.git/worktrees/`에 낡은 메타데이터 **28건**이 쌓였고 `git worktree prune`이
+`Permission denied`로 지우지 못한다. `git worktree list`는 정상이고 게이트도 통과하므로
+동작에는 영향이 없다. **발사마다 1건씩 는다는 사실만 남긴다.**

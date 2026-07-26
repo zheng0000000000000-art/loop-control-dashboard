@@ -109,3 +109,69 @@
    판단했지만, 그런 입력이 있으면 거부된다.
 3. **다른 CLI는 여전히 검증하지 않는다.** `measure`·`build-verify`·`gate-clean` 등은
    조사에서 *"결과가 위험한 넷"* 에 들지 않아 손대지 않았다.
+
+---
+
+# `--manual` 가드를 실측했다 (append, 2026-07-26)
+
+앞 절의 미달 ①(*"막힌 것은 오타이지 가드가 아니다"*)을 닫는다.
+
+## 왜 못 재고 있었나
+
+가드는 **요청 검증 뒤**에 있다(`CodexHarnessLauncherCli.cs` `RequestRejection` → 가드 → `Launch`).
+가드에 도달하려면 **모든 검증을 통과하는 요청**이 필요하고, 가드가 fail-open이면
+**코덱스가 실제로 발사된다.** 그래서 "재려면 위험을 감수해야 한다"고 적고 미뤘다.
+
+## 방법 — `Launch` 자체의 fail-fast를 이용한다
+
+`Launch`는 시작 직후 `ResolveExecutable("codex")`가 null이면
+**`codex-executable-not-found`로 끝난다**(`:157-158`). **API 호출 전이다.**
+
+그러므로 **PATH에서 codex를 빼고** 유효한 요청으로 두 번 돌리면,
+가드가 막았는지 통과시켰는지가 **서로 다른 오류 코드**로 갈린다. 비용 0.
+
+```bash
+# codex만 뺀 PATH
+NOCODEX=$(echo "$PATH" | tr ':' '\n' | grep -v 'Roaming/npm' | paste -sd:)
+
+PATH="$NOCODEX" codex-launch launch --request <유효한 요청>            # 가드가 막아야 한다
+PATH="$NOCODEX" codex-launch launch --request <유효한 요청> --manual   # 가드를 통과해야 한다
+```
+
+## 실측
+
+먼저 요청이 유효함을 확인했다(`validate` → **`ACCEPTED`**) — **가드까지 도달한다는 뜻**이다.
+
+| 실행 | 결과 | 해석 |
+| --- | --- | --- |
+| `launch` (플래그 없음) | **`automated-execution-not-ready`** | **가드가 막았다** |
+| `launch --manual` | **`codex-executable-not-found`** | **가드를 통과해 `Launch`까지 갔다** |
+
+**두 오류가 다르다는 것이 어느 분기를 탔는지를 증명한다.**
+`outbox`에 `GUARD-PROBE` 디렉터리가 생기지 않았다 — 증거 기록 전에 멈췄다.
+
+## 이제 세 층이 전부 실측됐다
+
+```
+오타(--manul)      →  unknown-option              (옵션 검증)
+플래그 없음        →  automated-execution-not-ready  (가드)
+정식 --manual      →  Launch까지 진행              (의도된 경로)
+```
+
+## 곁가지 — `.git/worktrees/`에 낡은 항목이 쌓인다
+
+발사마다 `git worktree add`/`remove`를 하는데, **메타데이터 디렉터리가 남는다.**
+실측: **28건**, `git worktree prune`이 `Permission denied`로 삭제하지 못한다
+(오늘 measure 픽스처에서 겪은 읽기 전용 속성과 같은 모양으로 보이나 **원인은 확인하지 않았다**).
+
+`git worktree list`는 본 저장소 하나만 보여주므로 **git의 동작에는 영향이 없고 게이트도 통과한다.**
+발사마다 1건씩 늘어난다는 사실만 남긴다. **고치지 않았다.**
+
+## 지표는 만족했으나 목적은 미달인 부분
+
+1. **`AutomatedExecutionReady`가 true일 때는 재지 않았다.** 지금 기록은 `automatedExecutionReady: false`라
+   가드가 항상 참이 된다. **true인 상태에서 `--manual` 없이 발사가 허용되는지는 안 봤다** —
+   그 상태를 만들려면 기록을 바꿔야 하고 그것은 사람 결재다.
+2. **`.git/worktrees/` 누적의 원인을 확인하지 않았다.** 읽기 전용으로 보이나 실측하지 않았다.
+3. **이 방법은 PATH 조작에 의존한다.** 더 나은 설계는 `validate`가 *"이 요청이 지금 발사될 수 있는가"* 를
+   함께 보고하는 것이다 — 그러면 위험 없이 언제나 잴 수 있다. **제안일 뿐 구현하지 않았다.**
