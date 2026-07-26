@@ -1,0 +1,7 @@
+{
+  "harness": "di-completion-check",
+  "gateId": "POST-COMMIT",
+  "taskId": "dicc02-matching-launch",
+  "launchId": "LAUNCH-X",
+  "baselineCommit": "9809dbcd3d220c0430e87cd4f574e370a9e89878"
+}

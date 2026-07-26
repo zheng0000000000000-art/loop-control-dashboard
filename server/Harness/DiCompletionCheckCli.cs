@@ -31,7 +31,7 @@ internal static class DiCompletionCheckCli
         var taskId = string.IsNullOrWhiteSpace(options.TaskId)
             ? DateTime.Now.ToString("yyyyMMdd-HHmmss")
             : SanitizeFileName(options.TaskId);
-        var report = BuildBaseReport(options.GateId, manifestPath, taskId);
+        var report = BuildBaseReport(options.GateId, manifestPath, taskId, options.LaunchId);
 
         try
         {
@@ -336,7 +336,7 @@ internal static class DiCompletionCheckCli
     // CLI 인자를 기본값과 함께 해석한다.
     private static DiCompletionOptions ParseArgs(string[] args)
     {
-        var options = new DiCompletionOptions("POST-EXECUTOR", "", "docs/handoff/GATE-MANIFEST.json", "", false);
+        var options = new DiCompletionOptions("POST-EXECUTOR", "", "", "docs/handoff/GATE-MANIFEST.json", "", false);
         for (var i = 1; i < args.Length; i++)
         {
             var arg = args[i];
@@ -344,6 +344,8 @@ internal static class DiCompletionCheckCli
                 options = options with { GateId = args[++i] };
             else if (arg.Equals("--task", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                 options = options with { TaskId = args[++i] };
+            else if (arg.Equals("--launch", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                options = options with { LaunchId = args[++i] };
             else if (arg.Equals("--manifest", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                 options = options with { ManifestPath = args[++i] };
             else if (arg.Equals("--emit-doc", StringComparison.OrdinalIgnoreCase))
@@ -361,8 +363,9 @@ internal static class DiCompletionCheckCli
     }
 
     // 보고서 기본 필드를 만든다.
-    private static JsonObject BuildBaseReport(string gateId, string manifestPath, string taskId)
-        => new()
+    private static JsonObject BuildBaseReport(string gateId, string manifestPath, string taskId, string launchId)
+    {
+        var report = new JsonObject
         {
             ["harness"] = "di-completion-check",
             ["gateId"] = gateId,
@@ -371,6 +374,10 @@ internal static class DiCompletionCheckCli
             ["createdAt"] = DateTimeOffset.Now.ToString("O"),
             ["gateVerdict"] = "FAIL",
         };
+        if (!string.IsNullOrWhiteSpace(launchId))
+            report["launchId"] = launchId;
+        return report;
+    }
 
     // gateId에 맞는 gate 객체를 찾는다.
     private static JsonObject? FindGate(JsonObject manifest, string gateId)
@@ -552,6 +559,6 @@ internal static class DiCompletionCheckCli
     }
 }
 
-internal sealed record DiCompletionOptions(string GateId, string TaskId, string ManifestPath, string EmitDocPath, bool EmitCliContract);
+internal sealed record DiCompletionOptions(string GateId, string TaskId, string LaunchId, string ManifestPath, string EmitDocPath, bool EmitCliContract);
 internal sealed record ProcessRunResult(int ExitCode, string Stdout, string Stderr, long DurationMs);
 internal sealed record CheckRunResult(JsonObject Report, bool Passed, JsonObject Failure);
