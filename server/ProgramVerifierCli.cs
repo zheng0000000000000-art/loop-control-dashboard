@@ -71,17 +71,20 @@ internal static class ProgramVerifierCli
         // 더러운 트리에서 잰 판정에 깨끗한 커밋 해시만 붙이면 그 커밋을 쟀다는 거짓이 된다.
         var cleanAtStart = WorktreeClean(root);
 
-        // 검사마다 `dotnet run`으로 다시 빌드하면 이 프로세스가 잡고 있는 산출물을 자식이 덮으려다
-        // 막힌다. 빌드가 최신이면 통과하므로 간헐적으로만 실패했다(ADR-016 §9). 앞에서 한 번만
-        // 빌드하고 검사는 --no-build로 돈다. 못 빌드하면 잴 수 없는 것이지 PASS가 아니다.
-        var build = BuildOnce(root);
-        if (build.ExitCode != 0)
+        // 검사마다 `dotnet run`으로 다시 빌드하면 실패한다. 이 프로세스가 곧 server의 exe라
+        // 자식이 그 파일을 덮을 수 없기 때문이다(ADR-016 §9·§10). 빌드가 이미 최신이면 통과하므로
+        // 간헐적으로만 실패했다. 그래서 검사는 --no-build로 돌리되, 낡은 바이너리를 재는 일이
+        // 없도록 소스가 더 새로우면 재지 않고 거부한다. 빌드는 호출자가 미리 한다.
+        var staleness = BinaryStaleness(root);
+        if (staleness.Stale)
         {
             Console.Error.WriteLine(new JsonObject
             {
-                ["error"] = "사전 빌드에 실패해 게이트를 잴 수 없다",
-                ["buildExitCode"] = build.ExitCode,
-                ["stderrTail"] = Tail(build.Stderr),
+                ["error"] = "바이너리가 소스보다 낡아 게이트를 잴 수 없다. 먼저 빌드하라",
+                ["binaryPath"] = staleness.BinaryPath,
+                ["binaryWrittenAt"] = staleness.BinaryWrittenAt,
+                ["newestSource"] = staleness.NewestSource,
+                ["newestSourceWrittenAt"] = staleness.NewestSourceWrittenAt,
             }.ToJsonString(JsonOptions));
             return 2;
         }
@@ -158,34 +161,42 @@ internal static class ProgramVerifierCli
         => BuiltInCommands.Contains(command)
             || HarnessRegistry.RegisteredNames.Contains(command, StringComparer.OrdinalIgnoreCase);
 
-    // 검사를 돌리기 전에 server 프로젝트를 한 번만 빌드한다. --no-build로 낡은 바이너리를 재는
-    // 것을 막는 것이 이 호출의 존재 이유다 — 뺄 거면 --no-build도 같이 빼야 한다.
-    private static (int ExitCode, string Stderr) BuildOnce(string root)
+    // 돌고 있는 바이너리가 server 소스보다 낡았는지 잰다. 여기서 빌드하지 않는 이유는
+    // 이 프로세스가 곧 그 바이너리여서 자기 자신을 덮을 수 없기 때문이다.
+    private static (bool Stale, string BinaryPath, string BinaryWrittenAt, string NewestSource, string NewestSourceWrittenAt)
+        BinaryStaleness(string root)
     {
-        var psi = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            WorkingDirectory = root,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        foreach (var a in new[] { "build", "server", "-v", "q", "--nologo" }) psi.ArgumentList.Add(a);
+        var binaryPath = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(binaryPath) || !File.Exists(binaryPath))
+            return (false, binaryPath ?? "", "", "", "");
 
-        try
+        var binaryWrittenAt = File.GetLastWriteTimeUtc(binaryPath);
+        var serverDir = Path.Combine(root, "server");
+        var newestPath = "";
+        var newestWrittenAt = DateTime.MinValue;
+
+        foreach (var pattern in new[] { "*.cs", "*.csproj" })
         {
-            using var process = Process.Start(psi)
-                ?? throw new InvalidOperationException("빌드 프로세스를 시작하지 못했다.");
-            var stdout = process.StandardOutput.ReadToEnd();
-            var stderr = process.StandardError.ReadToEnd();
-            process.WaitForExit();
-            // dotnet build는 오류를 stdout에 적는다. 둘 다 넘겨야 사유가 보인다.
-            return (process.ExitCode, string.IsNullOrWhiteSpace(stderr) ? stdout : stderr);
+            foreach (var file in Directory.EnumerateFiles(serverDir, pattern, SearchOption.AllDirectories))
+            {
+                // bin/obj는 빌드 산출물이라 소스가 아니다. 넣으면 언제나 낡았다고 나온다.
+                var relative = Path.GetRelativePath(serverDir, file).Replace('\\', '/');
+                if (relative.StartsWith("bin/", StringComparison.OrdinalIgnoreCase)
+                    || relative.StartsWith("obj/", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var writtenAt = File.GetLastWriteTimeUtc(file);
+                if (writtenAt <= newestWrittenAt) continue;
+                newestWrittenAt = writtenAt;
+                newestPath = relative;
+            }
         }
-        catch (Exception ex)
-        {
-            return (int.MinValue, ex.Message);
-        }
+
+        return (newestWrittenAt > binaryWrittenAt,
+            binaryPath,
+            binaryWrittenAt.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            newestPath,
+            newestWrittenAt == DateTime.MinValue ? "" : newestWrittenAt.ToString("yyyy-MM-ddTHH:mm:ssZ"));
     }
 
     // 검사 하나를 자식 프로세스로 돌린다. 출력 문자열로 성패를 세지 않고 exit code만 판정에 쓴다.
