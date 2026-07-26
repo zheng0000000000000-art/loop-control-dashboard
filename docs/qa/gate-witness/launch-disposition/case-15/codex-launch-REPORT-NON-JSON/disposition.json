@@ -1,0 +1,8 @@
+{
+  "launchId": "REPORT-NON-JSON",
+  "state": "imported",
+  "decidedAt": "2026-07-26T00:00:00Z",
+  "actor": "fixture",
+  "importCommit": "990c0bae3b484cda2f9e33bb6164dc2014bed271",
+  "gateReport": "docs/qa/gate-witness/launch-disposition/case-15/report.txt"
+}

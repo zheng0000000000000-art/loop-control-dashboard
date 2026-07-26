@@ -61,7 +61,7 @@ internal static class LaunchDispositionCli
         var dispositionPath = Path.Combine(directory, "disposition.json");
         string? reason = null;
 
-        if (!File.Exists(dispositionPath))
+        if (!Path.Exists(dispositionPath))
             reason = "disposition-missing";
         else
         {
@@ -73,7 +73,11 @@ internal static class LaunchDispositionCli
             }
             catch (Exception ex) when (ex is JsonException or InvalidOperationException)
             {
-                reason = $"disposition-invalid: {ex.Message}";
+                reason = $"disposition-unparsable: {ex.Message}";
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                reason = $"disposition-unreadable: {ex.Message}";
             }
         }
 
@@ -131,7 +135,7 @@ internal static class LaunchDispositionCli
         var reportPath = Path.GetFullPath(Path.IsPathRooted(gateReport)
             ? gateReport
             : Path.Combine(repoRoot, gateReport));
-        if (!File.Exists(reportPath))
+        if (!Path.Exists(reportPath))
             return "gate-report-not-found";
 
         JsonObject report;
@@ -140,9 +144,13 @@ internal static class LaunchDispositionCli
             report = JsonNode.Parse(File.ReadAllText(reportPath))?.AsObject()
                 ?? throw new JsonException("root must be an object");
         }
-        catch (JsonException ex)
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
-            return $"gate-report-invalid: {ex.Message}";
+            return $"gate-report-unparsable: {ex.Message}";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return $"gate-report-unreadable: {ex.Message}";
         }
 
         var reportLaunchId = ReadEquivalentLaunchId(report);
