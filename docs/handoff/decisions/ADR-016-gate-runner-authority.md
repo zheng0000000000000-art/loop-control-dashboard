@@ -198,3 +198,32 @@ di-completion-check verdict: PASS  14/14  exit 0   failures: []
 
 `ADR-016` §7의 `BuiltInCommands` 복제는 그대로다. 두 목록이 갈리면 러너가 다시 다른 답을 낸다.
 근본 해소는 그 목록을 공유 가능한 자리로 옮기는 것이며 `server/Harness/`(코덱스 영역)에 있다.
+
+## §9 정정 (2026-07-26) — `--no-build`를 결함으로 본 §1은 두 번째로 틀렸다
+
+§1은 `di-completion-check`의 `--no-build`를 "낡은 바이너리를 잰다"고 지목했고,
+§6에서 그 진단이 틀렸음을 이미 정정했다(진짜 사유는 `unknown command`).
+오늘 세 번째 사실이 나왔다: **`--no-build`는 결함이 아니라 그쪽이 도는 이유다.**
+
+`program-verify verify --gate POST-COMMIT` 실측:
+
+```
+verdict FAIL | 실패 6 / 12 | worktreeCleanAtStart True
+  gate-clean, handoff-integrity, context-pack-integrity, doc-integrity,
+  handoff-integrity(fixture-malformed), gate-witness-check
+  stderrTail: "빌드하지 못했습니다. 빌드 오류를 수정하고 다시 실행하세요."
+```
+
+같은 12개를 **직접 순차 실행하면 전부 기대값과 일치한다(실패 0/12).**
+
+원인은 실재다. `ProgramVerifierCli`는 검사마다 `dotnet run --project server`(빌드 포함)로
+자식을 띄우는데(`ProgramVerifierCli.cs:156`), **자기 자신이 그 프로젝트의 exe로 돌고 있다.**
+자식의 빌드가 부모가 잡은 산출물을 덮으려다 막힌다. 빌드가 이미 최신이면 통과하므로
+**간헐적으로만 실패한다** — 게이트 러너로서 최악의 성질이다.
+
+**결론**: `program-verify`의 PASS도 FAIL도 그대로 믿을 수 없다. §8에서 권위를
+`di-completion-check`에 준 결정은 이 사실로 더 강해진다.
+`--no-build`를 쓰려면 **호출 전에 빌드를 한 번 보장**하는 것이 맞는 설계이고,
+검사마다 빌드하는 것은 자기 프로세스와 충돌한다.
+
+수정은 별도 결재다. 그 전까지 게이트 판정은 `di-completion-check` 또는 직접 순차 실행으로 한다.

@@ -650,3 +650,12 @@ gate-witness-check []      | exp 0 | got 1   ← 실재 문제.
 **사람 판단이 필요한 것**: `server/Harness/GateWitnessCheckCli.cs`를 JSON Lines도 읽게 고치는
 후속 지시서(코덱스 영역)를 낼 것인가. 그 전까지 LAND의 `totalUnwitnessed 0`은
 **검증한 0이 아니라 믿은 0**이다 — 플래그가 꺼져 있으면 주장을 그대로 신뢰한다.
+
+## 2026-07-26 — POST-COMMIT은 초록이다 (직접 대조로 확인)
+
+`program-verify`는 FAIL 6/12를 냈지만 **그 6건 전부 빌드 실패**였고, 같은 12개를 직접
+순차 실행하면 **실패 0/12**다. 원인은 `ProgramVerifierCli`가 검사마다 자기 프로젝트를
+다시 빌드하면서 자기 자신이 그 exe로 돌고 있다는 것이다(ADR-016 §9).
+
+**사람 판단이 필요한 것**: `ProgramVerifierCli`를 고칠 것인가(사전 빌드 1회 + `--no-build`),
+아니면 `di-completion-check`만 남기고 폐기할 것인가. ADR-016 §8이 이미 권위를 후자에 줬다.
