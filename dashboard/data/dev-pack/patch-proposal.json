@@ -1,26 +1,29 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1785050864982",
-  "title": "악화 롤백 제안: maxFunctionLength",
+  "id": "proposal-1785050903663",
+  "title": "함수 길이 줄이기",
   "lifecycle": "submitted",
-  "kind": "rollback",
   "createdBy": {
-    "provider": "rule-engine",
-    "model": null
+    "provider": "ollama",
+    "model": "qwen3:8b"
   },
-  "revisionOf": null,
-  "summary": "직전에 충족되던 지표가 악화되어 자동 롤백을 제안한다. 체크리스트가 검토할 내용이 없어 1층을 건너뛰고 사람 결재로 직행한다.",
+  "revisionOf": "proposal-1785050864982",
+  "summary": "함수 길이를 줄여 가독성과 유지보수성을 개선합니다.",
+  "assumptions": [],
   "changes": [
     {
       "path": "maxFunctionLength",
       "before": 85,
-      "after": 80,
-      "note": "직전 승인 원인 미상 이후 maxFunctionLength이 80→85로 악화됨. 되돌리거나 원인 조사 필요"
+      "after": [
+        0,
+        80
+      ],
+      "note": "함수 길이를 줄여 가독성과 유지보수성을 개선하고자 함"
     }
   ],
   "impact": [
     {
-      "label": "악화 항목",
+      "label": "위반 항목",
       "value": "1"
     },
     {
