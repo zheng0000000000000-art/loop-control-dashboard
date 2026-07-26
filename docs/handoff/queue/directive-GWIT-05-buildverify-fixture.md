@@ -143,6 +143,6 @@ verify-behavior   server/BehaviorSnapshotCli.cs             ← server/ 루트
 ## 허용 파일 (allowlist)
 
 - server/Harness/BuildVerifyCli.cs
-- docs/qa/gate-witness/
+- docs/qa/gate-witness/**
 
 > 검증 문서는 영역 밖이라 조율자가 쓴다.
