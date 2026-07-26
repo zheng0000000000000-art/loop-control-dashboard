@@ -67,3 +67,62 @@
   - **셋 다 판정이 불편해서 기준을 옮기는 모양이다**(`CLAUDE.md` 금지사항 1번).
 - **되돌리는 법**: append한 **마지막 1줄을 제거**하면 정확히 이전 상태로 돌아간다. `WORKSTATE.json`은 **건드리지 않았다** — 되돌림에 필요한 것은 로그 1줄뿐이다.
 - **재발 방지**: v2(06C-1)의 rollback + preimage 복원이 이 오염 경로를 구조적으로 없앤다. **이 예외는 1회성이며, 같은 정리를 다시 하려면 새 결재가 필요하다.**
+
+---
+
+## 2026-07-26 — `trust-origin evidence`가 측정 보고서를 근거로 PASS를 적을 수 있게 한다
+
+**① 주체**
+
+사람(저장소 git user `Jaehyuk`)이 "기준을 변경하고 한번 돌려보자"로 결재했다. 집행은 Claude Opus 5(조율 세션).
+조율자가 먼저 **"기준 변경입니까?"를 물었고**, 결재를 받은 뒤에 손댔다.
+
+**② 근거 (실측 2026-07-26)**
+
+`land gate 12-B`(trust-origin 부트스트랩 의식)가 **프로그램으로 완주 불가능한 상태**였다.
+
+- `trust-origin evidence --out`의 호출부는 하나뿐이고 `gatesPass: false`로 고정돼 있었다
+  (`TrustOriginCli.cs:58`). 그래서 `releaseBuild`·`reconciliationFixtures`·`docIntegrity`·
+  self-test 3종이 **언제나 `NOT_RUN`**으로 나왔다.
+- `declare`는 그 값들이 `PASS`가 아니면 **언제나 거절**한다(`:284-290`, `integration-gate-evidence-missing`).
+- `gatesPass: true`로 부르는 곳은 **전부 `--self-test` 내부 픽스처**다. 실제 경로에는 없었다.
+
+즉 통과할 유일한 방법이 **증거 JSON을 손으로 고쳐 `PASS`라고 적는 것**이었다. 그것은
+`WORKSTATE`의 blocker가 명시적으로 경계하는 자기 승인 위조다 —
+*"`--human-decision`도 임의 파일이라 AI가 자기 승인을 위조할 수 있다."*
+
+한편 `declare`가 요구하는 값은 이미 전부 측정 가능하다. 같은 날
+`program-verify verify --gate WP-STATE-INTEGRITY-LAND`가 **14/14 PASS, exit 0**을 냈고
+self-test 케이스 수(19/24/8)도 `declare`의 기대값과 일치한다. **증거는 존재했고 기록할 통로만 없었다.**
+
+**바꾼 것**
+
+`trust-origin evidence`에 `--gate-report <path>`를 추가했다. 이 인자가 있을 때만 `gatesPass`가 참이 되며,
+보고서가 아래를 **전부** 만족해야 한다(하나라도 어긋나면 exit 2로 거절):
+
+| 검사 | 거절 코드 |
+| --- | --- |
+| 파일 존재 · 파싱 가능 | `gate-report-missing` / `gate-report-unparsable` |
+| `verifier == "program-verify"` | `gate-report-wrong-verifier` |
+| `gateId == "WP-STATE-INTEGRITY-LAND"` | `gate-report-wrong-gate` |
+| `verdict == "PASS"` | `gate-report-not-passing` |
+| `baselineCommit == HEAD` (낡은 통과 재사용 차단) | `gate-report-baseline-mismatch` |
+| `worktreeCleanAtStart == true` (미커밋 코드로 통과 차단) | `gate-report-dirty-worktree` |
+| 모든 검사의 `expectedExit == actualExit` | `gate-report-check-mismatch` |
+| `declare`가 근거로 삼는 명령이 보고서에 실재 | `gate-report-missing-required-check` |
+
+`ProgramVerifierCli`에는 `baselineCommit`과 `worktreeCleanAtStart`를 보고서에 싣도록 추가했다.
+
+**바꾸지 않은 것**: `declare`의 판정 조건은 그대로다. 무엇을 요구하는지는 안 건드렸고,
+**요구하는 것을 만들 수 있는 통로만** 열었다. `PASS`는 여전히 주장이 아니라 측정에서 온다.
+
+**③ 되돌리는 법**
+
+`TrustOriginCli.cs`의 `RunEvidence`에서 `--gate-report` 분기와 `GateReportRejection`·`LandGateId`·
+`RequiredGateCommands`를 지우고 `BuildIntegrationEvidence(ctx, gatesPass: false)`로 되돌리면 종전 동작이다.
+`ProgramVerifierCli`의 두 필드는 남겨도 무해하다(읽는 쪽이 없어질 뿐).
+되돌리면 12-B는 다시 완주 불가능해진다 — 되돌리기 전에 그 사실을 확인하라.
+
+**장애주입 (실측)**: 낡은 커밋 보고서 → `gate-report-baseline-mismatch` · 다른 게이트 →
+`gate-report-wrong-gate` · 손으로 쓴 verifier → `gate-report-wrong-verifier` · 없는 파일 →
+`gate-report-missing`. 네 경우 모두 exit 2로 거절됐다.

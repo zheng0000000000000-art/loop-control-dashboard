@@ -47,7 +47,12 @@ internal static class TrustOriginCli
         return 2;
     }
 
-    // 통합 게이트 evidence 초안을 파일로 쓴다. 실제 게이트 실행은 외부 절차가 수행한다.
+    // 통합 게이트 evidence를 파일로 쓴다.
+    // --gate-report가 없으면 전부 NOT_RUN인 초안이다(종전 동작).
+    // --gate-report가 있으면 program-verify가 낸 판정 보고서를 근거로 PASS를 적는다.
+    // 배경: 종전에는 gatesPass가 false로 고정이라 evidence는 언제나 NOT_RUN을 냈고 declare는
+    // NOT_RUN을 언제나 거절했다. 통과할 방법이 손으로 PASS라고 적는 것뿐이었고, 그것은
+    // WORKSTATE blocker가 경계하는 자기 승인 위조다. PASS가 주장이 아니라 측정에서 오게 한다.
     private static int RunEvidence(string[] args)
     {
         try
@@ -55,7 +60,15 @@ internal static class TrustOriginCli
             var outPath = Flag(args, "out");
             if (string.IsNullOrWhiteSpace(outPath)) return Error("integration-gate-evidence-out-required", 2);
             var ctx = Files(GitTools.FindRepoRoot());
-            var evidence = BuildIntegrationEvidence(ctx, gatesPass: false);
+            var reportPath = Flag(args, "gate-report");
+            var gatesPass = false;
+            if (!string.IsNullOrWhiteSpace(reportPath))
+            {
+                var reason = GateReportRejection(ctx, reportPath!);
+                if (reason is not null) return Error(reason, 2);
+                gatesPass = true;
+            }
+            var evidence = BuildIntegrationEvidence(ctx, gatesPass);
             var full = Path.GetFullPath(outPath);
             Directory.CreateDirectory(Path.GetDirectoryName(full)!);
             File.WriteAllText(full, evidence.ToJsonString(JsonOptions), Utf8NoBom);
@@ -295,6 +308,53 @@ internal static class TrustOriginCli
         if (Read(evidence, "baselineReconciliationReportSha256") != ReconciliationReportHash(recon)) return "baseline-reconciliation-report-mismatch";
         return null;
     }
+
+    // program-verify 보고서를 받을 수 있는지 판정한다. 받을 수 없으면 거절 사유를 돌려준다.
+    // 통과 조건을 모두 만족해야 null이다 — 모르는 것은 통과로 적지 않는다.
+    private static string? GateReportRejection(RepoFiles ctx, string reportPath)
+    {
+        var full = Path.GetFullPath(reportPath);
+        if (!File.Exists(full)) return "gate-report-missing";
+        JsonObject? report;
+        try { report = JsonNode.Parse(File.ReadAllText(full, Utf8NoBom))?.AsObject(); }
+        catch { return "gate-report-unparsable"; }
+        if (report is null) return "gate-report-unparsable";
+
+        if (Read(report, "verifier") != "program-verify") return "gate-report-wrong-verifier";
+        if (Read(report, "gateId") != LandGateId) return "gate-report-wrong-gate";
+        if (Read(report, "verdict") != "PASS") return "gate-report-not-passing";
+        // 낡은 통과 보고서를 나중에 다시 들이미는 것을 막는다. 잰 커밋이 지금 HEAD여야 한다.
+        var head = Git(ctx.Root, "rev-parse HEAD").Trim();
+        if (Read(report, "baselineCommit") != head) return "gate-report-baseline-mismatch";
+        // 더러운 트리에서 잰 판정에 깨끗한 커밋 해시만 붙이면, 커밋되지 않은 코드로 통과하고
+        // 그 커밋을 쟀다고 말하는 것이 된다. 측정 시작 시점이 커밋과 일치했어야 한다.
+        if (report["worktreeCleanAtStart"]?.GetValue<bool>() != true) return "gate-report-dirty-worktree";
+
+        var checks = report["checks"]?.AsArray();
+        if (checks is null || checks.Count == 0) return "gate-report-no-checks";
+        foreach (var check in checks)
+        {
+            var expected = check?["expectedExit"]?.GetValue<int>();
+            var actual = check?["actualExit"]?.GetValue<int>();
+            if (expected is null || actual is null || expected != actual) return "gate-report-check-mismatch";
+        }
+        // declare가 근거로 삼는 검사가 실제로 그 보고서 안에 있어야 한다. 없는데 PASS면
+        // 다른 게이트를 통과하고 이 게이트를 통과한 척하는 것이 된다.
+        var commands = checks.Select(c => c?["command"]?.GetValue<string>() ?? "").ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var required in RequiredGateCommands)
+        {
+            if (!commands.Contains(required)) return "gate-report-missing-required-check";
+        }
+        return null;
+    }
+
+    private const string LandGateId = "WP-STATE-INTEGRITY-LAND";
+
+    // declare가 PASS를 요구하는 항목을 실제로 잰 명령들. 보고서에 이것들이 없으면 근거가 아니다.
+    private static readonly string[] RequiredGateCommands =
+    [
+        "build-verify", "state-transition", "handoff-integrity", "recovery", "trust-origin", "measure", "doc-integrity",
+    ];
 
     // 현재 baseline에 대한 통합 evidence JSON을 만든다.
     private static JsonObject BuildIntegrationEvidence(RepoFiles ctx, bool gatesPass)

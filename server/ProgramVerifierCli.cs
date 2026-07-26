@@ -59,6 +59,10 @@ internal static class ProgramVerifierCli
             return 2;
         }
 
+        // 측정을 시작하는 시점의 트리 상태를 먼저 잡는다. 검사 중 measure가 산출물을 바꾸므로
+        // 끝난 뒤에 재면 언제나 더럽다. 소비하는 쪽은 "무엇을 쟀는가"를 알아야 한다 —
+        // 더러운 트리에서 잰 판정에 깨끗한 커밋 해시만 붙이면 그 커밋을 쟀다는 거짓이 된다.
+        var cleanAtStart = WorktreeClean(root);
         var runs = new List<CheckRun>();
         foreach (var spec in specs)
         {
@@ -67,7 +71,7 @@ internal static class ProgramVerifierCli
 
         var failed = runs.Where(r => r.ActualExit != r.Spec.ExpectedExit).ToList();
         var passed = failed.Count == 0 && runs.Count > 0;
-        var report = BuildReport(gateId, launchId, runs, passed);
+        var report = BuildReport(gateId, launchId, runs, passed, cleanAtStart);
 
         string? requestPath = null;
         if (passed && emitRequest) requestPath = WriteRequest(root, gateId, launchId, report);
@@ -146,7 +150,7 @@ internal static class ProgramVerifierCli
     }
 
     // 판정 결과를 기계가 읽는 모양으로 만든다. 검사별 기대값과 실측값을 나란히 남긴다.
-    private static JsonObject BuildReport(string gateId, string? launchId, List<CheckRun> runs, bool passed)
+    private static JsonObject BuildReport(string gateId, string? launchId, List<CheckRun> runs, bool passed, bool cleanAtStart)
     {
         var checks = new JsonArray();
         foreach (var run in runs)
@@ -171,6 +175,10 @@ internal static class ProgramVerifierCli
             ["schemaVersion"] = 1,
             ["gateId"] = gateId,
             ["launchId"] = launchId,
+            // 어느 커밋에서 잰 판정인지 박는다. 이것이 없으면 예전에 통과한 보고서를 나중에
+            // 다시 들이밀 수 있다 — 소비하는 쪽이 HEAD와 대조해 거절할 수 있어야 한다.
+            ["baselineCommit"] = HeadCommit(),
+            ["worktreeCleanAtStart"] = cleanAtStart,
             ["verdict"] = passed ? "PASS" : "FAIL",
             ["checkCount"] = runs.Count,
             ["failedCount"] = runs.Count(r => r.ActualExit != r.Spec.ExpectedExit),
@@ -203,6 +211,52 @@ internal static class ProgramVerifierCli
         var path = Path.Combine(dir, name);
         File.WriteAllText(path, request.ToJsonString(JsonOptions), Utf8NoBom);
         return Path.Combine(RequestDirRel, name).Replace('\\', '/');
+    }
+
+    // 측정 시작 시점에 워크트리가 커밋과 일치했는지 본다. 판정할 수 없으면 false다 —
+    // 모르는 것을 "깨끗했다"로 적지 않는다.
+    private static bool WorktreeClean(string root)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "git", WorkingDirectory = root,
+                RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false,
+            };
+            psi.ArgumentList.Add("status");
+            psi.ArgumentList.Add("--porcelain");
+            using var process = Process.Start(psi);
+            if (process is null) return false;
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            return process.ExitCode == 0 && string.IsNullOrWhiteSpace(output);
+        }
+        catch { return false; }
+    }
+
+    // 판정 시점의 HEAD 커밋을 읽는다. 못 읽으면 빈 문자열이지 "알 수 없음"을 감추지 않는다.
+    private static string HeadCommit()
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "git",
+                WorkingDirectory = RepoRoot(),
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+            psi.ArgumentList.Add("rev-parse");
+            psi.ArgumentList.Add("HEAD");
+            using var process = Process.Start(psi);
+            if (process is null) return "";
+            var output = process.StandardOutput.ReadToEnd().Trim();
+            process.WaitForExit();
+            return process.ExitCode == 0 ? output : "";
+        }
+        catch { return ""; }
     }
 
     // --이름 다음 값을 읽는다. 없으면 null이다.
