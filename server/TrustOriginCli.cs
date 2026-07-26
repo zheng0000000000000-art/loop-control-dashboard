@@ -310,47 +310,22 @@ internal static class TrustOriginCli
     }
 
     // program-verify 보고서를 받을 수 있는지 판정한다. 받을 수 없으면 거절 사유를 돌려준다.
-    // 통과 조건을 모두 만족해야 null이다 — 모르는 것은 통과로 적지 않는다.
+    // LAND 게이트 보고서를 근거로 쓸 수 있는지 본다. 공통 규칙은 GateReportReader가 갖는다 —
+    // program-verify와 같은 규칙을 두 벌 두면 한쪽이 받는 보고를 다른 쪽이 거절한다(ADR-016 §6).
+    // 여기에는 이 게이트에만 필요한 조건, 즉 근거로 삼을 검사가 실제로 들어 있는지만 남긴다.
     private static string? GateReportRejection(RepoFiles ctx, string reportPath)
     {
-        var full = Path.GetFullPath(reportPath);
-        if (!File.Exists(full)) return "gate-report-missing";
-        JsonObject? report;
-        try { report = JsonNode.Parse(File.ReadAllText(full, Utf8NoBom))?.AsObject(); }
-        catch { return "gate-report-unparsable"; }
-        if (report is null) return "gate-report-unparsable";
+        var rejection = GateReportReader.Reject(ctx.Root, reportPath, LandGateId, out var report);
+        if (rejection is not null || report is null) return rejection ?? "gate-report-unparsable";
 
-        // ADR-016 §15: 게이트 판정의 정본은 di-completion-check다. 그 보고도 받는다.
-        // 두 러너는 필드 이름만 다르다 — verifier/harness, verdict/gateVerdict.
-        // 아무 이름이나 받지는 않는다. 아는 러너 둘만이다(모르는 산출은 통과로 적지 않는다).
-        var producer = Read(report, "verifier") is { Length: > 0 } v ? v : Read(report, "harness");
-        if (producer != "program-verify" && producer != "di-completion-check")
-            return "gate-report-wrong-verifier";
-        if (Read(report, "gateId") != LandGateId) return "gate-report-wrong-gate";
-        var passVerdict = Read(report, "gateVerdict") is { Length: > 0 } gv ? gv : Read(report, "verdict");
-        if (passVerdict != "PASS") return "gate-report-not-passing";
-        // 낡은 통과 보고서를 나중에 다시 들이미는 것을 막는다. 잰 커밋이 지금 HEAD여야 한다.
-        var head = Git(ctx.Root, "rev-parse HEAD").Trim();
-        if (Read(report, "baselineCommit") != head) return "gate-report-baseline-mismatch";
-        // 더러운 트리에서 잰 판정에 깨끗한 커밋 해시만 붙이면, 커밋되지 않은 코드로 통과하고
-        // 그 커밋을 쟀다고 말하는 것이 된다. 측정 시작 시점이 커밋과 일치했어야 한다.
-        if (report["worktreeCleanAtStart"]?.GetValue<bool>() != true) return "gate-report-dirty-worktree";
-
-        var checks = report["checks"]?.AsArray();
-        if (checks is null || checks.Count == 0) return "gate-report-no-checks";
-        foreach (var check in checks)
-        {
-            var expected = check?["expectedExit"]?.GetValue<int>();
-            var actual = check?["actualExit"]?.GetValue<int>();
-            if (expected is null || actual is null || expected != actual) return "gate-report-check-mismatch";
-        }
         // declare가 근거로 삼는 검사가 실제로 그 보고서 안에 있어야 한다. 없는데 PASS면
         // 다른 게이트를 통과하고 이 게이트를 통과한 척하는 것이 된다.
-        var commands = checks.Select(c => c?["command"]?.GetValue<string>() ?? "").ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var commands = GateReportReader.CommandsIn(report);
         foreach (var required in RequiredGateCommands)
         {
             if (!commands.Contains(required)) return "gate-report-missing-required-check";
         }
+
         return null;
     }
 

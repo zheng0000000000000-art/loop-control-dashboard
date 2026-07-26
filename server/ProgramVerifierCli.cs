@@ -1,16 +1,11 @@
-// ⚠ 게이트 실행은 server/Harness/DiCompletionCheckCli.cs와 겹친다(ADR-016). 이 파일이 먼저가
-// 아니다 — 그쪽이 먼저 있었고 조율 세션이 재발명 검색을 건너뛰어 중복이 생겼다.
-// 이 자리에 있던 "그쪽은 --no-build로 낡은 바이너리를 잰다"는 설명은 **사실이 아니었다**
-// (ADR-016 §11: 그 인자는 없었고, 오히려 다시 빌드하다 자기 자신과 충돌했다). DICC-01이
-// 그쪽에도 같은 설계를 넣었으므로 **이제 두 러너의 실행 방식은 같다.** 어느 쪽을 정본으로
-// 둘지는 사람 결재로 남아 있다(ADR-016 §8). 남길 것은 baselineCommit·worktreeCleanAtStart
-// 기록과 transition request 생성이다.
+// Transition Request 생성기 — 게이트 판정은 하지 않는다.
+// ADR-016 §15: 게이트 판정의 정본은 server/Harness/DiCompletionCheckCli.cs다.
+// 그쪽이 --manifest로 픽스처 반증 시험이 가능하고 HarnessRegistry 네이티브이기 때문이다.
+// 여기 있던 게이트 실행 코드는 그 결정으로 제거했다 — 두 벌이 있으면 갈리고,
+// 갈린 결과 하나가 TRUSTED_BASELINE 선언 근거가 된 것이 ADR-016 §6의 사건이다.
 //
-// Program Verifier — 실행자가 낸 증거를 믿지 않고 게이트 검사를 직접 다시 돌려 판정한다.
-// CODEX-HARNESS-LAUNCHER-minimal-contract §2-6의 결속 상대다. Launcher는 transport와 기록만 하고,
-// 판정은 여기서 한다. 통과해도 canonical state는 건드리지 않는다 — transition request 후보만 낸다.
-using System.Diagnostics;
-using System.Security.Cryptography;
+// 하는 일: 이미 나온 게이트 보고서를 근거로 transition request 후보를 만든다.
+// 통과해도 canonical state는 건드리지 않는다 — 요청이지 전이가 아니다.
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -18,7 +13,6 @@ using System.Text.Json.Nodes;
 
 internal static class ProgramVerifierCli
 {
-    private const string ManifestRel = "docs/handoff/GATE-MANIFEST.json";
     private const string RequestDirRel = "outputs/transition-requests";
     private static readonly UTF8Encoding Utf8NoBom = new(false);
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -27,225 +21,62 @@ internal static class ProgramVerifierCli
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    // 검사 하나의 선언값이다. 목록은 GATE-MANIFEST.json에서만 온다 — 코드가 지어내지 않는다.
-    private record CheckSpec(int Order, string Command, string[] Args, int ExpectedExit, bool MutatesState);
-
-    // 검사 하나를 실제로 돌린 결과다. 판정 근거는 exitCode 하나뿐이다.
-    private record CheckRun(CheckSpec Spec, int ActualExit, long DurationMs, string StdoutSha256, string StderrTail);
-
-    // 명령을 분기한다. verify는 판정만, request는 통과한 판정에서 transition request 후보를 만든다.
+    // 명령을 분기한다. request는 게이트 보고서를 읽어 전이 요청 후보를 만든다.
     internal static int Run(string[] args)
     {
         var sub = args.Length > 1 ? args[1] : "";
-        if (string.Equals(sub, "verify", StringComparison.OrdinalIgnoreCase)) return Verify(args, emitRequest: false);
-        if (string.Equals(sub, "request", StringComparison.OrdinalIgnoreCase)) return Verify(args, emitRequest: true);
-        Console.Error.WriteLine("{\"error\":\"사용법: program-verify verify|request --gate <gateId> [--launch <launchId>] [--out <path>]\"}");
+        if (string.Equals(sub, "request", StringComparison.OrdinalIgnoreCase)) return Request(args);
+        if (string.Equals(sub, "verify", StringComparison.OrdinalIgnoreCase))
+        {
+            // 판정은 여기서 하지 않는다. 조용히 다른 일을 하지 말고 어디로 가야 하는지 말한다.
+            Console.Error.WriteLine("{\"error\":\"게이트 판정은 di-completion-check가 한다(ADR-016 §15). "
+                + "사용법: di-completion-check --gate <gateId> --task <id> 로 보고를 낸 뒤 "
+                + "program-verify request --gate <gateId> --report <path>\"}");
+            return 2;
+        }
+
+        Console.Error.WriteLine("{\"error\":\"사용법: program-verify request --gate <gateId> --report <path> [--launch <launchId>]\"}");
         return 2;
     }
 
-    // 게이트의 검사를 순서대로 직접 재실행하고 exit code로만 판정한다. 하나라도 어긋나면 FAIL이다.
-    private static int Verify(string[] args, bool emitRequest)
+    // 게이트 보고서를 근거로 transition request 후보를 만든다. 근거가 없으면 만들지 않는다.
+    private static int Request(string[] args)
     {
         var gateId = ReadOption(args, "--gate");
+        var reportPath = ReadOption(args, "--report");
         var launchId = ReadOption(args, "--launch");
-        if (string.IsNullOrWhiteSpace(gateId))
+        if (string.IsNullOrWhiteSpace(gateId) || string.IsNullOrWhiteSpace(reportPath))
         {
-            Console.Error.WriteLine("{\"error\":\"--gate <gateId>가 필요하다.\"}");
+            Console.Error.WriteLine("{\"error\":\"--gate <gateId> 와 --report <path> 가 필요하다.\"}");
             return 2;
         }
 
         var root = RepoRoot();
-        List<CheckSpec> specs;
-        try
-        {
-            specs = ReadGate(root, gateId);
-        }
-        catch (Exception ex)
-        {
-            // 게이트를 못 읽으면 통과가 아니라 실패다. 모르는 것을 PASS로 적지 않는다.
-            Console.Error.WriteLine($"{{\"error\":\"게이트를 읽지 못했다: {Escape(ex.Message)}\"}}");
-            return 2;
-        }
-
-        // 측정을 시작하는 시점의 트리 상태를 먼저 잡는다. 검사 중 measure가 산출물을 바꾸므로
-        // 끝난 뒤에 재면 언제나 더럽다. 소비하는 쪽은 "무엇을 쟀는가"를 알아야 한다 —
-        // 더러운 트리에서 잰 판정에 깨끗한 커밋 해시만 붙이면 그 커밋을 쟀다는 거짓이 된다.
-        var cleanAtStart = WorktreeClean(root);
-
-        // 검사마다 `dotnet run`으로 다시 빌드하면 실패한다. 이 프로세스가 곧 server의 exe라
-        // 자식이 그 파일을 덮을 수 없기 때문이다(ADR-016 §9·§10). 빌드가 이미 최신이면 통과하므로
-        // 간헐적으로만 실패했다. 그래서 검사는 --no-build로 돌리되, 낡은 바이너리를 재는 일이
-        // 없도록 소스가 더 새로우면 재지 않고 거부한다. 빌드는 호출자가 미리 한다.
-        var staleness = BinaryFreshness.Measure(root);
-        if (staleness.Stale)
+        // 판정 규칙은 GateReportReader 한 곳에 있다. trust-origin과 같은 규칙을 쓴다.
+        var rejection = GateReportReader.Reject(root, reportPath, gateId, out var report);
+        if (rejection is not null || report is null)
         {
             Console.Error.WriteLine(new JsonObject
             {
-                // di-completion-check와 같은 낱말을 쓴다. 못 잰 것은 FAIL이 아니며,
-                // verdict를 아예 안 내면 소비자가 판정을 읽을 수 없다(2026-07-26 대조에서 드러남).
                 ["gateId"] = gateId,
-                ["verdict"] = "NOT-MEASURED",
-                ["error"] = "바이너리가 소스보다 낡아 게이트를 잴 수 없다. 먼저 빌드하라",
-                ["binaryPath"] = staleness.BinaryPath,
-                ["binaryWrittenAt"] = staleness.BinaryWrittenAt,
-                ["newestSource"] = staleness.NewestSource,
-                ["newestSourceWrittenAt"] = staleness.NewestSourceWrittenAt,
+                ["verdict"] = "NO-REQUEST",
+                ["reason"] = rejection ?? "gate-report-unparsable",
             }.ToJsonString(JsonOptions));
-            return 2;
+            return 1;
         }
 
-        var runs = new List<CheckRun>();
-        foreach (var spec in specs)
+        var requestPath = WriteRequest(root, gateId, launchId, report);
+        Console.WriteLine(new JsonObject
         {
-            runs.Add(RunCheck(root, spec));
-        }
-
-        var failed = runs.Where(r => r.ActualExit != r.Spec.ExpectedExit).ToList();
-        var passed = failed.Count == 0 && runs.Count > 0;
-        var report = BuildReport(gateId, launchId, runs, passed, cleanAtStart);
-
-        string? requestPath = null;
-        if (passed && emitRequest) requestPath = WriteRequest(root, gateId, launchId, report);
-        report["transitionRequestPath"] = requestPath;
-
-        var outPath = ReadOption(args, "--out");
-        if (!string.IsNullOrWhiteSpace(outPath)) WriteReportFile(root, outPath, report);
-
-        Console.WriteLine(report.ToJsonString(JsonOptions));
-        return passed ? 0 : 1;
-    }
-
-    // 보고를 파일로 쓴다. 검사가 **전부 끝난 뒤에만** 쓰고, 임시 파일에 쓴 다음 옮긴다.
-    // 셸 리다이렉트로 같은 일을 하면 실행 내내 그 경로가 열려 있어, 그 파일을 읽는 검사가
-    // "파일에 접근할 수 없다"로 죽는다(2026-07-26 실측: launch-disposition이 자기 gateReport를
-    // 읽다 exit 2). 쓰는 시점을 검사 뒤로 미루는 것이 그 충돌을 구조적으로 없앤다.
-    private static void WriteReportFile(string root, string outPath, JsonObject report)
-    {
-        var full = Path.IsPathRooted(outPath) ? outPath : Path.Combine(root, outPath);
-        Directory.CreateDirectory(Path.GetDirectoryName(full)!);
-        var temp = full + ".tmp";
-        File.WriteAllText(temp, report.ToJsonString(JsonOptions), Utf8NoBom);
-        File.Move(temp, full, overwrite: true);
-    }
-
-    // 매니페스트에서 게이트 하나의 검사 목록을 읽는다. 없는 게이트는 예외로 올려 fail-closed 시킨다.
-    private static List<CheckSpec> ReadGate(string root, string gateId)
-    {
-        var path = Path.Combine(root, ManifestRel);
-        if (!File.Exists(path)) throw new FileNotFoundException($"{ManifestRel}가 없다.");
-        var manifest = JsonNode.Parse(File.ReadAllText(path, Utf8NoBom))?.AsObject()
-            ?? throw new InvalidOperationException("GATE-MANIFEST.json을 파싱하지 못했다.");
-        var gates = manifest["gates"]?.AsArray() ?? throw new InvalidOperationException("gates 배열이 없다.");
-        var gate = gates.FirstOrDefault(g =>
-            string.Equals(g?["gateId"]?.GetValue<string>(), gateId, StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException($"gateId '{gateId}'가 매니페스트에 없다.");
-        var checks = gate["checks"]?.AsArray() ?? throw new InvalidOperationException("checks 배열이 없다.");
-
-        var specs = new List<CheckSpec>();
-        foreach (var check in checks)
-        {
-            var command = check?["command"]?.GetValue<string>();
-            if (string.IsNullOrWhiteSpace(command)) throw new InvalidOperationException("command가 빈 검사가 있다.");
-            var argsNode = check?["args"]?.AsArray();
-            var checkArgs = argsNode?.Select(a => a?.GetValue<string>() ?? "").ToArray() ?? [];
-            // expectedExit이 선언되지 않았으면 0으로 가정하지 않는다 — 기대값 없는 검사는 판정할 수 없다.
-            var expected = check?["expectedExit"]?.GetValue<int>()
-                ?? throw new InvalidOperationException($"'{command}'에 expectedExit이 없다.");
-            // 등록되지 않은 명령은 실행하지 않는다. 이전에는 매니페스트에 적혀 있으면 등록 여부를
-            // 묻지 않고 돌렸고, 그래서 di-completion-check가 거부하는 명령 3개를 포함한 채
-            // WP-STATE-INTEGRITY-LAND가 14/14 PASS를 냈다(ADR-016 §6). 게이트가 아는 검사만 돌아야
-            // 그 PASS가 "게이트를 통과했다"는 뜻이 된다.
-            if (!KnownCommand(command))
-                throw new InvalidOperationException($"'{command}'는 등록된 검사가 아니다. HarnessRegistry에 없다.");
-            specs.Add(new CheckSpec(
-                check?["order"]?.GetValue<int>() ?? specs.Count + 1,
-                command,
-                checkArgs,
-                expected,
-                check?["mutatesState"]?.GetValue<bool>() ?? false));
-        }
-        if (specs.Count == 0) throw new InvalidOperationException($"gateId '{gateId}'에 검사가 하나도 없다.");
-        return specs.OrderBy(s => s.Order).ToList();
-    }
-
-    // 게이트가 아는 명령인지 본다. 목록은 HarnessRegistry에 하나만 있다(HREG-02) —
-    // 여기에 사본을 두면 두 러너가 갈려 같은 매니페스트에 다른 답을 낸다(ADR-016 §6).
-    private static bool KnownCommand(string command)
-        => HarnessRegistry.GateCommandNames.Contains(command);
-
-    // 검사 하나를 자식 프로세스로 돌린다. 출력 문자열로 성패를 세지 않고 exit code만 판정에 쓴다.
-    private static CheckRun RunCheck(string root, CheckSpec spec)
-    {
-        var psi = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            WorkingDirectory = root,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        foreach (var a in new[] { "run", "--project", "server", "--no-build", "--", spec.Command }) psi.ArgumentList.Add(a);
-        foreach (var a in spec.Args) psi.ArgumentList.Add(a);
-
-        var watch = Stopwatch.StartNew();
-        try
-        {
-            using var process = Process.Start(psi)
-                ?? throw new InvalidOperationException("프로세스를 시작하지 못했다.");
-            var stdout = process.StandardOutput.ReadToEnd();
-            var stderr = process.StandardError.ReadToEnd();
-            process.WaitForExit();
-            watch.Stop();
-            return new CheckRun(spec, process.ExitCode, watch.ElapsedMilliseconds, Sha256(stdout), Tail(stderr));
-        }
-        catch (Exception ex)
-        {
-            watch.Stop();
-            // 실행 자체가 안 된 것은 "종료 코드 없음"이지 통과가 아니다. 기대값과 다른 값을 넣어 FAIL로 만든다.
-            var missing = spec.ExpectedExit == int.MinValue ? int.MaxValue : int.MinValue;
-            return new CheckRun(spec, missing, watch.ElapsedMilliseconds, Sha256(""), Tail(ex.Message));
-        }
-    }
-
-    // 판정 결과를 기계가 읽는 모양으로 만든다. 검사별 기대값과 실측값을 나란히 남긴다.
-    private static JsonObject BuildReport(string gateId, string? launchId, List<CheckRun> runs, bool passed, bool cleanAtStart)
-    {
-        var checks = new JsonArray();
-        foreach (var run in runs)
-        {
-            checks.Add(new JsonObject
-            {
-                ["order"] = run.Spec.Order,
-                ["command"] = run.Spec.Command,
-                ["args"] = new JsonArray(run.Spec.Args.Select(a => (JsonNode)a!).ToArray()),
-                ["expectedExit"] = run.Spec.ExpectedExit,
-                ["actualExit"] = run.ActualExit,
-                ["passed"] = run.ActualExit == run.Spec.ExpectedExit,
-                ["mutatesState"] = run.Spec.MutatesState,
-                ["durationMs"] = run.DurationMs,
-                ["stdoutSha256"] = run.StdoutSha256,
-                ["stderrTail"] = run.StderrTail,
-            });
-        }
-        return new JsonObject
-        {
-            ["verifier"] = "program-verify",
-            ["schemaVersion"] = 1,
+            ["command"] = "program-verify request",
             ["gateId"] = gateId,
             ["launchId"] = launchId,
-            // 어느 커밋에서 잰 판정인지 박는다. 이것이 없으면 예전에 통과한 보고서를 나중에
-            // 다시 들이밀 수 있다 — 소비하는 쪽이 HEAD와 대조해 거절할 수 있어야 한다.
-            ["baselineCommit"] = HeadCommit(),
-            ["worktreeCleanAtStart"] = cleanAtStart,
-            ["verdict"] = passed ? "PASS" : "FAIL",
-            ["checkCount"] = runs.Count,
-            ["failedCount"] = runs.Count(r => r.ActualExit != r.Spec.ExpectedExit),
-            ["verifiedAt"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-            ["checks"] = checks,
-        };
+            ["gateReport"] = reportPath,
+            ["transitionRequestPath"] = requestPath,
+            ["note"] = "요청이지 전이가 아니다. canonical state는 사람 결재 + state-transition으로만 바뀐다.",
+        }.ToJsonString(JsonOptions));
+        return 0;
     }
-
-    // 통과한 판정에서 transition request 후보를 파일로 낸다. WORKSTATE는 건드리지 않는다 —
     // canonical 변경은 사람 결재와 StateApplier 전이를 거쳐야 한다(계약 §4).
     private static string WriteRequest(string root, string gateId, string? launchId, JsonObject report)
     {
@@ -270,53 +101,6 @@ internal static class ProgramVerifierCli
         File.WriteAllText(path, request.ToJsonString(JsonOptions), Utf8NoBom);
         return Path.Combine(RequestDirRel, name).Replace('\\', '/');
     }
-
-    // 측정 시작 시점에 워크트리가 커밋과 일치했는지 본다. 판정할 수 없으면 false다 —
-    // 모르는 것을 "깨끗했다"로 적지 않는다.
-    private static bool WorktreeClean(string root)
-    {
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "git", WorkingDirectory = root,
-                RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false,
-            };
-            psi.ArgumentList.Add("status");
-            psi.ArgumentList.Add("--porcelain");
-            using var process = Process.Start(psi);
-            if (process is null) return false;
-            var output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-            return process.ExitCode == 0 && string.IsNullOrWhiteSpace(output);
-        }
-        catch { return false; }
-    }
-
-    // 판정 시점의 HEAD 커밋을 읽는다. 못 읽으면 빈 문자열이지 "알 수 없음"을 감추지 않는다.
-    private static string HeadCommit()
-    {
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "git",
-                WorkingDirectory = RepoRoot(),
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-            };
-            psi.ArgumentList.Add("rev-parse");
-            psi.ArgumentList.Add("HEAD");
-            using var process = Process.Start(psi);
-            if (process is null) return "";
-            var output = process.StandardOutput.ReadToEnd().Trim();
-            process.WaitForExit();
-            return process.ExitCode == 0 ? output : "";
-        }
-        catch { return ""; }
-    }
-
     // --이름 다음 값을 읽는다. 없으면 null이다.
     private static string? ReadOption(string[] args, string name)
     {
@@ -326,7 +110,6 @@ internal static class ProgramVerifierCli
         }
         return null;
     }
-
     // 저장소 루트를 찾는다. 실행 위치가 어디든 같은 기준으로 검사를 돌리기 위함이다.
     private static string RepoRoot()
     {
@@ -338,21 +121,4 @@ internal static class ProgramVerifierCli
         }
         return Directory.GetCurrentDirectory();
     }
-
-    // 출력 본문을 해시로 남긴다. 본문을 판정에 쓰지 않되 나중에 대조할 수는 있게 한다.
-    private static string Sha256(string text)
-    {
-        var bytes = SHA256.HashData(Utf8NoBom.GetBytes(text ?? ""));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
-
-    // stderr는 원인 파악용으로 꼬리만 남긴다. 판정에는 쓰지 않는다.
-    private static string Tail(string text)
-    {
-        var t = (text ?? "").Trim();
-        return t.Length <= 500 ? t : t[^500..];
-    }
-
-    // JSON 문자열에 그대로 넣을 수 있게 최소 이스케이프만 한다.
-    private static string Escape(string text) => (text ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"");
 }
