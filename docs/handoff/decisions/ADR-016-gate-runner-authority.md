@@ -344,3 +344,18 @@ error MSB3021: ... LocalFirstWorkflowDashboard.Server.exe ...
 
 **§8의 정본 결정은 여전히 유효하다.** 세 게이트가 일치한다는 것이 두 벌을 유지해도 된다는
 뜻은 아니다. 오늘만 어긋남을 두 번 찾아 맞췄다(`BuiltInCommands`, `verdict` 부재).
+
+## §14 정정 (2026-07-26) — "순서를 강제하는 것이 없다"는 과장이었다
+
+`docs/verification/postexecutor-runner-comparison.md`의 미달 ①에 *"실무 순서는 실행자 산출 →
+빌드 → POST-EXECUTOR여야 하는데 그 순서를 문서나 하네스가 강제하지 않는다"*고 적었다.
+**절반은 틀렸다.**
+
+**빌드 → 게이트는 이미 강제된다.** 소스가 바이너리보다 새로우면 두 러너 모두
+exit 2 · `NOT-MEASURED` · 검사 0개로 거부하고 "먼저 빌드하라"고 말한다(§13에서 실측).
+`BinaryFreshness`가 곧 그 강제다.
+
+**남은 구멍은 산출 → 게이트 링크다.** 반입해 놓고 게이트를 안 돌려도 아무도 모른다.
+실측: `outbox/codex-launch-*` **15개** 중 처분이 기록된 것 **0개**.
+반입한 것·버린 것(`LAUNCH-GWIT-05`)·산출이 없던 것(`LAUNCH-GWIT-04`)이 파일로 구분되지 않는다.
+`DISPO-01`이 그 부분을 맡는다.
