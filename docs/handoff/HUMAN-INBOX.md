@@ -966,3 +966,18 @@ CLI 정식 철자는 --dry-run 이다 (StateApplierCli.cs:923)
 **사람 판단이 필요한 것**: 내부 키 이름이 CLI 옵션으로 받아들여지는 것을 막을 것인가
 (`server/StateApplierCli.cs` = `server/` 루트, 조율자 영역). 특히 `dry-run` 계열은
 **틀리면 실제 쓰기가 되므로** 다른 옵션보다 위험하다.
+
+## 2026-07-26 — dry-run 철자 문제를 고쳤다 (앞 항목 해소)
+
+값 없는 후행 `--옵션`이 조용히 버려져 `unknown-option` 검사에도 안 걸리던 것을 고쳤다
+(`docs/verification/dryrun-flag-failopen.md`).
+
+```
+--dry-run-flag (후행 무값)  →  고치기 전: 실제 apply · stateWritten true
+                                고친 뒤: exit 2 · status 불변
+--bogus (후행 무값)         →  exit 2 missing-option-value   (전에는 무시됐다)
+--dry-run (정식)            →  exit 0 · status 불변          (정상)
+```
+
+**남은 것**: `ParseFlagMap`류의 *"값 없으면 continue"* 패턴이 **다른 CLI에도 있을 수 있다.**
+이번엔 `StateApplierCli`만 고쳤다. 상태를 쓰는 명령이 또 있다면 같은 사고가 가능하다.

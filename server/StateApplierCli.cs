@@ -129,7 +129,9 @@ internal static class StateApplierCli
     // prepare 명령의 옵션을 검증하고 envelope/candidate를 생성한다.
     private static int RunPrepare(string[] args)
     {
-        var optErr = ValidateOptions(ParseFlagMap(args, 2), PrepareKnownKeys);
+        var map = ParseFlagMap(args, 2, out var formErr);
+        if (formErr is not null) { WriteRawError(formErr); return 2; }
+        var optErr = ValidateOptions(map, PrepareKnownKeys);
         if (optErr is not null) { WriteRawError(optErr); return 2; }
         var opts = ParsePrepareArgs(args);
         if (opts is null) { WriteRawError("prepare requires --transition-id and --request"); return 2; }
@@ -140,7 +142,9 @@ internal static class StateApplierCli
     // apply 명령의 옵션을 검증하고 v2 core를 실행한다.
     private static int RunApply(string[] args)
     {
-        var optErr = ValidateOptions(ParseFlagMap(args, 2), ApplyKnownKeys);
+        var map = ParseFlagMap(args, 2, out var formErr);
+        if (formErr is not null) { WriteRawError(formErr); return 2; }
+        var optErr = ValidateOptions(map, ApplyKnownKeys);
         if (optErr is not null) { WriteRawError(optErr); return 2; }
         var opts = ParseApplyArgs(args);
         if (opts is null) { WriteRawError("apply requires --envelope"); return 2; }
@@ -914,15 +918,39 @@ internal static class StateApplierCli
         return full;
     }
 
+    // 내부 키 이름이다. CLI 옵션으로 받으면 안 된다 — `--dry-run-flag`처럼 안전장치를 닮은 이름이
+    // 통과하면 dry-run이 아닌 실제 쓰기가 일어난다(2026-07-26 실제로 상태가 쓰였다).
+    private const string DryRunKey = "dry-run-flag";
+
     // 옵션 map을 파싱한다.
     private static Dictionary<string, string> ParseFlagMap(string[] args, int startIndex)
+        => ParseFlagMap(args, startIndex, out _);
+
+    // 옵션 map을 파싱하고 형식 오류를 함께 돌려준다.
+    // 값 없는 후행 `--옵션`을 조용히 버리면 unknown-option 검사에도 걸리지 않아 그대로 실행된다.
+    // 그 침묵이 2026-07-26 사고의 기전이다 — 버리지 말고 실패로 만든다.
+    private static Dictionary<string, string> ParseFlagMap(string[] args, int startIndex, out string? failure)
     {
+        failure = null;
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         for (var i = startIndex; i < args.Length; i++)
         {
-            if (string.Equals(args[i], "--dry-run", StringComparison.OrdinalIgnoreCase)) { map["dry-run-flag"] = "1"; continue; }
-            if (!args[i].StartsWith("--", StringComparison.Ordinal) || i + 1 >= args.Length) continue;
-            map[args[i][2..]] = args[++i];
+            if (string.Equals(args[i], "--dry-run", StringComparison.OrdinalIgnoreCase)) { map[DryRunKey] = "1"; continue; }
+            if (!args[i].StartsWith("--", StringComparison.Ordinal)) continue;
+
+            var name = args[i][2..];
+            if (string.Equals(name, DryRunKey, StringComparison.OrdinalIgnoreCase))
+            {
+                failure ??= $"unknown-option: --{name} (dry-run은 --dry-run이다)";
+                if (i + 1 < args.Length) i++;
+                continue;
+            }
+            if (i + 1 >= args.Length)
+            {
+                failure ??= $"missing-option-value: --{name}";
+                continue;
+            }
+            map[name] = args[++i];
         }
         return map;
     }
@@ -943,7 +971,7 @@ internal static class StateApplierCli
     private static PrepareOptions? ParsePrepareArgs(string[] args)
     {
         var map = ParseFlagMap(args, 2);
-        var dryRun = map.ContainsKey("dry-run-flag");
+        var dryRun = map.ContainsKey(DryRunKey);
         return map.TryGetValue("transition-id", out var id) && map.TryGetValue("request", out var req)
             ? new PrepareOptions(id, req, dryRun)
             : null;
@@ -953,7 +981,7 @@ internal static class StateApplierCli
     private static ApplyOptions? ParseApplyArgs(string[] args)
     {
         var map = ParseFlagMap(args, 2);
-        var dryRun = map.ContainsKey("dry-run-flag");
+        var dryRun = map.ContainsKey(DryRunKey);
         return map.TryGetValue("envelope", out var env) ? new ApplyOptions(env, dryRun) : null;
     }
 
