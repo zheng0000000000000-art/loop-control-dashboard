@@ -61,7 +61,7 @@
 | 7 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-d/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-d/applier-log.jsonl` | 1 | False | land gate 6·7 — fixture-d |
 | 8 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-e/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-e/applier-log.jsonl` | 1 | False | land gate 6·7 — fixture-e |
 | 9 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-malformed/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-malformed/applier-log.jsonl` | 2 | False | land gate 6·7 — fixture-malformed |
-| 10 | `recovery-selftest` | `` | 0 | False | RECOVERY fail-closed 자체 시험 |
+| 10 | `recovery-selftest` | `` | 0 | False | self-test가 거부 경로 7건을 확인한다(GWIT-04). negativeCaseCount로 출력하며 gate-witness-check가 실제 실행해 대조한다. |
 | 11 | `trust-origin-selftest` | `` | 0 | False | 부트스트랩 선행 검증 자체 시험 |
 | 12 | `measure` | `dev-pack` | 0 | True | land gate 11 |
 | 13 | `context-pack-integrity` | `` | 0 | False | 발사 전 참조 stale 차단 |
