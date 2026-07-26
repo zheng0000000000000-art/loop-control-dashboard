@@ -309,9 +309,10 @@ internal static class TrustOriginCli
         if (Read(evidence, "reconciliationFixtures") != "PASS") return "integration-gate-evidence-missing";
         if (Read(evidence, "docIntegrity") != "PASS") return "integration-gate-evidence-missing";
         if (ReadInt(evidence, "legacyCallsiteCount") != 0) return "direct-writer-gate-failed";
-        if (!SelfTestEvidencePass(evidence, "stateTransitionSelfTest", 19)) return "integration-gate-evidence-missing";
-        if (!SelfTestEvidencePass(evidence, "trustOriginSelfTest", 26)) return "integration-gate-evidence-missing";
-        if (!SelfTestEvidencePass(evidence, "recoverySelfTest", 8)) return "integration-gate-evidence-missing";
+        foreach (var (key, cases) in SelfTestGateCounts)
+        {
+            if (!SelfTestEvidencePass(evidence, key, cases)) return "integration-gate-evidence-missing";
+        }
         var dev = evidence["devPack"] as JsonObject;
         if (dev is null || ReadInt(dev, "violationCount") != 0 || Read(dev, "overallStatus") != "completed") return "integration-gate-evidence-missing";
         var evidenceFailures = (evidence["reconciliationFailures"] as JsonArray ?? []).OfType<JsonObject>().ToList();
@@ -389,9 +390,9 @@ internal static class TrustOriginCli
             ["baselineApplierLogSha256"] = Sha256(File.ReadAllBytes(ctx.LogPath)),
             ["releaseBuild"] = gatesPass ? "PASS" : "NOT_RUN",
             ["reconciliationFixtures"] = gatesPass ? "PASS" : "NOT_RUN",
-            ["stateTransitionSelfTest"] = SelfTestNode(gatesPass, 19),
-            ["trustOriginSelfTest"] = SelfTestNode(gatesPass, 26),
-            ["recoverySelfTest"] = SelfTestNode(gatesPass, 8),
+            ["stateTransitionSelfTest"] = SelfTestNode(gatesPass, CasesFor("stateTransitionSelfTest")),
+            ["trustOriginSelfTest"] = SelfTestNode(gatesPass, CasesFor("trustOriginSelfTest")),
+            ["recoverySelfTest"] = SelfTestNode(gatesPass, CasesFor("recoverySelfTest")),
             ["docIntegrity"] = gatesPass ? "PASS" : "NOT_RUN",
             ["devPack"] = new JsonObject { ["violationCount"] = gatesPass ? 0 : -1, ["overallStatus"] = gatesPass ? "completed" : "not-run" },
             ["legacyCallsiteCount"] = gatesPass ? 0 : -1,
@@ -400,6 +401,24 @@ internal static class TrustOriginCli
             ["baselineReconciliationReportSha256"] = ReconciliationReportHash(recon),
         };
     }
+
+    // evidence가 주장하는 self-test 케이스 수. **만드는 쪽과 검사하는 쪽이 이 표 하나를 쓴다.**
+    // 종전에는 세 곳(SelfTestNode 호출·SelfTestEvidencePass 호출·매니페스트)에 흩어져 손으로
+    // 맞춰야 했고, 케이스를 하나 더하면 declare가 사유를 가리키지 않는 방식으로 거절했다.
+    //
+    // 이 수치는 **실행해서 잰 것이 아니라 선언이다.** evidence 파일 변조를 잡는 용도이며,
+    // "self-test가 실제로 그만큼 돌았다"를 뜻하지 않는다 — 그 판정은 게이트의 self-test 검사가 한다.
+    // trustOriginSelfTest 항목은 §self-test의 selftest-case-count-matches-table이 실재와 대조한다.
+    private static readonly (string Key, int Cases)[] SelfTestGateCounts =
+    [
+        ("stateTransitionSelfTest", 19),
+        ("trustOriginSelfTest", 27),
+        ("recoverySelfTest", 8),
+    ];
+
+    // 표에서 케이스 수를 읽는다. 표에 없는 key는 0이며 그 항목은 통과할 수 없다.
+    private static int CasesFor(string key)
+        => SelfTestGateCounts.FirstOrDefault(x => x.Key == key).Cases;
 
     // self-test gate evidence 항목을 만든다.
     private static JsonObject SelfTestNode(bool pass, int casesRun) => new()
@@ -447,6 +466,12 @@ internal static class TrustOriginCli
         Add(cases, "required-commands-match-manifest",
             RequiredCommandsMissingFromManifest(RepoRootForSelfTest()).Count == 0, negative: false);
         Add(cases, "required-commands-drift-detected", RequiredCommandsDriftDetected(), negative: true);
+        // 표의 trustOriginSelfTest 값이 실재 케이스 수와 같은지 본다. 케이스를 더하면서 표를
+        // 안 고치면 declare가 integration-gate-evidence-missing으로 거절하는데, 그 사유는
+        // 원인을 가리키지 않는다(2026-07-26에 24 → 26으로 올릴 때 실제로 겪었다).
+        // +1은 이 케이스 자신이다 — Add가 아직 호출되기 전이므로 cases.Count에 안 들어 있다.
+        Add(cases, "selftest-case-count-matches-table",
+            CasesFor("trustOriginSelfTest") == cases.Count + 1, negative: false);
         var failed = cases.OfType<JsonObject>().Count(c => c["pass"]?.GetValue<bool>() != true);
         Output(new JsonObject { ["selfTest"] = "trust-origin-v2", ["verdict"] = failed == 0 ? "PASS" : "FAIL", ["casesRun"] = cases.Count, ["negativeCaseCount"] = cases.OfType<JsonObject>().Count(c => c["negative"]?.GetValue<bool>() == true), ["failed"] = failed, ["cases"] = cases });
         return failed == 0 ? 0 : 1;
