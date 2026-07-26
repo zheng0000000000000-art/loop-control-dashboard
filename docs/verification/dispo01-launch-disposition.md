@@ -378,3 +378,30 @@ launch-disposition ['outbox'] exp 0 got 1     (gate-report-not-found)
    *"무엇이 판정했는가"* 를 보려면 보고를 열어 `harness`/`verifier` 필드를 봐야 한다.
 3. **`--launch`를 안 써도 아무도 경고하지 않는다.** 처분을 쓸 때가 되어서야 mismatch로 드러난다.
    런처가 `pending`을 남기듯, 게이트 러너가 발사 맥락을 자동으로 알 방법은 없다.
+
+## ★ 정정 (같은 날, 반입 직후) — `DICC-02`는 절반만 고쳤다
+
+바로 위에서 *"두 러너 모두 처분 증거를 낼 수 있다"* 고 적었다. **거짓이다.**
+
+`di-completion-check`가 낸 보고를 실제로 `gateReport`로 써 보니:
+
+```
+launch-disposition outbox → LAUNCH-DICC-02 -> gate-report-baseline-invalid
+di-completion-check 보고 키: ... launchId 있음 ... baselineCommit 없음
+```
+
+`launch-disposition` §1-A는 **두 가지**를 본다 — `launchId` 일치 **그리고**
+`baselineCommit >= importCommit`. **`DICC-02` 지시서는 앞의 하나만 요구했다.**
+
+**내가 `DISPO-01` §1-A에 직접 쓴 규칙인데 후속 지시서에서 빠뜨렸다.**
+그리고 `launchId`가 실리는 것만 확인하고 *"이제 쓸 수 있다"* 고 단정했다 —
+**끝까지 써 보지 않고 중간 지표로 결론을 냈다.** 시험 4가 그걸 잡으라고 있었는데,
+그 시험은 픽스처(`case-20`)로만 돌았고 **실제 러너 산 보고로는 안 돌았다.**
+
+### 지금 상태
+
+`LAUNCH-DICC-02`의 `gateReport`는 **`program-verify` 산으로 바꿨다.**
+`launch-disposition outbox` **exit 0**(19/19). 저장소는 정합하다.
+
+`DICC-02`가 더한 `launchId`는 옳고 필요하다 — **다만 충분하지 않다.**
+`baselineCommit`을 더하는 후속 지시서가 필요하다.
