@@ -48,7 +48,7 @@ internal static class ClaimCheckCli
             // 주장 2 — 언급된 심볼이 실제 코드에 있는가(FIX-01 허위 완료주장이 여기 걸렸어야 했다).
             foreach (var sym in ExtractClaimedSymbols(text))
             {
-                var found = GitTools.RunGitText(root, $"grep -l {sym} -- server");
+                var found = GitTools.RunGitText(root, $"grep --untracked -l {sym} -- server");
                 var ok = !string.IsNullOrWhiteSpace(found);
                 if (!ok) mismatch++;
                 claims.Add(MakeClaim("symbol", $"{sym} 코드에 존재", "존재함",

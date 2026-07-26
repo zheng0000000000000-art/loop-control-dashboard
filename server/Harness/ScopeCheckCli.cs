@@ -8,6 +8,17 @@ using System.Text.RegularExpressions;
 
 internal static class ScopeCheckCli
 {
+    private static readonly string[] ByproductPatterns =
+    [
+        "outputs/**",
+        "dashboard/data/*/measurement.json",
+        "dashboard/data/*/run-log.json",
+        "dashboard/data/*/workflow-state.json",
+        "dashboard/data/*/patch-proposal.json",
+        "dashboard/data/*/review-report.json",
+        "**/*.pid",
+    ];
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -41,7 +52,9 @@ internal static class ScopeCheckCli
                 return 2;
             }
 
-            var changed = GetChangedFiles(root);
+            var allChanged = GetChangedFiles(root);
+            var ignored = allChanged.Where(IsByproduct).ToList();
+            var changed = allChanged.Where(file => !IsByproduct(file)).ToList();
             var outOfScope = new JsonArray();
             foreach (var file in changed)
             {
@@ -59,6 +72,7 @@ internal static class ScopeCheckCli
                 ["claimsFile"] = claimReport.RelativePath,
                 ["allowlistCount"] = allowlist.Count,
                 ["changedFileCount"] = changed.Count,
+                ["ignoredByproductCount"] = ignored.Count,
                 ["outOfScopeCount"] = outOfScope.Count,
                 ["claimConflictCount"] = conflictCount,
                 ["staleClaimCount"] = claimReport.StaleClaims.Count,
@@ -66,6 +80,7 @@ internal static class ScopeCheckCli
                 ["verdict"] = outOfScope.Count == 0 && conflictCount == 0 ? "PASS" : "FAIL",
                 ["allowlist"] = new JsonArray(allowlist.Select(p => (JsonNode)p).ToArray()),
                 ["outOfScopeFiles"] = outOfScope,
+                ["ignoredByproducts"] = new JsonArray(ignored.Select(file => (JsonNode)file).ToArray()),
                 ["claimConflicts"] = claimReport.Conflicts,
                 ["staleClaims"] = claimReport.StaleClaims,
                 ["unknownAllowlistClaims"] = claimReport.UnknownAllowlistClaims,
@@ -171,6 +186,10 @@ internal static class ScopeCheckCli
         return files.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
+    // 실행기·측정기가 만드는 런타임 부산물은 작업 범위 변경에서 제외한다.
+    private static bool IsByproduct(string file)
+        => ByproductPatterns.Any(pattern => GlobMatches(pattern, file));
+
     // claim 원장을 읽어 활성 충돌, 죽은 PID, allowlist 미상 claim을 분리한다.
     private static ClaimReport ReadClaims(string root, string? claimsPathOption, string selfActor, List<string> changedFiles)
     {
@@ -205,10 +224,12 @@ internal static class ScopeCheckCli
 
             if (!status.Equals("active", StringComparison.OrdinalIgnoreCase)) continue;
 
-            if (pid is null || !IsProcessAlive(pid.Value))
-                staleClaims.Add(BuildClaimSummary(item, "pid-dead"));
+            var liveness = EvaluateLiveness(item, pid);
+            if (!liveness.Alive)
+                staleClaims.Add(BuildClaimSummary(item, liveness.Reason));
 
             if (actor.Equals(selfActor, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!liveness.Alive) continue;
             foreach (var file in changedFiles)
             {
                 var matchedPath = paths.FirstOrDefault(path => GlobMatches(path, file));
@@ -250,18 +271,28 @@ internal static class ScopeCheckCli
         return null;
     }
 
-    // OS 프로세스 테이블에서 PID 생존 여부를 확인한다.
-    private static bool IsProcessAlive(int pid)
+    // claim 시각·만료 시각과 프로세스 시작 시각을 함께 대조해 PID 재사용을 배제한다.
+    private static ClaimLiveness EvaluateLiveness(JsonObject item, int? pid)
     {
-        if (pid <= 0) return false;
+        if (item["expiresAt"] is not null
+            && DateTimeOffset.TryParse(item["expiresAt"]!.ToString(), out var expiresAt)
+            && expiresAt <= DateTimeOffset.Now)
+            return new ClaimLiveness(false, "expired");
+        if (pid is null || pid <= 0) return new ClaimLiveness(false, "pid-dead");
         try
         {
-            using var process = Process.GetProcessById(pid);
-            return !process.HasExited;
+            using var process = Process.GetProcessById(pid.Value);
+            if (process.HasExited) return new ClaimLiveness(false, "pid-dead");
+            if (!DateTimeOffset.TryParse(item["claimedAt"]?.ToString(), out var claimedAt))
+                return new ClaimLiveness(false, "claimed-at-missing");
+            var startedAt = new DateTimeOffset(process.StartTime);
+            return startedAt <= claimedAt
+                ? new ClaimLiveness(true, "alive")
+                : new ClaimLiveness(false, "pid-reused");
         }
         catch
         {
-            return false;
+            return new ClaimLiveness(false, "pid-dead");
         }
     }
 
@@ -311,4 +342,6 @@ internal static class ScopeCheckCli
         JsonArray Conflicts,
         JsonArray StaleClaims,
         JsonArray UnknownAllowlistClaims);
+
+    private sealed record ClaimLiveness(bool Alive, string Reason);
 }

@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 internal static class DiCompletionCheckCli
 {
@@ -26,6 +27,9 @@ internal static class DiCompletionCheckCli
         var root = GitTools.FindRepoRoot();
         var options = ParseArgs(args);
         var manifestPath = ResolvePath(root, options.ManifestPath);
+
+        if (options.EmitCliContract)
+            return EmitCliContract(root);
 
         if (!string.IsNullOrWhiteSpace(options.EmitDocPath))
             return EmitDoc(root, manifestPath, ResolvePath(root, options.EmitDocPath));
@@ -57,6 +61,8 @@ internal static class DiCompletionCheckCli
             var warnings = new JsonArray();
             foreach (var warning in MutatingWarnings(checks)) warnings.Add(warning);
             foreach (var warning in UnlistedHarnessWarnings(manifest)) warnings.Add(warning);
+            var contractFailures = ValidateCliContract(root, warnings);
+            foreach (var failure in contractFailures) failures.Add(failure);
 
             foreach (var check in checks.OfType<JsonObject>().OrderBy(ReadOrder))
             {
@@ -138,7 +144,7 @@ internal static class DiCompletionCheckCli
             Failure(command, "exit-mismatch", $"expected {expectedExit}, actual {result.ExitCode}"));
     }
 
-    // dotnet run --no-build --project server -- <command> 형태로 기존 CLI를 재사용한다.
+    // dotnet run이 현재 소스를 먼저 빌드한 뒤 하위 검사를 실행하게 한다.
     private static ProcessRunResult RunDotnetCommand(string root, string command, List<string> args)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -152,7 +158,6 @@ internal static class DiCompletionCheckCli
             StandardErrorEncoding = Encoding.UTF8,
         };
         psi.ArgumentList.Add("run");
-        psi.ArgumentList.Add("--no-build");
         psi.ArgumentList.Add("--project");
         psi.ArgumentList.Add("server");
         psi.ArgumentList.Add("--");
@@ -305,7 +310,7 @@ internal static class DiCompletionCheckCli
     // CLI 인자를 기본값과 함께 해석한다.
     private static DiCompletionOptions ParseArgs(string[] args)
     {
-        var options = new DiCompletionOptions("POST-EXECUTOR", "", "docs/handoff/GATE-MANIFEST.json", "");
+        var options = new DiCompletionOptions("POST-EXECUTOR", "", "docs/handoff/GATE-MANIFEST.json", "", false);
         for (var i = 1; i < args.Length; i++)
         {
             var arg = args[i];
@@ -322,6 +327,8 @@ internal static class DiCompletionCheckCli
                         ? args[++i]
                         : "docs/handoff/HARNESSES.md",
                 };
+            else if (arg.Equals("--emit-cli-contract", StringComparison.OrdinalIgnoreCase))
+                options = options with { EmitCliContract = true };
         }
 
         return options;
@@ -389,6 +396,70 @@ internal static class DiCompletionCheckCli
     private static bool KnownCommand(string command)
         => BuiltInCommands.Contains(command) || HarnessRegistry.RegisteredNames.Contains(command, StringComparer.OrdinalIgnoreCase);
 
+    // 실제 라우터 비교문과 하네스 registry 키를 소스에서 읽어 CLI 배선 목록을 만든다.
+    private static List<string> EnumerateWiredCommands(string root)
+    {
+        var commands = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var router = File.ReadAllText(Path.Combine(root, "server", "Cli", "CliRouter.cs"));
+        foreach (Match match in Regex.Matches(router, @"string\.Equals\((?:cliCommand|args\[0\]),\s*""(?<name>[^""]+)"""))
+            commands.Add(match.Groups["name"].Value);
+
+        var registry = File.ReadAllText(Path.Combine(root, "server", "Harness", "HarnessRegistry.cs"));
+        foreach (Match match in Regex.Matches(registry, @"\[""(?<name>[^""]+)""\]\s*="))
+            commands.Add(match.Groups["name"].Value);
+        return commands.OrderBy(value => value, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    // 현재 배선을 계약 후보 JSON으로 stdout에만 출력한다.
+    private static int EmitCliContract(string root)
+    {
+        var commands = EnumerateWiredCommands(root);
+        Console.WriteLine(new JsonObject
+        {
+            ["schemaVersion"] = 1,
+            ["commands"] = new JsonArray(commands.Select(command => (JsonNode)new JsonObject
+            {
+                ["command"] = command,
+                ["critical"] = HarnessRegistry.RegisteredNames.Contains(command, StringComparer.OrdinalIgnoreCase)
+                    || command is "state-transition" or "projection" or "measure",
+            }).ToArray()),
+        }.ToJsonString(JsonOptions));
+        return 0;
+    }
+
+    // CLI 계약과 실재 배선을 대조하고 누락은 실패, 새 배선은 경고로 돌려준다.
+    private static JsonArray ValidateCliContract(string root, JsonArray warnings)
+    {
+        var failures = new JsonArray();
+        var path = Path.Combine(root, "docs", "handoff", "CLI-CONTRACT.json");
+        if (!File.Exists(path)) return failures;
+        var text = File.ReadAllText(path);
+        if (string.IsNullOrWhiteSpace(text)) return failures;
+        var contract = JsonNode.Parse(text) as JsonObject
+            ?? throw new JsonException("CLI contract root is not an object");
+        var wired = EnumerateWiredCommands(root).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var contracted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var node in (contract["commands"] as JsonArray) ?? [])
+        {
+            var item = node as JsonObject;
+            var command = item?["command"]?.ToString() ?? item?["name"]?.ToString() ?? node?.ToString() ?? "";
+            if (string.IsNullOrWhiteSpace(command)) continue;
+            contracted.Add(command);
+            if (!wired.Contains(command))
+                failures.Add(Failure(command, item?["critical"]?.GetValue<bool>() == true
+                    ? "critical-cli-wiring-missing"
+                    : "cli-wiring-missing", "contract command is not wired"));
+        }
+        foreach (var command in wired.Where(command => !contracted.Contains(command)))
+            warnings.Add(new JsonObject
+            {
+                ["command"] = command,
+                ["code"] = "cli-contract-unlisted",
+                ["message"] = "실재 배선이 CLI 계약에 없다.",
+            });
+        return failures;
+    }
+
     // JSON 문자열 배열 인자를 읽는다.
     private static List<string> ReadArgs(JsonObject check)
         => (check["args"] as JsonArray)?.Select(node => node?.ToString() ?? "").ToList() ?? [];
@@ -448,6 +519,6 @@ internal static class DiCompletionCheckCli
     }
 }
 
-internal sealed record DiCompletionOptions(string GateId, string TaskId, string ManifestPath, string EmitDocPath);
+internal sealed record DiCompletionOptions(string GateId, string TaskId, string ManifestPath, string EmitDocPath, bool EmitCliContract);
 internal sealed record ProcessRunResult(int ExitCode, string Stdout, string Stderr, long DurationMs);
 internal sealed record CheckRunResult(JsonObject Report, bool Passed, JsonObject Failure);

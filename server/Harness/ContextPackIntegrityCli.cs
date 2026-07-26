@@ -20,12 +20,17 @@ internal static class ContextPackIntegrityCli
         try
         {
             var root = GitTools.FindRepoRoot();
-            var directives = ResolveTargets(root, args.Skip(1).ToArray());
+            var inputs = args.Skip(1).ToArray();
+            var emitHashes = inputs.Length > 0 && inputs[0].Equals("--emit-hashes", StringComparison.OrdinalIgnoreCase);
+            var directives = ResolveTargets(root, emitHashes ? inputs.Skip(1).ToArray() : inputs);
             if (directives.Count == 0)
             {
                 Console.Error.WriteLine("{\"error\":\"no directive files found\"}");
                 return 2;
             }
+
+            if (emitHashes)
+                return EmitHashes(root, directives);
 
             var entries = new JsonArray();
             var missing = 0;
@@ -74,6 +79,47 @@ internal static class ContextPackIntegrityCli
             Console.Error.WriteLine($"{{\"error\":\"context-pack-integrity failed: {ex.Message}\"}}");
             return 2;
         }
+    }
+
+    // 검증과 같은 런타임으로 requiredInputs의 현재 sha256을 계산해 stdout에만 출력한다.
+    private static int EmitHashes(string root, List<string> directives)
+    {
+        var reports = new JsonArray();
+        foreach (var directive in directives)
+        {
+            var text = File.ReadAllText(directive);
+            var packText = ExtractContextPack(text);
+            var pack = packText is null ? null : JsonNode.Parse(packText) as JsonObject;
+            var hashes = new JsonArray();
+            foreach (var item in (pack?["requiredInputs"] as JsonArray)?.OfType<JsonObject>() ?? [])
+            {
+                var path = ReadString(item, "path").Replace('\\', '/');
+                var full = ResolveInputPath(root, path);
+                hashes.Add(new JsonObject
+                {
+                    ["path"] = path,
+                    ["sha256"] = File.Exists(full)
+                        ? Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(full))).ToLowerInvariant()
+                        : null,
+                    ["exists"] = File.Exists(full),
+                });
+            }
+            reports.Add(new JsonObject
+            {
+                ["directive"] = DisplayPath(root, directive),
+                ["requiredInputs"] = hashes,
+            });
+        }
+
+        Console.WriteLine(new JsonObject
+        {
+            ["harness"] = "context-pack-integrity",
+            ["mode"] = "emit-hashes",
+            ["directives"] = reports,
+        }.ToJsonString(JsonOptions));
+        return reports.OfType<JsonObject>()
+            .SelectMany(report => (report["requiredInputs"] as JsonArray)?.OfType<JsonObject>() ?? [])
+            .Any(item => item["exists"]?.GetValue<bool>() != true) ? 1 : 0;
     }
 
     // 인자가 없으면 큐 지시서 전체를, 인자가 있으면 파일이나 디렉터리 대상을 해석한다.

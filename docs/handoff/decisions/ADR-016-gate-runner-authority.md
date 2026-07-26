@@ -75,3 +75,49 @@ transition request 후보 생성(계약 §2-5·§2-6). 게이트 실행 자체�
 그러면 `--no-build` 결함을 그대로 안고 가며, `trust-origin evidence --gate-report`가 받을 보고서를
 낼 수단이 없어져 부트스트랩 경로도 함께 막힌다(`BASELINE-CHANGES.md` 2026-07-26 항목).
 **되돌리기 전에 `CODEX-GATE-04`를 먼저 착륙시켜라.**
+
+---
+
+## 6. 정정 (2026-07-26, 같은 세션) — **§1의 진단이 틀렸다**
+
+`CG04A`가 `--no-build`를 제거한 뒤 두 러너를 다시 돌렸다. **여전히 갈렸다.**
+
+```
+program-verify       실패 1  (context-pack-integrity — 착륙 ①단계의 stale, 예상됨)
+di-completion-check  실패 4  (같은 1 + self-test 3)
+```
+
+세 명령을 직접 돌리면 전부 exit 0이다. 게이트 보고서(`outputs/gates/adr016.gate.json`)에 실제
+사유가 적혀 있었다:
+
+```
+state-transition | verdict: FAIL-CLOSED | reason: unknown command
+recovery         | verdict: FAIL-CLOSED | reason: unknown command
+trust-origin     | verdict: FAIL-CLOSED | reason: unknown command
+```
+
+**낡은 바이너리가 아니었다.** `di-completion-check`는 `HarnessRegistry`에 **등록되지 않은 명령을
+거부한다.** 세 명령은 `CliRouter` 명령이지 하네스가 아니다. §1이 `--no-build`를 원인으로 지목한 것은
+**같은 시점에 눈에 띈 다른 결함을 원인으로 오인한 것**이다 — `CLAUDE.md`가 금지하는 프록시 단정이다.
+
+### 이 정정이 뒤집는 것
+
+- **`di-completion-check`의 그 동작은 결함이 아니라 fail-closed다.** 게이트가 알지 못하는 명령을
+  조용히 실행하지 않는다. 옳은 쪽이다.
+- **오히려 `program-verify`가 무르다.** 매니페스트에 적힌 것이면 등록 여부를 묻지 않고 실행한다.
+  `WP-STATE-INTEGRITY-LAND`의 14/14 PASS는 **등록된 러너라면 거부했을 명령 3개를 포함한 결과**다.
+  그 통과를 근거로 `TRUSTED_BASELINE`을 선언했다(`BASELINE-CHANGES.md` 2026-07-26).
+- **`--no-build` 제거는 여전히 옳다**(낡은 바이너리는 거짓 PASS를 낼 수 있다). 다만 그것이
+  두 러너가 갈린 이유는 아니었다.
+
+### 결정은 유지하되 근거를 바꾼다
+
+`CODEX-GATE-04` 착륙까지 `program-verify`가 권위라는 §2는 유지한다. 다만 이유가 다르다 —
+`di-completion-check`가 틀려서가 아니라, **`WP-STATE-INTEGRITY-LAND`가 아직 등록되지 않은 명령을
+포함하기 때문**이다. `CG04B`가 §3(등재)을 마치면 그 게이트를 `di-completion-check`로도 돌릴 수 있고,
+**그때 권위를 넘긴다.**
+
+**추가로 해야 할 일**(이 ADR이 만들지 않는다 — 별도 결재):
+`program-verify`도 등록되지 않은 명령을 거부해야 한다. 지금은 무르다. 고치기 전까지
+`program-verify`의 PASS는 "매니페스트에 적힌 명령이 전부 기대 exit code를 냈다"는 뜻이지
+"게이트가 아는 검사만 돌았다"는 뜻이 아니다. **인용할 때 이 차이를 적어라.**
