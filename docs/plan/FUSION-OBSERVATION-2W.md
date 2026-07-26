@@ -107,3 +107,56 @@ team-loop `BRAINSTORM-WORKFLOW.md` §7이 절차를 정했으나 **횟수를 안
 
 **기준선 표(§1·§2)는 고치지 마라.** 2026-07-27의 값이고, 고치면 비교가 사라진다.
 관찰 결과는 **아래에 append**한다.
+
+---
+
+## 관찰 1 (2026-07-27) — 실행자를 남의 저장소에 겨눠봤다
+
+**질문**: 실행자가 작동한다면 융합 작업 자체에도 쓸 수 있나? (사용자 제안)
+
+### 답: 쓸 수 있다
+
+`CodexHarnessLauncherCli.RepoRoot()`는 **CWD에서 위로 올라가며 `.git`을 찾고**,
+`git worktree add`도 그 root에서 돈다. **CWD를 대상 저장소에 두면 그 저장소가 root가 된다.**
+
+실측 — CWD를 `team-loop-lite-ai-learning`에 두고 로컬퍼스트 하네스 실행:
+
+```
+gate-clean docs      exit 1 · contentDirtyCount 1   ← 미추적 파일을 정확히 잡았다
+```
+
+**남의 저장소에서 실제로 판정한다.** 이것이 성립하면 `ADR-011`의 **D**(로컬 실행자로 한 바퀴)가
+처음으로 열릴 수 있다 — 여태 돌릴 대상이 자기 자신뿐이었다.
+
+### 막는 것 하나 — 영토가 하드코딩이다
+
+`CodexTerritory.Roots = ["server/Harness/", "skills/", "docs/qa/"]`는 **이 저장소 구조**다.
+team-loop은 `src/`·`test/`·`tools/`·`mcp/`라 발사 요청이 전부
+`allowed-paths-outside-codex-territory`로 거절된다.
+
+**그 자리에 들어갈 것이 team-loop에 이미 있다.** 그쪽 project context:
+*"`allowedPaths`, verification evidence, delivery state, and approval remain **server-owned**."*
+**태스크가 `allowedPaths`를 소유한다.** 하드코딩 상수를 **태스크가 주는 목록**으로 바꾸는 것이
+융합의 첫 조각이다.
+
+> **주의**: 그것은 **완화 방향**이다. 하드코딩의 목적이 *"실행자가 자기 영토를 스스로 넓힐 수 없게"*
+> 였는데, 요청에서 받으면 요청 작성자가 넓힐 수 있다. **사람 결재 대상이다.**
+
+### ★ 그 과정에서 fail-open을 찾았다 — 융합에 직격이다
+
+```
+gate-clean server            exit 0   ← team-loop에 없는 경로
+gate-clean nonexistent-xyz   exit 0
+```
+
+**`gate-clean <경로>`는 경로가 존재하지 않아도 PASS를 낸다.**
+
+**`POST-COMMIT` order 1이 `gate-clean server`다.** 대상을 team-loop으로 바꾸는 순간
+**첫 검사부터 조용히 초록**이 된다. 이 저장소 안에서도 `server/`를 개명하면 같은 일이 난다.
+
+`--manifestt`가 fixture 대신 production을 재고 exit 0을 냈던 것과 **같은 부류**다 —
+그때는 옵션 오타였고 이번엔 **인자 경로**다. 옵션 검증(`CliOptions`)은 오늘 고쳤지만
+**인자로 받은 경로의 실재 여부는 아무도 안 본다.**
+
+**고칠 자리**: `server/Harness/GateCleanCli.cs` — **코덱스 영토**라 지시서가 필요하다.
+**규칙 형태로 옮길 것**: *"검사 대상 경로가 존재하지 않으면 PASS가 아니라 입력 오류(2)다."*

@@ -1288,3 +1288,27 @@ docker named pipe도 막혀 **컴파일 증거를 만들 수 없다.** R1에서 
 
 **서버 상태**: team-loop 4173이 켜져 있다(workspace=`unknown-auction`). 내가 띄웠다.
 필요 없으면 꺼라.
+
+## 2026-07-27 — 융합 실험 첫 결과 + `gate-clean` fail-open 발견
+
+**실행자를 융합에 쓸 수 있다**(사용자 제안이 맞았다). `RepoRoot()`가 CWD를 따라가서
+CWD를 team-loop에 두면 그 저장소가 root가 된다. 실측: `gate-clean docs` → **exit 1**,
+team-loop의 미추적 파일을 정확히 잡았다. **남의 저장소에서 실제로 판정한다.**
+
+**막는 것은 영토 하드코딩 하나**다. `CodexTerritory.Roots`가 이 저장소 구조라 team-loop
+경로는 전부 거절된다. team-loop이 이미 태스크마다 `allowedPaths`를 소유하므로 그것으로
+바꾸는 것이 첫 조각인데 — **완화 방향이라 사람 결재다.**
+
+**★ 그 과정에서 fail-open을 찾았다.**
+
+```
+gate-clean server          exit 0   ← team-loop에 없는 경로
+gate-clean nonexistent-xyz exit 0
+```
+
+**경로가 존재하지 않아도 PASS다.** `POST-COMMIT` order 1이 `gate-clean server`라
+**대상을 team-loop으로 바꾸는 순간 첫 검사부터 조용히 초록**이 된다.
+이 저장소 안에서도 `server/`를 개명하면 같은 일이 난다.
+
+`server/Harness/GateCleanCli.cs`는 코덱스 영토라 **지시서가 필요하다.** 결재 대기:
+① 이 fail-open을 지금 고칠 것인가 ② 영토를 태스크 `allowedPaths`에서 받게 할 것인가.
