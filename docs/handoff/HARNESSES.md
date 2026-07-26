@@ -53,7 +53,7 @@
 | 순서 | 명령 | 인자 | 기대 exit | 상태 변경 | 비고 |
 | --- | --- | --- | --- | --- | --- |
 | 1 | `build-verify` | `` | 0 | False | land gate 1 |
-| 2 | `state-transition-selftest` | `` | 0 | False | land gate 2·4·5·8·9·10 — 19케이스(reconciliation-fail·candidate-toctou·FATAL 4분기·high-risk no-receipt 포함) |
+| 2 | `state-transition-selftest` | `` | 0 | False | self-test가 거부 경로 15건을 확인한다(GWIT-04). negativeCaseCount로 출력하며 gate-witness-check가 실제 실행해 대조한다. |
 | 3 | `handoff-integrity` | `` | 0 | False | land gate 3 — at rest reconciliation |
 | 4 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-a/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-a/applier-log.jsonl` | 1 | False | land gate 6·7 — fixture-a |
 | 5 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-b/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-b/applier-log.jsonl` | 1 | False | land gate 6·7 — fixture-b |
@@ -62,7 +62,7 @@
 | 8 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-e/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-e/applier-log.jsonl` | 1 | False | land gate 6·7 — fixture-e |
 | 9 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-malformed/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-malformed/applier-log.jsonl` | 2 | False | land gate 6·7 — fixture-malformed |
 | 10 | `recovery-selftest` | `` | 0 | False | self-test가 거부 경로 7건을 확인한다(GWIT-04). negativeCaseCount로 출력하며 gate-witness-check가 실제 실행해 대조한다. |
-| 11 | `trust-origin-selftest` | `` | 0 | False | 부트스트랩 선행 검증 자체 시험 |
+| 11 | `trust-origin-selftest` | `` | 0 | False | self-test가 거부 경로 20건을 확인한다(GWIT-04). negativeCaseCount로 출력하며 gate-witness-check가 실제 실행해 대조한다. |
 | 12 | `measure` | `dev-pack` | 0 | True | land gate 11 |
 | 13 | `context-pack-integrity` | `` | 0 | False | 발사 전 참조 stale 차단 |
 | 14 | `doc-integrity` | `` | 0 | False | 생성 문서와 실체 일치 |

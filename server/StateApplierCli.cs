@@ -613,43 +613,43 @@ internal static class StateApplierCli
     {
         var ctx = InitSelfTestRoot(root);
         var results = new JsonArray();
-        AddCase(results, "normal-new-transition", CaseNormal(ctx));
-        AddCase(results, "exact-idempotent-retry", CaseIdempotent(ctx));
+        AddCase(results, "normal-new-transition", CaseNormal(ctx), negative: false);
+        AddCase(results, "exact-idempotent-retry", CaseIdempotent(ctx), negative: false);
         AddCase(results, "same-id-different-request", CaseCollision(ctx, e =>
         {
             e["requestSha256"] = new string('a', 64);
             RefreshContract(e);
-        }));
+        }), negative: true);
         AddCase(results, "same-id-different-effectiveAt", CaseCollision(ctx, e =>
         {
             e["effectiveAt"] = "2026-01-01T00:00:01Z";
             RefreshContract(e);
-        }));
+        }), negative: true);
         AddCase(results, "same-id-different-kind", CaseCollision(ctx, e =>
         {
             e["transitionKind"] = "RECOVERY";
             RefreshContract(e);
-        }));
-        AddCase(results, "v1-idempotency-rejected", CaseV1Rejected(ctx));
-        AddCase(results, "pre-state-mismatch", CasePreMismatch(ctx));
-        AddCase(results, "reconciliation-fail", CaseReconciliationFail(ctx));
-        AddCase(results, "duplicate-v2-same-binding", CaseDuplicateSameBinding(ctx));
-        AddCase(results, "conflicting-v2-success", CaseConflictSuccess(ctx));
-        AddCase(results, "candidate-toctou", CaseCandidateTamper(ctx));
-        AddCase(results, "temp-write-failure", CaseFault(ctx, "ST-TEMP", ApplyFault.TempWrite, "state-temp-write-failed"));
-        AddCase(results, "atomic-replace-failure", CaseFault(ctx, "ST-REPLACE", ApplyFault.AtomicReplace, "state-atomic-replace-failed"));
-        AddCase(results, "after-replace-before-log", CaseFault(ctx, "ST-LOGMISS", ApplyFault.AfterReplaceBeforeLog, "pending-transition-recovery-required"));
-        AddCase(results, "after-log-before-cleanup", CaseAfterLogBeforeCleanup(ctx));
-        AddCase(results, "phase-change-no-receipt", CaseHighRisk(ctx, "PHASE_CHANGE"));
-        AddCase(results, "recovery-no-receipt", CaseHighRisk(ctx, "RECOVERY"));
-        AddCase(results, "replay-no-receipt", CaseHighRisk(ctx, "REPLAY"));
-        AddCase(results, "contract-hash-mismatch", CaseContractMismatch(ctx));
+        }), negative: true);
+        AddCase(results, "v1-idempotency-rejected", CaseV1Rejected(ctx), negative: true);
+        AddCase(results, "pre-state-mismatch", CasePreMismatch(ctx), negative: true);
+        AddCase(results, "reconciliation-fail", CaseReconciliationFail(ctx), negative: true);
+        AddCase(results, "duplicate-v2-same-binding", CaseDuplicateSameBinding(ctx), negative: false);
+        AddCase(results, "conflicting-v2-success", CaseConflictSuccess(ctx), negative: true);
+        AddCase(results, "candidate-toctou", CaseCandidateTamper(ctx), negative: true);
+        AddCase(results, "temp-write-failure", CaseFault(ctx, "ST-TEMP", ApplyFault.TempWrite, "state-temp-write-failed"), negative: true);
+        AddCase(results, "atomic-replace-failure", CaseFault(ctx, "ST-REPLACE", ApplyFault.AtomicReplace, "state-atomic-replace-failed"), negative: true);
+        AddCase(results, "after-replace-before-log", CaseFault(ctx, "ST-LOGMISS", ApplyFault.AfterReplaceBeforeLog, "pending-transition-recovery-required"), negative: true);
+        AddCase(results, "after-log-before-cleanup", CaseAfterLogBeforeCleanup(ctx), negative: false);
+        AddCase(results, "phase-change-no-receipt", CaseHighRisk(ctx, "PHASE_CHANGE"), negative: true);
+        AddCase(results, "recovery-no-receipt", CaseHighRisk(ctx, "RECOVERY"), negative: true);
+        AddCase(results, "replay-no-receipt", CaseHighRisk(ctx, "REPLAY"), negative: true);
+        AddCase(results, "contract-hash-mismatch", CaseContractMismatch(ctx), negative: true);
         var failed = results.OfType<JsonObject>().Count(o => o["pass"]?.GetValue<bool>() != true);
         Console.WriteLine(new JsonObject
         {
             ["selfTest"] = "state-transition-v2-core",
             ["verdict"] = failed == 0 ? "PASS" : "FAIL",
-            ["casesRun"] = results.Count,
+            ["casesRun"] = results.Count, ["negativeCaseCount"] = results.OfType<JsonObject>().Count(c => c["negative"]?.GetValue<bool>() == true),
             ["failed"] = failed,
             ["cases"] = results,
         }.ToJsonString(PrettyJson));
@@ -670,8 +670,10 @@ internal static class StateApplierCli
     }
 
     // self-test case 결과를 배열에 추가한다.
-    private static void AddCase(JsonArray results, string name, bool pass)
-        => results.Add(new JsonObject { ["case"] = name, ["pass"] = pass });
+    // self-test case 결과를 배열에 추가한다. negative는 "거부·결함이 나야 통과"인 케이스이며
+    // 필수 인자다 — 케이스를 추가하면서 표시를 잊으면 컴파일이 안 된다(GWIT-04 §1-A).
+    private static void AddCase(JsonArray results, string name, bool pass, bool negative)
+        => results.Add(new JsonObject { ["case"] = name, ["pass"] = pass, ["negative"] = negative });
 
     // 정상 신규 전이를 검증한다.
     private static bool CaseNormal(RepoContext ctx)

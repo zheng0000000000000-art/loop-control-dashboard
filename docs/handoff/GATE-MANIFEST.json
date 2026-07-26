@@ -258,7 +258,8 @@
           "args": [],
           "expectedExit": 0,
           "mutatesState": false,
-          "note": "land gate 2·4·5·8·9·10 — 19케이스(reconciliation-fail·candidate-toctou·FATAL 4분기·high-risk no-receipt 포함)"
+          "note": "self-test가 거부 경로 15건을 확인한다(GWIT-04). negativeCaseCount로 출력하며 gate-witness-check가 실제 실행해 대조한다.",
+          "internalNegativeCases": 15
         },
         {
           "order": 3,
@@ -361,7 +362,8 @@
           "args": [],
           "expectedExit": 0,
           "mutatesState": false,
-          "note": "부트스트랩 선행 검증 자체 시험"
+          "note": "self-test가 거부 경로 20건을 확인한다(GWIT-04). negativeCaseCount로 출력하며 gate-witness-check가 실제 실행해 대조한다.",
+          "internalNegativeCases": 20
         },
         {
           "order": 12,

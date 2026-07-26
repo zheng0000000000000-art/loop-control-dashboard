@@ -397,32 +397,32 @@ internal static class TrustOriginCli
     private static int RunSelfTest()
     {
         var cases = new JsonArray();
-        Add(cases, "consistent-baseline", RunCase(CaseConsistent));
-        Add(cases, "known-legacy-gap", RunCase(CaseLegacyGap));
-        Add(cases, "failure-set-mismatch", RunCase(CaseMismatch));
-        Add(cases, "conflict-rejected", RunCase(CaseConflict));
-        Add(cases, "malformed-rejected", RunCase(CaseMalformed));
-        Add(cases, "dirty-worktree", RunCase(CaseDirty));
-        Add(cases, "baseline-hash-mismatch", RunCase(CaseHashMismatch));
-        Add(cases, "redeclaration", RunCase(CaseRedeclare));
-        Add(cases, "uncommitted-record-inactive", RunCase(CaseUncommittedInactive));
-        Add(cases, "declaration-commit-active", RunCase(CaseDeclarationActive));
-        Add(cases, "self-reference-rejected", RunCase(CaseSelfReference));
-        Add(cases, "state-prefix-mutation", RunCase(CaseStatePrefix));
-        Add(cases, "log-prefix-mutation", RunCase(CaseLogPrefix));
-        Add(cases, "post-origin-normal", RunCase(CasePostOriginNormal));
-        Add(cases, "post-origin-state-only", RunCase(CasePostOriginStateOnly));
-        Add(cases, "post-origin-log-only", RunCase(CasePostOriginLogOnly));
-        Add(cases, "manual-record-invalid-epoch", RunCase(CaseManualRecordInvalidEpoch));
-        Add(cases, "manual-record-invalid-status", RunCase(CaseManualRecordInvalidStatus));
-        Add(cases, "tampered-failure-set-hash", RunCase(CaseTamperedFailureSetHash));
-        Add(cases, "evidence-missing-build-pass", RunCase(CaseEvidenceMissingBuildPass));
-        Add(cases, "post-origin-binding-mismatch", RunCase(CasePostOriginBindingMismatch));
-        Add(cases, "warning-report-bound", RunCase(CaseWarningReportBound));
-        Add(cases, "high-risk-stays-closed", HighRiskFailClosed());
-        Add(cases, "automatic-execution-false", true);
+        Add(cases, "consistent-baseline", RunCase(CaseConsistent), negative: false);
+        Add(cases, "known-legacy-gap", RunCase(CaseLegacyGap), negative: false);
+        Add(cases, "failure-set-mismatch", RunCase(CaseMismatch), negative: true);
+        Add(cases, "conflict-rejected", RunCase(CaseConflict), negative: true);
+        Add(cases, "malformed-rejected", RunCase(CaseMalformed), negative: true);
+        Add(cases, "dirty-worktree", RunCase(CaseDirty), negative: true);
+        Add(cases, "baseline-hash-mismatch", RunCase(CaseHashMismatch), negative: true);
+        Add(cases, "redeclaration", RunCase(CaseRedeclare), negative: true);
+        Add(cases, "uncommitted-record-inactive", RunCase(CaseUncommittedInactive), negative: true);
+        Add(cases, "declaration-commit-active", RunCase(CaseDeclarationActive), negative: false);
+        Add(cases, "self-reference-rejected", RunCase(CaseSelfReference), negative: true);
+        Add(cases, "state-prefix-mutation", RunCase(CaseStatePrefix), negative: true);
+        Add(cases, "log-prefix-mutation", RunCase(CaseLogPrefix), negative: true);
+        Add(cases, "post-origin-normal", RunCase(CasePostOriginNormal), negative: false);
+        Add(cases, "post-origin-state-only", RunCase(CasePostOriginStateOnly), negative: true);
+        Add(cases, "post-origin-log-only", RunCase(CasePostOriginLogOnly), negative: true);
+        Add(cases, "manual-record-invalid-epoch", RunCase(CaseManualRecordInvalidEpoch), negative: true);
+        Add(cases, "manual-record-invalid-status", RunCase(CaseManualRecordInvalidStatus), negative: true);
+        Add(cases, "tampered-failure-set-hash", RunCase(CaseTamperedFailureSetHash), negative: true);
+        Add(cases, "evidence-missing-build-pass", RunCase(CaseEvidenceMissingBuildPass), negative: true);
+        Add(cases, "post-origin-binding-mismatch", RunCase(CasePostOriginBindingMismatch), negative: true);
+        Add(cases, "warning-report-bound", RunCase(CaseWarningReportBound), negative: true);
+        Add(cases, "high-risk-stays-closed", HighRiskFailClosed(), negative: true);
+        Add(cases, "automatic-execution-false", true, negative: true);  // 자동 실행이 닫혀 있음을 단언한다
         var failed = cases.OfType<JsonObject>().Count(c => c["pass"]?.GetValue<bool>() != true);
-        Output(new JsonObject { ["selfTest"] = "trust-origin-v2", ["verdict"] = failed == 0 ? "PASS" : "FAIL", ["casesRun"] = cases.Count, ["failed"] = failed, ["cases"] = cases });
+        Output(new JsonObject { ["selfTest"] = "trust-origin-v2", ["verdict"] = failed == 0 ? "PASS" : "FAIL", ["casesRun"] = cases.Count, ["negativeCaseCount"] = cases.OfType<JsonObject>().Count(c => c["negative"]?.GetValue<bool>() == true), ["failed"] = failed, ["cases"] = cases });
         return failed == 0 ? 0 : 1;
     }
 
@@ -1057,7 +1057,10 @@ internal static class TrustOriginCli
     private static string Flag(string[] args, string name) { for (var i = 0; i + 1 < args.Length; i++) if (args[i] == "--" + name) return args[i + 1]; return ""; }
 
     // self-test case 결과를 JSON 배열에 추가한다.
-    private static void Add(JsonArray a, string name, bool pass) => a.Add(new JsonObject { ["case"] = name, ["pass"] = pass });
+    // self-test case 결과를 배열에 추가한다. negative는 "거부·결함이 나야 통과"인 케이스이며
+    // 필수 인자다 — 케이스를 추가하면서 표시를 잊으면 컴파일이 안 된다(GWIT-04 §1-A).
+    private static void Add(JsonArray a, string name, bool pass, bool negative) =>
+        a.Add(new JsonObject { ["case"] = name, ["pass"] = pass, ["negative"] = negative });
 
     // 성공 CommandResult를 만든다.
     private static CommandResult Ok(string command, JsonObject extra) { extra["command"] = command; extra["exitCode"] = 0; return new(0, extra); }
