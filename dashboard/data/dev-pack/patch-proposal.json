@@ -1,26 +1,29 @@
 {
   "schemaVersion": 2,
-  "id": "proposal-1785054191869",
-  "title": "악화 롤백 제안: maxFunctionLength",
-  "lifecycle": "superseded",
-  "kind": "rollback",
+  "id": "proposal-1785071964626",
+  "title": "함수 길이 제한 조정",
+  "lifecycle": "submitted",
   "createdBy": {
-    "provider": "rule-engine",
-    "model": null
+    "provider": "ollama",
+    "model": "qwen3:8b"
   },
-  "revisionOf": null,
-  "summary": "직전에 충족되던 지표가 악화되어 자동 롤백을 제안한다. 체크리스트가 검토할 내용이 없어 1층을 건너뛰고 사람 결재로 직행한다.",
+  "revisionOf": "proposal-1785071834128",
+  "summary": "함수 길이 측정값을 82에서 80으로 줄여 읽기와 유지보수를 용이하게 합니다.",
+  "assumptions": [],
   "changes": [
     {
       "path": "maxFunctionLength",
-      "before": 88,
-      "after": 80,
-      "note": "직전 승인 원인 미상 이후 maxFunctionLength이 80→88로 악화됨. 되돌리거나 원인 조사 필요"
+      "before": 82,
+      "after": [
+        0,
+        80
+      ],
+      "note": "함수 길이를 줄여 읽기와 유지보수를 용이하게 하기 위해 현재 측정값 82를 목표 80으로 조정합니다."
     }
   ],
   "impact": [
     {
-      "label": "악화 항목",
+      "label": "위반 항목",
       "value": "1"
     },
     {

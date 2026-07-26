@@ -19,7 +19,12 @@ internal static class DiCompletionCheckCli
     internal static int Run(string[] args)
     {
         var root = GitTools.FindRepoRoot();
-        var options = ParseArgs(args);
+        if (!TryParseArgs(args, out var options, out var optionError))
+        {
+            Console.Error.WriteLine(optionError);
+            return 2;
+        }
+
         var manifestPath = ResolvePath(root, options.ManifestPath);
 
         if (options.EmitCliContract)
@@ -334,21 +339,34 @@ internal static class DiCompletionCheckCli
         File.WriteAllText(path, report.ToJsonString(JsonOptions), new UTF8Encoding(false));
     }
 
-    // CLI 인자를 기본값과 함께 해석한다.
-    private static DiCompletionOptions ParseArgs(string[] args)
+    // 문서화된 CLI 인자만 값 규칙에 맞춰 해석한다.
+    private static bool TryParseArgs(string[] args, out DiCompletionOptions options, out string error)
     {
-        var options = new DiCompletionOptions("POST-EXECUTOR", "", "", "docs/handoff/GATE-MANIFEST.json", "", false);
+        options = new DiCompletionOptions("POST-EXECUTOR", "", "", "docs/handoff/GATE-MANIFEST.json", "", false);
+        error = "";
         for (var i = 1; i < args.Length; i++)
         {
             var arg = args[i];
-            if (arg.Equals("--gate", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
-                options = options with { GateId = args[++i] };
-            else if (arg.Equals("--task", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
-                options = options with { TaskId = args[++i] };
-            else if (arg.Equals("--launch", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
-                options = options with { LaunchId = args[++i] };
-            else if (arg.Equals("--manifest", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
-                options = options with { ManifestPath = args[++i] };
+            if (arg.Equals("--gate", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!TryReadRequiredOptionValue(args, ref i, arg, out var value, out error)) return false;
+                options = options with { GateId = value };
+            }
+            else if (arg.Equals("--task", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!TryReadRequiredOptionValue(args, ref i, arg, out var value, out error)) return false;
+                options = options with { TaskId = value };
+            }
+            else if (arg.Equals("--launch", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!TryReadRequiredOptionValue(args, ref i, arg, out var value, out error)) return false;
+                options = options with { LaunchId = value };
+            }
+            else if (arg.Equals("--manifest", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!TryReadRequiredOptionValue(args, ref i, arg, out var value, out error)) return false;
+                options = options with { ManifestPath = value };
+            }
             else if (arg.Equals("--emit-doc", StringComparison.OrdinalIgnoreCase))
                 options = options with
                 {
@@ -358,9 +376,34 @@ internal static class DiCompletionCheckCli
                 };
             else if (arg.Equals("--emit-cli-contract", StringComparison.OrdinalIgnoreCase))
                 options = options with { EmitCliContract = true };
+            else
+            {
+                error = $"unknown-option: {arg}";
+                return false;
+            }
         }
 
-        return options;
+        return true;
+    }
+
+    // 필수 옵션 값이 다음 옵션으로 넘어가지 않도록 한 항목을 읽는다.
+    private static bool TryReadRequiredOptionValue(
+        string[] args,
+        ref int index,
+        string option,
+        out string value,
+        out string error)
+    {
+        if (index + 1 >= args.Length || args[index + 1].StartsWith("--", StringComparison.Ordinal))
+        {
+            value = "";
+            error = $"missing-option-value: {option}";
+            return false;
+        }
+
+        value = args[++index];
+        error = "";
+        return true;
     }
 
     // 측정 시작 시점의 HEAD와 워크트리 청결 상태를 함께 잡는다.

@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-26T22:07:50.1909010+09:00",
+  "measuredAt": "2026-07-26T22:19:19.1617188+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
@@ -87,9 +87,9 @@
     },
     {
       "metricId": "maxFunctionLength",
-      "value": 80,
+      "value": 82,
       "evidence": [
-        "dashboard/app.js:535-614"
+        "server/Harness/DiCompletionCheckCli.cs:19-100"
       ]
     }
   ]

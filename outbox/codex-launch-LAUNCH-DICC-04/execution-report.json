@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-DICC-04",
+  "diId": "DICC-04",
+  "baselineCommit": "7b499abd78639fc04cba5e104a2871592557af28",
+  "startedAt": "2026-07-26T13:10:03Z",
+  "finishedAt": "2026-07-26T13:15:07Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "1271af446275be9cca1a9e02df7d12676773ef5f4e874b3750dc0173c9a1c040",
+  "stderrTail": "nt index,\n+        string option,\n+        out string value,\n+        out string error)\n+    {\n+        if (index + 1 >= args.Length || args[index + 1].StartsWith(\"--\", StringComparison.Ordinal))\n+        {\n+            value = \"\";\n+            error = $\"missing-option-value: {option}\";\n+            return false;\n         }\n \n-        return options;\n+        value = args[++index];\n+        error = \"\";\n+        return true;\n     }\n \n     // 측정 시작 시점의 HEAD와 워크트리 청결 상태를 함께 잡는다.\n\ntokens used\n86,956",
+  "changedPaths": [
+    "server/Harness/DiCompletionCheckCli.cs",
+    "docs/qa/gate-witness/DICC-04.md"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "3ab50c4a65a58f01117365c2897a7de036dd145629c311bd03f18976301ac341",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}

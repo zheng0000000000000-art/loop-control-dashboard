@@ -24,6 +24,9 @@
 | 8 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-a/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-a/applier-log.jsonl` | 1 | False | 반증 witness — 어긋난 상태를 실패로 보고하는지 확인한다(GWIT-01). 실측 2026-07-26: exit 1. |
 | 9 | `context-pack-integrity` | `docs/qa/gate-witness/stale-pin-directive.md` | 1 | False | 반증 witness — 일부러 stale한 pin을 실패로 보고하는지 확인한다. 실측: exit 1. |
 | 10 | `doc-integrity` | `--fixture docs/qa/gate-witness/doc-integrity-mismatch` | 1 | False | 반증 witness — 생성 문서와 원본이 어긋난 것을 실패로 보고하는지 확인한다(GWIT-02). 실측: exit 1. |
+| 11 | `measure` | `strict-pack --fixture docs/qa/gate-witness/measure-violating` | 1 | False | 반증 witness — blueprint 기준을 만족할 수 없게 만든 픽스처를 위반으로 보고하는지 확인한다. target은 상한이 아니라 일치 조건이라 저장소가 변해도 결과가 흔들리지 않는다. 실측 2026-07-26: exit 1. |
+| 12 | `verify-behavior` | `--fixture docs/qa/gate-witness/behavior-snapshot-mismatch.json` | 1 | False | 반증 witness — 실재와 다른 동작 스냅샷을 불일치로 보고하는지 확인한다. 실측 2026-07-26: exit 1. |
+| 13 | `build-verify` | `--fixture docs/qa/gate-witness/build-verify-broken` | 1 | False | 반증 witness — 컴파일되지 않는 픽스처를 빌드 실패로 보고하는지 확인한다(GWIT-05). 실측 2026-07-26: exit 1. |
 
 ### POST-COMMIT
 
@@ -44,10 +47,12 @@
 | 10 | `doc-integrity` | `--fixture docs/qa/gate-witness/doc-integrity-mismatch` | 1 | False | 반증 witness — 생성 문서와 원본이 어긋난 것을 실패로 보고하는지 확인한다(GWIT-02). 실측: exit 1. |
 | 11 | `gate-witness-check` | `` | 0 | False | 성공만 확인하는 검사를 센다(GWIT-01). requireFailureWitness가 켜진 게이트에서 반증 없는 검사가 있으면 exit 1. 이 게이트는 2026-07-26 기준 0건이다. |
 | 12 | `gate-witness-check` | `docs/qa/gate-witness/require-failure-witness.json` | 1 | False | 반증 witness — 반증 없는 검사가 있는 게이트를 실패로 보고하는지 확인한다(GWIT-01 §5). 실측 2026-07-26: exit 1. |
+| 13 | `launch-disposition` | `outbox` | 0 | False | 실행자 산출물의 처분이 전부 기록돼 있는지 센다(DISPO-01). 미기록·pending이 있으면 exit 1. 2026-07-26 기준 22/22 기록. |
+| 14 | `launch-disposition` | `docs/qa/gate-witness/launch-disposition/case-01` | 1 | False | 반증 witness — 처분이 없는 발사를 위반으로 보고하는지 확인한다(DISPO-01 §4-1). 실측 2026-07-26: exit 1. |
 
 ### WP-STATE-INTEGRITY-LAND
 
-- triggeredBy: dotnet run --project server -- program-verify verify --gate WP-STATE-INTEGRITY-LAND (수동)
+- triggeredBy: dotnet run --project server -- di-completion-check --gate WP-STATE-INTEGRITY-LAND (수동)
 - description: WP-STATE-INTEGRITY 통합 land gate 중 기계가 판정할 수 있는 항목. 12번(clean replay A / trust-origin 부트스트랩 B)은 포함하지 않는다 — 사람 결재이며, 이 게이트가 PASS여도 TRUSTED_BASELINE이 선언되는 것은 아니다.
 
 | 순서 | 명령 | 인자 | 기대 exit | 상태 변경 | 비고 |
@@ -68,6 +73,8 @@
 | 14 | `doc-integrity` | `` | 0 | False | 생성 문서와 실체 일치 |
 | 15 | `context-pack-integrity` | `docs/qa/gate-witness/stale-pin-directive.md` | 1 | False | 반증 witness — stale한 pin을 실패로 보고하는지 확인한다(GWIT-01). 실측 2026-07-26: exit 1. |
 | 16 | `doc-integrity` | `--fixture docs/qa/gate-witness/doc-integrity-mismatch` | 1 | False | 반증 witness — 생성 문서와 원본이 어긋난 것을 실패로 보고하는지 확인한다(GWIT-02). 실측: exit 1. |
+| 17 | `measure` | `strict-pack --fixture docs/qa/gate-witness/measure-violating` | 1 | False | 반증 witness — blueprint 기준을 만족할 수 없게 만든 픽스처를 위반으로 보고하는지 확인한다. target은 상한이 아니라 일치 조건이라 저장소가 변해도 결과가 흔들리지 않는다. 실측 2026-07-26: exit 1. |
+| 18 | `build-verify` | `--fixture docs/qa/gate-witness/build-verify-broken` | 1 | False | 반증 witness — 컴파일되지 않는 픽스처를 빌드 실패로 보고하는지 확인한다(GWIT-05). 실측 2026-07-26: exit 1. |
 
 ## Manifest 밖 등록 하네스
 

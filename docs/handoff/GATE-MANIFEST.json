@@ -102,7 +102,9 @@
             "docs/qa/gate-witness/measure-violating"
           ],
           "expectedExit": 1,
-          "mutatesState": false
+          "mutatesState": false,
+          "order": 11,
+          "note": "반증 witness — blueprint 기준을 만족할 수 없게 만든 픽스처를 위반으로 보고하는지 확인한다. target은 상한이 아니라 일치 조건이라 저장소가 변해도 결과가 흔들리지 않는다. 실측 2026-07-26: exit 1."
         },
         {
           "command": "verify-behavior",
@@ -111,7 +113,9 @@
             "docs/qa/gate-witness/behavior-snapshot-mismatch.json"
           ],
           "expectedExit": 1,
-          "mutatesState": false
+          "mutatesState": false,
+          "order": 12,
+          "note": "반증 witness — 실재와 다른 동작 스냅샷을 불일치로 보고하는지 확인한다. 실측 2026-07-26: exit 1."
         },
         {
           "command": "build-verify",
@@ -120,7 +124,9 @@
             "docs/qa/gate-witness/build-verify-broken"
           ],
           "expectedExit": 1,
-          "mutatesState": false
+          "mutatesState": false,
+          "order": 13,
+          "note": "반증 witness — 컴파일되지 않는 픽스처를 빌드 실패로 보고하는지 확인한다(GWIT-05). 실측 2026-07-26: exit 1."
         }
       ],
       "unregisteredChecks": [
@@ -260,7 +266,9 @@
             "outbox"
           ],
           "expectedExit": 0,
-          "mutatesState": false
+          "mutatesState": false,
+          "order": 13,
+          "note": "실행자 산출물의 처분이 전부 기록돼 있는지 센다(DISPO-01). 미기록·pending이 있으면 exit 1. 2026-07-26 기준 22/22 기록."
         },
         {
           "command": "launch-disposition",
@@ -268,7 +276,9 @@
             "docs/qa/gate-witness/launch-disposition/case-01"
           ],
           "expectedExit": 1,
-          "mutatesState": false
+          "mutatesState": false,
+          "order": 14,
+          "note": "반증 witness — 처분이 없는 발사를 위반으로 보고하는지 확인한다(DISPO-01 §4-1). 실측 2026-07-26: exit 1."
         }
       ],
       "unregisteredChecks": [
@@ -464,7 +474,9 @@
             "docs/qa/gate-witness/measure-violating"
           ],
           "expectedExit": 1,
-          "mutatesState": false
+          "mutatesState": false,
+          "order": 17,
+          "note": "반증 witness — blueprint 기준을 만족할 수 없게 만든 픽스처를 위반으로 보고하는지 확인한다. target은 상한이 아니라 일치 조건이라 저장소가 변해도 결과가 흔들리지 않는다. 실측 2026-07-26: exit 1."
         },
         {
           "command": "build-verify",
@@ -473,7 +485,9 @@
             "docs/qa/gate-witness/build-verify-broken"
           ],
           "expectedExit": 1,
-          "mutatesState": false
+          "mutatesState": false,
+          "order": 18,
+          "note": "반증 witness — 컴파일되지 않는 픽스처를 빌드 실패로 보고하는지 확인한다(GWIT-05). 실측 2026-07-26: exit 1."
         }
       ],
       "requireFailureWitness": true
