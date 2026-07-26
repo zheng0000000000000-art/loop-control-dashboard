@@ -1,7 +1,9 @@
 {
   "launchId": "LAUNCH-HOPT-01",
-  "state": "pending",
+  "state": "imported",
   "decidedAt": "2026-07-26",
-  "actor": "codex-launch (자동) — 처분은 사람이 정한다",
-  "note": "발사만 됐고 반입·폐기는 정해지지 않았다. launch-disposition이 위반으로 센다."
+  "actor": "조율 세션(Claude Opus 5) · 사람 지시",
+  "importCommit": "c276c2d987e0456ce312138943f16a6b5b76212e",
+  "gateReport": "docs/handoff/gate-evidence/LAUNCH-HOPT-01.gate.json",
+  "note": "하네스 CLI 다섯의 오타 옵션 거부. handoff-integrity --projection도 거부된다 — 그 플래그는 아무 일도 하지 않으면서 통과하고 있었다."
 }

@@ -221,3 +221,57 @@ PATH="$NOCODEX" codex-launch launch --request <유효한 요청> --manual   # �
    그 값이 false인 상태에서만 검증됐다. **true로 바꾸려면 기록을 고쳐야 하고 사람 결재다.**
 2. **`validate`가 가드를 읽는다는 것은 신뢰 원점 기록을 읽는다는 뜻이다.** 읽기 전용이지만
    `validate`의 부작용 범위가 조금 넓어졌다.
+
+---
+
+# 전면 적용 완료 (append, 2026-07-26)
+
+앞 절의 미달 ③(*"다른 CLI는 여전히 검증하지 않는다"*)을 닫는다.
+
+## 이제 열 CLI가 오타를 거부한다
+
+| CLI | 영역 | 경로 |
+| --- | --- | --- |
+| `state-transition` | `server/` | 사고 직후 직접 |
+| `di-completion-check` | `server/Harness/` | `DICC-04` + `R1` |
+| `trust-origin` · `codex-launch` | `server/` | 직접 |
+| `measure` · `verify-behavior` · `program-verify` · `recovery` | `server/` | 직접 |
+| `handoff-integrity` · `gate-clean` · `doc-integrity` · `build-verify` · `scope-check` | `server/Harness/` | **`HOPT-01`** |
+
+**검증 규칙 정의는 `server/CliOptions.cs` 하나다.**
+
+## ★ 아무 일도 하지 않던 플래그
+
+```
+handoff-integrity --projection   전:  exit 0 (그냥 정상 검사)   후:  exit 2
+```
+
+`HandoffIntegrityCli`에 projection 코드가 없다. 진짜 명령은 `CliRouter`의 `projection`이다.
+**CLAUDE.md는 "파일을 다 쓴 뒤 마지막에 `projection` 실행"을 요구하는데,
+`--projection`을 붙여도 통과하므로 안 한 것을 한 줄 알았다.**
+조율자가 오늘 여러 번 그렇게 돌렸다 — 다행히 진짜 `projection`도 따로 돌린 커밋이 대부분이라
+`handoff-integrity`가 계속 통과했지만, **그건 운이지 설계가 아니었다.**
+
+## 실측
+
+| 시험 | 결과 |
+| --- | --- |
+| 오타 6종(`--workstatee`·`--status-fixturee`·`--fixturee`·`--actorr`·`--fixturee`·`--projection`) | **전부 exit 2** |
+| 값 없는 `--workstate` | **exit 2 · `missing-option-value`** |
+| **정상 픽스처 7종** | **fixture-a 1 · fixture-c 0 · gate-clean 1/0 · doc-integrity 1 · build-verify 1/0 — 이전과 동일** |
+| `--self-test` 스위치 | **0** |
+| `LAND` · `measure dev-pack` | **0 · violations 0** |
+
+**정상 픽스처 7종이 이 작업의 안전장치다.** 막는 것만 확인하면 *"막았다"* 와 *"부쉈다"* 가
+구분되지 않는다. `DICC-04`의 시험 8과 같은 역할이다.
+
+## 지표는 만족했으나 목적은 미달인 부분
+
+1. **`scope-check`의 오류 문구가 다르다.** 다른 넷은 `unknown-option: --x`인데 그쪽은
+   `scope-check failed: unknown option: X`로 나온다. **거부는 하지만 문구가 통일되지 않았다.**
+   판정은 exit code로 하므로 동작에는 영향이 없다.
+2. **옵션 표를 코드로 재확인하지 않았다.** 지시서에 *"표를 믿지 말고 코드에서 확인하라"* 고 적었고
+   실행자가 확인했다고 보고했지만, **조율자가 다섯 파일의 옵션 목록을 다시 대조하지는 않았다.**
+3. **`--projection`이 언제부터 무효였는지 모른다.** 오늘 그렇게 돌린 커밋들에서
+   projection이 실제로 돌았는지는 커밋별로 확인하지 않았다. `handoff-integrity`가
+   계속 통과했다는 사실만 안다.
