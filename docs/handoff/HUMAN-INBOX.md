@@ -816,3 +816,60 @@ handoff-integrity   원시 바이트 SHA256        ← 안 받음
    제거하면 `--out`으로 보고를 내던 현재 작업 흐름도 `di-completion-check --task`로 바뀐다.
 2. `RequiredGateCommands`를 매니페스트와 **기계가 대조**하게 할 것인가(코덱스 영역).
 3. `trust-origin declare`는 **돌리지 않았다.** 이제 근거가 만들어지므로 선언 여부는 결재다.
+
+## 2026-07-26 — 정정: `trust-origin declare`는 결재 대상이 아니다. 이미 선언돼 있다
+
+앞서 *"이제 근거가 만들어지므로 `declare` 선언 여부는 결재다"* 라고 올렸다. **틀렸다.**
+
+```
+trust-origin inspect →  existingTrustOriginCount 1 · highestTrustEpoch 1
+                        eligibleForBootstrap false · worktreeClean true
+DeclareCore:            EnumerateRecords().Count > 0 → "trust-origin-already-established"
+```
+
+**`declare`를 돌리면 거절된다.** 확인하지 않고 결재 항목으로 올렸다 —
+오늘 반복한 실수(확인 안 한 추정을 사실처럼 적기)의 네 번째다.
+
+### 실재 상태
+
+| 항목 | 값 |
+| --- | --- |
+| 기록 | `docs/handoff/trust-origins/TO-2026-001.json` |
+| `trustEpoch` | 1 |
+| `declaredAt` | 2026-07-26T04:42:03Z |
+| `baselineCommit` | `763226ae…` (= `CALLSITE-HISTORICAL…`) |
+| 현재 HEAD | **그로부터 92커밋 앞** |
+| `trust-origin verify` | **exit 0** — 기록은 자기 baseline과 정합하다 |
+
+### 승계 경로는 **설계상 없다**
+
+```
+trustEpoch = 1 하드코딩(TrustOriginCli.cs:235,250)
+verify: trustEpoch != 1 → trust-origin-record-invalid (:828)
+self-test: "epoch 1 재선언이 거부되는지 검증한다" (:534)
+```
+
+**한 번만 선언되도록 의도적으로 막혀 있다.** 다시 세우는 것은 결재가 아니라 **설계 변경**이다.
+
+### 그래서 진짜 물어야 할 것
+
+`ADR-016` §6이 밝힌 대로, 이 선언의 근거였던 LAND **14/14 PASS는 무른 러너**가 낸 것이다 —
+등록되지 않은 명령 3개를 포함한 채 통과했고, 엄격한 러너였다면 거부했을 결과다.
+**선언 자체가 무효라는 뜻은 아니지만, 그 근거는 이제 약한 것으로 확인됐다.**
+
+한편 오늘 파이프라인을 고친 뒤 **깨끗한 클론에서 HEAD 기준 LAND 18/18 PASS**를 실측했다
+(`docs/verification/clone-truth-check.md`). **현재 상태가 건전하다는 증거는 있다 —
+다만 그것이 `TO-2026-001`에 묶여 있지 않다.**
+
+**선택지**:
+
+1. **그대로 둔다.** 기록은 verify를 통과하고, 근거가 약했다는 사실은 `ADR-016` §6에 남아 있다.
+   추가 조치 없음. **가장 적은 변경이고, 지금 무엇이 깨져 있지는 않다.**
+2. **승계 경로(epoch 2)를 만든다.** 한 번만 선언되게 한 설계를 바꾸는 것이라
+   **별도 ADR과 강한 사유가 필요하다.** "근거가 약했다"가 그 사유로 충분한지가 쟁점이다.
+3. **보강 증거만 남긴다.** HEAD 기준 게이트 결과를 기록에 덧붙인다 — 다만 기록은 사람 몫이고
+   덧붙이는 기계 경로가 없다. 사실상 문서로만 남기는 것이며 1번과 크게 다르지 않다.
+
+**나는 아무것도 하지 않았다.** `declare`도 돌리지 않았고 기록도 건드리지 않았다.
+증거 파일을 미리 만들어 두지도 않았다 — `baselineCommit == HEAD`가 강제되므로
+**커밋 하나만 더 쌓여도 낡는다.** 필요하면 결정 시점에 그 자리에서 만들어야 한다.
