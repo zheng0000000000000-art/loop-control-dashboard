@@ -1,7 +1,9 @@
 {
   "launchId": "LAUNCH-DICC-03",
-  "state": "pending",
+  "state": "imported",
   "decidedAt": "2026-07-26",
-  "actor": "codex-launch (자동) — 처분은 사람이 정한다",
-  "note": "발사만 됐고 반입·폐기는 정해지지 않았다. launch-disposition이 위반으로 센다."
+  "actor": "조율 세션(Claude Opus 5) · 사람 지시",
+  "importCommit": "99753ddee6f708955666f3476efc87bf23edf69f",
+  "gateReport": "docs/handoff/gate-evidence/LAUNCH-DICC-03.gate.json",
+  "note": "이 반입으로 di-completion-check 보고도 gateReport로 쓸 수 있게 됐다. 다만 이 gateReport 자체는 program-verify 산이다 — 어느 러너를 정본으로 할지는 ADR-016 §8 사람 결재다."
 }

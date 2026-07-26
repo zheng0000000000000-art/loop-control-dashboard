@@ -1,0 +1,209 @@
+{
+  "verifier": "program-verify",
+  "schemaVersion": 1,
+  "gateId": "POST-COMMIT",
+  "launchId": "LAUNCH-DICC-03",
+  "baselineCommit": "99753ddee6f708955666f3476efc87bf23edf69f",
+  "worktreeCleanAtStart": false,
+  "verdict": "PASS",
+  "checkCount": 14,
+  "failedCount": 0,
+  "verifiedAt": "2026-07-26T11:55:05Z",
+  "checks": [
+    {
+      "order": 1,
+      "command": "gate-clean",
+      "args": [
+        "server"
+      ],
+      "expectedExit": 0,
+      "actualExit": 0,
+      "passed": true,
+      "mutatesState": false,
+      "durationMs": 675,
+      "stdoutSha256": "e81720b320de078b29105c6a73d4065d744837c4c6d663b3c4ec2103854b3fee",
+      "stderrTail": ""
+    },
+    {
+      "order": 2,
+      "command": "handoff-integrity",
+      "args": [],
+      "expectedExit": 0,
+      "actualExit": 0,
+      "passed": true,
+      "mutatesState": false,
+      "durationMs": 686,
+      "stdoutSha256": "15750bc41ef61820ef8a966dac5eb3e6b0b81393e5064779975465561d661ea5",
+      "stderrTail": ""
+    },
+    {
+      "order": 3,
+      "command": "context-pack-integrity",
+      "args": [],
+      "expectedExit": 0,
+      "actualExit": 0,
+      "passed": true,
+      "mutatesState": false,
+      "durationMs": 691,
+      "stdoutSha256": "27d040db593784ebcdaf51b2af23b7ce4547de2b2539ac928b67c172dc82de93",
+      "stderrTail": ""
+    },
+    {
+      "order": 4,
+      "command": "doc-integrity",
+      "args": [],
+      "expectedExit": 0,
+      "actualExit": 0,
+      "passed": true,
+      "mutatesState": false,
+      "durationMs": 725,
+      "stdoutSha256": "11cf283664271e46967691ffd637ecf69d8b4b258cc800101f6c4d17d53bd9bb",
+      "stderrTail": ""
+    },
+    {
+      "order": 5,
+      "command": "hs-scan",
+      "args": [],
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "mutatesState": false,
+      "durationMs": 723,
+      "stdoutSha256": "c45ccddd5ddd2ea3c42460330e207caca14f137d7122dbab400ad9ad3a93ca6f",
+      "stderrTail": ""
+    },
+    {
+      "order": 6,
+      "command": "handoff-integrity",
+      "args": [
+        "--workstate",
+        "docs/qa/fixtures/reconciliation/fixture-a/workstate.json",
+        "--applier-log",
+        "docs/qa/fixtures/reconciliation/fixture-a/applier-log.jsonl"
+      ],
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "mutatesState": false,
+      "durationMs": 699,
+      "stdoutSha256": "68ec0355235168f21695d46f1fa595c4af107be2464eb9bb619a75eba794f8e3",
+      "stderrTail": ""
+    },
+    {
+      "order": 7,
+      "command": "handoff-integrity",
+      "args": [
+        "--workstate",
+        "docs/qa/fixtures/reconciliation/fixture-malformed/workstate.json",
+        "--applier-log",
+        "docs/qa/fixtures/reconciliation/fixture-malformed/applier-log.jsonl"
+      ],
+      "expectedExit": 2,
+      "actualExit": 2,
+      "passed": true,
+      "mutatesState": false,
+      "durationMs": 654,
+      "stdoutSha256": "86f950af0feba1dcd4d914cf341a0f45ef45656139828d1bf5afc796bf5b788e",
+      "stderrTail": "{\"harness-error\":\"workstate-malformed\",\"subject\":\"workstate.appliedTransitions[TRANS-MAL-001].appliedAt\",\"message\":\"appliedAt is missing or not a valid UTC RFC3339 timestamp: ''\"}"
+    },
+    {
+      "order": 8,
+      "command": "context-pack-integrity",
+      "args": [
+        "docs/qa/gate-witness/stale-pin-directive.md"
+      ],
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "mutatesState": false,
+      "durationMs": 663,
+      "stdoutSha256": "f7a4b683c4a1696aa12b0b68a464ce87174f2d8547a50a2e200e5bd677f34fba",
+      "stderrTail": ""
+    },
+    {
+      "order": 9,
+      "command": "gate-clean",
+      "args": [
+        "--status-fixture",
+        "docs/qa/gate-witness/gate-clean-dirty.status"
+      ],
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "mutatesState": false,
+      "durationMs": 646,
+      "stdoutSha256": "1137f3d3c149f3d46b9fb6602a34b850eadb56b19307bad2b8682b9167a90008",
+      "stderrTail": ""
+    },
+    {
+      "order": 10,
+      "command": "doc-integrity",
+      "args": [
+        "--fixture",
+        "docs/qa/gate-witness/doc-integrity-mismatch"
+      ],
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "mutatesState": false,
+      "durationMs": 680,
+      "stdoutSha256": "cdb475bf7199d93caf4696394ea5ee91bf0dabd3ce504b6e234c843b0462309e",
+      "stderrTail": ""
+    },
+    {
+      "order": 11,
+      "command": "gate-witness-check",
+      "args": [],
+      "expectedExit": 0,
+      "actualExit": 0,
+      "passed": true,
+      "mutatesState": false,
+      "durationMs": 15995,
+      "stdoutSha256": "7adbfd264a4447658d2d3c3290a32070bad3907e9259b8755fec9c916fe9835b",
+      "stderrTail": ""
+    },
+    {
+      "order": 12,
+      "command": "gate-witness-check",
+      "args": [
+        "docs/qa/gate-witness/require-failure-witness.json"
+      ],
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "mutatesState": false,
+      "durationMs": 636,
+      "stdoutSha256": "ac1cbdafd388334d8e99c28d2530a8add1794f13babdd4609bec89c67c8bf683",
+      "stderrTail": ""
+    },
+    {
+      "order": 13,
+      "command": "launch-disposition",
+      "args": [
+        "outbox"
+      ],
+      "expectedExit": 0,
+      "actualExit": 0,
+      "passed": true,
+      "mutatesState": false,
+      "durationMs": 1208,
+      "stdoutSha256": "281b5d37a4b151b8dcad5a6458cb2d03b23cd4ce5f540ac76660566e01858283",
+      "stderrTail": ""
+    },
+    {
+      "order": 14,
+      "command": "launch-disposition",
+      "args": [
+        "docs/qa/gate-witness/launch-disposition/case-01"
+      ],
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true,
+      "mutatesState": false,
+      "durationMs": 661,
+      "stdoutSha256": "18d00e41fc4d6c4750b952c231a4d0e106ddaf82676a34e32c39fe8b391504d1",
+      "stderrTail": ""
+    }
+  ],
+  "transitionRequestPath": null
+}
