@@ -683,3 +683,16 @@ WP-STATE-INTEGRITY-LAND   18 / 18   미반증 0   ← 이제 검증한 0
 **사람 판단이 남은 것**: `ADR-016` §8은 권위를 `di-completion-check`에 줬다. 이제 두 러너가
 모두 돌아가므로 **어느 쪽을 정본으로 둘 것인지**를 확정할지, 아니면 §7의 `BuiltInCommands`
 중복부터 없앨지(코덱스 영역) 정해야 한다. 목록이 갈리면 두 러너가 다시 다른 답을 낸다.
+
+## 2026-07-26 — di-completion-check도 자기잠금에 걸린다 (새 항목)
+
+`BuiltInCommands` 중복은 `HREG-02`로 해소됐다(정의 1개, 소비자 2개가 따라옴 — 실측).
+
+**그 과정에서 나온 것**: `di-completion-check`에는 `--no-build`가 없어 `program-verify`가
+방금 고친 것과 **똑같은 MSB3021 자기잠금**에 걸린다(ADR-016 §11). 세 게이트 모두 FAIL이지만
+사유는 빌드 실패다. `unknown-command` 판정만은 자식을 띄우기 전이라 영향이 없다.
+
+**사람 판단이 필요한 것**: 같은 설계(빌드하지 않고 낡음을 재서 거부)를 `DiCompletionCheckCli`에
+적용하는 후속 지시서를 낼 것인가. **코덱스 영역**이다.
+그 전까지 `di-completion-check`의 PASS/FAIL은 그대로 믿을 수 없다 — `ADR-016` §8이 권위를
+그쪽에 줬으므로 영향이 크다.

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "gates": [
+    {
+      "gateId": "HREG-02-MEASURE",
+      "description": "내장 measure 명령 인식을 반증한다.",
+      "triggeredBy": "HREG-02 반증 시험",
+      "checks": [
+        {
+          "order": 1,
+          "command": "measure",
+          "args": [
+            "dev-pack"
+          ],
+          "expectedExit": 0,
+          "mutatesState": true
+        }
+      ]
+    }
+  ]
+}

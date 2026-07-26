@@ -264,3 +264,45 @@ verdict FAIL | 실패 6 / 12 | worktreeCleanAtStart True
 
 **남은 성질**: 소스 mtime이 미래로 찍혀 있으면 다시 빌드해도 계속 거부한다(실측으로 확인).
 fail-closed 방향이고 메시지가 어느 파일인지 말해 주지만, 시계가 어긋난 환경에서는 막힌다.
+
+## §11 정정 (2026-07-26) — `di-completion-check`에는 `--no-build`가 없다. §1은 사실 자체가 틀렸다
+
+§1은 *"그쪽은 `dotnet run --no-build`로 낡은 바이너리를 잰다(`DiCompletionCheckCli.cs:155`)"*고 적었다.
+실제 코드는 그런 인자를 붙이지 않는다.
+
+```
+DiCompletionCheckCli.cs:160-164
+  psi.ArgumentList.Add("run");
+  psi.ArgumentList.Add("--project");
+  psi.ArgumentList.Add("server");
+  psi.ArgumentList.Add("--");
+  psi.ArgumentList.Add(command);
+```
+
+그래서 **`program-verify`가 §10에서 고친 것과 똑같은 자기잠금에 걸린다.** 실측 stdoutTail:
+
+```
+error MSB3021: ... LocalFirstWorkflowDashboard.Server.exe ...
+  because it is being used by another process
+```
+
+세 게이트 모두 FAIL이 나왔고 사유는 `exit-mismatch`이지만 **실제로는 검사가 빌드 단계에서 죽은 것**이다.
+`gate-clean`·`handoff-integrity`·`context-pack-integrity`·`doc-integrity`가 개별 실행에서는 exit 0인데
+여기서는 1로 잡혔다.
+
+**§8이 게이트 권위를 준 러너가 이 상태다.** §8의 근거(§6: 등록되지 않은 명령을 fail-closed한다)는
+여전히 유효하지만, **그 러너의 PASS/FAIL을 그대로 믿을 수 없다**는 사실이 추가된다.
+`unknown-command` 판정은 자식을 띄우기 전에 나므로 영향을 받지 않는다 — 실측으로 확인했다(HREG-02 §4).
+
+수정은 **코덱스 영역**이다(`server/Harness/`). `program-verify`와 같은 설계
+(빌드하지 않고 낡음을 재서 거부)를 적용하는 후속 지시서가 필요하다.
+
+**§1은 이로써 세 번 정정됐다**(§6 `unknown command` · §10 자기참조 · §11 `--no-build` 부재).
+프록시로 짚은 진단이 한 번도 맞지 않았다.
+
+### 곁가지 — `program-verify`는 픽스처 매니페스트를 못 받는다
+
+`--manifest`를 해석하지 않고 언제나 실제 `GATE-MANIFEST.json`을 읽는다(`ProgramVerifierCli.cs:115`).
+`di-completion-check`는 받는다. **그래서 두 러너를 픽스처로 대조할 수 없다.**
+2026-07-26에 픽스처로 대조를 시도해 exit 2 vs 1을 얻었는데, 그것은 판정 불일치가 아니라
+**`program-verify`가 그 게이트 id를 못 찾은 것**이었다. 무효한 비교였다.

@@ -2,6 +2,12 @@
 
 internal static class HarnessRegistry
 {
+    private static readonly HashSet<string> BuiltInCommands = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "measure",
+        "verify-behavior",
+    };
+
     private static readonly Dictionary<string, Func<string[], int>> Handlers = new(StringComparer.OrdinalIgnoreCase)
     {
         ["e2e-usage"] = E2EUsageCli.Run,
@@ -28,6 +34,10 @@ internal static class HarnessRegistry
 
     // 등록된 하네스 이름 목록을 반환한다.
     internal static IReadOnlyCollection<string> RegisteredNames => Handlers.Keys.ToArray();
+
+    // 게이트가 인식하는 내장 명령과 등록 하네스 이름 목록을 반환한다.
+    internal static IReadOnlySet<string> GateCommandNames { get; }
+        = BuiltInCommands.Concat(Handlers.Keys).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     // 이름이 표에 있으면 해당 하네스를 실행하고 exit code를 반환한다. 없으면 null을 반환한다.
     internal static int? TryRun(string[] args)

@@ -15,12 +15,6 @@ internal static class DiCompletionCheckCli
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    private static readonly HashSet<string> BuiltInCommands = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "measure",
-        "verify-behavior",
-    };
-
     // di-completion-check 진입점이다. exit 0=모든 기대 exit 일치, 1=불일치 또는 fail-closed.
     internal static int Run(string[] args)
     {
@@ -394,7 +388,7 @@ internal static class DiCompletionCheckCli
 
     // manifest 명령이 실행 가능한 CLI인지 확인한다.
     private static bool KnownCommand(string command)
-        => BuiltInCommands.Contains(command) || HarnessRegistry.RegisteredNames.Contains(command, StringComparer.OrdinalIgnoreCase);
+        => HarnessRegistry.GateCommandNames.Contains(command, StringComparer.OrdinalIgnoreCase);
 
     // 실제 라우터 비교문과 하네스 registry 키를 소스에서 읽어 CLI 배선 목록을 만든다.
     private static List<string> EnumerateWiredCommands(string root)

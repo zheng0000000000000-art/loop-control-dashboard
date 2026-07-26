@@ -147,19 +147,10 @@ internal static class ProgramVerifierCli
         return specs.OrderBy(s => s.Order).ToList();
     }
 
-    // di-completion-check의 BuiltInCommands를 그대로 옮긴 것이다(server/Harness/DiCompletionCheckCli.cs:18).
-    // 그 필드가 private이라 참조할 수 없어 복제했다 — 두 목록이 갈리면 두 러너가 다시 다른 답을 내므로,
-    // 저쪽이 바뀌면 여기도 바꿔야 한다. 갈리는 것 자체가 결함이다.
-    private static readonly HashSet<string> BuiltInCommands = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "measure",
-        "verify-behavior",
-    };
-
-    // 게이트가 아는 명령인지 본다. 판정 기준을 di-completion-check와 같게 유지한다.
+    // 게이트가 아는 명령인지 본다. 목록은 HarnessRegistry에 하나만 있다(HREG-02) —
+    // 여기에 사본을 두면 두 러너가 갈려 같은 매니페스트에 다른 답을 낸다(ADR-016 §6).
     private static bool KnownCommand(string command)
-        => BuiltInCommands.Contains(command)
-            || HarnessRegistry.RegisteredNames.Contains(command, StringComparer.OrdinalIgnoreCase);
+        => HarnessRegistry.GateCommandNames.Contains(command);
 
     // 돌고 있는 바이너리가 server 소스보다 낡았는지 잰다. 여기서 빌드하지 않는 이유는
     // 이 프로세스가 곧 그 바이너리여서 자기 자신을 덮을 수 없기 때문이다.

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "gates": [
+    {
+      "gateId": "HREG-02-UNKNOWN",
+      "description": "알 수 없는 명령의 실패 닫힘을 반증한다.",
+      "triggeredBy": "HREG-02 반증 시험",
+      "checks": [
+        {
+          "order": 1,
+          "command": "hreg-02-unknown",
+          "args": [],
+          "expectedExit": 0,
+          "mutatesState": false
+        }
+      ]
+    }
+  ]
+}
