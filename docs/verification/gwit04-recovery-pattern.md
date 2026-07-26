@@ -71,3 +71,40 @@ internalNegativeCases: 99 (실제 7)
    워크트리 변경 0을 확인했고 이번 변경은 출력 필드 추가뿐이라 성질이 유지된다고 보았으나,
    **재측정하지는 않았다.**
 3. `LAND`는 여전히 `requireFailureWitness`를 켜지 않았다. 4건이 남아 있다.
+
+---
+
+## 확대 적용 검증 (2026-07-26, `2603a97` 이후)
+
+위 §"지표는 만족했으나 목적은 미달인 부분" 1·2를 실측으로 닫는다.
+**원 기록은 지우지 않는다** — 그 시점에는 실제로 재지 않았다.
+
+### 반증 시험 2·3 — 두 파일 모두
+
+| 파일 | 기준 | 시험 2 (음성 비활성화) | 시험 3 (양성 비활성화) |
+| --- | --- | --- | --- |
+| `StateApplierCli` | 19 / 15 | `casesRun` 18 · **`negative` 14** | `casesRun` 18 · **`negative` 15 유지** |
+| `TrustOriginCli` | 24 / 20 | `casesRun` 23 · **`negative` 19** | `casesRun` 23 · **`negative` 20 유지** |
+
+비활성화한 케이스: `conflicting-v2-success`/`normal-new-transition`(StateApplier),
+`failure-set-mismatch`/`consistent-baseline`(TrustOrigin).
+
+**두 시험이 함께 상수 구현을 배제한다.** 시험 2만 보면 "케이스 수에 연동된 상수"일 수 있고,
+시험 3만 보면 "아무것도 안 하는 상수"일 수 있다. 세 파일 모두 같은 결과다.
+
+### §1-C 거짓 주장 차단 — 두 검사 모두
+
+`internalNegativeCases: 999`(실제 15 / 20)로 올린 픽스처 매니페스트:
+
+```
+LAND unwitnessed: ['build-verify', 'state-transition-selftest', 'trust-origin-selftest', 'measure']
+  state-transition-selftest 차단: True
+  trust-origin-selftest    차단: True
+```
+
+**`gate-witness-check`가 두 경우 모두 주장을 믿지 않고 실제로 실행해 세어 대조한다.**
+
+### 남은 미달 항목
+
+`LAND`는 여전히 `requireFailureWitness`를 켜지 않았다. `build-verify`·`measure` 2건이 남아 있고
+둘 다 픽스처 모드가 없다 — `GWIT-02`식 후속 지시서가 필요하다.
