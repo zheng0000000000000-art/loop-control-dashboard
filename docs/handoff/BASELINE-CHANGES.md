@@ -332,3 +332,48 @@ recovery 1/1, trust-origin 1/1.
    `Unmeasured`·`CaseCountKeys`를 지우고, 재귀 최댓값을 쓰는 종전 `CountJsonCaseValues`와
    `FindCaseCount`를 복원. 실패 반환값도 `0`으로 되돌린다.
 3. (선택) `docs/qa/gate-witness/nested-counter.json`·`nested-counter-output.json` 삭제.
+
+## 2026-07-27 — 사람이 권한 3건을 열었다 + 되돌림 지점 확보
+
+### ① 주체
+**사람(사용자)이 명시적으로 허가**했고 조율자가 받아 적는다.
+
+> *"create_task·claim_task·handoff_write·loop_enter 이런 걸 말한 게 맞아. 2, 3번 다 허락할게.
+> 어차피 깃도 연결되어 있을 테니까 작업하다 큰일 났다 싶어도 너가 되돌릴 수 있잖아"*
+
+### ② 무엇이 열렸나
+
+1. **team-loop MCP 쓰기 도구 금지 해제** — `create_task`·`claim_task`·`handoff_write`·`loop_enter`
+   등. 이 세션 시작부터 서 있던 금지였고, 이제 해제됐다.
+2. **영토 완화 결재** — `CodexTerritory.Roots` 하드코딩을 **태스크가 주는 `allowedPaths`**에서
+   받도록 바꾸는 것. **완화 방향임을 알린 뒤 받은 허가다.**
+   *"실행자가 자기 영토를 스스로 넓힐 수 없게"* 라는 원래 목적이 약해진다.
+3. **범위 "전부"** — `ADR-018 §3-a`("범위 안 정하고 2주 관찰")보다 우선한다.
+   융합 작업을 끝까지 진행한다.
+
+### ③ 되돌리는 법 — **git만으로는 안 된다**
+
+**사람의 전제가 반만 맞았다.** 실측:
+
+```
+team-loop/.gitignore:  data/*.json · data/*.jsonl · data/*.key · workspaces/*/
+data/ 추적 파일: 1개
+```
+
+**태스크·승격 영수증·실패 뭉치·헌법 관찰·컨텍스트팩이 전부 git 밖이다.**
+`workspaces/unknown-auction/`도 미추적. MCP 쓰기가 만드는 상태는 **git revert로 안 돌아온다.**
+
+그래서 쓰기 전에 스냅샷을 떴다:
+
+```
+C:\NHN Project\_snapshots\2026-07-27-pre-fusion\   (153 파일, data 4.0M + workspaces 361K)
+
+되돌리기:
+  cd "C:\NHN Project\team-loop-lite-ai-learning"
+  rm -rf data workspaces
+  cp -r "C:\NHN Project\_snapshots\2026-07-27-pre-fusion\data" data
+  cp -r "C:\NHN Project\_snapshots\2026-07-27-pre-fusion\workspaces" workspaces
+```
+
+**로컬퍼스트 쪽은 git으로 되돌아간다**(전부 추적됨). team-loop **코드**도 git으로 되돌아간다.
+**되돌아가지 않는 것은 team-loop의 런타임 상태뿐**이고 그것을 위 스냅샷이 덮는다.
