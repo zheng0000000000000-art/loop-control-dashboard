@@ -21,6 +21,9 @@
 | 5 | `context-pack-integrity` | `` | 0 | False |  |
 | 6 | `doc-integrity` | `` | 0 | False |  |
 | 7 | `gate-clean` | `server` | 1 | False | 실행자 직후에는 더러운 것이 정상이다. exit 1이 기대값이다. |
+| 8 | `handoff-integrity` | `--workstate docs/qa/fixtures/reconciliation/fixture-a/workstate.json --applier-log docs/qa/fixtures/reconciliation/fixture-a/applier-log.jsonl` | 1 | False | 반증 witness — 어긋난 상태를 실패로 보고하는지 확인한다(GWIT-01). 실측 2026-07-26: exit 1. |
+| 9 | `context-pack-integrity` | `docs/qa/gate-witness/stale-pin-directive.md` | 1 | False | 반증 witness — 일부러 stale한 pin을 실패로 보고하는지 확인한다. 실측: exit 1. |
+| 10 | `doc-integrity` | `--fixture docs/qa/gate-witness/doc-integrity-mismatch` | 1 | False | 반증 witness — 생성 문서와 원본이 어긋난 것을 실패로 보고하는지 확인한다(GWIT-02). 실측: exit 1. |
 
 ### POST-COMMIT
 
@@ -63,6 +66,8 @@
 | 12 | `measure` | `dev-pack` | 0 | True | land gate 11 |
 | 13 | `context-pack-integrity` | `` | 0 | False | 발사 전 참조 stale 차단 |
 | 14 | `doc-integrity` | `` | 0 | False | 생성 문서와 실체 일치 |
+| 15 | `context-pack-integrity` | `docs/qa/gate-witness/stale-pin-directive.md` | 1 | False | 반증 witness — stale한 pin을 실패로 보고하는지 확인한다(GWIT-01). 실측 2026-07-26: exit 1. |
+| 16 | `doc-integrity` | `--fixture docs/qa/gate-witness/doc-integrity-mismatch` | 1 | False | 반증 witness — 생성 문서와 원본이 어긋난 것을 실패로 보고하는지 확인한다(GWIT-02). 실측: exit 1. |
 
 ## Manifest 밖 등록 하네스
 
