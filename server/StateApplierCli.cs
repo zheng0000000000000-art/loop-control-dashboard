@@ -188,29 +188,36 @@ internal static class StateApplierCli
     }
 
     // apply core는 pending 검사, reconciliation, idempotency, 신규 전이 적용을 순서대로 수행한다.
-    private static int ApplyEnvelopeCore(RepoContext ctx, TransitionEnvelope envelope, bool dryRun, ApplyRuntime runtime)
+    // 판정 결과를 그대로 돌려준다. 사유(FailureCode)까지 봐야 하는 검사가 있어 출력과 분리했다 —
+    // exit code만 보면 "high-risk라서 거부"와 "다른 이유로 거부"가 같아 보인다(06C-2-R4가 요구한 구분).
+    private static ApplyResult ApplyEnvelopeResult(RepoContext ctx, TransitionEnvelope envelope, bool dryRun, ApplyRuntime runtime)
     {
         if (!ValidateEnvelopeStatic(envelope, out var staticFailure))
-            return WriteResult(envelope, new ApplyResult("rejected", 1, false, false, PendingExists(ctx, envelope), staticFailure));
+            return new ApplyResult("rejected", 1, false, false, PendingExists(ctx, envelope), staticFailure);
 
         // RECOVERY.md의 불변식: "reconciliation before any apply decision".
         // 종전에는 InspectPending이 먼저였고, pending 저널·상태 해시·로그 성공을 모두 위조하면
         // reconciliation이 깨진 저장소에서도 idempotent(exit 0)가 나왔다(2026-07-26 실측).
         // 상태를 쓰지는 않으므로 위조된 전이는 아니지만, 거짓 OK다 — 판정 전에 먼저 잰다.
         var recon = RunReconciliation(ctx);
-        if (recon.ExitCode != 0) return WriteResult(envelope, recon);
+        if (recon.ExitCode != 0) return recon;
         var pendingExit = InspectPending(ctx, envelope);
-        if (pendingExit is not null) return WriteResult(envelope, pendingExit);
+        if (pendingExit is not null) return pendingExit;
         var existing = CheckExistingTransition(ctx, envelope, recon);
-        if (existing is not null) return WriteResult(envelope, existing);
+        if (existing is not null) return existing;
         if (HighRiskKinds.Contains(envelope.TransitionKind))
-            return WriteResult(envelope, new ApplyResult("rejected", 1, false, false, PendingExists(ctx, envelope),
-                "trusted-human-receipt-required", "verified human receipt infrastructure is not available"));
+            return new ApplyResult("rejected", 1, false, false, PendingExists(ctx, envelope),
+                "trusted-human-receipt-required", "verified human receipt infrastructure is not available");
         var prepared = PrepareApplyInput(ctx, envelope);
-        if (prepared.Result.ExitCode != 0) return WriteResult(envelope, prepared.Result);
-        if (dryRun) return WriteResult(envelope, new ApplyResult("applied", 0, false, false, false));
-        return WriteResult(envelope, CommitNewTransition(ctx, envelope, prepared.Input!, runtime));
+        if (prepared.Result.ExitCode != 0) return prepared.Result;
+        if (dryRun) return new ApplyResult("applied", 0, false, false, false);
+        return CommitNewTransition(ctx, envelope, prepared.Input!, runtime);
     }
+
+    // 판정하고 결과를 CLI 계약 형식으로 출력한다.
+    private static int ApplyEnvelopeCore(RepoContext ctx, TransitionEnvelope envelope, bool dryRun, ApplyRuntime runtime)
+        => WriteResult(envelope, ApplyEnvelopeResult(ctx, envelope, dryRun, runtime));
+
 
     // pending journal을 먼저 검사해 자동 cleanup 가능 상태와 recovery-required 상태를 분리한다.
     private static ApplyResult? InspectPending(RepoContext ctx, TransitionEnvelope envelope)
@@ -616,6 +623,30 @@ internal static class StateApplierCli
         finally { try { if (Directory.Exists(root)) Directory.Delete(root, true); } catch { } }
     }
 
+    // high-risk 전이 3종이 실제로 거부되는지 임시 fixture 저장소에서 확인한다.
+    // trust-origin의 declare 선행조건이 이 결과를 쓴다 — 상수 대신 진짜 apply 경로를 돈다.
+    // self-test의 phase-change/recovery/replay-no-receipt 케이스와 **같은 CaseHighRisk를 쓴다.**
+    // 사본을 만들면 한쪽만 고쳐질 때 서로 다른 답을 낸다.
+    internal static bool HighRiskFailsClosed(IReadOnlyCollection<string> requiredKinds)
+    {
+        // **HighRiskKinds를 순회하지 마라.** 검증 대상 집합을 그대로 도는 검사는, 종류를 빼면
+        // 검사도 줄어 통과한다(2026-07-26 실측: REPLAY를 빼도 self-test가 0이었다).
+        // 요구 목록은 부르는 쪽이 준다.
+        if (requiredKinds.Count == 0) return false;
+        var root = Path.Combine(Path.GetTempPath(), $"st-highrisk-{Guid.NewGuid():N}");
+        try
+        {
+            var ctx = InitSelfTestRoot(root);
+            return requiredKinds.All(kind => CaseHighRisk(ctx, kind));
+        }
+        catch
+        {
+            // 확인하지 못한 것은 통과가 아니다.
+            return false;
+        }
+        finally { try { if (Directory.Exists(root)) Directory.Delete(root, true); } catch { } }
+    }
+
     // self-test root를 구성하고 모든 06C-1 fixture를 실행한다.
     private static int RunSelfTestInRoot(string root)
     {
@@ -800,7 +831,9 @@ internal static class StateApplierCli
         env["transitionContractSha256"] = ComputeContractHash(env["transitionId"]!.ToString(), kind,
             env["requestSha256"]!.ToString(), env["expectedPreStateSha256"]!.ToString(),
             env["expectedPostStateSha256"]!.ToString(), env["effectiveAt"]!.ToString());
-        return ApplyEnvelopeCore(ctx, ReadEnvelopeFromObject(env), false, new ApplyRuntime()) == 1;
+        // exit 1만 보면 "high-risk라서 거부"와 "다른 이유로 거부"가 구분되지 않는다(06C-2-R4의 요구).
+        var result = ApplyEnvelopeResult(ctx, ReadEnvelopeFromObject(env), false, new ApplyRuntime());
+        return result.ExitCode == 1 && result.FailureCode == "trusted-human-receipt-required";
     }
 
     // contract hash와 개별 hash 모순을 검증한다.

@@ -990,7 +990,16 @@ internal static class TrustOriginCli
     }
 
     // 06C-2에서는 high-risk 전이가 계속 fail-closed임을 나타낸다.
-    private static bool HighRiskFailClosed() => true;
+    // high-risk 전이가 실제로 거부되는지 확인한다. 종전에는 `=> true` 상수였고, 그래서
+    // declare의 선행조건도 self-test의 high-risk-stays-closed 케이스도 결코 실패하지 않았다
+    // (2026-07-26 실측). 판정은 StateApplier가 소유하므로 그쪽 경로를 그대로 돈다.
+    // declare가 요구하는 high-risk 종류. **StateApplier의 집합을 참조하지 않는다** —
+    // 그쪽에서 종류가 빠지면 이 목록과 어긋나 검사가 실패해야 한다.
+    private static readonly string[] RequiredHighRiskKinds = ["PHASE_CHANGE", "RECOVERY", "REPLAY"];
+
+    // high-risk 전이가 실제로 거부되는지 확인한다. 종전에는 `=> true` 상수였고, 그래서
+    // declare의 선행조건도 self-test의 high-risk-stays-closed 케이스도 결코 실패하지 않았다.
+    private static bool HighRiskFailClosed() => StateApplierCli.HighRiskFailsClosed(RequiredHighRiskKinds);
 
     // 자동 launcher hook 활성화 여부를 보수적으로 감지한다.
     private static bool AutomaticLauncherEnabled(string root) => File.Exists(Path.Combine(root, ".claude", "settings.json")) && File.ReadAllText(Path.Combine(root, ".claude", "settings.json")).Contains("\"hooks\"");
