@@ -50,6 +50,14 @@ public static class BehaviorSnapshotCli
         try
         {
             var root = FindWorkspaceRoot();
+            // 오타를 조용히 무시하면 픽스처와 비교했다고 믿는데 실제 스냅샷과 비교한다.
+            var optionFailure = CliOptions.Validate(args, 1, ["fixture"], []);
+            if (optionFailure is not null)
+            {
+                Console.Error.WriteLine(new JsonObject { ["error"] = optionFailure }.ToJsonString());
+                return 2;
+            }
+
             var fixturePath = FixtureArgument(args);
             var snapshotPath = fixturePath is null
                 ? Path.Combine(root, "docs", "behavior-snapshot.json")

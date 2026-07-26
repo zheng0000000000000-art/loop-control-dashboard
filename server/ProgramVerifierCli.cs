@@ -42,6 +42,13 @@ internal static class ProgramVerifierCli
     // 게이트 보고서를 근거로 transition request 후보를 만든다. 근거가 없으면 만들지 않는다.
     private static int Request(string[] args)
     {
+        var optionFailure = CliOptions.Validate(args, 2, ["gate", "report", "launch"], []);
+        if (optionFailure is not null)
+        {
+            Console.Error.WriteLine(new JsonObject { ["error"] = optionFailure }.ToJsonString(JsonOptions));
+            return 2;
+        }
+
         var gateId = ReadOption(args, "--gate");
         var reportPath = ReadOption(args, "--report");
         var launchId = ReadOption(args, "--launch");

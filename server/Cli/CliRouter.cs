@@ -104,6 +104,8 @@ internal static class CliRouter
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         };
 
+        if (MeasureOptionFailure(args, cliJsonOptions) is int optionExit) return optionExit;
+
         var fixtureRoot = MeasureFixtureArgument(args);
         var positional = args.Where(arg => !string.Equals(arg, "--fixture", StringComparison.OrdinalIgnoreCase)).ToArray();
         if (fixtureRoot is not null)
@@ -187,6 +189,16 @@ internal static class CliRouter
 
         fixtureCopy = CopyMeasureFixture(source, workspaceRoot);
         return fixtureCopy;
+    }
+
+    // 오타를 조용히 무시하면 픽스처를 쟀다고 믿는데 실제 dashboard/data를 잰다.
+    // 문제가 있으면 종료 코드를, 없으면 null을 준다.
+    private static int? MeasureOptionFailure(string[] args, JsonSerializerOptions options)
+    {
+        var failure = CliOptions.Validate(args, 1, ["fixture"], []);
+        if (failure is null) return null;
+        Console.Error.WriteLine(CliError(failure).ToJsonString(options));
+        return 2;
     }
 
     // measure의 --fixture <dataRoot> 인자를 읽는다. 없으면 null.

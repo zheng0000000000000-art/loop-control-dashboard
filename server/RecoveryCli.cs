@@ -25,6 +25,16 @@ internal static class RecoveryCli
     internal static int Run(string[] args)
     {
         var sub = args.Length > 1 ? args[1] : "";
+        // 오타를 조용히 무시하면 픽스처를 지정했다고 믿는데 실제 저장소를 진단한다.
+        var optionFailure = sub switch
+        {
+            "inspect" => CliOptions.Validate(args, 2, ["workstate", "applier-log", "pending-dir"], []),
+            "evidence" => CliOptions.Validate(args, 2, ["out", "workstate", "applier-log", "pending-dir"], []),
+            "--self-test" => CliOptions.Validate(args, 2, [], []),
+            _ => null,
+        };
+        if (optionFailure is not null) return Error(optionFailure, 2);
+
         if (string.Equals(sub, "inspect", StringComparison.OrdinalIgnoreCase)) return RunInspect(args);
         if (string.Equals(sub, "evidence", StringComparison.OrdinalIgnoreCase)) return RunEvidence(args);
         if (string.Equals(sub, "--self-test", StringComparison.OrdinalIgnoreCase)) return RunSelfTest();
