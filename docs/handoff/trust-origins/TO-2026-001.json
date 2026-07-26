@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 2,
+  "trustOriginId": "TO-2026-001",
+  "trustEpoch": 1,
+  "declarationType": "BOOTSTRAP_TRUST_ORIGIN",
+  "declarationStatus": "HUMAN_DECLARED_NOT_CRYPTOGRAPHICALLY_VERIFIED",
+  "baselineCommit": "763226aef13f950ac30c86031698cd7f8151f326",
+  "baselineWorkstateSha256": "75b3d696204e8d635015f88538b505db0af25e9e5045b3809150afa8fff2e998",
+  "baselineApplierLogSha256": "d2e7e2ca530456b62ca669597e6766da0528a7f9c1c8df00292941adceeb6177",
+  "baselineAppliedTransitionCount": 20,
+  "baselineSuccessfulLogEntryCount": 21,
+  "stateApplierSchemaVersion": 2,
+  "reconciliationSchemaVersion": 2,
+  "reconciliationMode": "VERIFIED_CONSISTENT",
+  "baselineReconciliationExitCode": 0,
+  "declaredLegacyFailures": [],
+  "declaredLegacyFailureSetSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "declaredLegacyWarnings": [
+    {
+      "code": "duplicate-success-in-log",
+      "subject": "TEST-DI0001-2",
+      "detailSha256": "e6aa7250b6e084fb2b50518664894c0cb34231ecc33fae3f252d75e228d20edc"
+    }
+  ],
+  "baselineReconciliationReportSha256": "302a0db4485a863473171049983740225df8ae0a89435ed303c8d7b87776ce9f",
+  "integrationGateEvidenceSha256": "8f4c9e249c60260fed328ee3815b779cac54a5862113c3f03b975e49e596148d",
+  "legacyHistory": "NOT_EXACTLY_REPLAY_VERIFIED",
+  "buildVerdict": "VERIFIED_PASS",
+  "callsiteVerdict": "VERIFIED_PASS",
+  "highRiskTransitionVerdict": "FAIL_CLOSED_VERIFIED",
+  "automatedLauncherVerdict": "DISABLED",
+  "normalTransitionReadyAfterDeclaration": true,
+  "verifiedHumanApprovalReady": false,
+  "recoveryApplyReady": false,
+  "phaseChangeReady": false,
+  "replayReady": false,
+  "automatedExecutionReady": false,
+  "declaredBy": {
+    "actorType": "human",
+    "actorId": "bootstrap-operator",
+    "actorPath": "local-manual",
+    "provenance": "CLAIMED_NOT_VERIFIED"
+  },
+  "declaredAt": "2026-07-26T04:42:03Z"
+}
