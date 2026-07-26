@@ -65,16 +65,16 @@ internal static class RecoveryCli
     private static int RunSelfTest()
     {
         var cases = new JsonArray();
-        Add(cases, "pending-pre-no-success", RunCase(CasePendingPreNoSuccess));
-        Add(cases, "pending-post-success", RunCase(CasePendingPostSuccess));
-        Add(cases, "pending-post-no-success", RunCase(CasePendingPostNoSuccess));
-        Add(cases, "pending-ambiguous", RunCase(CasePendingAmbiguous));
-        Add(cases, "state-only-gap", RunCase(CaseStateOnlyGap));
-        Add(cases, "conflicting-success", RunCase(CaseConflict));
-        Add(cases, "evidence-package", RunCase(CaseEvidencePackage));
-        Add(cases, "high-risk-stays-closed", RunCase(CaseHighRiskClosed));
+        Add(cases, "pending-pre-no-success", RunCase(CasePendingPreNoSuccess), negative: true);  // HasPendingCode — 미해결 pending이 보고되는가
+        Add(cases, "pending-post-success", RunCase(CasePendingPostSuccess), negative: true);  // HasPendingCode — 정리 대상 pending이 보고되는가
+        Add(cases, "pending-post-no-success", RunCase(CasePendingPostNoSuccess), negative: true);  // HasPendingCode — 복구 필요가 보고되는가
+        Add(cases, "pending-ambiguous", RunCase(CasePendingAmbiguous), negative: true);  // HasPendingCode — 모호 상태가 보고되는가
+        Add(cases, "state-only-gap", RunCase(CaseStateOnlyGap), negative: true);  // HasFailureCode — 로그 누락이 실패로 보고되는가
+        Add(cases, "conflicting-success", RunCase(CaseConflict), negative: true);  // HasFailureCode — 중복 성공 충돌이 실패로 보고되는가
+        Add(cases, "evidence-package", RunCase(CaseEvidencePackage), negative: false);  // 산출물이 생성되는가 — 성공을 단언한다
+        Add(cases, "high-risk-stays-closed", RunCase(CaseHighRiskClosed), negative: true);  // recoveryApplyReady == false — 거부가 유지되는가
         var failed = cases.OfType<JsonObject>().Count(c => c["pass"]?.GetValue<bool>() != true);
-        Console.WriteLine(new JsonObject { ["selfTest"] = "recovery-fault-infra", ["verdict"] = failed == 0 ? "PASS" : "FAIL", ["casesRun"] = cases.Count, ["failed"] = failed, ["cases"] = cases }.ToJsonString(JsonOptions));
+        Console.WriteLine(new JsonObject { ["selfTest"] = "recovery-fault-infra", ["verdict"] = failed == 0 ? "PASS" : "FAIL", ["casesRun"] = cases.Count, ["failed"] = failed, ["negativeCaseCount"] = cases.OfType<JsonObject>().Count(c => c["negative"]?.GetValue<bool>() == true), ["cases"] = cases }.ToJsonString(JsonOptions));
         return failed == 0 ? 0 : 1;
     }
 
@@ -390,8 +390,11 @@ internal static class RecoveryCli
     // CLI flag 값을 찾는다.
     private static string Flag(string[] args, string name) { for (var i = 0; i + 1 < args.Length; i++) if (args[i] == "--" + name) return args[i + 1]; return ""; }
 
-    // self-test case 결과를 배열에 추가한다.
-    private static void Add(JsonArray cases, string name, bool pass) => cases.Add(new JsonObject { ["case"] = name, ["pass"] = pass });
+    // self-test case 결과를 배열에 추가한다. negative는 "거부·결함이 나야 통과"인 케이스를 뜻하며
+    // 필수 인자다 — 케이스를 추가하면서 표시를 잊으면 컴파일이 안 된다. 손으로 유지하는 별도
+    // 목록도, 이름 문자열로 추정하는 방식도 쓰지 않는다(GWIT-04 §1-A).
+    private static void Add(JsonArray cases, string name, bool pass, bool negative) =>
+        cases.Add(new JsonObject { ["case"] = name, ["pass"] = pass, ["negative"] = negative });
 
     // JSON 오류를 stderr로 출력한다.
     private static int Error(string message, int code) { Console.Error.WriteLine(new JsonObject { ["error"] = message }.ToJsonString()); return code; }
