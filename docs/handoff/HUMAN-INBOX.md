@@ -745,3 +745,31 @@ launch-disposition outbox → exit 1 | launchCount 16 | violations 16 (전부 di
 받아들인다면 발사 → 반입/폐기 판단 → `disposition.json` 확정이 한 묶음이 된다.
 받아들이지 않는다면 `pending`을 유예(예: N커밋 동안 통과)로 바꾸는 별도 결재가 필요하다.
 **지금은 유예를 넣지 않았다** — 유예는 조용히 잊히는 쪽으로 기운다.
+
+## 2026-07-26 — 처분이 가리키는 증거 17건이 저장소에 없다 (긴급, 사람 결재)
+
+**실측**:
+
+```
+disposition.json의 gateReport 참조 17건 중 커밋된 것: 0건
+.gitignore:20   outputs/*
+git ls-files outputs/ → 3개(review-log.md, reviewer-log.md, run-executor.ps1)뿐
+```
+
+**새로 클론하면 `launch-disposition outbox`가 17건 전부 `gate-report-not-found`를 내고
+`POST-COMMIT`이 빨갛다.** 지금 초록인 것은 내 작업 트리에만 그 파일들이 있어서다.
+
+오늘 만든 기록이 **저장소와 함께 이동하지 않는다.** 이 저장소가 반복해 온
+*"기록이 실체와 어긋난다"* 이고, **`.gitignore`가 규칙이 요구하는 파일을 쓸어간** 전례가 이미 있다.
+
+**선택지**:
+
+1. `.gitignore`에 `!outputs/gates/` 계열 되짚기를 추가해 게이트 보고를 커밋한다.
+   보고 하나가 수십 KB이고 발사마다 늘어난다.
+2. 처분 증거만 추적되는 경로(예: `docs/handoff/gate-evidence/`)로 옮기고
+   `--out`/`--task`가 거기를 가리키게 한다. 기존 17건의 `gateReport` 경로도 갱신해야 한다.
+3. `launch-disposition`이 추적되지 않는 경로를 가리키는 `gateReport`를 **위반으로 세게** 한다
+   (문제를 드러내되 옮기지는 않는다).
+
+**어느 것이든 `.gitignore` 또는 증거 경로 결정이라 사람 결재다.**
+**나는 아무것도 바꾸지 않았다** — 지금 상태는 "내 트리에서만 초록"이다.
