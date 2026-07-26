@@ -121,3 +121,40 @@ trust-origin     | verdict: FAIL-CLOSED | reason: unknown command
 `program-verify`도 등록되지 않은 명령을 거부해야 한다. 지금은 무르다. 고치기 전까지
 `program-verify`의 PASS는 "매니페스트에 적힌 명령이 전부 기대 exit code를 냈다"는 뜻이지
 "게이트가 아는 검사만 돌았다"는 뜻이 아니다. **인용할 때 이 차이를 적어라.**
+
+---
+
+## 7. 후속 조치 완료 (2026-07-26) — `program-verify`도 미등록 명령을 거부한다
+
+§6이 "별도 결재"로 미뤄 둔 항목을 사람 지시로 수행했다.
+
+`program-verify`가 `di-completion-check`와 **같은 기준**으로 판정하게 했다:
+`KnownCommand` = `{measure, verify-behavior}` ∪ `HarnessRegistry.RegisteredNames`.
+미등록 명령이 매니페스트에 있으면 **게이트를 읽는 단계에서 exit 2로 거부**한다 — 실행하지 않는다.
+
+`BuiltInCommands` 두 항목은 `DiCompletionCheckCli.cs:18`에서 복제했다. 그 필드가 private이라
+참조할 수 없었다. **두 목록이 갈리면 두 러너가 다시 다른 답을 내므로, 갈리는 것 자체가 결함이다** —
+코드 주석에 그렇게 적었다.
+
+### 실측 결과 — 선언의 근거가 실제로 무너진다
+
+```
+program-verify verify --gate WP-STATE-INTEGRITY-LAND
+  → exit 2  "게이트를 읽지 못했다: 'state-transition'는 등록된 검사가 아니다."
+
+program-verify verify --gate POST-COMMIT
+  → 검사 5개 전부 실행됨. 실패는 gate-clean 하나(조율자 미커밋 변경 때문).
+```
+
+**`TRUSTED_BASELINE`을 정당화한 게이트를 이제 두 러너 모두 돌리지 않는다.** 이전의 14/14 PASS는
+지금 기준으로는 **재현되지 않는다.**
+
+### 이것이 뜻하는 것
+
+- **선언이 자동으로 무효가 되지는 않는다.** 기록(`TO-2026-001`)은 그대로이고, 그때의 측정도
+  거짓이 아니었다 — 세 명령을 **직접 돌리면 지금도 exit 0**이다. 문제는 그것들이 게이트가
+  아는 검사가 아니라는 것이다.
+- **다음 갈림길은 사람 결재다.** ①세 명령을 `HarnessRegistry`에 등재해 게이트를 온전히 만들고
+  다시 잰다(코덱스 영역, 지시서 필요) ②게이트에서 뺀다 — 그러면 land gate의 2·4·5·8·9·10을
+  덮던 검사가 사라져 게이트가 얇아진다.
+- **①을 권한다.** ②는 숫자만 초록으로 만들고 실질을 줄인다.

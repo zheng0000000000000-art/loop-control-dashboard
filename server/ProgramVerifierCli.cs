@@ -111,6 +111,12 @@ internal static class ProgramVerifierCli
             // expectedExit이 선언되지 않았으면 0으로 가정하지 않는다 — 기대값 없는 검사는 판정할 수 없다.
             var expected = check?["expectedExit"]?.GetValue<int>()
                 ?? throw new InvalidOperationException($"'{command}'에 expectedExit이 없다.");
+            // 등록되지 않은 명령은 실행하지 않는다. 이전에는 매니페스트에 적혀 있으면 등록 여부를
+            // 묻지 않고 돌렸고, 그래서 di-completion-check가 거부하는 명령 3개를 포함한 채
+            // WP-STATE-INTEGRITY-LAND가 14/14 PASS를 냈다(ADR-016 §6). 게이트가 아는 검사만 돌아야
+            // 그 PASS가 "게이트를 통과했다"는 뜻이 된다.
+            if (!KnownCommand(command))
+                throw new InvalidOperationException($"'{command}'는 등록된 검사가 아니다. HarnessRegistry에 없다.");
             specs.Add(new CheckSpec(
                 check?["order"]?.GetValue<int>() ?? specs.Count + 1,
                 command,
@@ -121,6 +127,20 @@ internal static class ProgramVerifierCli
         if (specs.Count == 0) throw new InvalidOperationException($"gateId '{gateId}'에 검사가 하나도 없다.");
         return specs.OrderBy(s => s.Order).ToList();
     }
+
+    // di-completion-check의 BuiltInCommands를 그대로 옮긴 것이다(server/Harness/DiCompletionCheckCli.cs:18).
+    // 그 필드가 private이라 참조할 수 없어 복제했다 — 두 목록이 갈리면 두 러너가 다시 다른 답을 내므로,
+    // 저쪽이 바뀌면 여기도 바꿔야 한다. 갈리는 것 자체가 결함이다.
+    private static readonly HashSet<string> BuiltInCommands = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "measure",
+        "verify-behavior",
+    };
+
+    // 게이트가 아는 명령인지 본다. 판정 기준을 di-completion-check와 같게 유지한다.
+    private static bool KnownCommand(string command)
+        => BuiltInCommands.Contains(command)
+            || HarnessRegistry.RegisteredNames.Contains(command, StringComparer.OrdinalIgnoreCase);
 
     // 검사 하나를 자식 프로세스로 돌린다. 출력 문자열로 성패를 세지 않고 exit code만 판정에 쓴다.
     private static CheckRun RunCheck(string root, CheckSpec spec)
