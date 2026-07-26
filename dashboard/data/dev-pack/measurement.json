@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-26T16:31:10.5396176+09:00",
+  "measuredAt": "2026-07-26T16:39:21.6462484+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
@@ -87,9 +87,9 @@
     },
     {
       "metricId": "maxFunctionLength",
-      "value": 85,
+      "value": 80,
       "evidence": [
-        "server/Harness/GateCleanCli.cs:19-103"
+        "dashboard/app.js:535-614"
       ]
     }
   ]

@@ -32,74 +32,79 @@ internal static class GateCleanCli
 
             var paths = args.Skip(1).Where(a => !a.StartsWith('-')).ToArray();
             if (paths.Length == 0) paths = new[] { "server" };
-
-            var files = new JsonArray();
-            var contentDirty = 0;
-            var representationOnly = 0;
-
-            foreach (var path in paths)
-            {
-                var porcelain = GitTools.RunGitText(repoRoot, $"status --porcelain -- {path}") ?? "";
-                foreach (var line in porcelain.Split('\n', StringSplitOptions.RemoveEmptyEntries))
-                {
-                    var status = line.Length >= 2 ? line[..2] : "??";
-                    var file = line.Length > 3 ? line[3..].Trim().Trim('"') : "";
-                    if (file.Length == 0) continue;
-
-                    if (status.Contains('?') || status.Contains('D'))
-                    {
-                        contentDirty++;
-                        files.Add(MakeEntry(file, status, "content-dirty",
-                            status.Contains('?') ? "미추적 파일" : "삭제됨"));
-                        continue;
-                    }
-
-                    var head = GitTools.RunGitBytes(repoRoot, $"show HEAD:{file}");
-                    var full = Path.Combine(repoRoot, file);
-                    if (head is null || !File.Exists(full))
-                    {
-                        contentDirty++;
-                        files.Add(MakeEntry(file, status, "content-dirty", "HEAD 블롭 또는 워킹파일 없음"));
-                        continue;
-                    }
-
-                    var work = File.ReadAllBytes(full);
-                    var rawSame = head.AsSpan().SequenceEqual(work);
-                    if (GitTools.NormalizedHash(head) == GitTools.NormalizedHash(work))
-                    {
-                        if (!rawSame) representationOnly++;
-                        files.Add(MakeEntry(file, status,
-                            rawSame ? "clean" : "representation-only",
-                            rawSame ? "동일" : DescribeRepresentation(head, work)));
-                    }
-                    else
-                    {
-                        contentDirty++;
-                        files.Add(MakeEntry(file, status, "content-dirty", "정규화 후에도 내용이 다름 — 진짜 변경"));
-                    }
-                }
-            }
-
-            var report = new JsonObject
-            {
-                ["harness"] = "gate-clean",
-                ["paths"] = new JsonArray(paths.Select(p => (JsonNode)p).ToArray()),
-                ["contentDirtyCount"] = contentDirty,
-                ["representationOnlyCount"] = representationOnly,
-                ["gate"] = contentDirty == 0 ? "PASS" : "FAIL",
-                ["files"] = files,
-                ["hygieneWarning"] = representationOnly > 0
-                    ? $"표현만 다른 파일 {representationOnly}건 — 어떤 도구가 파일을 되쓰고 있다(FAIL-2026-010)."
-                    : null,
-            };
-            Console.WriteLine(report.ToJsonString(JsonOptions));
-            return contentDirty == 0 ? 0 : 1;
+            return RunGitStatus(repoRoot, paths);
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"{{\"error\":\"gate-clean 실패: {ex.Message}\"}}");
             return 2;
         }
+    }
+
+    // 실제 git status를 수집해 내용 변경 여부를 판정하고 출력한다.
+    private static int RunGitStatus(string repoRoot, string[] paths)
+    {
+        var files = new JsonArray();
+        var contentDirty = 0;
+        var representationOnly = 0;
+
+        foreach (var path in paths)
+        {
+            var porcelain = GitTools.RunGitText(repoRoot, $"status --porcelain -- {path}") ?? "";
+            foreach (var line in porcelain.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var status = line.Length >= 2 ? line[..2] : "??";
+                var file = line.Length > 3 ? line[3..].Trim().Trim('"') : "";
+                if (file.Length == 0) continue;
+
+                if (status.Contains('?') || status.Contains('D'))
+                {
+                    contentDirty++;
+                    files.Add(MakeEntry(file, status, "content-dirty",
+                        status.Contains('?') ? "미추적 파일" : "삭제됨"));
+                    continue;
+                }
+
+                var head = GitTools.RunGitBytes(repoRoot, $"show HEAD:{file}");
+                var full = Path.Combine(repoRoot, file);
+                if (head is null || !File.Exists(full))
+                {
+                    contentDirty++;
+                    files.Add(MakeEntry(file, status, "content-dirty", "HEAD 블롭 또는 워킹파일 없음"));
+                    continue;
+                }
+
+                var work = File.ReadAllBytes(full);
+                var rawSame = head.AsSpan().SequenceEqual(work);
+                if (GitTools.NormalizedHash(head) == GitTools.NormalizedHash(work))
+                {
+                    if (!rawSame) representationOnly++;
+                    files.Add(MakeEntry(file, status,
+                        rawSame ? "clean" : "representation-only",
+                        rawSame ? "동일" : DescribeRepresentation(head, work)));
+                }
+                else
+                {
+                    contentDirty++;
+                    files.Add(MakeEntry(file, status, "content-dirty", "정규화 후에도 내용이 다름 — 진짜 변경"));
+                }
+            }
+        }
+
+        var report = new JsonObject
+        {
+            ["harness"] = "gate-clean",
+            ["paths"] = new JsonArray(paths.Select(p => (JsonNode)p).ToArray()),
+            ["contentDirtyCount"] = contentDirty,
+            ["representationOnlyCount"] = representationOnly,
+            ["gate"] = contentDirty == 0 ? "PASS" : "FAIL",
+            ["files"] = files,
+            ["hygieneWarning"] = representationOnly > 0
+                ? $"표현만 다른 파일 {representationOnly}건 — 어떤 도구가 파일을 되쓰고 있다(FAIL-2026-010)."
+                : null,
+        };
+        Console.WriteLine(report.ToJsonString(JsonOptions));
+        return contentDirty == 0 ? 0 : 1;
     }
 
     // 저장된 porcelain 출력만 읽어 clean·dirty를 판정한다.
