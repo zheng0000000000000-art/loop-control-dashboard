@@ -158,3 +158,43 @@ program-verify verify --gate POST-COMMIT
   다시 잰다(코덱스 영역, 지시서 필요) ②게이트에서 뺀다 — 그러면 land gate의 2·4·5·8·9·10을
   덮던 검사가 사라져 게이트가 얇아진다.
 - **①을 권한다.** ②는 숫자만 초록으로 만들고 실질을 줄인다.
+
+---
+
+## 8. 해소 (2026-07-26) — **두 러너가 같은 답을 낸다. 권위를 넘긴다**
+
+`HREG-01` 착륙(`b62b5cc`)으로 self-test 3종이 `HarnessRegistry`에 등재됐고,
+`GATE-MANIFEST`의 `WP-STATE-INTEGRITY-LAND`가 새 이름을 가리키도록 교체했다
+(`state-transition --self-test` → `state-transition-selftest` 등 3건).
+
+**같은 게이트, 같은 커밋에서 처음으로 두 러너가 일치했다:**
+
+```
+program-verify      verdict: PASS  14/14  exit 0
+di-completion-check verdict: PASS  14/14  exit 0   failures: []
+```
+
+### 결정 변경
+
+**§2의 "`program-verify`가 권위"를 종료한다.** 그 결정의 조건은 *"`CODEX-GATE-04` 착륙까지"*였고,
+실제 해소 조건은 §6이 밝힌 대로 **등재**였다. 등재가 끝났으므로:
+
+- **게이트 판정의 권위는 `di-completion-check`다.** 등재된 검사만 도는 쪽이 기본이다.
+- `program-verify`에 남는 것은 `di-completion-check`에 없는 것뿐이다 —
+  `baselineCommit`·`worktreeCleanAtStart` 기록과 transition request 후보 생성(계약 §2-5·§2-6).
+  **게이트 실행 자체는 넘긴다.** 두 러너가 같은 `KnownCommand` 기준을 쓰므로 결과가 갈리지 않는다.
+- **판정을 인용할 때 러너 이름을 함께 적는 규칙은 유지한다.** 지금은 일치하지만, 갈리는 순간
+  그 사실이 보여야 한다.
+
+### `TRUSTED_BASELINE`에 대하여
+
+선언의 근거였던 14/14 PASS가 **엄격한 기준에서 재현됐다.** §7이 *"지금 기준으로 재현되지 않는다"*고
+적은 상태는 해소됐다.
+
+**다만 재선언한 것이 아니다.** `TO-2026-001`은 그대로이고, 이 문단은 *"그때 통과가 지금 기준으로도
+성립한다"*는 사실만 기록한다. 기록을 갱신할지는 사람 판단이다.
+
+### 남는 것
+
+`ADR-016` §7의 `BuiltInCommands` 복제는 그대로다. 두 목록이 갈리면 러너가 다시 다른 답을 낸다.
+근본 해소는 그 목록을 공유 가능한 자리로 옮기는 것이며 `server/Harness/`(코덱스 영역)에 있다.

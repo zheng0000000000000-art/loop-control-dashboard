@@ -142,10 +142,8 @@
         },
         {
           "order": 2,
-          "command": "state-transition",
-          "args": [
-            "--self-test"
-          ],
+          "command": "state-transition-selftest",
+          "args": [],
           "expectedExit": 0,
           "mutatesState": false,
           "note": "land gate 2·4·5·8·9·10 — 19케이스(reconciliation-fail·candidate-toctou·FATAL 4분기·high-risk no-receipt 포함)"
@@ -238,20 +236,16 @@
         },
         {
           "order": 10,
-          "command": "recovery",
-          "args": [
-            "--self-test"
-          ],
+          "command": "recovery-selftest",
+          "args": [],
           "expectedExit": 0,
           "mutatesState": false,
           "note": "RECOVERY fail-closed 자체 시험"
         },
         {
           "order": 11,
-          "command": "trust-origin",
-          "args": [
-            "--self-test"
-          ],
+          "command": "trust-origin-selftest",
+          "args": [],
           "expectedExit": 0,
           "mutatesState": false,
           "note": "부트스트랩 선행 검증 자체 시험"
