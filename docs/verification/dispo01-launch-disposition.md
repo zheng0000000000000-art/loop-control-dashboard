@@ -204,3 +204,51 @@ launch-disposition ['outbox'] exp 0 got 2
    그 사실을 아는 방법은 이 문서뿐이다.
 3. **`LAUNCH-DISPO-02`의 `gateReport`는 반입 커밋에서 잰 진짜 측정이다** — backfill 14건과 달리
    그 발사에 대응하는 시점의 판정이다. 앞으로의 발사도 이 모양이어야 한다.
+
+---
+
+# 자기참조 충돌을 코드로 막았다 (append, 2026-07-26)
+
+앞 절의 미달 ②(*"자기참조 충돌을 코드가 막지 않는다"*)를 닫는다.
+
+## 무엇이 문제였나
+
+`disposition.json`의 `gateReport`가 가리키는 경로에 **게이트 실행의 stdout을 셸 리다이렉트**하면,
+실행 내내 그 파일이 열려 있다. 그 파일을 읽는 `launch-disposition`이 죽는다.
+
+```
+launch-disposition ['outbox'] exp 0 got 2
+  "The process cannot access the file ... LAUNCH-DISPO-02.gate.json"
+```
+
+**검사가 읽으려는 파일을 같은 실행이 쓰고 있었다.** 문서로 "그러지 마라"고 적는 것은
+관례일 뿐이고, 다음 사람은 같은 곳에 빠진다.
+
+## 무엇을 했나
+
+`program-verify verify|request ... --out <path>`를 추가했다(`ProgramVerifierCli.cs`).
+
+- **검사가 전부 끝난 뒤에만** 쓴다. 실행 중에는 그 경로를 건드리지 않는다.
+- **임시 파일에 쓴 뒤 옮긴다.** 중간에 죽어도 반쯤 쓰인 JSON이 남지 않고 이전 보고가 남는다.
+
+## 실측 — 충돌하던 그 상황을 그대로 재현
+
+| 방식 | 결과 |
+| --- | --- |
+| 셸 리다이렉트 `> outputs/gates/backfill/LAUNCH-DISPO-02.gate.json` | `launch-disposition` **exit 2** (파일 접근 불가) → 게이트 FAIL |
+| **`--out outputs/gates/backfill/LAUNCH-DISPO-02.gate.json`** (더러운 트리) | 충돌 **없음**. 실패는 `gate-clean` 하나뿐 — 커밋 전이라 참인 실패 |
+| **`--out …`** (커밋 후 깨끗한 트리) | **exit 0** |
+
+**같은 경로, 같은 게이트, 같은 검사인데 쓰는 시점만 옮겨서 통과한다.**
+
+## 지표는 만족했으나 목적은 미달인 부분
+
+1. **셸 리다이렉트를 여전히 쓸 수 있다.** `--out`은 안전한 대안을 준 것이지 위험한 길을 막은 것이
+   아니다. 프로세스가 자기 stdout이 어디로 가는지 알 수 없어 코드로 탐지할 방법을 찾지 못했다.
+   **다만 이제 "관례를 지켜라"가 아니라 "이 인자를 써라"가 됐다** — 지킬 수 있는 형태다.
+2. **`di-completion-check`에는 `--out`이 없다.** 그쪽은 자체 evidence 경로에 쓰므로 같은 충돌이
+   나려면 `gateReport`가 그 경로를 가리켜야 한다. 지금은 그런 기록이 없지만 구조적으로 가능하다.
+   **코덱스 영역이라 후속이다.**
+3. **`launch-disposition`은 여전히 읽기 실패 시 전체를 exit 2로 중단한다.** 한 파일이 잠겨 있으면
+   나머지 16건도 판정되지 않는다. 건별 위반(`gate-report-unreadable`)으로 낮추는 편이 낫다 —
+   **코덱스 영역이라 후속이다.**
