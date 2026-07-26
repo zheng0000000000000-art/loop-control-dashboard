@@ -773,3 +773,31 @@ git ls-files outputs/ → 3개(review-log.md, reviewer-log.md, run-executor.ps1)
 
 **어느 것이든 `.gitignore` 또는 증거 경로 결정이라 사람 결재다.**
 **나는 아무것도 바꾸지 않았다** — 지금 상태는 "내 트리에서만 초록"이다.
+
+## 2026-07-26 — 클론에서 handoff-integrity가 실패한다 (오늘 일과 무관, 사람 결재)
+
+증거 보관 문제를 고치고 **깨끗한 클론에서 게이트를 돌려** 확인하다가 나왔다.
+
+```
+클론 POST-COMMIT → FAIL 1/14
+  handoff-integrity: hash-mismatch (server/Program.cs, server/OllamaExecutor.cs)
+```
+
+**실측**: 두 파일은 **줄바꿈만 다르다**(내 트리 CRLF, 클론 LF, 정규화 후 동일).
+`.gitattributes`는 `*.cs text eol=lf` — **저장소 기준은 LF이고 클론이 옳다.**
+내 작업 트리에 2026-07-11 이전의 CRLF가 남아 있다.
+
+```
+gate-clean          NormalizedHash 사용        ← 2026-07-11에 같은 문제로 넣음
+handoff-integrity   원시 바이트 SHA256        ← 안 받음
+```
+
+`WORKSTATE.json`의 `changedFiles` 해시는 **CRLF 트리에서 계산된 값**이라 저장소 기준으로
+체크아웃한 어떤 기계에서도 맞지 않는다.
+
+**사람 판단이 필요한 것**:
+1. `handoff-integrity`도 정규화 해시를 쓰게 할 것인가(코덱스 영역, **기록의 의미가 바뀐다**), 또는
+2. `WORKSTATE.json`의 해시를 LF 기준으로 다시 계산할 것인가(**상태 변경**), 또는
+3. 작업 트리를 `git add --renormalize .`로 맞출 것인가(그러면 지금 맞는 해시가 안 맞게 된다).
+
+**셋 중 무엇이 참인지 정하는 것이 먼저다. 나는 아무것도 바꾸지 않았다.**
