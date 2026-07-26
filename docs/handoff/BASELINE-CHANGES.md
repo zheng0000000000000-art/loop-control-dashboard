@@ -126,3 +126,44 @@ self-test 케이스 수(19/24/8)도 `declare`의 기대값과 일치한다. **�
 **장애주입 (실측)**: 낡은 커밋 보고서 → `gate-report-baseline-mismatch` · 다른 게이트 →
 `gate-report-wrong-gate` · 손으로 쓴 verifier → `gate-report-wrong-verifier` · 없는 파일 →
 `gate-report-missing`. 네 경우 모두 exit 2로 거절됐다.
+
+---
+
+## 2026-07-26 — `CodexHarnessLauncher`의 쓰기 허용 범위에 `skills/`를 더한다
+
+**① 주체**
+
+사람(저장소 git user `Jaehyuk`). 조율자가 `DAUTH-02` 지시서의 allowlist 절에
+**"이 지시서는 현재 런처로 쏠 수 없다"**를 명시하고 *"범위를 넓힐지는 사람 결재다"*라고 물은 뒤,
+"푸시 부터 하고 2번해봐"(= `DAUTH-02` 수행)로 결재받았다. 집행은 Claude Opus 5.
+
+> **조율자의 가정**: 위 지시가 범위 확대에 대한 결재를 포함한다고 읽었다. 그렇지 않다면 되돌려라 — §③.
+
+**② 근거**
+
+`ADR-002` 25행: **`server/Harness/`·`skills/`는 코덱스 배타 쓰기 영역.**
+그런데 `CODEX-HARNESS-LAUNCHER-minimal-contract` §2-2는 런처의 쓰기 범위를
+`server/Harness/` + 승인된 fixture로 좁혀 썼다. 계약이 런처를 "하네스·fixture 제작 통로"로
+정의했기 때문이다(§0).
+
+두 문서가 어긋난 지점이 실제로 물었다. `DAUTH-02`(착륙 절차를 스킬에 적는 지시서)의 allowlist는
+`skills/common/directive-authoring.md` 하나인데, **`ADR-002`상 코덱스 영역이면서 런처로는 쏠 수 없었다.**
+
+**넓힌 폭은 `ADR-002`의 선까지다.** 그 이상 넓히지 않았다:
+- 추가한 것은 `skills/` 하나.
+- `server/` 루트·`docs/handoff/**`·`outputs/**` 등은 여전히 거절된다
+  (`allowed-paths-outside-codex-territory`, exit 2).
+- 즉 런처가 쓸 수 있는 곳은 **코덱스가 원래 소유한 곳**뿐이다. 권한을 새로 만든 것이 아니라
+  선언된 권한과 통로를 일치시킨 것이다.
+
+**바꾸지 않은 것**: 계약의 나머지 전부. 역할 검사·해시 고정·격리 사본·판정 금지·
+`AUTOMATED_EXECUTION_READY` 없이는 `--manual`만 — 그대로다.
+
+**③ 되돌리는 법**
+
+`server/CodexHarnessLauncherCli.cs`의 `PermittedWriteRoots`에서 `"skills/"`를 지운다.
+그러면 `skills/`를 쓰는 요청은 다시 `allowed-paths-outside-codex-territory`로 exit 2다.
+되돌리면 `DAUTH-02`는 런처로 수행할 수 없고 수동 dispatch만 남는다 — 되돌리기 전에 확인하라.
+
+**장애주입 (실측)**: 아래 §"CPX-01/DAUTH-02 발사 기록" 참조. `skills/` 추가 후에도
+코덱스 영역 밖 경로는 계속 거절되는지 재확인했다.
