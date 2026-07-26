@@ -2512,3 +2512,30 @@
 - push 대기: 0건. 발사: 3건(수동). 승인·반려·전이 대행 없음(전이는 사람 지시). QUOTA_SIGNAL: 미감지.
 
 <run-summary>DI-00-04의 차단 사유 세 건을 각각 실측해 해소를 확인하고(손 위조 거부·--human-decision 제거·네 조각 완료 기준 대조) 사람 지시로 blocked → verifying 전이를 정규 경로로 수행했다. 그 과정에서 apply --dry-run-flag가 dry-run이 아니라 실제 상태 쓰기가 되는 사고가 났고, 원인인 "값 없는 후행 옵션이 조용히 버려짐"을 고친 뒤 CLI 전면을 조사해 같은 fail-open을 네 곳에서 제거했다. di-completion-check --manifestt가 픽스처 대신 production을 재고 PASS를 내던 것이 가장 위험했다. 커밋 3a0ed01에 거짓 수치(violations:0)를 적은 것도 자진 신고하고 R1으로 해소했으며, 이후 커밋에는 measure 조건을 명령에 걸었다. ADR-017로 TO-2026-001을 그대로 두기로 했다. 최종 게이트 전부 통과, WORKSTATE는 verifying이고 다음은 사람의 land gate 12번이다.</run-summary>
+## 조율자 2026-07-26 (3회차 — fail-open 제거·미확인 3건 종결, review-log)
+
+- **성격**: 사람이 대화로 지시한 연속 작업. 발사 3건(`DICC-04`·`R1`·`HOPT-01`), 전부 수동 `--manual`.
+- **오타 옵션 fail-open 전면 제거**: `state-transition apply --dry-run-flag`가 **실제 상태를 쓴** 사고에서
+  출발해 CLI 전면을 조사했다. **`di-completion-check --manifestt`가 exit 0으로 production을 재고 PASS**를
+  냈고(픽스처 1검사 대신 14검사), `measure --fixturee`도 실제 `dashboard/data`를 쟀다.
+  **열 CLI에 검증을 붙였다** — `server/CliOptions.cs` 정의 하나를 공유한다.
+  `handoff-integrity --projection`이 **아무 일도 하지 않으면서 통과하던 것**도 함께 막았다.
+- **미확인 3건 종결**:
+  ①`InspectPending`이 reconciliation보다 먼저 `idempotent`를 낼 수 있다 → **사실이었다.**
+  셋(pending·상태해시·로그)을 위조하니 깨진 저장소에서 exit 0이 나왔다. `RECOVERY.md`의 불변식
+  *"reconciliation before any apply decision"* 을 코드가 어기고 있었고, 순서를 바로잡아 exit 1로 막았다.
+  정상 재적용은 `idempotent` 0 유지.
+  ②`HighRiskFailClosed()`가 **`=> true` 상수**였다 — `declare` 선행조건이 결코 실패하지 않았다.
+  요구 목록 분리 + 사유(`trusted-human-receipt-required`) 검사로 바꿨다. **반증 3회 만에 통과.**
+  ③아카이브 NUL 바이트의 원인은 **`0`이 NUL로 쓰인 것**(`<NUL>5H·…`). pin 대상 44개 중 해당 없음을
+  확인하고 1:1 치환. `grep`이 이제 읽는다.
+- **자진 신고**: 커밋 `3a0ed01`에 `violations:0`이라 적었으나 실측 1이었다(`22d4c37` 정정, `R1`로 해소).
+  **원인은 내 지시서 누락** — `DICC-04`의 지표 기준에 `measure`를 안 넣었다. 이후 커밋에는
+  `measure != 0`이면 커밋하지 않는 **조건을 명령에 걸었고, 그 조건이 이번 회차에 세 번 막아줬다.**
+- **정정**: `four-di-criteria-recheck.md`의 06C-2 *"전부 일치"* 를 **미달**로 정정했다.
+  전체 통과를 개별 항목의 증거로 쓴 것이 잘못이었다.
+- **최종 게이트**: `POST-COMMIT` 0 · `LAND` 0 · `gate-witness-check` 0 · `launch-disposition` 0 ·
+  `trust-origin verify` 0 · self-test 3종 전부 0. `WORKSTATE`는 `verifying`, blockers 0.
+- push 대기: 0건. 발사: 3건(수동). 전이·승인 대행 없음. QUOTA_SIGNAL: 미감지.
+
+<run-summary>dry-run 철자 사고에서 출발해 오타 옵션 fail-open을 CLI 열 곳에서 제거했다. di-completion-check --manifestt가 픽스처 대신 production을 재고 exit 0 PASS를 내던 것이 가장 위험했고, handoff-integrity --projection이 아무 일도 안 하면서 통과하던 것도 막았다. 미확인 3건을 전부 종결했다 — InspectPending의 거짓 OK는 사실이어서 reconciliation을 앞으로 옮겼고, HighRiskFailClosed는 상수여서 실제 apply 경로를 도는 검사로 바꿨으며(반증 3회 만에 통과), 아카이브 NUL은 0이 NUL로 쓰인 것이라 1:1 치환했다. 커밋에 거짓 수치를 적은 것도 자진 신고하고 명령에 measure 조건을 걸어 이후 세 번 막았다. four-di-criteria-recheck의 06C-2 결론도 미달로 정정했다. 최종 게이트 전부 통과, WORKSTATE는 verifying이며 남은 것은 사람의 land gate 12번뿐이다.</run-summary>
