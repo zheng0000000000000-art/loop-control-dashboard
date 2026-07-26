@@ -87,3 +87,65 @@ NormalizedContentHash 두 벌 → 하나 (NHASH-01)
 
    **이로써 세 게이트 모두 새 러너로, 클론에서 초록임이 실측됐다**
    (`POST-COMMIT` 14/14 · `LAND` 18/18 · `POST-EXECUTOR` 13/13).
+
+---
+
+# RequiredGateCommands 기계 대조 (append, 2026-07-26)
+
+`HUMAN-INBOX`의 *"손 동기화라 이름을 또 바꾸면 또 끊긴다"* 를 닫는다.
+
+## 지시서를 쓰지 않았다 — 영역이 아니었다
+
+`server/TrustOriginCli.cs`는 **`server/` 루트라 코덱스 영역이 아니다**
+(`PermittedWriteRoots = server/Harness/, skills/, docs/qa/`). 지시서로 쓰면 어느 실행자도
+수행할 수 없다. **직접 경로로 했다.**
+
+## 무엇을 했나
+
+1. `RequiredCommandsMissingFromManifest(root)` — 목록과 매니페스트 LAND 검사 이름을 대조해
+   **없는 이름들을 돌려준다.**
+2. `GateReportRejection`이 그것을 **먼저** 본다. 어긋나면 `required-commands-stale`.
+   종전에는 목록이 낡아도 사유가 `gate-report-missing-required-check`로 나와
+   **보고서를 의심하게** 만들었다 — 실제 원인은 목록이었다.
+3. `trust-origin --self-test`에 두 케이스 추가.
+
+## 반증 시험
+
+| 케이스 | 성격 | 결과 |
+| --- | --- | --- |
+| `required-commands-match-manifest` | 양성 | **pass** |
+| **`required-commands-drift-detected`** | **음성** | **pass** |
+
+**후자가 핵심이다.** 매니페스트 **사본**에서 필수 검사 하나를 지우고, 그것이 정확히
+"빠진 것"으로 보고되는지 확인한다. 잡지 못하면 이 검사는 아무것도 하지 않는다.
+**원본은 건드리지 않는다**(임시 경로에서 하고 지운다).
+
+실측: `trust-origin --self-test` **26케이스 · 21음성 · failed 0 · exit 0**.
+회귀: `gate-witness-check` exit 0, LAND 판정 exit 0, `trust-origin evidence` exit 0.
+
+## ★ 같은 병이 하나 더 드러났다 — 케이스 수도 손 동기화다
+
+케이스를 더하자 **세 곳의 상수**가 같이 움직여야 했다.
+
+```
+SelfTestNode(gatesPass, 24)                      → 26   (증거를 만드는 쪽)
+SelfTestEvidencePass(evidence, "…", 24)          → 26   (증거를 검사하는 쪽, 정확 일치)
+GATE-MANIFEST internalNegativeCases: 20          → 21
+```
+
+안 맞추면 `declare`가 `integration-gate-evidence-missing`으로 거절한다 — fail-closed지만
+**사유가 원인을 가리키지 않는다.** `RequiredGateCommands`와 정확히 같은 모양이다.
+
+**다만 매니페스트 쪽은 이미 기계가 본다** — `gate-witness-check`가 검사를 실제 실행해
+`internalNegativeCases`를 대조한다(`DISPO`/`GWIT` 계열 작업). 코드 안의 두 상수는 아직 아니다.
+
+## 지표는 만족했으나 목적은 미달인 부분
+
+1. **`required-commands-stale` 사유가 실제로 나오는 것을 보지 못했다.** 그 분기를 타려면
+   매니페스트를 실제로 어긋나게 해야 하는데 하지 않았다. **탐지 함수는 음성 케이스로
+   실측했지만, 그 함수를 `GateReportRejection`에 배선한 부분은 시험하지 않았다.**
+   오늘 "중간 지표로 결론 내지 마라"를 여러 번 배웠는데 여기서 그 선을 넘지 않았다고
+   말하기 어렵다.
+2. **`SelfTestNode`/`SelfTestEvidencePass`의 상수 두 개는 여전히 손 동기화다.**
+   케이스를 더하는 사람이 셋을 다 기억해야 한다. `cases.Count`를 그대로 쓰는 쪽이 옳지만
+   **증거 검사 쪽이 "몇 개여야 한다"를 주장하는 것이 설계 의도**일 수 있어 건드리지 않았다.
