@@ -320,9 +320,15 @@ internal static class TrustOriginCli
         catch { return "gate-report-unparsable"; }
         if (report is null) return "gate-report-unparsable";
 
-        if (Read(report, "verifier") != "program-verify") return "gate-report-wrong-verifier";
+        // ADR-016 §15: 게이트 판정의 정본은 di-completion-check다. 그 보고도 받는다.
+        // 두 러너는 필드 이름만 다르다 — verifier/harness, verdict/gateVerdict.
+        // 아무 이름이나 받지는 않는다. 아는 러너 둘만이다(모르는 산출은 통과로 적지 않는다).
+        var producer = Read(report, "verifier") is { Length: > 0 } v ? v : Read(report, "harness");
+        if (producer != "program-verify" && producer != "di-completion-check")
+            return "gate-report-wrong-verifier";
         if (Read(report, "gateId") != LandGateId) return "gate-report-wrong-gate";
-        if (Read(report, "verdict") != "PASS") return "gate-report-not-passing";
+        var passVerdict = Read(report, "gateVerdict") is { Length: > 0 } gv ? gv : Read(report, "verdict");
+        if (passVerdict != "PASS") return "gate-report-not-passing";
         // 낡은 통과 보고서를 나중에 다시 들이미는 것을 막는다. 잰 커밋이 지금 HEAD여야 한다.
         var head = Git(ctx.Root, "rev-parse HEAD").Trim();
         if (Read(report, "baselineCommit") != head) return "gate-report-baseline-mismatch";

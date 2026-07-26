@@ -286,7 +286,7 @@
     {
       "gateId": "WP-STATE-INTEGRITY-LAND",
       "description": "WP-STATE-INTEGRITY 통합 land gate 중 기계가 판정할 수 있는 항목. 12번(clean replay A / trust-origin 부트스트랩 B)은 포함하지 않는다 — 사람 결재이며, 이 게이트가 PASS여도 TRUSTED_BASELINE이 선언되는 것은 아니다.",
-      "triggeredBy": "dotnet run --project server -- program-verify verify --gate WP-STATE-INTEGRITY-LAND (수동)",
+      "triggeredBy": "dotnet run --project server -- di-completion-check --gate WP-STATE-INTEGRITY-LAND (수동)",
       "checks": [
         {
           "order": 1,
