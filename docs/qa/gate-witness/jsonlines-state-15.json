@@ -24,7 +24,7 @@
           "command": "trust-origin-selftest",
           "args": [],
           "expectedExit": 0,
-          "internalNegativeCases": 20
+          "internalNegativeCases": 21
         }
       ]
     }

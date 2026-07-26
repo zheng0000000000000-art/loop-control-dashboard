@@ -111,7 +111,7 @@ internal static class GateWitnessCheckCli
 
         foreach (var check in checks.Where(item => ReadInt(item["expectedExit"], 0) == 0))
         {
-            if (HasWitness(root, check, checks, requireWitness))
+            if (HasWitness(root, check, checks))
                 continue;
 
             unwitnessed.Add(new JsonObject
@@ -131,12 +131,11 @@ internal static class GateWitnessCheckCli
         }, requireWitness, unwitnessed.Count);
     }
 
-    // 동일 명령의 비영 출구, 명시적 order 연결, 검증된 내부 사례 중 하나를 증거로 인정한다.
+    // 동일 명령의 비영 출구, 명시적 order 연결, 실측된 내부 사례 중 하나를 증거로 인정한다.
     private static bool HasWitness(
         string root,
         JsonObject check,
-        List<JsonObject> checks,
-        bool validateInternalClaims)
+        List<JsonObject> checks)
     {
         var command = check["command"]?.ToString() ?? "";
         if (checks.Any(other =>
@@ -156,7 +155,15 @@ internal static class GateWitnessCheckCli
         var claimedCases = ReadInt(check["internalNegativeCases"], 0);
         if (claimedCases < 1)
             return false;
-        return !validateInternalClaims || CountInternalNegativeCases(root, check) >= claimedCases;
+
+        // 실측과 **정확히** 같아야 한다. `>=`로 두면 적게 적을수록 쉽게 통과해서, 매니페스트 숫자가
+        // 실재보다 작아지는 쪽으로 흘러도 아무도 모른다. 1이라고 적으면 어떤 self-test든 반증된
+        // 것으로 세어졌다. casesRun이 표를 표와 비교하던 것과 같은 병이다(2026-07-27).
+        //
+        // requireFailureWitness로 이 검증을 건너뛰지 않는다. **재보지 않은 주장은 증거가 아니다** —
+        // 건너뛰면 그 게이트는 문면 숫자만으로 "반증됨"이 된다. 차단 여부는 Run이 따로 정하므로
+        // (blocking |= RequiresWitness && ...), 항상 재도 준비 안 된 게이트를 빨갛게 만들지 않는다.
+        return CountInternalNegativeCases(root, check) == claimedCases;
     }
 
     // opt-in 게이트에서는 검사를 실제 실행하고 구조화 출력의 음성 사례 수를 읽는다.

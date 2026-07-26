@@ -279,6 +279,16 @@
           "mutatesState": false,
           "order": 14,
           "note": "반증 witness — 처분이 없는 발사를 위반으로 보고하는지 확인한다(DISPO-01 §4-1). 실측 2026-07-26: exit 1."
+        },
+        {
+          "command": "gate-witness-check",
+          "args": [
+            "docs/qa/gate-witness/internal-claim-understated.json"
+          ],
+          "expectedExit": 1,
+          "mutatesState": false,
+          "order": 15,
+          "note": "반증 witness — internalNegativeCases를 실측보다 적게 적은 매니페스트를 거부하는지 확인한다. 종전 `measured >= claimed`에서는 적게 적을수록 쉽게 통과했다(실측 2026-07-27: 종전 코드 exit 0, 현재 exit 1)."
         }
       ],
       "unregisteredChecks": [
@@ -416,7 +426,7 @@
           "args": [],
           "expectedExit": 0,
           "mutatesState": false,
-          "note": "self-test가 거부 경로 20건을 확인한다(GWIT-04). negativeCaseCount로 출력하며 gate-witness-check가 실제 실행해 대조한다.",
+          "note": "self-test가 거부 경로 21건을 확인한다(GWIT-04). negativeCaseCount로 출력하며 gate-witness-check가 실제 실행해 대조한다.",
           "internalNegativeCases": 21
         },
         {

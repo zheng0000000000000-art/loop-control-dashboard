@@ -270,3 +270,34 @@ outputs/review/06C-1-R1.codex.md
 
 되돌리면 `trust-origin inspect`의 `staleHistoricalEntries`가 다시 2건이 되고
 `DirectWriterGatePass`가 false로 닫힌다. 코드 변경은 없어 되돌리기는 이 파일 한 개다.
+
+## 2026-07-27 — POST-COMMIT에 검사 1개 추가 (order 15) + gate-witness-check 판정 강화
+
+### ① 주체
+사용자 위임, **조율자(Claude) 실행.**
+
+### ② 근거
+`gate-witness-check`가 `internalNegativeCases`를 `measured >= claimed`로 봤다.
+**적게 적을수록 쉽게 통과한다** — `1`이라고 적으면 음성 사례가 하나라도 있는 self-test는
+전부 "반증됨"이 된다. `==`로 바꿔 매니페스트 숫자를 실재에 양방향으로 못 박았다.
+`requireFailureWitness`가 없으면 재보지도 않고 인정하던 분기도 없앴다(차단 여부는 `Run`이
+따로 정하므로 준비 안 된 게이트가 빨개지지 않는다).
+
+**실측**: 새 픽스처 `internal-claim-understated.json`(14 주장 / 실측 15)이
+**종전 코드에서 exit 0**, 현재 exit 1. 코드를 되돌려 rebuild해 직접 쟀다.
+
+숫자 자체는 셋 다 맞았다(15/7/21). 다만 매니페스트 note가 "20건", 픽스처
+`jsonlines-state-15.json`이 `20`으로 낡아 있었고 **그 픽스처는 어느 게이트에도 안 물려 있었다.**
+둘 다 21로 고치고, 새 반증 픽스처를 **POST-COMMIT order 15**로 물렸다.
+
+방향은 좁히는 쪽이다. 검사 수가 14 → 15로 늘고, 정상 코드에서는 전부 초록이다
+(LAND 18/18 PASS, `gate-witness-check` exit 0).
+
+### ③ 되돌리는 법
+1. `docs/handoff/GATE-MANIFEST.json`의 POST-COMMIT `order: 15` 블록 삭제.
+2. `server/Harness/GateWitnessCheckCli.cs`의 `HasWitness` 마지막 줄을
+   `return !validateInternalClaims || CountInternalNegativeCases(root, check) >= claimedCases;`로
+   되돌리고 `validateInternalClaims` 매개변수와 호출부 인자를 복원.
+3. (선택) `docs/qa/gate-witness/internal-claim-understated.json` 삭제.
+
+note와 픽스처의 `21`은 실측값이므로 되돌리지 마라 — 그건 낡은 값이었다.

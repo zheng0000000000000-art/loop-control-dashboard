@@ -1,0 +1,20 @@
+{
+  "_comment": "내부 반증 주장을 실재보다 적게 적은 매니페스트. 종전에는 measured >= claimed 라서",
+  "_comment2": "이렇게 적을수록 쉽게 통과했다. gate-witness-check는 exit 1을 내야 한다.",
+  "schemaVersion": 1,
+  "gates": [
+    {
+      "gateId": "GWIT-UNDERCLAIM",
+      "requireFailureWitness": true,
+      "checks": [
+        {
+          "order": 1,
+          "command": "state-transition-selftest",
+          "args": [],
+          "expectedExit": 0,
+          "internalNegativeCases": 14
+        }
+      ]
+    }
+  ]
+}
