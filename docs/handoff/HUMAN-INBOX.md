@@ -696,3 +696,17 @@ WP-STATE-INTEGRITY-LAND   18 / 18   미반증 0   ← 이제 검증한 0
 적용하는 후속 지시서를 낼 것인가. **코덱스 영역**이다.
 그 전까지 `di-completion-check`의 PASS/FAIL은 그대로 믿을 수 없다 — `ADR-016` §8이 권위를
 그쪽에 줬으므로 영향이 크다.
+
+## 2026-07-26 — di-completion-check 수정 완료, 두 러너가 같은 답을 낸다
+
+`DICC-01` 반입으로 그쪽도 `--no-build` + 낡음 판정을 쓴다. 낡음 판정 정의는
+`server/Harness/BinaryFreshness.cs` 하나뿐이고 두 러너가 공유한다.
+
+```
+POST-COMMIT              di-completion-check PASS 12/12   program-verify PASS 12/12
+WP-STATE-INTEGRITY-LAND  di-completion-check PASS 18/18   program-verify PASS 18/18
+```
+
+**사람 판단이 남은 것**: `ADR-016` §8의 정본 결정. 두 러너가 같은 답을 낸다는 것이
+둘 다 둬도 된다는 뜻은 아니다 — **같은 일을 하는 코드가 두 벌**이고 지금 같은 답을
+내는 건 방금 맞춰서다. 갈리면 §6의 사건이 다시 난다.

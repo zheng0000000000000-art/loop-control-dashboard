@@ -306,3 +306,20 @@ error MSB3021: ... LocalFirstWorkflowDashboard.Server.exe ...
 `di-completion-check`는 받는다. **그래서 두 러너를 픽스처로 대조할 수 없다.**
 2026-07-26에 픽스처로 대조를 시도해 exit 2 vs 1을 얻었는데, 그것은 판정 불일치가 아니라
 **`program-verify`가 그 게이트 id를 못 찾은 것**이었다. 무효한 비교였다.
+
+## §12 (2026-07-26) — 두 러너가 처음으로 같은 답을 냈다
+
+`DICC-01`이 `di-completion-check`에도 §10의 설계를 넣었다(`--no-build` + 낡음 판정).
+낡음 판정 정의는 `server/Harness/BinaryFreshness.cs` **하나뿐**이고 두 러너가 그것을 쓴다.
+
+| 게이트 | `di-completion-check` | `program-verify verify` |
+| --- | --- | --- |
+| `POST-COMMIT` | PASS 12/12 (exit 0) | PASS 12/12 (exit 0) |
+| `WP-STATE-INTEGRITY-LAND` | PASS 18/18 (exit 0) | PASS 18/18 (exit 0) |
+
+**§6의 사건이 재현될 구조적 조건은 사라졌다.** 그러나 **§8의 결정은 유효하다** —
+같은 일을 하는 코드가 두 벌 있는 상태이고, 지금 같은 답을 내는 건 방금 맞춰서다.
+정본을 정하는 것은 사람 결재다.
+
+남은 차이: `program-verify`는 `--manifest`를 해석하지 않는다(`ProgramVerifierCli.cs:115`).
+픽스처 매니페스트로는 대조할 수 없고 실제 게이트 id로만 가능하다.
