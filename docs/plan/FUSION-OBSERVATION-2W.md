@@ -160,3 +160,40 @@ gate-clean nonexistent-xyz   exit 0
 
 **고칠 자리**: `server/Harness/GateCleanCli.cs` — **코덱스 영토**라 지시서가 필요하다.
 **규칙 형태로 옮길 것**: *"검사 대상 경로가 존재하지 않으면 PASS가 아니라 입력 오류(2)다."*
+
+---
+
+## 관찰 2 (2026-07-27) — 도메인 오염이 이미 일어나 있다
+
+**사용자 제약**: *"미지의 경매장 쪽 정보가 팀루프 자체에 섞이는 건 지양하고 싶다."*
+
+**이미 섞여 있다.** MCP `list_skills`의 **전역 스킬**에 경매장/심사 도메인이 4개 있다:
+
+```
+judging-video-clarity            "첫 30초에 장르·코어 루프·AI 차별점이 보여야"
+judging-ai-native-gameplay       "AI-on/off 런을 비교"
+judging-technical-documentation  "프롬프트 나열식 문서는 반려"
+judging-nhn-fit-human-review     "NHN 적합성은 참고 증거로만 표기"
+```
+
+**team-loop은 오케스트레이션 도구인데 그 전역 스킬이 특정 프로젝트의 심사 기준을 담고 있다.**
+`workspaces/unknown-auction/`은 gitignore로 분리돼 있지만 **`data/skills.json`은 workspace 구분이
+없다** — 한쪽에서 승격된 지식이 다른 쪽 에이전트에게도 규칙으로 실린다.
+
+같은 경로로 들어온 다른 오염:
+
+```
+scope-violation-handling  →  "src/store.js 경로를 수정하지 않는다"
+                             "public/index.html 경로를 수정하지 않는다"
+                             "docs/MEMBER-USAGE-AI.md 경로를 수정하지 않는다"
+```
+
+**한 번의 실패에서 나온 파일 이름이 전역 규칙이 됐다.**
+
+### 이것이 융합 목록에 더하는 것
+
+- **스킬·하네스에 소속(scope)이 필요하다** — 전역인가, 특정 workspace 것인가.
+  지금은 구분이 없어서 **승격이 곧 전역 오염**이다.
+- 로컬퍼스트의 대응 규칙이 있다: `skills/domains/`는 **"이번 작업이 바꿀 파일 경로가 그 스킬의
+  트리거와 일치할 때만" 읽는다.** 전역(`skills/common/`)과 도메인이 폴더로 갈려 있고,
+  **애매하면 읽지 않는다**가 기본값이다. 그 구분이 team-loop에는 없다.

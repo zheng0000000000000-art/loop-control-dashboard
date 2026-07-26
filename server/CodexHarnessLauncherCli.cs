@@ -112,11 +112,18 @@ internal static class CodexHarnessLauncherCli
 
         // 계약 §2-2: 쓰기 범위가 코덱스 영역 밖이면 요청 자체를 거절한다. 실행 후 잡는 것이 아니라
         // 쏘기 전에 막는다 — 잘못 쏜 뒤의 scope 위반은 이미 사본을 더럽힌 뒤다.
+        // 요청이 영토를 선언하면 그것을 쓰고, 아니면 이 저장소의 기본 영토를 쓴다(2026-07-27 결재).
+        // 선언한 영토 자체가 저장소 전체이거나 밖으로 나가면 거절한다 — 그러면 검사가 있으나 마나다.
+        var declaredRoots = Array(request, "territoryRoots");
+        IReadOnlyList<string> roots = declaredRoots.Count > 0 ? declaredRoots : CodexTerritory.Roots;
+        var rootsRejection = declaredRoots.Count > 0 ? CodexTerritory.RootsRejection(declaredRoots) : null;
+        if (rootsRejection is not null) return rootsRejection;
+
         var allowed = Array(request, "allowedPaths");
         if (allowed.Count == 0) return "allowed-paths-required";
         foreach (var path in allowed)
         {
-            if (!CodexTerritory.Contains(path)) return "allowed-paths-outside-codex-territory";
+            if (!CodexTerritory.Contains(path, roots)) return "allowed-paths-outside-codex-territory";
         }
 
         var forbidden = Array(request, "forbiddenActions");
