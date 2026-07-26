@@ -1,7 +1,9 @@
 {
   "launchId": "LAUNCH-NHASH-01",
-  "state": "pending",
+  "state": "imported",
   "decidedAt": "2026-07-26",
-  "actor": "codex-launch (자동) — 처분은 사람이 정한다",
-  "note": "발사만 됐고 반입·폐기는 정해지지 않았다. launch-disposition이 위반으로 센다."
+  "actor": "조율 세션(Claude Opus 5) · 사람 지시",
+  "importCommit": "0f38a27de0f105d09de8e31f29707f37c35c94ed",
+  "gateReport": "docs/handoff/gate-evidence/LAUNCH-NHASH-01.gate.json",
+  "note": "gateReport는 추적되는 경로에 --out으로 냈다. 코덱스는 읽는 쪽만, 조율자가 같은 커밋에서 쓰는 쪽을 바꿨다."
 }
