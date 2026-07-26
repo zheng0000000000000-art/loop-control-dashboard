@@ -38,6 +38,17 @@ internal static class TrustOriginCli
     internal static int Run(string[] args)
     {
         var sub = args.Length > 1 ? args[1] : "";
+        // 하위 명령마다 받는 옵션이 다르다. 모르는 옵션을 조용히 무시하면 오타가 "옵션 없음"이 되어
+        // 다른 것을 재고 성공으로 끝난다(2026-07-26: --gate-reportt 가 exit 0으로 NOT_RUN 증거를 냈다).
+        var optionFailure = sub switch
+        {
+            "evidence" => CliOptions.Validate(args, 2, ["out", "gate-report"], []),
+            "declare" => CliOptions.Validate(args, 2, ["evidence"], []),
+            "inspect" or "verify" or "--self-test" => CliOptions.Validate(args, 2, [], []),
+            _ => null,
+        };
+        if (optionFailure is not null) return Error(optionFailure, 2);
+
         if (string.Equals(sub, "inspect", StringComparison.OrdinalIgnoreCase)) return RunInspect();
         if (string.Equals(sub, "evidence", StringComparison.OrdinalIgnoreCase)) return RunEvidence(args);
         if (string.Equals(sub, "declare", StringComparison.OrdinalIgnoreCase)) return RunDeclare(args);

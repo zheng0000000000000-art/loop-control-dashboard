@@ -43,6 +43,10 @@ internal static class CodexHarnessLauncherCli
     // 요청을 검사하고, launch면 격리 사본에서 실행한 뒤 증거를 기록한다.
     private static int Execute(string[] args, bool launch)
     {
+        // --manual은 안전장치다. 오타가 조용히 무시되면 그 가드가 없는 것과 같아진다.
+        var optionFailure = CliOptions.Validate(args, 2, ["request"], ["manual"]);
+        if (optionFailure is not null) return Error(optionFailure, 2);
+
         var requestPath = Flag(args, "request");
         if (string.IsNullOrWhiteSpace(requestPath)) return Error("launch-request-required", 2);
         var root = RepoRoot();
