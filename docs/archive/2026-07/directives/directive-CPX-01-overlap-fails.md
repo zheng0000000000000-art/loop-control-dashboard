@@ -8,7 +8,7 @@
   "readOrder": [
     "docs/context/RUNTIME-INDEX.md",
     "docs/directives/_header.md",
-    "docs/handoff/queue/directive-CPX-01-overlap-fails.md",
+    "docs/archive/2026-07/directives/directive-CPX-01-overlap-fails.md",
     "server/Harness/ContextPackIntegrityCli.cs"
   ],
   "forbiddenActions": ["commit", "push", "state-transition", "pass", "product-code-edit", "approve", "reject", "import", "edit-baseline"]

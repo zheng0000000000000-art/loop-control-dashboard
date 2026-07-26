@@ -8,8 +8,8 @@
   "readOrder": [
     "docs/context/RUNTIME-INDEX.md",
     "docs/directives/_header.md",
-    "docs/handoff/queue/directive-DAUTH-02-landing-procedure.md",
-    "docs/handoff/queue/directive-CPX-01-overlap-fails.md",
+    "docs/archive/2026-07/directives/directive-DAUTH-02-landing-procedure.md",
+    "docs/archive/2026-07/directives/directive-CPX-01-overlap-fails.md",
     "skills/common/directive-authoring.md"
   ],
   "forbiddenActions": ["commit", "push", "state-transition", "pass", "product-code-edit", "approve", "reject", "import", "edit-baseline"]
