@@ -47,3 +47,40 @@
 2. **시험 4 미실시.** 깨끗한 트리에서의 회귀 확인은 두 지시서 연속으로 미뤄졌다.
 3. 이 회귀는 `GWIT-02` 반입 때 **측정을 먼저 돌렸으면 반입 전에 잡혔다.** 조율자가 측정과
    커밋을 한 명령에 묶어 결과를 보기 전에 커밋한 것이 원인이며 `9159d3f`에 정정했다.
+
+---
+
+## 정정 (같은 세션) — 시험 4를 실측했다
+
+위에 *"시험 4는 하지 않았다"*고 적었으나, 반입을 커밋해 트리가 깨끗해진 직후 실측했다.
+**두 지시서 연속으로 미뤘던 항목이 닫혔다.**
+
+```
+git status --porcelain      0줄 (clean)
+gate-clean                  exit 0   ✅ 기대 0
+gate-clean server           exit 0   ✅ POST-COMMIT 형태
+```
+
+**production 판정에 회귀가 없다**는 것이 이로써 확인됐다. `--status-fixture` 분기를 얹고
+함수를 분해했는데도 인자 없는 경로가 그대로다.
+
+### POST-COMMIT 게이트 전체 (깨끗한 트리)
+
+```
+di-completion-check --gate POST-COMMIT
+  verdict: PASS   checks: 12   failures: []   exit 0
+```
+
+**반증 witness 5건이 포함된 게이트가 전부 통과한다.** 이 게이트는 이제
+`requireFailureWitness: true`이고 반증 없는 검사가 0건이며, `gate-witness-check` 자신도
+등재돼 자기 witness를 갖는다.
+
+이 세션에서 POST-COMMIT이 지나온 길:
+
+| 시점 | 검사 | 반증 없음 |
+| --- | --- | --- |
+| 세션 시작 | 5 | 4 |
+| `handoff-integrity` witness 2건 + 플래그 켬 | 7 | 3 |
+| `context-pack-integrity` witness | 8 | 2 |
+| `GWIT-02` witness 2건 (`gate-clean`·`doc-integrity`) | 10 | **0** |
+| `gate-witness-check` + 자기 witness 등재 | **12** | **0** |
