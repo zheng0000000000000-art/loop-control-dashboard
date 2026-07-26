@@ -75,5 +75,15 @@ NormalizedContentHash 두 벌 → 하나 (NHASH-01)
 
    **새 흐름이 조율자 트리 밖에서도 끝까지 돈다.**
 
-4. **`POST-EXECUTOR`는 클론에서 새 흐름으로 안 돌렸다.** 더러운 트리를 만들어야 하고
-   앞서 `program-verify`로 한 번 확인했다. 러너가 바뀌었으므로 **다시 재지는 않았다.**
+4. ~~`POST-EXECUTOR`는 새 러너로 안 돌렸다~~ → **돌렸다.** 깨끗한 클론(baseline `6deed01`):
+
+   | 트리 상태 | `di-completion-check --gate POST-EXECUTOR` |
+   | --- | --- |
+   | 깨끗함 | **FAIL 1/13** — 유일한 실패가 `gate-clean` `expected 1, actual 0` |
+   | 더럽힘(`server/executor-scratch.txt`) | **PASS 13/13**, `worktreeCleanAtStart` false |
+
+   **유일한 실패가 정확히 그 검사 하나**라는 것이 전제 불충족이라는 증거다.
+   옛 러너(`program-verify`)로 잰 결과와 **같다** — 러너를 바꿔도 판정이 같음이 확인됐다.
+
+   **이로써 세 게이트 모두 새 러너로, 클론에서 초록임이 실측됐다**
+   (`POST-COMMIT` 14/14 · `LAND` 18/18 · `POST-EXECUTOR` 13/13).
