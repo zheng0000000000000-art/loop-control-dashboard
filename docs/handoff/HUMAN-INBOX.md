@@ -1158,3 +1158,26 @@ private static bool HighRiskFailClosed() => true;      // TrustOriginCli.cs:993
    **CI의 `.NET 8` 다리를 초록으로 켠다.**
 
 둘 다 **조율자가 직접 못 한다** — `HarnessRegistry`와 17개 파일이 전부 `server/Harness/`다.
+
+## 2026-07-27 — TERR-01 반입 완료 + TERR-02 대기
+
+**반입했다**(사용자 지시). `territory-check`가 POST-COMMIT order 19·20·21로 물렸고
+**POST-COMMIT 21/21 PASS**. 자기보고는 증거가 아니라 **패치를 격리 클론에 붙여 네 조합을
+직접 재실행**했고 전부 일치했다. 근거: `docs/verification/terr-01.md`.
+
+**설계 결함은 내 것이다.** TERR-01 지시서의 면제 규칙을 **경로 기준**으로 썼다 —
+"어떤 outbox 패치든 그 경로를 담고 있으면 반입". 그래서 **코덱스가 한 번이라도 만진 파일은
+그 뒤로 조율자가 영원히 자유롭게 고칠 수 있다.** 오늘 내 세 번의 침범 중
+`GateWitnessCheckCli.cs` 건은 **이 하네스로도 안 잡힌다.** 코덱스는 지시서대로 만들었고
+이 성질을 자진 신고했다.
+
+**발사 대기 2건**
+1. `docs/directives/TERR-02-import-binding.md` — 면제를 **그 커밋의 반입**에 묶는다.
+   핵심 반증: `--commit 7feeb44…`의 `violations`가 **2 → 3**이 되어야 한다.
+   **exit code는 양쪽 다 1이라 exit code만으로는 증명이 안 된다** — 수치를 봐야 한다.
+2. `docs/directives/NET8-01-harness-json-options.md` — 하네스 JSON 옵션 한 벌로 모으고
+   **CI의 .NET 8 다리를 초록으로 켠다.**
+
+**부수로 한 것**: 대기 지시서 `GATE-TRUTH-01`의 `HarnessRegistry.cs` 핀을 다시 계산했다.
+이번 반입이 그 파일에 `territory-check` 등록 한 줄을 더했기 때문이다. **전제에 영향 없다고
+판단한 것은 나이고, 그 지시서를 머리와 목적 절까지만 다시 읽었다.** 판단이 틀렸으면 되돌려라.
