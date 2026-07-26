@@ -536,3 +536,81 @@ recovery inspect   : recoveryClass=L2 · recommendedAction=quarantine-and-human-
 
 > ⚠️ **`GATE-MANIFEST`의 `handoff-integrity` expectedExit를 1로 바꾸자는 안은 기각한다.**
 > 그건 **"상태가 어긋난 것이 정상"이라고 등재**하는 것이고, 그 순간 그 검사는 죽는다.
+
+---
+
+# 2026-07-26 조율 세션 — 사람 결재가 필요한 것 (5건)
+
+기록: Claude Opus 5(조율). 이 세션은 `ADR-015` 종료 → `TRUSTED_BASELINE` 선언 →
+`CodexHarnessLauncher` 구현 → 지시서 4건 발사·착륙까지 갔다. 아래는 **조율자가 결정할 수 없는 것**이다.
+
+## 1. `ADR-016` 승인 — **§2가 아니라 §8이 유효한 결정이다**
+
+상태가 "사람 승인 대기"인데 문서에 §6(정정)·§7(후속)·§8(해소)이 붙었다.
+**승인할 때 §2의 "`program-verify`가 권위"가 아니라 §8의 "`di-completion-check`가 권위"를
+승인하는 것임을 확인하라.** §2는 §8로 종료됐다.
+
+§4에 조율자의 자기 신고가 있다: `program-verify`는 **재발명**이며, 만든 당사자가 그것을 권위로
+정하는 ADR을 썼다. 지금은 권위를 넘겼으므로 그 위험은 줄었으나 **재발명 사실은 남는다.**
+
+## 2. `TRUSTED_BASELINE` 기록을 갱신할 것인가
+
+`TO-2026-001`은 `program-verify`가 무르던 시점의 14/14 PASS를 근거로 선언됐다(§7이 지적).
+**등재 후 엄격한 기준에서 그 통과가 재현됐다**(§8, 두 러너 모두 PASS 14/14).
+
+- **갱신하지 않아도 사실은 성립한다.** 조율자는 재선언하지 않았다.
+- 갱신한다면 `trust-origin declare`를 다시 돌리는 것이 아니라, **기록에 재측정 사실을 덧붙이는**
+  형태가 맞다고 본다. 판단은 사람 몫이다.
+
+## 3. `GATE-CP-01` — actor가 유효하지 않다
+
+`actor: CORE_INFRA_EXECUTOR (sonnet)`인데 `server/Harness/ContextPackIntegrityCli.cs`를 쓴다.
+**`ADR-002` 코덱스 배타 영역이다.** `ADR-015` 예외는 `05H`·`06H` 한정이었으므로 이 지시서는
+**애초에 그 예외 밖**이었고, 2026-07-26 종료로 더 분명해졌다.
+
+또한 allowlist에 `outputs/launch/run-executor.ps1`이 있어 **코덱스 영역을 걸친다** —
+`CODEX-GATE-04`와 같은 모양이며 그것은 `CG04A`/`CG04B`로 나눠 해소했다. 같은 분할이 필요하다.
+
+**결정할 것**: actor를 코덱스로 바꾸고 분할할 것인가, 다른 실행자에게 새 예외를 줄 것인가.
+예외라면 새 ADR과 새 결재가 필요하다.
+
+## 4. `outbox/codex-launch-*` 반입 — 남은 것 없음 (확인만)
+
+이 세션에서 쏜 4건(`CPX-01`·`DAUTH-02`·`CG04A`·`CG04A-R1`·`HREG-01`)은 전부 반입·착륙했다.
+`outbox/`에 남은 candidate는 없다. **확인만 하고 넘어가면 된다.**
+
+## 5. `CodexHarnessLauncher` 자동 발사 — 아직 열지 마라 (참고)
+
+`PermittedWriteRoots`에 `skills/`를 더한 것은 `BASELINE-CHANGES.md`(2026-07-26)에 기록했다.
+**자동 발사는 여전히 닫혀 있다** — `automatedExecutionReady: false`이므로 `--manual` 없이는
+`automated-execution-not-ready`로 거절된다. 계약 §83대로 `WP-STATE-LAUNCH-GATE`(06L) 통과 후
+`AUTOMATED_EXECUTION_READY`에서만 열어야 한다. **이 세션은 그것을 열지 않았다.**
+
+---
+
+## 조율자가 이어서 할 수 있는 것 (결재 불필요)
+
+- `CG04B`의 `critical: true` 경로 시험과 시험 3(계약에 없는 새 명령 → warning) — 미실시로 남아 있다.
+- `ADR-016` §7의 `BuiltInCommands` 복제 해소 — 다만 대상이 `server/Harness/`라 **지시서가 필요하다.**
+- 완료된 지시서(`CG04A`·`CG04A-R1`·`HREG-01`)의 archive 이동 — `crossDirectivePinCollisions`가
+  실제 숫자를 말하게 하려면 필요하다. 옮기기 전 경로 참조를 먼저 훑어야 한다(2026-07-26 실측 교훈).
+
+> **정정 (같은 세션, 위 §4).** *"`outbox/`에 남은 candidate는 없다"*고 적었으나 **틀렸다.**
+> 확인해 보니 다섯 개가 그대로 있다:
+>
+> ```
+> outbox/codex-launch-LAUNCH-CPX-01-R2    188줄  (CPX-01)
+> outbox/codex-launch-LAUNCH-DAUTH-02      33줄  (DAUTH-02)
+> outbox/codex-launch-LAUNCH-CG04A        347줄  (CG04A)
+> outbox/codex-launch-LAUNCH-CG04A-R1      33줄  (CG04A-R1)
+> outbox/codex-launch-LAUNCH-HREG-01       14줄  (HREG-01)
+> ```
+>
+> **다섯 다 이미 반입·착륙했다** — 내용이 남아 있을 뿐 대기 중인 것은 없다. 즉 §4의 결론
+> ("확인만 하고 넘어가면 된다")은 유지되지만, **근거로 적은 사실이 틀렸다.**
+> `outbox/`는 `.gitignore` 대상이라 저장소를 오염시키지는 않는다.
+>
+> 이 정정 자체가 §"조율자가 이어서 할 수 있는 것"에 항목을 하나 더한다:
+> **반입 끝난 launch 산출물을 지우는 절차가 없다.** 남겨 두면 다음 사람이 대기 중인 것으로 오독한다.
+> `codex-launch`가 반입 여부를 알 방법이 없으므로 이것도 사람이 손으로 지워야 하며,
+> 완료 표식 문제(같은 세션에서 지시서 archive 이동으로 겪은 것)와 **같은 부류**다.
