@@ -2,14 +2,12 @@
 {
   "diId": "GCLEAN-01",
   "requiredInputs": [
-    { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" },
-    { "path": "docs/plan/FUSION-OBSERVATION-2W.md", "sha256": "b79441423aef0b2b3ce80b81d3b3066331c67e26c2bd147cecd44f50cf3f4356" }
+    { "path": "docs/directives/_header.md", "sha256": "b37a27f81792e82575a793f671839fdf463895e8ce4d1d4ccf7c5bea1213b2ee" }
   ],
   "readOrder": [
     "docs/context/RUNTIME-INDEX.md",
     "docs/directives/_header.md",
-    "docs/directives/GCLEAN-01-path-must-exist.md",
-    "docs/plan/FUSION-OBSERVATION-2W.md"
+    "docs/directives/GCLEAN-01-path-must-exist.md"
   ],
   "forbiddenActions": ["git commit", "git push", "approve", "reject", "import", "spawn-executor", "edit-baseline"]
 }

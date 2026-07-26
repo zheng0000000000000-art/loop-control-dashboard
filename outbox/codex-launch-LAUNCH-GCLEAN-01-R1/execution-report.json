@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-GCLEAN-01-R1",
+  "diId": "GCLEAN-01",
+  "baselineCommit": "c92d0a331bf2d9b281509bcdec5cff6161ad245c",
+  "startedAt": "2026-07-26T19:38:53Z",
+  "finishedAt": "2026-07-26T19:39:14Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "d4a29764ca883a3105d2e30bf3b36b25b2830bc8e4fe624217e72e287e3874a7",
+  "stderrTail": "dels_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\ncodex\n착수 중단: 필수 입력 해시가 일치하지 않습니다.\n\n- `docs/directives/_header.md`: 일치\n- `docs/plan/FUSION-OBSERVATION-2W.md`\n  - 요구: `b79441423aef0b2b3ce80b81d3b3066331c67e26c2bd147cecd44f50cf3f4356`\n  - 실제: `5d5683a112a6e4ebba43106446f56f01501c7c985b971cfa960b55781528396e`\n\n다음 중 하나를 선택해 주세요.\n\n1. 현재 파일에 맞는 해시로 context-pack을 갱신\n2. 요구 해시와 일치하는 파일 버전을 제공\n\n파일 수정이나 금지된 작업은 수행하지 않았습니다.\ntokens used\n42,906",
+  "changedPaths": [],
+  "scopeViolations": [],
+  "candidatePatchSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}
