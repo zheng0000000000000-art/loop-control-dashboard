@@ -252,3 +252,62 @@ launch-disposition ['outbox'] exp 0 got 2
 3. **`launch-disposition`은 여전히 읽기 실패 시 전체를 exit 2로 중단한다.** 한 파일이 잠겨 있으면
    나머지 16건도 판정되지 않는다. 건별 위반(`gate-report-unreadable`)으로 낮추는 편이 낫다 —
    **코덱스 영역이라 후속이다.**
+
+---
+
+# DISPO-03 (append, 2026-07-26) — 한 건이 깨져도 나머지를 판정한다
+
+앞 절의 미달 ③(*"읽기 실패 시 전체를 exit 2로 중단한다"*)을 닫는다.
+
+## 반증 시험 (지시서 §4 — 6개 전부 실측, 사유까지)
+
+| # | 픽스처 | 기대 | 실측 |
+| --- | --- | --- | --- |
+| 1 | `gateReport`가 **디렉터리**를 가리킴 | 위반 1, `not-found`와 다른 사유 | **`gate-report-unreadable`** |
+| 2 | `gateReport`가 JSON이 아님 | 또 다른 사유 | **`gate-report-unparsable`** |
+| 3 | `disposition.json`이 JSON이 아님 | `state-invalid`와 다른 사유 | **`disposition-unparsable`** |
+| 4 | **깨진 1건 + 정상 2건** | **launchCount 3 · violations 1** | **3 · 1** |
+| 5 | 루트 경로 없음 | exit 2 | **2** |
+| 6 | 기존 case-01~13 | 이전과 동일 | **1,0,1,1,1,0,0,1,1,1,1,1,1** — 동일 |
+
+**시험 4가 목적 자체다.** `launchCount`가 2였으면 깨진 건을 목록에서 빼버린 것이고
+(*"그런 발사는 없었다"*), `violations`가 3이었으면 정상 2건까지 물들인 것이다.
+
+**사유가 넷 다 다르다** — `not-found`·`unreadable`·`unparsable`(보고)·`unparsable`(처분).
+*"없다"* 와 *"있는데 못 읽는다"* 가 구분된다. 후자는 대개 다른 프로세스가 쓰고 있다는 뜻이고,
+그게 이 문제의 출발점이었다.
+
+## DISPO-02가 끝까지 확인됐다
+
+이 발사에서 런처가 `disposition.json`을 `pending`으로 **자동 생성**했고,
+`launch-disposition`이 `disposition-missing`이 아니라 **`disposition-pending`**으로 잡았다.
+
+```
+launch-disposition outbox → launchCount 18 | violations 1
+  LAUNCH-DISPO-03 -> disposition-pending
+```
+
+**기록이 없는 것과 아직 안 정한 것이 실제로 구분된다.**
+
+## ★ 순서를 하나 더 배웠다 — 보고를 먼저, 처분을 나중에
+
+처분을 먼저 쓰고 게이트를 돌렸더니 **FAIL 1/14**였다. 사유:
+
+```
+launch-disposition ['outbox'] exp 0 got 1     (gate-report-not-found)
+```
+
+`disposition.json`이 가리키는 보고를 **그 실행이 만들기 때문에**, 첫 실행 시점에는 그 파일이
+아직 없다. `--out`이 검사 뒤에 쓰므로 필연이다. 다시 재니 **PASS 0/14**.
+
+**운영 순서**: `--out`으로 보고를 먼저 만들고 → 처분을 쓰고 → 다시 재서 확인한다.
+처분을 먼저 쓰면 반드시 한 번 실패한다. **결함이 아니라 의존 순서다.**
+
+## 지표는 만족했으나 목적은 미달인 부분
+
+1. **위 순서를 코드가 강제하지 않는다.** 아는 방법은 이 문서뿐이다.
+   `--out` 때 그 경로가 어떤 `disposition.json`에 참조되는지 보고 미리 만들어 두는 식의
+   해결이 가능하지만, 러너가 처분 파일을 아는 것은 결합이 과하다고 판단해 하지 않았다.
+2. **`di-completion-check`에는 `--out`이 없다.** `DISPO-03` §6에 별도 지시서로 남겼다.
+3. **`gate-report-unreadable` 메시지에 예외 원문이 그대로 실린다.** 절대 경로가 노출되고
+   길다. 사유 코드로 판정하면 되지만 출력이 지저분하다 — 고치지 않았다.
