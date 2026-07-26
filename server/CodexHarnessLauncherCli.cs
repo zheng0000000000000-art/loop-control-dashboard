@@ -20,12 +20,10 @@ internal static class CodexHarnessLauncherCli
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    // 쓰기 허용 범위. ADR-002가 선언한 코덱스 배타 영역(server/Harness/·skills/)과 승인된
-    // fixture 경로(docs/qa/)까지다. 그 선을 넘지 않는다 — 넘히려면 사람 결재가 다시 필요하다.
-    // skills/는 2026-07-26 사람 결재로 추가했다(BASELINE-CHANGES 참조). 계약 §2-2는 런처를
-    // 하네스·fixture 제작으로 좁혀 썼는데, ADR-002는 skills/도 코덱스 배타로 준다. 절차 문서를
+    // 쓰기 허용 범위의 정본은 CodexTerritory다(사본을 두지 마라). 그 선을 넘히려면 사람 결재다.
+    // skills/는 2026-07-26 사람 결재로 들어왔다(BASELINE-CHANGES 참조). 계약 §2-2는 런처를
+    // 하네스·fixture 제작으로 좁혀 썼는데 ADR-002는 skills/도 코덱스 배타로 준다 — 절차 문서를
     // 코덱스에게 맡기려면 그 간극을 메워야 했고, ADR-002의 선까지만 맞췄다.
-    private static readonly string[] PermittedWriteRoots = ["server/Harness/", "skills/", "docs/qa/"];
 
     // 계약 §3: 요청이 스스로 금지해야 하는 행위. 하나라도 빠지면 요청이 불완전한 것이다.
     private static readonly string[] RequiredForbiddenActions =
@@ -118,9 +116,7 @@ internal static class CodexHarnessLauncherCli
         if (allowed.Count == 0) return "allowed-paths-required";
         foreach (var path in allowed)
         {
-            var normalized = path.Replace('\\', '/');
-            if (!PermittedWriteRoots.Any(r => normalized.StartsWith(r, StringComparison.OrdinalIgnoreCase)))
-                return "allowed-paths-outside-codex-territory";
+            if (!CodexTerritory.Contains(path)) return "allowed-paths-outside-codex-territory";
         }
 
         var forbidden = Array(request, "forbiddenActions");
