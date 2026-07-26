@@ -411,13 +411,14 @@ internal static class TrustOriginCli
     // 종전에는 세 곳(SelfTestNode 호출·SelfTestEvidencePass 호출·매니페스트)에 흩어져 손으로
     // 맞춰야 했고, 케이스를 하나 더하면 declare가 사유를 가리키지 않는 방식으로 거절했다.
     //
-    // 이 수치는 **실행해서 잰 것이 아니라 선언이다.** evidence 파일 변조를 잡는 용도이며,
-    // "self-test가 실제로 그만큼 돌았다"를 뜻하지 않는다 — 그 판정은 게이트의 self-test 검사가 한다.
-    // trustOriginSelfTest 항목은 §self-test의 selftest-case-count-matches-table이 실재와 대조한다.
+    // 표 자체는 선언이다. evidence 파일 변조를 잡는 용도이고, 그 값이 옳은지는 §self-test가 잰다 —
+    // **세 항목 모두 실재와 대조된다.** trustOriginSelfTest는 selftest-case-count-matches-table이,
+    // 나머지 둘은 state-transition/recovery-case-count-measured가 실제로 self-test를 돌려 센다.
+    // 2026-07-27 전까지 뒤의 둘은 생산자·검사자가 같은 이 표를 읽어 대조가 공회전이었다.
     private static readonly (string Key, int Cases)[] SelfTestGateCounts =
     [
         ("stateTransitionSelfTest", 19),
-        ("trustOriginSelfTest", 27),
+        ("trustOriginSelfTest", 29),
         ("recoverySelfTest", 8),
     ];
 
@@ -475,6 +476,13 @@ internal static class TrustOriginCli
         // 안 고치면 declare가 integration-gate-evidence-missing으로 거절하는데, 그 사유는
         // 원인을 가리키지 않는다(2026-07-26에 24 → 26으로 올릴 때 실제로 겪었다).
         // +1은 이 케이스 자신이다 — Add가 아직 호출되기 전이므로 cases.Count에 안 들어 있다.
+        // 나머지 두 항목은 실제로 self-test를 돌려 센다. 여기까지 두 값 모두 표에서만 왔고
+        // 생산자(BuildIntegrationEvidence)도 검사자(SelfTestEvidencePass)도 같은 표를 읽어
+        // 대조가 공회전이었다 — 케이스를 늘려도 줄여도 통과했다(2026-07-27 실측).
+        Add(cases, "state-transition-case-count-measured",
+            StateApplierCli.MeasuredSelfTestCaseCount() == CasesFor("stateTransitionSelfTest"), negative: false);
+        Add(cases, "recovery-case-count-measured",
+            RecoveryCli.MeasuredSelfTestCaseCount() == CasesFor("recoverySelfTest"), negative: false);
         Add(cases, "selftest-case-count-matches-table",
             CasesFor("trustOriginSelfTest") == cases.Count + 1, negative: false);
         var failed = cases.OfType<JsonObject>().Count(c => c["pass"]?.GetValue<bool>() != true);

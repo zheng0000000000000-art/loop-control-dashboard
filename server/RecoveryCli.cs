@@ -71,8 +71,22 @@ internal static class RecoveryCli
         catch (Exception ex) { return Error(ex.Message, 2); }
     }
 
-    // RECOVERY fault fixture 전체를 임시 경로에서 검증한다.
+    // self-test가 실제로 돈 케이스 수를 잰다. trust-origin의 표가 이 값과 대조된다.
+    // 케이스마다 자기 임시 디렉터리를 쓰므로 census가 주는 root는 쓰지 않는다.
+    internal static int MeasuredSelfTestCaseCount()
+        => SelfTestCensus.Measure("recovery-census", _ => SelfTestCases().Count);
+
+    // RECOVERY fault fixture 전체를 임시 경로에서 검증하고 결과를 찍는다.
     private static int RunSelfTest()
+    {
+        var cases = SelfTestCases();
+        var failed = cases.OfType<JsonObject>().Count(c => c["pass"]?.GetValue<bool>() != true);
+        Console.WriteLine(new JsonObject { ["selfTest"] = "recovery-fault-infra", ["verdict"] = failed == 0 ? "PASS" : "FAIL", ["casesRun"] = cases.Count, ["failed"] = failed, ["negativeCaseCount"] = cases.OfType<JsonObject>().Count(c => c["negative"]?.GetValue<bool>() == true), ["cases"] = cases }.ToJsonString(JsonOptions));
+        return failed == 0 ? 0 : 1;
+    }
+
+    // 복구 fixture 케이스를 모두 실행하고 결과 배열을 준다. 세는 쪽과 찍는 쪽이 같은 목록을 쓴다.
+    private static JsonArray SelfTestCases()
     {
         var cases = new JsonArray();
         Add(cases, "pending-pre-no-success", RunCase(CasePendingPreNoSuccess), negative: true);  // HasPendingCode — 미해결 pending이 보고되는가
@@ -83,9 +97,7 @@ internal static class RecoveryCli
         Add(cases, "conflicting-success", RunCase(CaseConflict), negative: true);  // HasFailureCode — 중복 성공 충돌이 실패로 보고되는가
         Add(cases, "evidence-package", RunCase(CaseEvidencePackage), negative: false);  // 산출물이 생성되는가 — 성공을 단언한다
         Add(cases, "high-risk-stays-closed", RunCase(CaseHighRiskClosed), negative: true);  // recoveryApplyReady == false — 거부가 유지되는가
-        var failed = cases.OfType<JsonObject>().Count(c => c["pass"]?.GetValue<bool>() != true);
-        Console.WriteLine(new JsonObject { ["selfTest"] = "recovery-fault-infra", ["verdict"] = failed == 0 ? "PASS" : "FAIL", ["casesRun"] = cases.Count, ["failed"] = failed, ["negativeCaseCount"] = cases.OfType<JsonObject>().Count(c => c["negative"]?.GetValue<bool>() == true), ["cases"] = cases }.ToJsonString(JsonOptions));
-        return failed == 0 ? 0 : 1;
+        return cases;
     }
 
     // fixture마다 독립 임시 디렉터리를 사용한다.

@@ -18167,6 +18167,126 @@
       ],
       "reason": "1층 체크리스트에서 수정 필요 항목이 발견됐다.",
       "createdAt": "2026-07-26T23:35:13.4621614+09:00"
+    },
+    {
+      "id": "review-1785079523036",
+      "proposalId": "proposal-1785079514205",
+      "verdict": "needs_changes",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "functionsWithoutComment",
+          "checkId": "note-nonempty",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "note는 '함수 내부에 주석을 추가하여 코드의 가독성과 유지보수성을 향상시키고자 함'으로 비어 있지 않고 의미 있는 설명을 제공함",
+          "comment": "note는 '함수 내부에 주석을 추가하여 코드의 가독성과 유지보수성을 향상시키고자 함'으로 비어 있지 않고 의미 있는 설명을 제공함",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "functionsWithoutComment",
+          "checkId": "after-matches-goal",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "before 값은 1이고 after 값은 0이지만 note는 코드의 가독성과 유지보수성을 향상시키기 위해 함수 내부에 주석을 추가하고자 함으로, after 값은 note의 방향과 일치하지 않음",
+          "comment": "before 값은 1이고 after 값은 0이지만 note는 코드의 가독성과 유지보수성을 향상시키기 위해 함수 내부에 주석을 추가하고자 함으로, after 값은 note의 방향과 일치하지 않음",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "functionsWithoutComment",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "제안은 함수 주석 추가로 가독성 향상 목적, blueprint 위반과 무관",
+          "comment": "제안은 함수 주석 추가로 가독성 향상 목적, blueprint 위반과 무관",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트에서 수정 필요 항목이 발견됐다.",
+      "createdAt": "2026-07-27T00:25:23.0370603+09:00"
+    },
+    {
+      "id": "review-1785079536392",
+      "proposalId": "proposal-1785079528259",
+      "verdict": "needs_changes",
+      "reviewer": {
+        "type": "ai",
+        "provider": "ollama",
+        "model": "qwen3:14b"
+      },
+      "riskAssessed": "high",
+      "findings": [
+        {
+          "target": "functionsWithoutComment",
+          "checkId": "note-nonempty",
+          "answer": true,
+          "expected": true,
+          "confidence": "high",
+          "note": "note 필드에 의미 있는 설명이 포함되어 있습니다.",
+          "comment": "note 필드에 의미 있는 설명이 포함되어 있습니다.",
+          "onFail": "needs_changes",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        },
+        {
+          "target": "functionsWithoutComment",
+          "checkId": "after-matches-goal",
+          "answer": false,
+          "expected": true,
+          "confidence": "high",
+          "note": "note는 주석을 추가하여 가독성과 유지보수성을 향상시키고자 함이라고 했으나, after 값은 0으로 줄어들어 일치하지 않음",
+          "comment": "note는 주석을 추가하여 가독성과 유지보수성을 향상시키고자 함이라고 했으나, after 값은 0으로 줄어들어 일치하지 않음",
+          "onFail": "needs_changes",
+          "passed": false,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "concern"
+        },
+        {
+          "target": "functionsWithoutComment",
+          "checkId": "no-scope-creep",
+          "answer": false,
+          "expected": false,
+          "confidence": "high",
+          "note": "변경 제안은 함수 주석 추가로 가독성 향상에 초점",
+          "comment": "변경 제안은 함수 주석 추가로 가독성 향상에 초점",
+          "onFail": "escalate",
+          "passed": true,
+          "uncertain": false,
+          "attempts": 1,
+          "model": "qwen3:14b",
+          "severity": "info"
+        }
+      ],
+      "reason": "1층 체크리스트에서 수정 필요 항목이 발견됐다.",
+      "createdAt": "2026-07-27T00:25:36.3922411+09:00"
     }
   ]
 }

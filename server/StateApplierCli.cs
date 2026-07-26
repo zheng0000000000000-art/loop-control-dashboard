@@ -656,8 +656,30 @@ internal static class StateApplierCli
         }
     }
 
+    // self-test가 실제로 돈 케이스 수를 잰다. trust-origin의 표가 이 값과 대조된다 —
+    // 표를 표와 비교하면 케이스를 늘려도 줄여도 통과하므로 실측이 필요하다.
+    internal static int MeasuredSelfTestCaseCount()
+        => SelfTestCensus.Measure("st-census", root => RunSelfTestCases(root).Count);
+
     // self-test root를 구성하고 모든 06C-1 fixture를 실행한다.
     private static int RunSelfTestInRoot(string root)
+    {
+        var results = RunSelfTestCases(root);
+        var failed = results.OfType<JsonObject>().Count(o => o["pass"]?.GetValue<bool>() != true);
+        Console.WriteLine(new JsonObject
+        {
+            ["selfTest"] = "state-transition-v2-core",
+            ["verdict"] = failed == 0 ? "PASS" : "FAIL",
+            ["casesRun"] = results.Count, ["negativeCaseCount"] = results.OfType<JsonObject>().Count(c => c["negative"]?.GetValue<bool>() == true),
+            ["failed"] = failed,
+            ["cases"] = results,
+        }.ToJsonString(PrettyJson));
+        return failed == 0 ? 0 : 1;
+    }
+
+    // 06C-1 fixture 케이스를 모두 실행하고 결과 배열을 준다. 세는 쪽과 찍는 쪽이 같은 목록을 쓴다 —
+    // 목록을 두 벌 두면 한쪽만 늘어날 때 개수가 어긋난다.
+    private static JsonArray RunSelfTestCases(string root)
     {
         var ctx = InitSelfTestRoot(root);
         var results = new JsonArray();
@@ -692,16 +714,7 @@ internal static class StateApplierCli
         AddCase(results, "recovery-no-receipt", CaseHighRisk(ctx, "RECOVERY"), negative: true);
         AddCase(results, "replay-no-receipt", CaseHighRisk(ctx, "REPLAY"), negative: true);
         AddCase(results, "contract-hash-mismatch", CaseContractMismatch(ctx), negative: true);
-        var failed = results.OfType<JsonObject>().Count(o => o["pass"]?.GetValue<bool>() != true);
-        Console.WriteLine(new JsonObject
-        {
-            ["selfTest"] = "state-transition-v2-core",
-            ["verdict"] = failed == 0 ? "PASS" : "FAIL",
-            ["casesRun"] = results.Count, ["negativeCaseCount"] = results.OfType<JsonObject>().Count(c => c["negative"]?.GetValue<bool>() == true),
-            ["failed"] = failed,
-            ["cases"] = results,
-        }.ToJsonString(PrettyJson));
-        return failed == 0 ? 0 : 1;
+        return results;
     }
 
     // self-test 임시 저장소를 초기화한다.
