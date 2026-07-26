@@ -70,6 +70,22 @@ internal static class ProgramVerifierCli
         // 끝난 뒤에 재면 언제나 더럽다. 소비하는 쪽은 "무엇을 쟀는가"를 알아야 한다 —
         // 더러운 트리에서 잰 판정에 깨끗한 커밋 해시만 붙이면 그 커밋을 쟀다는 거짓이 된다.
         var cleanAtStart = WorktreeClean(root);
+
+        // 검사마다 `dotnet run`으로 다시 빌드하면 이 프로세스가 잡고 있는 산출물을 자식이 덮으려다
+        // 막힌다. 빌드가 최신이면 통과하므로 간헐적으로만 실패했다(ADR-016 §9). 앞에서 한 번만
+        // 빌드하고 검사는 --no-build로 돈다. 못 빌드하면 잴 수 없는 것이지 PASS가 아니다.
+        var build = BuildOnce(root);
+        if (build.ExitCode != 0)
+        {
+            Console.Error.WriteLine(new JsonObject
+            {
+                ["error"] = "사전 빌드에 실패해 게이트를 잴 수 없다",
+                ["buildExitCode"] = build.ExitCode,
+                ["stderrTail"] = Tail(build.Stderr),
+            }.ToJsonString(JsonOptions));
+            return 2;
+        }
+
         var runs = new List<CheckRun>();
         foreach (var spec in specs)
         {
@@ -142,6 +158,36 @@ internal static class ProgramVerifierCli
         => BuiltInCommands.Contains(command)
             || HarnessRegistry.RegisteredNames.Contains(command, StringComparer.OrdinalIgnoreCase);
 
+    // 검사를 돌리기 전에 server 프로젝트를 한 번만 빌드한다. --no-build로 낡은 바이너리를 재는
+    // 것을 막는 것이 이 호출의 존재 이유다 — 뺄 거면 --no-build도 같이 빼야 한다.
+    private static (int ExitCode, string Stderr) BuildOnce(string root)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            WorkingDirectory = root,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        foreach (var a in new[] { "build", "server", "-v", "q", "--nologo" }) psi.ArgumentList.Add(a);
+
+        try
+        {
+            using var process = Process.Start(psi)
+                ?? throw new InvalidOperationException("빌드 프로세스를 시작하지 못했다.");
+            var stdout = process.StandardOutput.ReadToEnd();
+            var stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            // dotnet build는 오류를 stdout에 적는다. 둘 다 넘겨야 사유가 보인다.
+            return (process.ExitCode, string.IsNullOrWhiteSpace(stderr) ? stdout : stderr);
+        }
+        catch (Exception ex)
+        {
+            return (int.MinValue, ex.Message);
+        }
+    }
+
     // 검사 하나를 자식 프로세스로 돌린다. 출력 문자열로 성패를 세지 않고 exit code만 판정에 쓴다.
     private static CheckRun RunCheck(string root, CheckSpec spec)
     {
@@ -153,7 +199,7 @@ internal static class ProgramVerifierCli
             RedirectStandardError = true,
             UseShellExecute = false,
         };
-        foreach (var a in new[] { "run", "--project", "server", "--", spec.Command }) psi.ArgumentList.Add(a);
+        foreach (var a in new[] { "run", "--project", "server", "--no-build", "--", spec.Command }) psi.ArgumentList.Add(a);
         foreach (var a in spec.Args) psi.ArgumentList.Add(a);
 
         var watch = Stopwatch.StartNew();
