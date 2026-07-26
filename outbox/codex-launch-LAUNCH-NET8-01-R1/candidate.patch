@@ -1,0 +1,60 @@
+diff --git a/docs/qa/gate-witness/NET8-01-R1.md b/docs/qa/gate-witness/NET8-01-R1.md
+new file mode 100644
+index 0000000..49bd0d6
+--- /dev/null
++++ b/docs/qa/gate-witness/NET8-01-R1.md
+@@ -0,0 +1,54 @@
++# NET8-01-R1 작업 증거
++
++> 컴파일을 실제로 입증할 수 없어 `server/Harness/**` 변경은 모두 철회했다. 이 문서는 실행 환경 차단 증거만 기록하며 반입할 코드 산출물은 없다.
++
++## 주체
++
++Codex harness executor. 지시서가 `docs/qa/gate-witness/**` 직접 경로를 명시해 이 문서만 직접 작성했다.
++
++## 사용한 하네스와 결과
++
++| 명령 | exit code | 결과 |
++| --- | ---: | --- |
++| `dotnet build server -v q --nologo --no-restore` | 1 | `server/obj/project.assets.json` 부재(`NETSDK1004`) |
++| `dotnet restore server --source server/obj --ignore-failed-sources` | 1 | 참조 팩을 로컬 원본에서 찾지 못함(`NU1101`) |
++| `dotnet build server -p:TargetFramework=net10.0 -v q --nologo` | 1 | NuGet TLS 인증서 부재(`NU1301`) |
++| `docker image inspect mcr.microsoft.com/dotnet/sdk:8.0` | 1 | Docker API named pipe 접근 거부 |
++| `docker image inspect mcr.microsoft.com/dotnet/sdk:10.0` | 1 | Docker API named pipe 접근 거부 |
++| `dotnet run --project server -- measure dev-pack` | 1 | 복원 단계의 `NU1301`로 측정기 미기동; violations 수치 없음 |
++
++컴파일 시도 출력 꼬리:
++
++```text
++C:\...\server\LocalFirstWorkflowDashboard.Server.csproj : error NU1301: https://api.nuget.org/v3/index.json 원본에 대한 서비스 인덱스를 로드할 수 없습니다.
++C:\...\server\LocalFirstWorkflowDashboard.Server.csproj : error NU1301:   Authentication failed, see inner exception.
++C:\...\server\LocalFirstWorkflowDashboard.Server.csproj : error NU1301:   보안 패키지에 사용할 수 있는 인증서가 없습니다.
++```
++
++오류 0개인 빌드 출력은 얻지 못했다. 따라서 `verify-behavior`, `scope-check` 하네스, .NET 8/10 런타임 하네스 전수 실행, `hs-scan`, POST-COMMIT, LAND는 실행하지 않았다.
++
++dev-pack 게이트는 실행 파일이 시작되기 전 복원 단계에서 종료되어 요구된 `violations` 수치를 만들지 못했다:
++
++```json
++{"gate":"dev-pack","violations":null,"attempt":1,"exitCode":1,"reason":"NU1301 before measurement"}
++```
++
++## 변경 철회 확인
++
++공유 `HarnessJson.Options`와 19개 참조 변경을 작성했으나 컴파일 증거를 만들 수 없어 전부 철회했다. 철회 직후 `git status --short`, `git diff --stat`, `git diff --check`에는 이 증거 문서 생성 전 기준으로 출력이 없었다.
++
++## 참조한 스킬
++
++- `skills/common/directive-authoring.md`
++- `skills/common/directive-writing.md`
++- `skills/common/executor-launch.md`
++- `skills/common/hs-gate.md`
++- `skills/common/powershell-encoding.md`
++- `skills/common/root-cause-diagnosis.md`
++- `skills/common/verification.md`
++
++도메인 스킬은 `server/Harness/**`와 일치하는 트리거를 찾지 못해 읽지 않았다.
++
++## 지표는 만족했으나 목적은 미달인 부분
++
++해당 없음. 지표 자체를 산출하지 못했다. 컴파일 증거가 없으므로 목적 달성 여부도 판정할 수 없고, 코드 산출물을 남기지 않았다.

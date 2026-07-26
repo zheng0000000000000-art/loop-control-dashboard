@@ -1,0 +1,8 @@
+{
+  "launchId": "LAUNCH-NET8-01-R1",
+  "state": "rejected",
+  "decidedAt": "2026-07-26",
+  "actor": "조율 세션(Claude Opus 5) · 사람 지시로 반려",
+  "note": "코덱스 잘못이 아니다. 지시서로 고칠 수 있는 문제도 아니다. 대체 빌드 3수단이 모두 막혔고 게이트 JSON도 violations를 null로 정직하게 냈다. ADR-018에 따라 이 계열은 진행 불가로 정리한다.",
+  "reason": "environment-blocked: 격리 사본에서 NuGet(NU1301, 인증서 없음)에 닿지 못하고 docker named pipe도 거부돼 컴파일 증거를 만들 수 없다. 코덱스는 19개 파일을 고쳤다가 전부 철회하고 산출물을 내지 않았다 — 지시서가 의도대로 작동했다."
+}

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "CODEX_LAUNCH_EVIDENCE",
+  "launchId": "LAUNCH-NET8-01-R1",
+  "diId": "NET8-01-R1",
+  "baselineCommit": "474af40a705a11e9396a87462ace9f250737c14d",
+  "startedAt": "2026-07-26T18:30:38Z",
+  "finishedAt": "2026-07-26T18:36:19Z",
+  "exitCode": 0,
+  "timedOut": false,
+  "stdoutSha256": "0ff75eb2e7acf9c9fe2658005f8270379f6aee7f3fe013e251aa1c9dd361909a",
+  "stderrTail": "heck`에는 이 증거 문서 생성 전 기준으로 출력이 없었다.\n+\n+## 참조한 스킬\n+\n+- `skills/common/directive-authoring.md`\n+- `skills/common/directive-writing.md`\n+- `skills/common/executor-launch.md`\n+- `skills/common/hs-gate.md`\n+- `skills/common/powershell-encoding.md`\n+- `skills/common/root-cause-diagnosis.md`\n+- `skills/common/verification.md`\n+\n+도메인 스킬은 `server/Harness/**`와 일치하는 트리거를 찾지 못해 읽지 않았다.\n+\n+## 지표는 만족했으나 목적은 미달인 부분\n+\n+해당 없음. 지표 자체를 산출하지 못했다. 컴파일 증거가 없으므로 목적 달성 여부도 판정할 수 없고, 코드 산출물을 남기지 않았다.\n\ntokens used\n101,904",
+  "changedPaths": [
+    "docs/qa/gate-witness/NET8-01-R1.md"
+  ],
+  "scopeViolations": [],
+  "candidatePatchSha256": "afb2166df251d9965ee170c004cc1cfc8fa7601cf768c62a0804200ef5da16a1",
+  "verdict": "NOT_JUDGED_BY_LAUNCHER",
+  "note": "이것은 증거이지 판정이 아니다. 산출물은 outbox candidate이며 반입은 사람이 한다.",
+  "pathsMissingFromPatch": []
+}
