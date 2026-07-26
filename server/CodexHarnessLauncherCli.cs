@@ -198,6 +198,7 @@ internal static class CodexHarnessLauncherCli
             Directory.CreateDirectory(outDir);
             File.WriteAllText(Path.Combine(outDir, "candidate.patch"), patch, Utf8NoBom);
             File.WriteAllText(Path.Combine(outDir, "execution-report.json"), evidence.ToJsonString(JsonOptions), Utf8NoBom);
+            WritePendingDisposition(outDir, launchId, started);
 
             evidence["outboxDir"] = Path.GetRelativePath(root, outDir).Replace('\\', '/');
             Output(evidence);
@@ -208,6 +209,24 @@ internal static class CodexHarnessLauncherCli
         {
             RunProcess(root, "git", ["worktree", "remove", "--force", workdir], 120);
         }
+    }
+
+    // 처분을 아직 안 정했다는 사실을 발사 시점에 남긴다. 기록이 없는 것과 안 정한 것은 다른 상태다.
+    // 이미 파일이 있으면 덮지 않는다 — 사람이 정한 처분을 런처가 지우면 안 된다(DISPO-02 §6-1).
+    private static void WritePendingDisposition(string outDir, string launchId, DateTime startedAt)
+    {
+        var path = Path.Combine(outDir, "disposition.json");
+        if (File.Exists(path)) return;
+
+        var record = new JsonObject
+        {
+            ["launchId"] = launchId,
+            ["state"] = "pending",
+            ["decidedAt"] = startedAt.ToString("yyyy-MM-dd"),
+            ["actor"] = "codex-launch (자동) — 처분은 사람이 정한다",
+            ["note"] = "발사만 됐고 반입·폐기는 정해지지 않았다. launch-disposition이 위반으로 센다.",
+        };
+        File.WriteAllText(path, record.ToJsonString(JsonOptions), Utf8NoBom);
     }
 
     // 실행자에게 줄 프롬프트를 만든다. 금지 행위를 본문에 실어 요청과 프롬프트가 어긋나지 않게 한다.

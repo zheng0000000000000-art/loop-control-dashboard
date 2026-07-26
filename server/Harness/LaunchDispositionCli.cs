@@ -103,6 +103,7 @@ internal static class LaunchDispositionCli
         var state = ReadRequired(disposition, "state");
         return state switch
         {
+            "pending" => "disposition-pending",
             "rejected" => string.IsNullOrWhiteSpace(ReadRequired(disposition, "reason"))
                 ? "rejection-reason-missing"
                 : null,
