@@ -904,3 +904,29 @@ self-test: "epoch 1 재선언이 거부되는지 검증한다" (:534)
    **그 네 조각이 이 브랜치에 다 들어와 있는지 확인이 필요하다.** LAND 18/18은 그 증거가 아니다.
 3. `InspectPending`이 reconciliation보다 먼저 `idempotent`를 낼 수 있는 경로는 **재보지 않았다.**
    `stateWritten: false`라 위조된 상태 변경은 아니지만, *"거짓 OK"* 는 가능하다.
+
+## 2026-07-26 — 세 번째 차단 조건도 실측했다. 네 조각의 완료 기준이 지금도 만족된다
+
+*"05H+06C-1+06C-2+06H를 통합 branch에서 단일 land gate로"* 를 **"게이트가 통과한다"가 아니라
+"각 DI가 스스로 정한 완료 기준을 지금도 만족하는가"** 로 다시 물었다
+(`docs/verification/four-di-criteria-recheck.md`). 아카이브 지시서 **13개 개정본**의 완료 기준 절이 근거다.
+
+| DI | 결과 |
+| --- | --- |
+| **05H** | fixture `a1 b1 c0 d1 e1 f1 malformed2` · at-rest 0 · self-test 0 · `--pending-transition` 1 — **전부 일치** |
+| **06C-1** | `--human-decision`/`--root`/`--bogus-flag` 전부 2 · self-test 0 · **손 위조 거부**(`stateWritten:false`) — **전부 일치** |
+| **06C-2** | self-test 0(26 case) · 인수없음 2 · `verify-behavior` true · measure 0 — **전부 일치** |
+| **06H** | fixture A 매니페스트 게이트 **exit 1** · doc-integrity 0 · RECOVERY.md 두 시기 분리 · L1 행 없음 — **전부 일치** |
+
+**따라서 `DI-00-04`의 차단 사유 세 건이 모두 실측으로 해소됐다.**
+①손 위조 통과 ②`--human-decision` 위조 ③네 조각 미완 — 셋 다.
+
+**사람 판단이 필요한 것**:
+
+1. **`blockers` 세 건을 해소로 정리하고 `WORKSTATE`를 `blocked`에서 옮길 것인가.**
+   **상태 전이 = 사람 결재**이고 `blockers`를 쓴 주체는 **검수자**다. 조율자가 지우지 않았다.
+2. 그 다음이 land gate 12번(사람이 직접 수행하는 절차)이다.
+
+**남은 미확인 세 가지**(검증 문서 §미달에 적음): `InspectPending`이 reconciliation보다 먼저
+`idempotent`를 낼 수 있는 경로, self-test 개별 케이스의 출력 필드를 하나씩 열어보지 않은 점,
+그리고 13개 개정본 중 **초기 개정본의 대체된 항목은 의도적으로 제외**했다는 점.
