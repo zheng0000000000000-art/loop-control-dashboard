@@ -142,3 +142,20 @@ merge-base --is-ancestor importCommit baselineCommit  → 아니면 gate-report-
 - docs/qa/gate-witness/**
 
 > 검증 문서는 영역 밖이라 조율자가 쓴다.
+
+---
+
+## §7 갱신 (2026-07-26, 발사 직전) — §6의 문제는 해소됐다
+
+§6은 *"처분이 가리키는 `gateReport` 17건이 전부 커밋되지 않았다"*고 적었다. **해소됐다.**
+
+- 증거는 이제 **`docs/handoff/gate-evidence/`**(추적됨)에 둔다. `outputs/`는 임시 자리다.
+- `outbox/`의 `disposition.json`·`execution-report.json`·`candidate.patch`도 추적된다.
+- 깨끗한 클론에서 `POST-COMMIT` **PASS 0/14**, `LAND` **PASS 0/18**을 실측했다.
+  (`BASELINE-CHANGES.md` 2026-07-26 두 건, `docs/verification/clone-truth-check.md`)
+
+**§4 시험 1에 영향**: 살아 있는 실행으로 하라는 요구는 그대로다.
+다만 시험용 보고는 `docs/handoff/gate-evidence/`에 두지 마라 — **거기는 실제 처분이 의존하는
+자리다.** 시험은 임시 경로(`outputs/gates/` 등)를 쓰고 명령·출력을 보고에 붙여라.
+그 경로가 추적되지 않는다는 사실이 **시험을 무효로 만들지 않는다** — 시험은 왕복이 되는지를
+보는 것이지 파일이 영구히 남는지를 보는 것이 아니다.
