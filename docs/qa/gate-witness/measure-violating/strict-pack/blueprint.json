@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 2,
+  "items": [
+    {
+      "metricId": "domainWordsInEngine",
+      "target": 0,
+      "priority": "high",
+      "note": "Engine.cs·engine.js 안의 도메인 단어(게임 용어, 특정 단계 id 문자열) 개수"
+    },
+    {
+      "metricId": "functionsWithoutComment",
+      "target": 0,
+      "priority": "high",
+      "note": "코드 파일에서 기능 주석이 없는 함수/메서드 개수"
+    },
+    {
+      "metricId": "directiveAcceptanceCriteria",
+      "band": [
+        3,
+        99
+      ],
+      "priority": "high",
+      "note": "지시서의 검수 기준 항목 수 — 3개 미만이면 지시서 미달"
+    },
+    {
+      "metricId": "koPoliteEndings",
+      "target": 0,
+      "priority": "normal",
+      "note": "ko.json 내 '~요'·'습니다' 종결 개수 (다체 원칙)"
+    },
+    {
+      "metricId": "verdictInProposalFile",
+      "target": 0,
+      "priority": "high",
+      "note": "proposal 파일 안에 판정 값(approved/rejected)이 존재하는 횟수 — report가 유일 저장소"
+    },
+    {
+      "metricId": "devRoleInRuntimeLogs",
+      "target": 0,
+      "priority": "normal",
+      "note": "서버 액션이 만든 로그 중 role=dev인 엔트리 수"
+    },
+    {
+      "metricId": "schemaVersionMissing",
+      "target": 0,
+      "priority": "normal",
+      "note": "schemaVersion 필드가 없는 데이터 파일 수"
+    },
+    {
+      "metricId": "hardcodedColors",
+      "target": 0,
+      "priority": "normal",
+      "note": "style.css 외 파일의 hex/rgb 색상 리터럴 개수 (모든 색은 CSS 변수로)"
+    },
+    {
+      "metricId": "inlineStyles",
+      "target": 0,
+      "priority": "normal",
+      "note": "HTML·JS의 인라인 style 속성/style= 문자열 조립 개수"
+    },
+    {
+      "metricId": "smallTouchTargets",
+      "target": 0,
+      "priority": "normal",
+      "note": "style.css에서 버튼·클릭 요소 셀렉터 중 min-height 44px 미만 명시 개수 (정적 검사 한계 내 근사)"
+    },
+    {
+      "metricId": "newFontFamilies",
+      "target": 0,
+      "priority": "normal",
+      "note": "style.css의 font-family 선언 중 기준 목록 외 폰트 개수"
+    },
+    {
+      "metricId": "skillsWithoutVersion",
+      "target": 0,
+      "priority": "normal",
+      "note": "skills/ 문서 중 '버전:' 줄이 없는 파일 수"
+    },
+    {
+      "metricId": "skillDomainViolations",
+      "target": 0,
+      "priority": "normal",
+      "note": "verification 문서에서 그 작업의 변경 파일과 무관한 도메인 스킬을 참조한 건수"
+    },
+    {
+      "metricId": "programCsLines",
+      "band": [
+        0,
+        2661
+      ],
+      "priority": "normal",
+      "note": "Program.cs ? ?. ?? ?? ?? 2419?, ??? +10%"
+    },
+    {
+      "metricId": "appJsLines",
+      "band": [
+        0,
+        2692
+      ],
+      "priority": "normal",
+      "note": "dashboard/app.js ? ?. ?? ?? ?? 2447?, ??? +10%"
+    },
+    {
+      "metricId": "maxFunctionLength",
+      "band": [
+        0,
+        80
+      ],
+      "priority": "normal",
+      "note": "반증 픽스처: target은 상한이 아니라 일치 조건이다. 함수 길이가 정확히 0인 저장소는 없으므로 항상 위반이다. 고치지 마라.",
+      "target": 0
+    }
+  ]
+}

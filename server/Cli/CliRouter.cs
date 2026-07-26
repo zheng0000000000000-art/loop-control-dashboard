@@ -30,7 +30,7 @@ internal static class CliRouter
             return BehaviorSnapshotCli.Snapshot();
 
         if (string.Equals(cliCommand, "verify-behavior", StringComparison.OrdinalIgnoreCase))
-            return BehaviorSnapshotCli.Verify();
+            return BehaviorSnapshotCli.Verify(args);
 
         if (args.Length > 0 && string.Equals(args[0], "dispatch-executor", StringComparison.OrdinalIgnoreCase))
             return DispatchExecutorCli.Run(args);
@@ -104,19 +104,31 @@ internal static class CliRouter
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         };
 
-        if (args.Length < 2 || string.IsNullOrWhiteSpace(args[1]))
+        var fixtureRoot = MeasureFixtureArgument(args);
+        var positional = args.Where(arg => !string.Equals(arg, "--fixture", StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (fixtureRoot is not null)
+            positional = positional.Where(arg => !string.Equals(arg, fixtureRoot, StringComparison.Ordinal)).ToArray();
+
+        if (positional.Length < 2 || string.IsNullOrWhiteSpace(positional[1]))
         {
-            Console.Error.WriteLine(CliError("?ъ슜踰? measure <projectId>").ToJsonString(cliJsonOptions));
+            Console.Error.WriteLine(CliError("?ъ슜踰? measure <projectId> [--fixture <dataRoot>]").ToJsonString(cliJsonOptions));
             return 2;
         }
 
-        var projectId = args[1];
+        var projectId = positional[1];
+        string? fixtureCopy = null;
 
         try
         {
             var workspaceRoot = Directory.GetParent(Directory.GetCurrentDirectory())?.FullName
                 ?? throw new InvalidOperationException("Workspace root was not found.");
-            var dataRoot = Path.Combine(workspaceRoot, "dashboard", "data");
+            var dataRoot = ResolveMeasureDataRoot(workspaceRoot, fixtureRoot, out fixtureCopy);
+            if (dataRoot is null)
+            {
+                Console.Error.WriteLine(CliError($"fixture data root not found: {fixtureRoot}").ToJsonString(cliJsonOptions));
+                return 2;
+            }
+
             var storage = new Storage(dataRoot);
             storage.ValidateAndRestoreAllProjects();
             var cliNtfy = new NtfyOptions(false, "", "", 24);
@@ -141,6 +153,82 @@ internal static class CliRouter
             Console.Error.WriteLine(CliError(error.Message).ToJsonString(cliJsonOptions));
             return 2;
         }
+        finally
+        {
+            if (fixtureCopy is not null)
+            {
+                try
+                {
+                    DeleteMeasureFixture(fixtureCopy);
+                }
+                catch (Exception cleanupError)
+                {
+                    // 조용히 삼키면 잔여 사본이 쌓이는데도 트리가 깨끗해 보인다. 반드시 드러낸다.
+                    Console.Error.WriteLine(new JsonObject
+                    {
+                        ["fixtureCleanupFailed"] = fixtureCopy,
+                        ["error"] = cleanupError.Message,
+                    }.ToJsonString(cliJsonOptions));
+                }
+            }
+        }
+    }
+
+    // 측정이 읽을 data root를 정한다. 픽스처면 사본을 만들어 그 경로를 준다. 없는 픽스처면 null.
+    private static string? ResolveMeasureDataRoot(string workspaceRoot, string? fixtureRoot, out string? fixtureCopy)
+    {
+        fixtureCopy = null;
+        if (fixtureRoot is null)
+            return Path.Combine(workspaceRoot, "dashboard", "data");
+
+        var source = Path.GetFullPath(Path.Combine(workspaceRoot, fixtureRoot));
+        if (!Directory.Exists(source))
+            return null;
+
+        fixtureCopy = CopyMeasureFixture(source, workspaceRoot);
+        return fixtureCopy;
+    }
+
+    // measure의 --fixture <dataRoot> 인자를 읽는다. 없으면 null.
+    private static string? MeasureFixtureArgument(string[] args)
+    {
+        for (var index = 0; index < args.Length - 1; index += 1)
+        {
+            if (string.Equals(args[index], "--fixture", StringComparison.OrdinalIgnoreCase))
+                return args[index + 1];
+        }
+
+        return null;
+    }
+
+    // 픽스처 data root를 dashboard/ 아래 임시 이름으로 복사한다.
+    // 측정은 파일을 쓰므로 원본을 건드리면 안 되고, 지표가 프로젝트 경로에서 저장소 루트를
+    // 되짚으므로 dashboard/data/<project>와 같은 깊이여야 한다. 실행 후 finally에서 지운다.
+    private static string CopyMeasureFixture(string source, string workspaceRoot)
+    {
+        var destination = Path.Combine(workspaceRoot, "dashboard", "lfwd-measure-fixture-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(destination);
+        foreach (var directory in Directory.GetDirectories(source, "*", SearchOption.AllDirectories))
+            Directory.CreateDirectory(directory.Replace(source, destination));
+
+        foreach (var file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
+            File.Copy(file, file.Replace(source, destination), true);
+
+        return destination;
+    }
+
+    // 픽스처 사본을 지운다. 실행 중 생긴 history 스냅샷이 읽기 전용이라 그냥 지우면 막힌다.
+    private static void DeleteMeasureFixture(string path)
+    {
+        foreach (var file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
+            File.SetAttributes(file, FileAttributes.Normal);
+
+        // history 스냅샷 디렉터리는 불변으로 만들어져 읽기 전용이다. 사본에서는 풀어야 지워진다.
+        foreach (var directory in Directory.GetDirectories(path, "*", SearchOption.AllDirectories))
+            File.SetAttributes(directory, FileAttributes.Directory);
+
+        File.SetAttributes(path, FileAttributes.Directory);
+        Directory.Delete(path, true);
     }
 
     // CLI 痢≪젙 寃곌낵 ?붿빟????以?JSON?쇰줈 留뚮뱺??

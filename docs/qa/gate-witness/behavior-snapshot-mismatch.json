@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 999,
+  "simtune": {
+    "deliberatelyWrong": true
+  },
+  "measurements": [],
+  "scenarioReplay": {
+    "deliberatelyWrong": true
+  }
+}

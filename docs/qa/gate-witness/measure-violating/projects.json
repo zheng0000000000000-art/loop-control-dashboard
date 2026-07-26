@@ -1,0 +1,10 @@
+{
+  "projects": [
+    {
+      "id": "strict-pack",
+      "name": "Strict Pack — measure 반증 픽스처",
+      "path": "./data/strict-pack/"
+    }
+  ],
+  "lastOpened": "strict-pack"
+}

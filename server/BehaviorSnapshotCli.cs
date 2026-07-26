@@ -44,17 +44,23 @@ public static class BehaviorSnapshotCli
         }
     }
 
-    // 현재 동작과 저장된 스냅샷을 비교한다.
-    public static int Verify()
+    // 현재 동작과 저장된 스냅샷을 비교한다. --fixture <경로>면 그 스냅샷을 대신 쓴다.
+    public static int Verify(string[] args)
     {
         try
         {
             var root = FindWorkspaceRoot();
-            var snapshotPath = Path.Combine(root, "docs", "behavior-snapshot.json");
+            var fixturePath = FixtureArgument(args);
+            var snapshotPath = fixturePath is null
+                ? Path.Combine(root, "docs", "behavior-snapshot.json")
+                : Path.GetFullPath(Path.Combine(root, fixturePath));
 
             if (!File.Exists(snapshotPath))
             {
-                Console.Error.WriteLine(new JsonObject { ["error"] = "docs/behavior-snapshot.json not found" }.ToJsonString());
+                Console.Error.WriteLine(new JsonObject
+                {
+                    ["error"] = $"snapshot not found: {RelativePath(root, snapshotPath)}",
+                }.ToJsonString());
                 return 2;
             }
 
@@ -65,6 +71,7 @@ public static class BehaviorSnapshotCli
             {
                 ["behaviorEqual"] = equal,
                 ["snapshot"] = RelativePath(root, snapshotPath),
+                ["fixtureMode"] = fixturePath is not null,
             }.ToJsonString());
             return equal ? 0 : 1;
         }
@@ -73,6 +80,18 @@ public static class BehaviorSnapshotCli
             Console.Error.WriteLine(new JsonObject { ["error"] = error.Message }.ToJsonString());
             return 2;
         }
+    }
+
+    // --fixture <경로> 인자를 읽는다. 없으면 null을 준다.
+    private static string? FixtureArgument(string[] args)
+    {
+        for (var index = 0; index < args.Length - 1; index += 1)
+        {
+            if (string.Equals(args[index], "--fixture", StringComparison.OrdinalIgnoreCase))
+                return args[index + 1];
+        }
+
+        return null;
     }
 
     // 저장소의 현재 동작 요약을 만든다.

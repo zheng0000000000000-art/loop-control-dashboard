@@ -614,3 +614,24 @@ recovery inspect   : recoveryClass=L2 · recommendedAction=quarantine-and-human-
 > **반입 끝난 launch 산출물을 지우는 절차가 없다.** 남겨 두면 다음 사람이 대기 중인 것으로 오독한다.
 > `codex-launch`가 반입 여부를 알 방법이 없으므로 이것도 사람이 손으로 지워야 하며,
 > 완료 표식 문제(같은 세션에서 지시서 archive 이동으로 겪은 것)와 **같은 부류**다.
+
+## 2026-07-26 — POST-COMMIT 게이트가 빨갛다 (자진 신고)
+
+`program-verify verify --gate POST-COMMIT` → **FAIL, 12개 중 2개 불일치**.
+
+```
+gate-clean ['server']      | exp 0 | got 1   ← 작업 중 트리가 더러워서. 커밋 후 해소.
+gate-witness-check []      | exp 0 | got 1   ← 실재 문제.
+```
+
+**원인**: 지난 세션에 `POST-EXECUTOR`의 `requireFailureWitness`를 켰는데 그 게이트의
+`build-verify`가 아직 반증 witness 없이 남아 있다. `gate-witness-check`는 그래서 exit 1을 낸다.
+매니페스트의 POST-COMMIT은 그 검사에 exit 0을 기대하므로 **켠 시점부터 POST-COMMIT은 빨갛다.**
+그동안 개별 하네스로만 커밋해 와서 드러나지 않았다 — **주체는 나다.**
+
+**이것은 고장이 아니라 참인 신호다.** `expectedExit`를 1로 바꾸는 식으로 덮지 않았다.
+해소 경로는 `GWIT-05`(코덱스 영역, `build-verify` 픽스처 모드)이며, 그게 반입되면
+`totalUnwitnessed` 2 → 0이 되어 저절로 초록이 된다.
+
+**사람 판단이 필요한 것**: 그때까지 POST-COMMIT을 빨간 채로 둘 것인가, 아니면
+`POST-EXECUTOR`의 `requireFailureWitness`를 잠시 내려 둘 것인가. 후자는 기준 변경이다.

@@ -167,3 +167,15 @@ self-test 케이스 수(19/24/8)도 `declare`의 기대값과 일치한다. **�
 
 **장애주입 (실측)**: 아래 §"CPX-01/DAUTH-02 발사 기록" 참조. `skills/` 추가 후에도
 코덱스 영역 밖 경로는 계속 거절되는지 재확인했다.
+
+## 2026-07-26 — GATE-MANIFEST에 `measure`·`verify-behavior` 반증 witness 3건 추가
+
+- **주체**: 조율 세션(Claude Opus 5). 결재는 사람.
+- **근거**: 두 검사가 반증 witness 없이 PASS만 보고하고 있었다(`gate-witness-check` totalUnwitnessed 5).
+  픽스처 모드(`--fixture`)를 구현하고 실측으로 exit 1을 재현한 뒤 등재했다.
+  등재 내용은 **검사를 늘리는 방향**이며 기존 검사의 기대값은 건드리지 않았다.
+  - `POST-EXECUTOR` + `measure strict-pack --fixture …` (exit 1), `verify-behavior --fixture …` (exit 1)
+  - `WP-STATE-INTEGRITY-LAND` + `measure strict-pack --fixture …` (exit 1)
+- **되돌리는 법**: `docs/handoff/GATE-MANIFEST.json`에서 위 3개 check 객체를 지운다.
+  픽스처(`docs/qa/gate-witness/measure-violating/`, `behavior-snapshot-mismatch.json`)와
+  CLI의 `--fixture` 분기는 남겨도 무해하다(기본 경로 동작 불변, 실측 확인).
