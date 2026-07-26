@@ -301,3 +301,34 @@ outputs/review/06C-1-R1.codex.md
 3. (선택) `docs/qa/gate-witness/internal-claim-understated.json` 삭제.
 
 note와 픽스처의 `21`은 실측값이므로 되돌리지 마라 — 그건 낡은 값이었다.
+
+## 2026-07-27 — POST-COMMIT에 검사 3개 추가 (order 16·17·18) + 카운터 파서 규칙 변경
+
+### ① 주체
+사용자 위임, **조율자(Claude) 실행.** 앞 항목(order 15)에서 자진 신고한 구멍을 닫는다.
+
+### ② 근거
+`CountJsonCaseValues`가 출력 전체를 **재귀로 훑어 최댓값**을 취했다. 요약이 아니라 어딘가 깊이
+박힌 큰 수가 답이 된다. `>=` 시절에는 관대해서 안 드러났지만, `==`로 바꾼 뒤에는 **정상 코드가
+게이트를 깨는** 쪽으로 터진다.
+
+**최상위에 카운터를 선언한 문서가 정확히 하나일 때만** 인정하도록 바꿨다. 실패값은 `0`이 아니라
+`Unmeasured = -1`이다 — `0`은 "세어봤더니 없더라"라서 구분되어야 한다.
+
+**"하나뿐"이 안전한지 먼저 쟀다**: state-transition은 문서 43개 중 최상위 카운터 문서가 1개,
+recovery 1/1, trust-origin 1/1.
+
+**실측**: 새 픽스처 `nested-counter.json`(99가 `summary` 안에 있다)이 **종전 파서에서 exit 0**,
+현재 exit 1. 코드를 되돌려 rebuild해 직접 쟀다.
+
+`jsonlines-non-json.json`·`jsonlines-truncated.json`은 종전에도 올바르게 동작했지만 **어느
+게이트에도 물려 있지 않아 실행된 적이 없었다.** 함께 물렸다.
+
+방향은 좁히는 쪽이다. 검사 수 15 → 18, 정상 코드에서는 전부 초록(LAND 18/18 PASS).
+
+### ③ 되돌리는 법
+1. `docs/handoff/GATE-MANIFEST.json`의 POST-COMMIT `order: 16`·`17`·`18` 블록 삭제.
+2. `server/Harness/GateWitnessCheckCli.cs`에서 `CountJsonCaseValues`·`TopLevelCaseCount`·
+   `Unmeasured`·`CaseCountKeys`를 지우고, 재귀 최댓값을 쓰는 종전 `CountJsonCaseValues`와
+   `FindCaseCount`를 복원. 실패 반환값도 `0`으로 되돌린다.
+3. (선택) `docs/qa/gate-witness/nested-counter.json`·`nested-counter-output.json` 삭제.

@@ -1,0 +1,23 @@
+{
+  "_comment": "중첩된 카운터를 요약으로 인정하면 안 된다. 종전 파서는 출력 전체의 최댓값을 취해",
+  "_comment2": "이 99를 답으로 썼다. gate-witness-check는 exit 1을 내야 한다.",
+  "schemaVersion": 1,
+  "gates": [
+    {
+      "gateId": "GWIT-NESTED-COUNTER",
+      "requireFailureWitness": true,
+      "checks": [
+        {
+          "order": 1,
+          "command": "gate-witness-check",
+          "args": [
+            "--count-output-fixture",
+            "docs/qa/gate-witness/nested-counter-output.json"
+          ],
+          "expectedExit": 0,
+          "internalNegativeCases": 99
+        }
+      ]
+    }
+  ]
+}

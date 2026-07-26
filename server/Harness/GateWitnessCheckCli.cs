@@ -74,7 +74,8 @@ internal static class GateWitnessCheckCli
         }
         catch (JsonException)
         {
-            count = 0;
+            // 중간에 끊긴 출력은 부분만 읽어 쓰지 않는다. 읽지 못한 것은 증거가 아니다.
+            count = Unmeasured;
         }
 
         Console.WriteLine(new JsonObject
@@ -188,7 +189,7 @@ internal static class GateWitnessCheckCli
             Environment.CurrentDirectory = originalDirectory;
         }
         if (exitCode != 0)
-            return 0;
+            return Unmeasured;
 
         try
         {
@@ -196,16 +197,31 @@ internal static class GateWitnessCheckCli
         }
         catch (JsonException)
         {
-            return 0;
+            return Unmeasured;
         }
     }
 
-    // stdout의 모든 연속 JSON 값을 끝까지 읽고 알려진 카운터의 최댓값을 반환한다.
+    // 재보지 못했음을 뜻한다. 0이 아니다 — 0은 "세어봤더니 없더라"라서 구분되어야 한다.
+    private const int Unmeasured = -1;
+
+    // 명령이 자기 결과를 선언하는 자리로 인정하는 이름들. 이 셋 중 **하나만** 최상위에 있어야 한다.
+    private static readonly string[] CaseCountKeys =
+        ["internalNegativeCases", "negativeCaseCount", "rejectedCaseCount"];
+
+    // stdout의 연속 JSON 값을 끝까지 읽고, **최상위에 카운터를 선언한 문서가 정확히 하나일 때만**
+    // 그 값을 인정한다.
+    //
+    // 종전에는 출력 전체를 재귀로 훑어 **최댓값**을 썼다. 그러면 요약이 아니라 어딘가 깊이 박힌
+    // 큰 수가 답이 된다. `>=` 시절에는 관대해서 안 드러났지만 `==`로 바꾼 뒤에는 반대로
+    // **정상 코드가 게이트를 깨는** 쪽으로 터진다 — self-test가 중간 산출물에 더 큰 수를 하나
+    // 찍기 시작하면 그만이다(2026-07-27 자진 신고 항목).
+    //
+    // 문서가 여럿이면 어느 것이 요약인지 프로그램이 알 수 없다. **모르면 증거가 아니다.**
     private static int CountJsonCaseValues(string output)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(output);
         var offset = 0;
-        var maximum = 0;
+        var declared = new List<int>();
         while (offset < bytes.Length)
         {
             while (offset < bytes.Length &&
@@ -216,26 +232,24 @@ internal static class GateWitnessCheckCli
 
             var reader = new Utf8JsonReader(bytes.AsSpan(offset));
             var node = JsonNode.Parse(ref reader);
-            maximum = Math.Max(maximum, FindCaseCount(node));
+            var value = TopLevelCaseCount(node);
+            if (value != Unmeasured)
+                declared.Add(value);
             offset += checked((int)reader.BytesConsumed);
         }
-        return maximum;
+
+        return declared.Count == 1 ? declared[0] : Unmeasured;
     }
 
-    // 알려진 구조화 카운터만 재귀적으로 읽어 문면 주장을 실행 증거와 분리한다.
-    private static int FindCaseCount(JsonNode? node)
+    // 문서 **최상위**의 카운터를 읽는다. 중첩된 값은 보지 않는다 — 요약이 아니기 때문이다.
+    // 카운터 이름이 둘 이상 동시에 있으면 어느 쪽이 답인지 알 수 없으므로 인정하지 않는다.
+    private static int TopLevelCaseCount(JsonNode? node)
     {
-        if (node is JsonObject obj)
-        {
-            var direct = new[] { "internalNegativeCases", "negativeCaseCount", "rejectedCaseCount" }
-                .Select(name => ReadInt(obj[name], 0))
-                .Max();
-            return Math.Max(direct, obj.Select(pair => FindCaseCount(pair.Value)).DefaultIfEmpty(0).Max());
-        }
+        if (node is not JsonObject obj)
+            return Unmeasured;
 
-        return node is JsonArray array
-            ? array.Select(FindCaseCount).DefaultIfEmpty(0).Max()
-            : 0;
+        var present = CaseCountKeys.Where(name => obj[name] is not null).ToList();
+        return present.Count == 1 ? ReadInt(obj[present[0]], Unmeasured) : Unmeasured;
     }
 
     // JSON 값을 정수로 안전하게 읽는다.

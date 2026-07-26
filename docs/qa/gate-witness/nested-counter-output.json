@@ -1,0 +1,7 @@
+{
+  "harness": "probe",
+  "note": "최상위에는 카운터가 없다. summary 안에 깊이 박혀 있을 뿐이다.",
+  "summary": {
+    "negativeCaseCount": 99
+  }
+}

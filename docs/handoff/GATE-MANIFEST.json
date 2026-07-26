@@ -289,6 +289,36 @@
           "mutatesState": false,
           "order": 15,
           "note": "반증 witness — internalNegativeCases를 실측보다 적게 적은 매니페스트를 거부하는지 확인한다. 종전 `measured >= claimed`에서는 적게 적을수록 쉽게 통과했다(실측 2026-07-27: 종전 코드 exit 0, 현재 exit 1)."
+        },
+        {
+          "command": "gate-witness-check",
+          "args": [
+            "docs/qa/gate-witness/nested-counter.json"
+          ],
+          "expectedExit": 1,
+          "mutatesState": false,
+          "order": 16,
+          "note": "반증 witness — 출력 깊숙이 박힌 카운터를 요약으로 인정하지 않는지 확인한다. 종전 파서는 출력 전체의 최댓값을 취해 중첩된 99를 답으로 썼다(실측 2026-07-27: 종전 exit 0, 현재 exit 1)."
+        },
+        {
+          "command": "gate-witness-check",
+          "args": [
+            "docs/qa/gate-witness/jsonlines-non-json.json"
+          ],
+          "expectedExit": 1,
+          "mutatesState": false,
+          "order": 17,
+          "note": "반증 witness — JSON이 아닌 출력을 증거로 세지 않는지 확인한다(GWIT-06). 픽스처는 있었으나 어느 게이트에도 물려 있지 않아 실행된 적이 없었다."
+        },
+        {
+          "command": "gate-witness-check",
+          "args": [
+            "docs/qa/gate-witness/jsonlines-truncated.json"
+          ],
+          "expectedExit": 1,
+          "mutatesState": false,
+          "order": 18,
+          "note": "반증 witness — 중간에 끊긴 출력을 부분만 읽어 쓰지 않는지 확인한다(GWIT-06). 이것도 물려 있지 않던 픽스처다."
         }
       ],
       "unregisteredChecks": [
