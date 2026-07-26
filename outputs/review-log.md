@@ -2483,3 +2483,32 @@
 - push 대기: 0건(전부 push). 발사: 8건(수동). QUOTA_SIGNAL: 미감지.
 
 <run-summary>게이트 파이프라인의 실재 정합을 맞춘 회차. gate-witness-check 미반증 17→0, 발사 처분 기록 0→22/22, 깨끗한 클론에서 세 게이트 전부 PASS를 실측했다. ADR-016 §15로 게이트 판정 정본을 di-completion-check로 확정하고 program-verify에서 게이트 실행을 제거했으며, ADR-017로 TO-2026-001을 그대로 두기로 했다(기록 미변경, verify exit 0). 죽어 있던 경로 셋(outbox 전체 미추적·handoff-integrity 원시 바이트 해시·RequiredGateCommands 이름 드리프트)을 클론 실행으로 찾아 고쳤다. 기준 변경 3건은 BASELINE-CHANGES에 근거·되돌리는 법과 함께 남겼다. 발사 8건 전부 수동, 승인·전이 대행 없음.</run-summary>
+## 조율자 2026-07-26 (2회차 — 차단 해소·전이·fail-open 조치, review-log)
+
+- **성격**: 앞 회차에 이어 사람이 대화로 지시한 연속 작업. 발사 3건(코덱스), 전부 수동 `--manual`.
+- **차단 해소 (실측)**: `DI-00-04`의 `blockers` 세 건을 각각 재서 전부 해소를 확인했다.
+  ①손 위조 transition-id → `apply` **rejected · `stateWritten:false`**(클론에서 실제 위조)
+  ②`--human-decision` 위조 → **`removed-option` exit 2**, 고위험 전이는 `trusted-human-receipt-required`
+  ③네 조각(`05H`·`06C-1`·`06C-2`·`06H`)의 완료 기준을 **아카이브 지시서 13개 개정본**에서 뽑아 대조 — 전부 일치.
+  근거: `docs/verification/blocker-recheck-2026-07-26.md` · `four-di-criteria-recheck.md`
+- **상태 전이**: `blocked` → **`verifying`**(`DI0004-VERIFYING-20260726`, NORMAL, blockers 2 → 0).
+  **손 편집 없이** `state-transition prepare`→`apply`로만. `blockers`를 쓴 주체는 검수자이며
+  조율자가 지운 것이 아니라 실측 후 **사람 지시로** 전이했다. `completed`는 별도 결재다.
+- **사고 1건 (자진 신고)**: `apply --dry-run-flag`로 시험하려다 **실제 적용됐다.**
+  값 없는 후행 `--옵션`이 조용히 버려져 `unknown-option` 검사에도 안 걸렸다.
+  결과가 지시받은 것과 같았을 뿐 **의도치 않은 상태 쓰기**였다.
+- **그 사고에서 출발한 조사·조치**: CLI 전면에서 같은 fail-open을 찾았다.
+  `di-completion-check --manifestt`가 **exit 0으로 production을 재고 PASS**를 냈다(픽스처 1검사 대신 14검사).
+  네 CLI를 고쳤다 — `state-transition`(직접) · `di-completion-check`(`DICC-04`+`R1`, 코덱스) ·
+  `trust-origin`·`codex-launch`(직접, `CliOptions.Validate` 공용).
+  **`codex-launch --manul`은 전에 "측정 못 함"이었는데 이제 발사 없이 exit 2로 확인된다.**
+- **거짓 수치 1건 (자진 신고)**: 커밋 `3a0ed01`에 `violations:0`이라 적었으나 실측은 1이었다
+  (`maxFunctionLength` 82). `22d4c37`에 정정하고 `DICC-04-R1`로 해소했다.
+  **원인은 내 지시서 누락** — `DICC-04`의 지표 기준에 `measure`를 안 넣었고 실행자는 적힌 것을 지켰다.
+  이후 커밋부터 `measure != 0`이면 커밋하지 않도록 **명령에 조건을 걸었다.**
+- **결정 1건**: `ADR-017` — `TO-2026-001`을 그대로 둔다(사람 선택). 기록 파일 미변경, `verify` exit 0.
+- **최종 게이트**: `POST-COMMIT` 0 · `LAND` 0 · `gate-witness-check` 0 ·
+  `launch-disposition` 0(22/22) · `trust-origin verify` 0. `WORKSTATE`는 `verifying`, blockers 0.
+- push 대기: 0건. 발사: 3건(수동). 승인·반려·전이 대행 없음(전이는 사람 지시). QUOTA_SIGNAL: 미감지.
+
+<run-summary>DI-00-04의 차단 사유 세 건을 각각 실측해 해소를 확인하고(손 위조 거부·--human-decision 제거·네 조각 완료 기준 대조) 사람 지시로 blocked → verifying 전이를 정규 경로로 수행했다. 그 과정에서 apply --dry-run-flag가 dry-run이 아니라 실제 상태 쓰기가 되는 사고가 났고, 원인인 "값 없는 후행 옵션이 조용히 버려짐"을 고친 뒤 CLI 전면을 조사해 같은 fail-open을 네 곳에서 제거했다. di-completion-check --manifestt가 픽스처 대신 production을 재고 PASS를 내던 것이 가장 위험했다. 커밋 3a0ed01에 거짓 수치(violations:0)를 적은 것도 자진 신고하고 R1으로 해소했으며, 이후 커밋에는 measure 조건을 명령에 걸었다. ADR-017로 TO-2026-001을 그대로 두기로 했다. 최종 게이트 전부 통과, WORKSTATE는 verifying이고 다음은 사람의 land gate 12번이다.</run-summary>
