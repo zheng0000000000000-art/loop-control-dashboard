@@ -399,7 +399,11 @@ internal static class CodexHarnessLauncherCli
         var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
         while (dir is not null)
         {
-            if (Directory.Exists(Path.Combine(dir.FullName, ".git"))) return dir.FullName;
+            // worktree에서는 `.git`이 디렉터리가 아니라 **파일**(gitdir 포인터)이다.
+            // 디렉터리만 찾으면 worktree 안에서 그 지점을 지나쳐 엉뚱한 상위를 루트로 잡는다.
+            // GitTools.FindRepoRoot가 GCLEAN-01에서 같은 이유로 고쳐졌다 — 여기도 맞춘다.
+            if (Directory.Exists(Path.Combine(dir.FullName, ".git"))
+                || File.Exists(Path.Combine(dir.FullName, ".git"))) return dir.FullName;
             dir = dir.Parent;
         }
         return Directory.GetCurrentDirectory();
