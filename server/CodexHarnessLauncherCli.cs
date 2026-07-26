@@ -139,6 +139,39 @@ internal static class CodexHarnessLauncherCli
         return null;
     }
 
+    // 격리 사본에 복원 산출물(server/obj)을 넣어준다. 없으면 실행자가 빌드를 증명할 수 없다.
+    //
+    // 2026-07-27 실측: `codex exec --sandbox workspace-write`는 **네트워크가 없다.** 그런데
+    // worktree는 gitignore된 `server/obj`를 안 가져오므로 `--no-restore`는 NETSDK1004
+    // (project.assets.json 부재), 복원은 NU1301(원본 로드 실패)로 죽는다. 두 발사(NET8-01·R1)가
+    // 여기서 막혔고, 첫 번째는 **컴파일되지 않는 산출물**을 냈다.
+    //
+    // obj는 gitignore라 사본의 `git add -A`에 잡히지 않는다 — scope 판정에 영향이 없다.
+    // 복사가 실패해도 발사를 막지 않는다. 빌드 실패는 실행자가 보고할 몫이지 런처가 판정할 것이 아니다.
+    private static void SeedRestoreOutput(string root, string workdir)
+    {
+        try
+        {
+            var source = new DirectoryInfo(Path.Combine(root, "server", "obj"));
+            if (!source.Exists) return;
+            CopyDirectory(source, new DirectoryInfo(Path.Combine(workdir, "server", "obj")));
+        }
+        catch
+        {
+            // 무시한다. 실행자가 빌드 불가를 보고하면 그것이 증거다.
+        }
+    }
+
+    // 디렉터리를 통째로 복사한다.
+    private static void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
+    {
+        Directory.CreateDirectory(target.FullName);
+        foreach (var file in source.GetFiles())
+            file.CopyTo(Path.Combine(target.FullName, file.Name), overwrite: true);
+        foreach (var dir in source.GetDirectories())
+            CopyDirectory(dir, new DirectoryInfo(Path.Combine(target.FullName, dir.Name)));
+    }
+
     // 경로가 있고 해시가 현재 내용과 맞는지 본다. 어긋나면 낡은 참조로 쏘는 것이다.
     private static string? PinnedFileRejection(string root, JsonObject request, string pathKey, string hashKey, string label)
     {
@@ -162,6 +195,8 @@ internal static class CodexHarnessLauncherCli
             // 계약 §2-3: 임시 사본에서 실행한다. worktree로 baseline 커밋을 그대로 떼어낸다.
             var add = RunProcess(root, "git", ["worktree", "add", "--detach", workdir, baseline], 120);
             if (add.ExitCode != 0) return Error("isolated-copy-failed", 2);
+
+            SeedRestoreOutput(root, workdir);
 
             var prompt = BuildPrompt(root, request);
             var timeout = Int(request, "timeoutSeconds");
