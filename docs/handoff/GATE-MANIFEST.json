@@ -364,6 +364,27 @@
           "mutatesState": false,
           "order": 22,
           "note": "반증 witness — imported가 아닌 처분(rejected)의 패치가 영토 면제 근거로 쓰이지 않는지 확인한다(TERR-02). 실측 2026-07-27: exit 1, coveredByOutbox 0, violations 3. 짝 시험으로 갈랐다 — 같은 픽스처의 state만 imported로 뒤집으면 coveredByOutbox가 1이 되고 violations가 2가 된다. 즉 디렉터리를 안 읽는 것이 아니라 rejected라서 제외하는 것이다. 그 imported 쌍 픽스처는 docs/qa/가 코덱스 영토라 조율자가 만들 수 없어 등재하지 못했다 — 수동 확인으로 남아 있다(docs/verification/terr-02.md)."
+        },
+        {
+          "command": "gate-clean",
+          "args": [
+            "nonexistent-xyz"
+          ],
+          "expectedExit": 2,
+          "mutatesState": false,
+          "order": 23,
+          "note": "반증 witness — 검사 대상 경로가 없으면 PASS가 아니라 입력 오류다(GCLEAN-01). 종전에는 exit 0이었고, POST-COMMIT order 1이 gate-clean server라 server/를 개명하면 첫 검사가 아무것도 안 재고 통과했다. 실측 2026-07-27: exit 2, missingPaths에 경로가 담긴다."
+        },
+        {
+          "command": "gate-clean",
+          "args": [
+            "--status-fixture",
+            "docs/qa/gate-witness/no-such-fixture.status"
+          ],
+          "expectedExit": 2,
+          "mutatesState": false,
+          "order": 24,
+          "note": "반증 witness — 없는 status fixture로 PASS가 나오면 그 반증 시험 자체가 시험이 아니다(GCLEAN-01). 실측 2026-07-27: exit 2."
         }
       ],
       "unregisteredChecks": [

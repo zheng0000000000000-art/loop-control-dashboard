@@ -1,7 +1,9 @@
 {
   "launchId": "LAUNCH-GCLEAN-01-R2",
-  "state": "pending",
+  "state": "imported",
   "decidedAt": "2026-07-26",
-  "actor": "codex-launch (자동) — 처분은 사람이 정한다",
-  "note": "발사만 됐고 반입·폐기는 정해지지 않았다. launch-disposition이 위반으로 센다."
+  "actor": "조율 세션(Claude Opus 5) · 사람 지시로 반입",
+  "note": "조율자가 격리 클론에 붙여 다섯 조합을 직접 재실행했고 코덱스 보고와 전부 일치했다. 앞선 두 시도는 각각 조율자가 프로세스를 죽여 증거가 없었고(R1 이전), 참조 입력 해시가 낡아 코덱스가 착수를 옳게 거부했다(R1). 둘 다 조율자 잘못이다. 게이트 증거 보고는 이 처분 기록 커밋에서 잰 것이며 반입 시점 판정이 아니다.",
+  "importCommit": "3ae9d66cd1e5be25691f88da7aacd008e0f6418e",
+  "gateReport": "docs/handoff/gate-evidence/LAUNCH-GCLEAN-01-R2.gate.json"
 }
