@@ -72,3 +72,72 @@ backfill은 **사람·조율자의 판단**이다. 실행자가 대신 정하지
 3. **반입 여부를 하네스가 검증하지는 않는다.** `disposition.json`이 `imported`라고 말하면
    그렇게 믿는다(다만 게이트 보고와의 정합은 확인한다). 패치가 실제로 적용됐는지는
    diff로 추정할 수 없어 의도적으로 빼놓았다(§1-B) — **기록이 진실의 출처**라는 설계다.
+
+---
+
+# backfill (append, 2026-07-26) — 16건 전부 기록했고 매니페스트에 등재했다
+
+원문의 미달 ①(*"기록은 아직 없다"*)을 닫는다. 원문은 그 시점에 참이었으므로 지우지 않는다.
+
+## 처분을 어떻게 정했는가 — 전부 실측
+
+| 상태 | 건수 | 근거 |
+| --- | --- | --- |
+| `imported` | **14** | 신규 파일이 추가된 커밋(`git log --diff-filter=A`) 7건 + 추가된 내용으로 찾은 커밋(`git log -S`) 7건 |
+| `rejected` | **1** | `LAUNCH-GWIT-05` |
+| `no-output` | **1** | `LAUNCH-GWIT-04` — `candidate.patch`가 빈 파일 |
+
+**커밋 메시지로 짐작하지 않았다.** `importCommit`은 그 패치가 만든 파일이 실제로 추가된 커밋,
+또는 그 패치가 추가한 줄이 실제로 들어간 커밋이다. CLAUDE.md가 금지한 *"커밋 접두사·타임스탬프
+상관"* 을 쓰지 않았다.
+
+`LAUNCH-GWIT-05`를 `rejected`로 판정한 근거도 실체다: 그 패치가 만든
+`docs/qa/gate-witness/build-verify-broken/Program.cs`는 **저장소에 추가된 커밋이 없다.**
+R2가 만든 `Broken.cs`는 `b213b63`에 있다. **두 산출물이 파일 단위로 구분된다.**
+
+## ★ `gateReport`는 역사적으로 존재한 적이 없었다
+
+```
+outputs/gates/ 보고 32개 중 launchId를 담은 것: 0개
+```
+
+`state: "imported"`가 요구하는 연결을 **파이프라인이 한 번도 만들지 않았다.**
+내가 방금 만든 검사의 통과 조건이 역사에 대해 **도달 불가능**했다는 뜻이다.
+
+**지어 넣지 않았다.** `program-verify verify --gate POST-COMMIT --launch <id>`를
+**14번 실제로 돌려** `outputs/gates/backfill/`에 남겼다. 전부 `PASS 12/12`.
+
+각 `disposition.json`의 `note`에 이렇게 적었다:
+
+> 반입 당시에는 launchId를 담은 게이트 보고가 만들어지지 않았다. 여기 적힌 gateReport는
+> backfill 시점 HEAD에서 실제로 다시 잰 것이며, **반입 당시의 판정이 아니다.**
+
+**14개 보고의 `baselineCommit`은 모두 같다.** 각 반입이 그때그때 개별로 게이트를 통과했다는
+뜻이 아니라, **그 반입들을 모두 담은 트리가 지금 POST-COMMIT을 통과한다**는 뜻이다.
+읽는 사람이 오해하지 않도록 여기와 각 파일에 남긴다.
+
+## 등재 (§6-2)
+
+backfill이 **끝난 뒤** 등재했다 — 순서를 지켰다.
+
+```
+POST-COMMIT + launch-disposition ['outbox']                                  exp 0
+POST-COMMIT + launch-disposition ['docs/qa/gate-witness/.../case-01']        exp 1  ← 반증 witness
+```
+
+| 게이트 | witnessed | 미반증 |
+| --- | --- | --- |
+| POST-EXECUTOR | 13/13 | 0 |
+| **POST-COMMIT** | **14/14** | **0** |
+| WP-STATE-INTEGRITY-LAND | 18/18 | 0 |
+
+`launch-disposition outbox` → **exit 0, launchCount 16, violations 0.**
+
+## 지표는 만족했으나 목적은 미달인 부분
+
+1. **`gateReport` 14개가 동일한 측정이다.** 계약(§1-A: `baselineCommit >= importCommit`)은
+   진실하게 만족하지만, **반입 시점 판정이라는 강한 의미는 없다.** 앞으로의 발사부터가 진짜다.
+2. **`codex-launch`가 여전히 처분을 요구하지 않는다.** 다음 발사도 `disposition-missing`으로
+   시작하고 사람이 손으로 채워야 한다. 발사 시점 `state: "pending"` 자동 기록은 별도 결재다.
+3. **`no-output` 사유는 실행 보고의 서술을 옮긴 것이다.** `candidate.patch`가 빈 파일이라는 것은
+   실측이지만, *왜* 비었는지(NU1301 TLS 실패)는 **코덱스의 자기보고**다. 내가 재현하지 않았다.

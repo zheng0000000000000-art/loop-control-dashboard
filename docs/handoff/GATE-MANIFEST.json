@@ -253,6 +253,22 @@
           "expectedExit": 1,
           "mutatesState": false,
           "note": "반증 witness — 반증 없는 검사가 있는 게이트를 실패로 보고하는지 확인한다(GWIT-01 §5). 실측 2026-07-26: exit 1."
+        },
+        {
+          "command": "launch-disposition",
+          "args": [
+            "outbox"
+          ],
+          "expectedExit": 0,
+          "mutatesState": false
+        },
+        {
+          "command": "launch-disposition",
+          "args": [
+            "docs/qa/gate-witness/launch-disposition/case-01"
+          ],
+          "expectedExit": 1,
+          "mutatesState": false
         }
       ],
       "unregisteredChecks": [
