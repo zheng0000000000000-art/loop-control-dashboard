@@ -74,6 +74,12 @@ jobs:
   windows:
     name: windows / 10.0
     runs-on: windows-latest
+    # 러너에는 AspNetCore.App 8·9·10이 모두 깔려 있다. 이 프로젝트는 net8.0을 겨냥하므로
+    # 그냥 두면 **8이 골라진다** — 잡 이름은 10.0인데 실제로는 8에서 돌았다(2026-07-27 첫 실행에서
+    # hs-scan이 .NET 8 버그로 exit 2를 냈다). 이름과 실재를 맞춘다.
+    # .NET 8 검증은 linux 컨테이너 다리가 맡는다(NET8-01이 켠다). 여기서 겸하지 않는다.
+    env:
+      DOTNET_ROLL_FORWARD: LatestMajor
     steps:
       - uses: actions/checkout@v4
         with:

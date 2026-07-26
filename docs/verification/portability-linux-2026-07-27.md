@@ -128,3 +128,31 @@ matrix에서 `"8.0"`을 빼되 **"잊어서 빠진 게 아니다"를 주석으�
    `shell: bash`·`git clean` 동작은 미검증이다.
 3. **CI가 게이트 매니페스트에 없다.** CI 자체가 깨져도 로컬 게이트는 초록이다 —
    `gate-witness-check`가 CI를 모른다. **CI를 지키는 것은 여전히 사람이다.**
+
+## 정정 — windows 잡은 이름과 다른 런타임에서 돌고 있었다
+
+첫 CI 실행 결과: **linux / 10.0 ✓ (1m25s)**, **windows / 10.0 ✗** — `hs-scan` 기대 1 / 실제 2,
+사유는 같은 `TypeInfoResolver`다.
+
+`setup-dotnet 10.0.x`를 깔았는데도 **.NET 8에서 돌았다.** 러너 로그:
+
+```
+Microsoft.NETCore.App 8.0.6 / 8.0.22 / 8.0.28 / 9.0.6 / 9.0.17 / 10.0.8 / 10.0.9 / 10.0.10
+```
+
+이 프로젝트는 `net8.0`을 겨냥하므로 **정확히 맞는 8이 있으면 그것을 고른다.** `RollForward=Major`는
+없을 때만 올라간다. 로컬이 10에서 돌던 이유는 **로컬에 `Microsoft.AspNetCore.App` 8이 없어서**다
+(`NETCore.App` 8.0.27은 있지만 Web 앱이 요구하는 AspNetCore 8이 없다). 실측:
+
+```
+기본                              hs-scan=1
+DOTNET_ROLL_FORWARD=LatestPatch   실행 실패 150 (AspNetCore.App 8.0.0 없음)
+DOTNET_ROLL_FORWARD=LatestMajor   hs-scan=1
+```
+
+**즉 "이 저장소는 .NET 10에서 돈다"는 로컬 환경의 우연이었다.** 8이 깔린 기계라면 어디서든
+`hs-scan`이 깨진다 — 리눅스만의 문제가 아니었다. 앞 절에서 "linux / .NET 8"이라고 좁게 쓴 것을
+여기서 넓힌다.
+
+windows 잡에 `DOTNET_ROLL_FORWARD: LatestMajor`를 준다. **이름과 실재를 맞추는 것이지
+버그를 덮는 게 아니다** — .NET 8 검증은 linux 컨테이너 다리가 맡고, 그건 `NET8-01`이 켠다.
