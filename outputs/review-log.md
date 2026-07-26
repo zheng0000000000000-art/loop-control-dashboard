@@ -2458,4 +2458,28 @@
 - 판정: 신규 처리 사건 없음. 커밋 없음(FILE-CLAIMS.json 고아 클레임 보류 유지). HUMAN-INBOX에 PID 완전 사망 관측만 짧게 append(신규 등재 아님).
 - push 대기: 62건. 발사: 없음(sonnet spawn 안 함). QUOTA_SIGNAL: 미감지.
 
-<run-summary>FILE-CLAIMS.json 고아 클레임(GUARD-03-15956) 상태 불변(active/exitCode=null, 사람 결정 대기)이나 PID 15956이 이번 회차에 처음 완전히 사망함을 확인. gate-clean server PASS 유지. codex 커밋(ce4bff9) 추가로 push 대기 62건. 커밋·발사 없음.</run-summary>
+<run-summary>FILE-CLAIMS.json 고아 클레임(GUARD-03-15956) 상태 불변(active/exitCode=null, 사람 결정 대기)이나 PID 15956이 이번 회차에 처음 완전히 사망함을 확인. gate-clean server PASS 유지. codex 커밋(ce4bff9) 추가로 push 대기 62건. 커밋·발사 없음.</run-summary>## 조율자 2026-07-26 (게이트 파이프라인 정합 회차, review-log)
+
+- **성격**: 사람이 대화로 지시한 연속 작업 회차. 발사 8건(코덱스), 전부 수동 `--manual`. sonnet spawn 없음.
+- **한 일 (반입 8건)**: `GWIT-05`(build-verify 픽스처) · `GWIT-06`(JSON Lines 음성 수) ·
+  `HREG-02`(BuiltInCommands 단일화) · `DICC-01`(자기 재빌드 제거) · `DISPO-01/02/03`(발사 처분) ·
+  `DICC-02/03`(발사·커밋 귀속) · `NHASH-01`(정규화 해시 단일화).
+  조율자 직접 경로: `measure`·`verify-behavior` 픽스처 모드, `program-verify` 낡음 판정과 `--out`,
+  게이트 실행 제거, `GateReportReader` 신설, `RequiredGateCommands` 기계 대조.
+- **수치**: `gate-witness-check` 미반증 **17 → 0**(세 게이트 모두 `requireFailureWitness` 켬).
+  `launch-disposition` **미기록 16 → 22/22 기록**. 깨끗한 클론에서 `POST-COMMIT` 14/14,
+  `LAND` 18/18, `POST-EXECUTOR` 13/13(전제 충족 시) 전부 PASS.
+- **결정**: `ADR-016` §15 — 게이트 판정 정본을 `di-completion-check`로 확정(사람 선택).
+  `ADR-017` — `TO-2026-001`을 그대로 둔다(사람 선택). **기록 파일 미변경, `verify` exit 0 확인.**
+- **기준 변경 3건** — `BASELINE-CHANGES.md`에 append:
+  ①처분 증거를 `docs/handoff/gate-evidence/`로 ②`outbox`의 세 종류 추적
+  ③`RequiredGateCommands`를 실재 이름으로 정정(요구 항목 수 불변).
+- **죽어 있던 것 세 개를 실측으로 찾았다**: `outbox/` 전체 미추적(클론에서 게이트 실행 불가),
+  `handoff-integrity`의 원시 바이트 해시(클론에서 hash-mismatch),
+  `RequiredGateCommands`(이름 교체 이후 `--gate-report` 경로가 두 러너 모두에게 사망).
+- **판정**: 커밋 다수, 전부 push 완료. 발사 8건 모두 처분 기록됨. 승인·반려·전이 대행 없음.
+- **HUMAN-INBOX**: 이번 회차에 올린 결재 항목 전부 닫힘. `declare` 항목은 **오등재였음을 정정**
+  (이미 선언돼 있어 실행 불가).
+- push 대기: 0건(전부 push). 발사: 8건(수동). QUOTA_SIGNAL: 미감지.
+
+<run-summary>게이트 파이프라인의 실재 정합을 맞춘 회차. gate-witness-check 미반증 17→0, 발사 처분 기록 0→22/22, 깨끗한 클론에서 세 게이트 전부 PASS를 실측했다. ADR-016 §15로 게이트 판정 정본을 di-completion-check로 확정하고 program-verify에서 게이트 실행을 제거했으며, ADR-017로 TO-2026-001을 그대로 두기로 했다(기록 미변경, verify exit 0). 죽어 있던 경로 셋(outbox 전체 미추적·handoff-integrity 원시 바이트 해시·RequiredGateCommands 이름 드리프트)을 클론 실행으로 찾아 고쳤다. 기준 변경 3건은 BASELINE-CHANGES에 근거·되돌리는 법과 함께 남겼다. 발사 8건 전부 수동, 승인·전이 대행 없음.</run-summary>
