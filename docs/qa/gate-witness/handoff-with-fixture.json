@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "gates": [
+    {
+      "gateId": "HANDOFF-FIXTURE",
+      "checks": [
+        {
+          "order": 1,
+          "command": "handoff-integrity",
+          "args": [],
+          "expectedExit": 0,
+          "mutatesState": false
+        },
+        {
+          "order": 2,
+          "command": "handoff-integrity",
+          "args": ["--fixture", "negative"],
+          "expectedExit": 1,
+          "mutatesState": false
+        }
+      ]
+    }
+  ]
+}

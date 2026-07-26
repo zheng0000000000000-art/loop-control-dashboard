@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "gates": [
+    {
+      "gateId": "ALL-PAIRED",
+      "requireFailureWitness": true,
+      "checks": [
+        {
+          "order": 1,
+          "command": "sample-check",
+          "args": [],
+          "expectedExit": 0,
+          "mutatesState": false
+        },
+        {
+          "order": 2,
+          "command": "sample-check",
+          "args": ["negative"],
+          "expectedExit": 1,
+          "mutatesState": false
+        }
+      ]
+    }
+  ]
+}

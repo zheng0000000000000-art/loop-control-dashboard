@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "gates": [
+    {
+      "gateId": "GWIT-01-NEGATIVE",
+      "requireFailureWitness": true,
+      "checks": [
+        {
+          "order": 1,
+          "command": "gate-witness-check",
+          "args": [],
+          "expectedExit": 0,
+          "mutatesState": false
+        }
+      ]
+    }
+  ]
+}
