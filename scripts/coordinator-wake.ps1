@@ -15,6 +15,8 @@ param(
   [string]$HeartbeatPath  = 'C:\NHN Project\_ops\coordinator-heartbeat.json',
   # 이 파일이 있으면 깨우지 않는다. 조율자가 명시적으로 멈출 때만 만든다.
   [string]$HoldPath       = 'C:\NHN Project\_ops\coordinator-hold.flag',
+  # 막혀서 조율자에게 올라온 것들. 안 다뤄진 항목이 있으면 그것이 최우선 방아쇠다.
+  [string]$InboxPath      = 'C:\NHN Project\_ops\coordinator-inbox.md',
   [string]$WorkingDir     = 'C:\Users\1\Documents\Local-First Workflow Dashboard',
   [string]$LogDir         = 'C:\NHN Project\_ops\wake-logs',
   [string]$ReaderId       = 'usr_claude_coordinator',
@@ -62,7 +64,8 @@ function Report-Stop([string]$reason, [string]$detail) {
   Write-Line "$reason - $detail"
   $inbox = Join-Path (Split-Path -Parent $HeartbeatPath) 'coordinator-inbox.md'
   $stamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-  try { Add-Content -Path $inbox -Encoding UTF8 -Value "- [$stamp] $reason : $detail" } catch { }
+  # [ ] 로 쓴다. 처리하면 [x] 가 된다 - 무엇이 아직 안 다뤄졌는지가 파일만 봐도 드러난다.
+  try { Add-Content -Path $inbox -Encoding UTF8 -Value "- [ ] $stamp $reason : $detail" } catch { }
   if (Test-Path $loopLogScriptEarly) {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $loopLogScriptEarly `
       -Text "멈춤 · $reason · $detail" 2>&1 | Out-Null
@@ -171,12 +174,21 @@ if (Test-Path $QueuePath) {
 # pendingWork 로 깨우지 않는다. 거기엔 사람 게이트 태스크가 섞여 있어서
 # 아무도 집을 수 없는 일로 깨우고, 그다음 no-progress 로 멈춘다.
 # 2026-07-27 실측: board-stuck=2 로 깨어나 no-progress before=0 after=1 로 끝났다.
-if ($unread.Count -eq 0 -and $boardReady.Count -eq 0 -and $boardReview.Count -eq 0 -and $queueOpen -eq 0 -and $queueReview -eq 0) {
+if ($inboxPending -eq 0 -and $unread.Count -eq 0 -and $boardReady.Count -eq 0 -and $boardReview.Count -eq 0 -and $queueOpen -eq 0 -and $queueReview -eq 0) {
   Write-Line "nothing-to-do (사람 게이트 대기 $pendingWork 건)"; exit 0
 }
 # 검토 대기가 있으면 그것이 최우선이다. 실행보다 판정이 먼저 밀린다 —
 # 판정이 안 나면 그다음 실행이 무엇 위에 쌓이는지 아무도 모른다.
-$trigger = if ($boardReview.Count -gt 0) { "board-review=$($boardReview.Count)" }
+# 조율자 인계함에 안 다뤄진 항목이 있으면 그것이 최우선이다. 막혀서 올라온 것이므로
+# 그대로 두면 그 줄기 전체가 선다. 2026-07-28: 인계함이 방아쇠가 아니어서, 막힘이 쌓여도
+# 사람이 말을 걸어야 조율자가 읽었다. 스스로 깨우는 고리가 여기서 끊겨 있었다.
+$inboxPending = 0
+if (Test-Path $InboxPath) {
+  $inboxPending = @(Select-String -Path $InboxPath -Pattern '^\s*-\s\[\s\]\s' -AllMatches).Count
+}
+
+$trigger = if ($inboxPending -gt 0) { "inbox=$inboxPending" }
+  elseif ($boardReview.Count -gt 0) { "board-review=$($boardReview.Count)" }
   elseif ($queueReview -gt 0) { "review=$queueReview" }
   elseif ($unread.Count -gt 0) { "unread=$($unread.Count)" }
   elseif ($boardReady.Count -gt 0) { "board=$($boardReady.Count)" }
@@ -250,7 +262,8 @@ if (Test-Path $lockScript) {
 
 # 같은 글로 두 번 깨우지 않는다. 실패한 세션이 무한히 재시도하면 토큰만 태운다.
 # 큐가 방아쇠일 때는 남은 개수를 표식으로 쓴다. 하나 끝나면 개수가 줄어 다음 깨우기가 열린다.
-$markerValue = if ($boardReview.Count -gt 0) { "board-review:$($boardReview[0].id)" }
+$markerValue = if ($inboxPending -gt 0) { "inbox:$inboxPending" }
+  elseif ($boardReview.Count -gt 0) { "board-review:$($boardReview[0].id)" }
   elseif ($queueReview -gt 0) { "review:$queueReview" }
   elseif ($unread.Count -gt 0) { $unread[0].id }
   elseif ($boardReady.Count -gt 0) { "board:$($boardReady[0].id)" }
@@ -281,7 +294,7 @@ if ((Test-Path $marker) -and ((Get-Content -Raw $marker).Trim() -eq $markerValue
     Write-Line "stalled $markerValue - ${attempts}회 시도했고 진전이 없다. 조율자에게 넘긴다"
     $escalation = Join-Path (Split-Path -Parent $HeartbeatPath) 'coordinator-inbox.md'
     $stamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-    Add-Content -Path $escalation -Encoding UTF8 -Value "- [$stamp] $markerValue : ${attempts}회 시도 무진전. 조율자가 직접 볼 것."
+    Add-Content -Path $escalation -Encoding UTF8 -Value "- [ ] $stamp $markerValue : ${attempts}회 시도 무진전. 조율자가 직접 볼 것."
     if (Test-Path $loopLogScriptEarly) {
       & powershell -NoProfile -ExecutionPolicy Bypass -File $loopLogScriptEarly `
         -Text "막힘 · $markerValue · ${attempts}회 시도 무진전 · 조율자 처리 대기" 2>&1 | Out-Null
@@ -340,6 +353,9 @@ $executePrompt = @'
    (readBy 에 usr_claude_coordinator 가 없는 것)
 
 그다음에 해라.
+- C:\NHN Project\_ops\coordinator-inbox.md 에 "- [ ]" 로 남은 항목이 있으면 그것이 최우선이다.
+  막혀서 올라온 것이다. 원인을 실체로 확인하고 처리한 뒤 그 줄의 [ ] 를 [x] 로 바꾼다.
+  못 풀면 [ ] 로 두고 무엇을 확인했는지 그 줄 아래에 덧붙인다. 지우지 마라.
 - 읽은 메시지에 readBy 를 추가해 읽음으로 표시한다.
 - 같은 파일에 authorUserId 를 usr_claude_coordinator 로 해서 답을 남긴다.
 - 사람이 시킨 것이 있으면 그것이 최우선이다.
