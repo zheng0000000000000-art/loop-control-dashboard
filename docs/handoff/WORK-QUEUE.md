@@ -49,23 +49,38 @@
 
 ## 대기 중
 
-- [ ] **외부 에이전트를 위한 제3의 실행 모드 (team-loop)**
-  - 무엇: team-loop의 `executionMode`는 `HUMAN`(사람) 아니면 `AGENT`(team-loop이 spawn한 실행자)뿐이다.
-    우리 깨어난 세션은 **둘 다 아니다** — 외부 에이전트다. 그래서 `claim_task`를 쓰면
-    납품 게이트가 실행자 종료 코드를 요구해 막힌다(`src/delivery-gate.js`).
-  - 지금 우회: `HUMAN` 모드로 일한다(2026-07-28 사용자 결정). **대가가 있다** —
-    `allowNoChanges`(정말 납품했는가) 검사가 납품 게이트 안에 있어서 `HUMAN`에서는 안 돈다.
-  - 완료 조건: 외부 에이전트가 **자기 게이트 결과를 증거로 제출**하고 그것으로 납품 게이트를
-    통과할 수 있다. 증거 없는 제출은 여전히 거절되는 것을 **음성 사례로 확인**한다.
-  - 주의: 이건 판정층 변경이다. `unverified-claims.js`가 지키는 원칙
-    ("돌지 않은 검사는 아무것도 증명하지 않는다")을 깨지 않는 형태여야 한다.
-  - **원인 지점이 더 좁혀짐(2026-07-28, `tsk_06ba445c1ee0e40aa5fe` 실측)**: `work_start_next`를
-    `executionMode: 'HUMAN'` 명시로 호출해 실제로 `task.executionMode='HUMAN'`, `worker: null`
-    (발사 없음) 상태로 시작하는 것까지는 성공했다. 그런데 바로 이어서 `submit_task_result`를
-    호출하니 응답의 `task.executionMode`가 `'AGENT'`로 바뀌어 있었다(version 2→3) —
-    `work_start_next`가 아니라 **`submit_task_result` 핸들러 자체가 제출을 받으며 AGENT로
-    넘긴다.** HUMAN으로 시작해도 피할 수 없다는 뜻이라, 이전 진단("work_start_next 기본값
-    문제")보다 더 구체적인 원인이다.
+- [~] **외부 에이전트를 위한 제3의 실행 모드 (team-loop)** — team-loop 저장소 `server.js` 두 곳을 고쳤다(커밋 `05ffa81`, `fusion/judgment-layer`).
+  - 무엇: team-loop의 `executionMode`는 `HUMAN`(사람) 아니면 `AGENT`(team-loop이 spawn한 실행자)뿐이었다.
+    우리 깨어난 세션은 **둘 다 아니다** — 외부 에이전트다. `EXTERNAL_AGENT` 모드 자체는 이미
+    커밋 `35cdcf7`로 반입돼 있었다(`src/delivery-gate.js`가 실행자 종료 코드 대신 프로그램 증거를
+    요구하는 분기).
+  - **이번에 좁힌 두 지점을 실제로 고쳤다**:
+    (1) `submit_task_result`(`action==='submit'`, server.js:~1712)가 제출을 받으며 `executionMode`를
+    **무조건 `'AGENT'`로 되돌리고 있었다** — `work_start_next`가 `EXTERNAL_AGENT`를 지켜도 제출
+    한 번으로 도로 AGENT가 돼, 뒤이은 `verify`가 실행자 종료 코드를 요구하는 AGENT 분기를 탔다.
+    현재 상태가 `EXTERNAL_AGENT`면 그대로 지키게 고쳤다(`AGENT`가 아니면 종전대로 `AGENT`).
+    (2) `work_start_next`(`/api/orchestration/start-next`, server.js:~588) 자신도 `status`를
+    `HUMAN`일 때만 `IN_PROGRESS`로 올리고 `EXTERNAL_AGENT`는 `READY`에 그대로 뒀다 — `AGENT`는
+    나중에 spawn된 워커가 `claim`으로 `IN_PROGRESS`를 찍어주지만, `EXTERNAL_AGENT`에는 그 워커가
+    없어(워커가 곧 이 세션이다) `verify`가 "IN_PROGRESS 아님"(409)으로 영원히 거절했다. `HUMAN`과
+    같이 `EXTERNAL_AGENT`도 여기서 바로 `IN_PROGRESS`로 두게 고쳤다.
+  - **확인한 것**: 새 시험 `test/external-agent-submit.test.js` — 임시 git 워크스페이스 + 실제
+    HTTP 서버로 시작(`start-next` executionMode:'EXTERNAL_AGENT') → 파일 제출(`submit`) → 검증
+    (`verify`) 전 구간을 재현. 고치기 전엔 두 지점 각각 재현됨을 먼저 확인했다(제출 뒤
+    `executionMode`가 `'AGENT'`로 바뀜, 그다음 `verify`가 409) — 그다음 고쳐서 통과로 바뀌는 것도
+    확인했다(`verification.status==='PASSED'`, 실제 `git diff --check` 실행이 증거). 증거 없는
+    제출이 여전히 거절되는 음성 사례는 `test/delivery-gate.test.js`(`35cdcf7`에서 이미 추가된
+    "external agent is rejected when no check actually ran")가 갖고 있어 새로 만들지 않았다.
+    `npm test` 전체 재실행 → `518/518` 통과. `git diff --check` 통과, 변경은 `server.js`(2곳) +
+    새 시험 파일뿐 — allowedPaths 밖 없음(team-loop 저장소는 이 CLAUDE.md의 dispatch/outbox
+    적용 대상이 아니라 직접 커밋했다, 선례: `35cdcf7`·`415cc7d`·`66012cb`).
+  - **판정 세션이 볼 것**: 이 세션이 실행 세션이라 승인은 다음 판정 세션의 몫이다(ADR-020).
+    판정 시 team-loop 저장소(`C:\NHN Project\team-loop-lite-ai-learning`)에서 `git show 05ffa81`로
+    diff를, `npm test`로 518/518을 직접 재실행해 대조할 것.
+  - 주의(그대로 유효): 이건 판정층 변경이다. `unverified-claims.js`가 지키는 원칙
+    ("돌지 않은 검사는 아무것도 증명하지 않는다")을 깨지 않는 형태였는지도 판정이 함께 볼 것 —
+    이번 수정은 게이트의 요구 수준 자체(프로그램 증거 필수)는 그대로 두고, 그 요구가 적용되는
+    모드가 중간에 뒤바뀌던 배선만 고쳤다.
 
 (현재 대기 없음 — 아래 사람 게이트 2건은 실행자가 집지 않는다.)
 
