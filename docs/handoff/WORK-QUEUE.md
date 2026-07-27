@@ -42,13 +42,7 @@
 > **순서는 사람이 정한다.** 2026-07-27 사용자 지시로 작업보드를 맨 위로 올렸다 —
 > *"작업보드 쪽 먼저 하는 게 확실하지 않을까?"*
 
-- [ ] **`buildSkillPolicy`의 두 벌 출처를 하나로**
-  - 무엇: `src/skill-policy.js`가 `workspaceRoot/data/skills.json`을 읽는데, MCP `list_skills`는
-    서버 `dataDirectory`의 레지스트리를 읽는다. **에이전트가 보는 스킬과 실제 적용 스킬이 다르다.**
-    `unknown-auction` workspace에서는 그 파일이 아예 없어 등록 스킬이 0개로 적용된다.
-  - 완료 조건: 한 출처에서 읽고 `scope`로 거른다. 시험으로 **두 경로가 같은 목록을 준다**를 단언한다.
-  - 주의: CLI(`src/cli/main.js`)가 이 함수를 쓴다. 기존 동작을 깨지 않게 기본값을 유지한다.
-
+(현재 대기 없음 — 아래 사람 게이트 2건은 실행자가 집지 않는다.)
 
 > **사람 게이트 2건은 보드로 옮겼다.** 발사가 필요해서 실행자가 집을 수 없다.
 > 폰에서 보이되 안 집히도록 제목을 `[사람 게이트]`로 시작하게 했다.
@@ -58,6 +52,18 @@
 ---
 
 ## 끝난 것
+
+- [x] **`buildSkillPolicy`의 두 벌 출처를 하나로** — team-loop 작업보드가 지시큐로 실측된 첫 사례
+  (2026-07-27). `tsk_6890ae63a52af48e9539`가 보드에서 `board=1` 트리거로 실제 발사(claude-code/claude-opus-5)
+  → 실행 → 사람 리뷰(최재혁) → 병합까지 무인+사람승인으로 완주. `src/skill-policy.js`가
+  `workspaceRoot/data/skills.json`을 따로 읽던 것을 없애고 서버 `list_skills`와 같은
+  `SkillRegistry(dataDirectory, workspaceId)`만 쓰게 통일(team-loop `80a2fdb`, 병합 `48a2fbf`).
+  이 조율자 세션이 **실행 세션과 다른 세션**으로 하네스를 직접 재실행해 대조:
+  `node --test test/skill-policy-source.test.js` 4/4 통과(단독), `node --test` 전체 502/502 통과
+  (이전 기록 498에서 +4, 이 작업이 추가한 시험 수와 일치). 승인은 이미 사람이 했으므로(커밋 트레일러
+  `Reviewed-By: 최재혁`) 판정 세션의 자기승인 문제는 해당 없음 — 이 세션은 재현 검증만 추가했다.
+  큐에는 이 항목이 사람이 올리기 전부터 있었으나, 보드 쪽 파이프라인이 먼저 집어 처리했다
+  (큐와 보드가 같은 백로그를 가리키고 있었다는 뜻 — 중복 작업 아님).
 
 - [x] **team-loop 작업보드를 지시큐로 잇기** — 판정 통과(2026-07-27, 실행 세션과 다른 판정 세션).
   다시 돌려 대조: `measure dev-pack`(violations=0), `handoff-integrity`(failures=[]),
