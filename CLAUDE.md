@@ -37,7 +37,8 @@
 - **자기가 한 일을 자기가 승인하는 것.** 2026-07-27부터 approve/reject/import는 에이전트가 할 수 있다(ADR-020).
   단 **실행한 세션과 승인하는 세션이 달라야 한다.** 실행자는 `- [~]`(검토 대기)까지만 옮기고,
   승인은 판정 세션이 한다. 판정은 **하네스를 직접 재실행해 대조**하고, 자기보고를 근거로 삼지 않는다.
-- **발사(sonnet/codex spawn).** 사람 게이트다 — 비용이 발생한다. 보드에서는 제목 `[사람 게이트]`로 표시한다.
+- **기준 파일 변경만 사람 결재다**(위 항목). **발사(sonnet/codex spawn)는 2026-07-28부터 조율자 재량**(ADR-021).
+  비용이 발생하므로 **왜 쐈는지를 반드시 남긴다.** 보드에서 `[조율자 판단]`으로 표시하고 인계함으로 올라온다.
 - **`Engine.cs`·`Storage.cs`·`Guardrails.cs`에 도메인 지식**(게임 용어·metricId·ollama 코드)을 넣는 것.
 - **기록 파일을 통째로 읽어 통째로 다시 쓰는 것.** `outputs/review-log.md`·`outputs/reviewer-log.md`·`docs/handoff/sessions/*`·`HUMAN-INBOX.md`·`BASELINE-CHANGES.md`는 **append만.**
   고칠 게 있으면 **새 항목으로 정정을 덧붙인다.** (이유: 저장소에 이미 깨진 한글이 박혀 있어 재작성하면 조용히 오염된다 — RULES-RATIONALE 참조)
