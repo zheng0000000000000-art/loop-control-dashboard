@@ -54,6 +54,23 @@ $unread = @($discussion.messages | Where-Object {
 # 작업이 남아 있으면 메시지가 없어도 깨운다. 메시지에만 반응하면 그건 루프가 아니라 응답이다.
 # 2026-07-27: 334분 공백 동안 할 일이 남아 있었는데 아무도 이어가지 않았다.
 # 지시큐는 작업보드다 — 사람이 태스크를 올려두면 조율자가 그것을 집어간다.
+# 도는 서버가 옛 코드면 알린다. 코드를 고치고 프로세스를 그대로 두는 실수를 하루에 세 번 했고,
+# 그중 하나는 approve_task 가 보낸 reviewSessionPid 를 옛 서버가 버려서 기록이 유실됐다.
+# 그때 나는 "세션이 도구를 안 썼다"고 잘못 읽을 뻔했다. 사람이 기억할 일이 아니다.
+# 깨우지는 않는다 - 재시작은 사람이 볼 수 있을 때 하는 편이 낫다. 대신 반드시 남긴다.
+$staleServerScript = Join-Path (Split-Path -Parent $PSCommandPath) 'check-stale-server.ps1'
+if (Test-Path $staleServerScript) {
+  $staleOut = & powershell -NoProfile -ExecutionPolicy Bypass -File $staleServerScript -TeamLoopRoot $TeamLoopRoot 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    foreach ($line in @($staleOut)) { Write-Line "$line" }
+    if (Test-Path (Join-Path (Split-Path -Parent $PSCommandPath) 'loop-log.ps1')) {
+      & powershell -NoProfile -ExecutionPolicy Bypass `
+        -File (Join-Path (Split-Path -Parent $PSCommandPath) 'loop-log.ps1') `
+        -Text "경고 · team-loop 서버가 옛 코드로 돌고 있다. 재시작해야 최근 변경이 반영된다" 2>&1 | Out-Null
+    }
+  }
+}
+
 # 보드의 좀비를 먼저 회수한다. 큐 sweep 의 거울이다 - 없으면 발사 실패마다 하나씩 쌓이고
 # boardReady 는 IN_PROGRESS 를 안 세므로 아무에게도 안 보인다.
 # 2026-07-27 실측: 실패한 발사가 태스크를 IN_PROGRESS 로 두고 10.2시간 방치돼 있었다.
