@@ -80,6 +80,18 @@ switch ($Action) {
     Invoke-Git $RepoRoot @('worktree', 'remove', '--force', $dir) | Out-Null
     Invoke-Git $RepoRoot @('branch', '-D', $branch) | Out-Null
     Invoke-Git $RepoRoot @('worktree', 'prune') | Out-Null
+    # git 이 내용은 지워도 폴더 자체를 못 지우는 경우가 있다 — 방금 끝난 세션이 그 경로를
+    # 쥐고 있으면 그렇다. 2026-07-27 첫 한 바퀴 실측에서 빈 폴더가 남았다.
+    # 안 지우면 한 바퀴마다 하나씩 쌓인다.
+    if (Test-Path $dir) {
+      try {
+        Remove-Item -LiteralPath $dir -Recurse -Force -ErrorAction Stop
+        Write-Output "removed $branch (폴더도 직접 지웠다)"
+      } catch {
+        Write-Output "removed $branch (폴더 $dir 가 남았다: $($_.Exception.Message))"
+      }
+      exit 0
+    }
     Write-Output "removed $branch"
     exit 0
   }
