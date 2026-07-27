@@ -1,17 +1,10 @@
 // WORKSTATE handoff integrity harness.
 // Checks that the current handoff record is backed by real files, hashes, and completion artifacts.
 // --workstate + --applier-log 둘 다 지정 시 fixture 격리 모드: reconciliation+malformed+blockers만 실행.
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 internal static class HandoffIntegrityCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     private static readonly HashSet<string> DoneStatuses = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -101,7 +94,7 @@ internal static class HandoffIntegrityCli
                 ["fixtureMode"] = fixtureMode,
                 ["verdict"] = "HARNESS_ERROR",
                 ["failures"] = failures, ["warnings"] = warnings,
-            }.ToJsonString(JsonOptions));
+            }.ToJsonString(HarnessJson.Options));
             return 2;
         }
 
@@ -124,7 +117,7 @@ internal static class HandoffIntegrityCli
             ["note"] = fixtureMode
                 ? "Fixture isolation mode: reconciliation+blockers only."
                 : "Full mode: changedFiles hash, completion, queue, reconciliation.",
-        }.ToJsonString(JsonOptions));
+        }.ToJsonString(HarnessJson.Options));
         return failures.Count == 0 ? 0 : 1;
     }
 
@@ -402,7 +395,7 @@ internal static class HandoffIntegrityCli
                 ["selfTest"] = "handoff-integrity-pending",
                 ["verdict"] = "PASS",
                 ["casesRun"] = cases.Length,
-            }.ToJsonString(JsonOptions));
+            }.ToJsonString(HarnessJson.Options));
             return 0;
         }
 
@@ -412,7 +405,7 @@ internal static class HandoffIntegrityCli
             ["verdict"] = "FAIL",
             ["mismatchCount"] = mismatches.Count,
             ["mismatches"] = mismatches,
-        }.ToJsonString(JsonOptions));
+        }.ToJsonString(HarnessJson.Options));
         return 1;
     }
 

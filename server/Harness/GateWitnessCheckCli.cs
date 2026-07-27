@@ -1,16 +1,10 @@
 // 게이트 매니페스트의 성공 검사마다 실패 반증 증거가 있는지 집계한다.
 // 기본 모드는 관찰만 하며, 명시적으로 요구한 게이트만 누락을 차단한다.
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
 internal static class GateWitnessCheckCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // gate-witness-check 진입점. exit 0=관찰 완료, 1=opt-in 게이트 누락, 2=입력 또는 실행 오류.
     internal static int Run(string[] args)
@@ -44,7 +38,7 @@ internal static class GateWitnessCheckCli
                 ["harness"] = "gate-witness-check",
                 ["gates"] = reports,
                 ["totalUnwitnessed"] = totalUnwitnessed,
-            }.ToJsonString(JsonOptions));
+            }.ToJsonString(HarnessJson.Options));
             return blocking ? 1 : 0;
         }
         catch (Exception ex)
@@ -82,7 +76,7 @@ internal static class GateWitnessCheckCli
         {
             ["harness"] = "gate-witness-count-output-fixture",
             ["internalNegativeCases"] = count,
-        }.ToJsonString(JsonOptions));
+        }.ToJsonString(HarnessJson.Options));
         return 0;
     }
 

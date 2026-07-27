@@ -1,16 +1,10 @@
 // 실행자 산출물 디렉터리의 처분 기록과 반입 게이트 연결을 검증한다.
 // 기록 부재와 기록·실체 불일치를 디렉터리별 위반으로 집계한다.
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
 internal static class LaunchDispositionCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // launch-disposition 진입점. exit 0=위반 없음, 1=위반 있음, 2=입력 또는 실행 오류.
     internal static int Run(string[] args)
@@ -40,7 +34,7 @@ internal static class LaunchDispositionCli
                 ["launchCount"] = reports.Count,
                 ["violations"] = violations,
                 ["launches"] = reports,
-            }.ToJsonString(JsonOptions));
+            }.ToJsonString(HarnessJson.Options));
             return violations == 0 ? 0 : 1;
         }
         catch (Exception ex)

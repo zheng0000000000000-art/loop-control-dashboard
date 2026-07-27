@@ -1,17 +1,10 @@
 // 핵심 상태·큐 문서가 비원자적 쓰기로 조용히 잘렸는지 검사하는 하네스 CLI.
 // STATUS.md·SONNET-QUEUE.md·CliRouter.cs가 각각 끝이 잘린 채 발견됐다(FAIL-2026-011).
 // .cs는 빌드가 잡지만 .md/.json은 잡아주는 것이 없어 WORKSTATE.json이 잘리면 상태 원본이 조용히 소실된다.
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 internal static class DocIntegrityCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // 잘리면 피해가 큰 핵심 파일들.
     private static readonly string[] CriticalJson =
@@ -91,7 +84,7 @@ internal static class DocIntegrityCli
                 ["files"] = results,
                 ["note"] = "비원자적 쓰기로 조용히 잘린 파일을 검출한다. 복구는 사람·조율자의 몫.",
             };
-            Console.WriteLine(report.ToJsonString(JsonOptions));
+            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
             return broken == 0 ? 0 : 1;
         }
         catch (Exception ex)

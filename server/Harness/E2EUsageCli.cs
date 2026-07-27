@@ -1,15 +1,8 @@
 // E2E 실사용 시나리오 하네스 — 인프로세스, 상태 변경 없음.
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 internal static class E2EUsageCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // e2e-usage CLI 진입점. 6개 시나리오를 인프로세스로 실행하고 JSON 결과를 출력한다. failCount>0이면 exit code 2.
     internal static int Run(string[] args)
@@ -42,7 +35,7 @@ internal static class E2EUsageCli
             {
                 ["scenarios"] = scenarios,
                 ["failCount"] = failCount,
-            }.ToJsonString(JsonOptions));
+            }.ToJsonString(HarnessJson.Options));
 
             return failCount > 0 ? 2 : 0;
         }
@@ -53,7 +46,7 @@ internal static class E2EUsageCli
                 ["error"] = error.Message,
                 ["scenarios"] = new JsonArray(),
                 ["failCount"] = -1,
-            }.ToJsonString(JsonOptions));
+            }.ToJsonString(HarnessJson.Options));
             return 2;
         }
     }

@@ -39,6 +39,22 @@
 
 ## 대기 중
 
+- [~] **`.NET 8` 하네스 JSON 옵션 통합 (NET8-01-R1, 옵션 a)** — 실행 끝, 판정 대기
+  - 한 것: `server/Harness/` **18개** 파일의 개별 `JsonSerializerOptions`를 `HarnessJson.Options` 한 벌로.
+    `TypeInfoResolver = new DefaultJsonTypeInfoResolver()` 추가. `using`은 파일마다 판단해
+    **5개 파일이 `System.Text.Json`을 유지**(앞 시도가 여기서 깨졌다 — 지시서가 지목한 2개 + 발견 3개).
+  - 확인한 것(컨테이너 실측):
+    - 수정 전 `.NET 8` `hs-scan` = **2** (`TypeInfoResolver` 미지정 예외) → 수정 후 = **1**(기대값)
+    - 하네스 22개 exit code 표가 **`.NET 8`과 `.NET 10`에서 한 줄도 다르지 않다**
+    - 양쪽 컨테이너 `build` = 0 warning / 0 error
+  - **판정자가 볼 것 둘**:
+    1. **이 커밋은 코덱스 영토(`server/Harness/`)를 직접 건드렸다.** `TERRITORY-EXCEPTIONS.json`에
+       sha 등재가 필요하다. **작성자가 등재하면 자기승인이라 안 했다.**
+    2. **`gates.yml` matrix에 `"8.0"`은 아직 안 넣었다.** 컨테이너에서 POST-COMMIT `PASS 22/22`를
+       직접 보이지 못했다(복사본에 `.git`·`outputs/` 없음). CI가 초록으로 도착해야 켠다 — FAIL-2026-010.
+  - 보고: `docs/qa/gate-witness/NET8-01-R1.md` (자진 신고 3건 있음)
+
+
 > **순서는 사람이 정한다.** 2026-07-27 사용자 지시로 작업보드를 맨 위로 올렸다 —
 > *"작업보드 쪽 먼저 하는 게 확실하지 않을까?"*
 

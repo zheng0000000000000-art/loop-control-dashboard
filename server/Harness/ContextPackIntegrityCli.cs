@@ -1,18 +1,12 @@
 // 지시서 Context Pack의 참조 파일 존재와 해시 일치를 검사하는 하네스 CLI.
 // 해시 갱신이나 스탬핑 없이 선언된 입력만 읽어 검증한다.
 using System.Security.Cryptography;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 internal static class ContextPackIntegrityCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // context-pack-integrity 진입점이다. exit 0=정상 또는 skipped만 있음, 1=missing/stale, 2=사용법 또는 하네스 오류.
     internal static int Run(string[] args)
@@ -71,7 +65,7 @@ internal static class ContextPackIntegrityCli
                 ["note"] = "Read-only check. Context Pack hashes are supplied by directive authors, not by this harness.",
             };
 
-            Console.WriteLine(report.ToJsonString(JsonOptions));
+            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
             return failureCount == 0 ? 0 : 1;
         }
         catch (Exception ex)
@@ -116,7 +110,7 @@ internal static class ContextPackIntegrityCli
             ["harness"] = "context-pack-integrity",
             ["mode"] = "emit-hashes",
             ["directives"] = reports,
-        }.ToJsonString(JsonOptions));
+        }.ToJsonString(HarnessJson.Options));
         return reports.OfType<JsonObject>()
             .SelectMany(report => (report["requiredInputs"] as JsonArray)?.OfType<JsonObject>() ?? [])
             .Any(item => item["exists"]?.GetValue<bool>() != true) ? 1 : 0;

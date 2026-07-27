@@ -1,16 +1,9 @@
 // state-transition 활성 경로에서 prepare/apply로 정렬되지 않은 옛 단일-샷 호출을 탐지한다.
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 internal static class StateTransitionCallsiteCheckCli
 {
-    private static readonly JsonSerializerOptions WriteOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // 활성 경로로 간주하는 파일 확장자 — 역사적 증거 파일은 allowlist로 면제.
     private static readonly string[] ActiveExtensions =
@@ -33,7 +26,7 @@ internal static class StateTransitionCallsiteCheckCli
             var root = GitTools.FindRepoRoot();
             var result = ScanCallsites(root);
 
-            Console.WriteLine(result.ToJsonString(WriteOptions));
+            Console.WriteLine(result.ToJsonString(HarnessJson.Options));
             return result["legacyCallsiteCount"]?.GetValue<int>() == 0 ? 0 : 1;
         }
         catch (Exception ex)

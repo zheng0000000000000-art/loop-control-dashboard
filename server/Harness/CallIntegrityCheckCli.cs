@@ -1,17 +1,10 @@
 // 리팩토링으로 이동한 함수의 정의 위치와 호출부 정합성을 확인하는 하네스 CLI.
 // DI-R-01~04 수작업 QA를 기본 룰로 고정하고, 필요하면 인자로 단일 심볼도 검사한다.
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 internal static class CallIntegrityCheckCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // call-integrity-check 진입점. exit 0=정의·호출 정합, 1=불일치, 2=사용법 오류.
     internal static int Run(string[] args)
@@ -49,7 +42,7 @@ internal static class CallIntegrityCheckCli
                 ["rules"] = results,
                 ["note"] = "Checks moved-method definitions, qualified call sites, and stale unqualified calls in the old owner file.",
             };
-            Console.WriteLine(report.ToJsonString(JsonOptions));
+            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
             return failures == 0 ? 0 : 1;
         }
         catch (Exception ex)

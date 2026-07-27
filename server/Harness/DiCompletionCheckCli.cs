@@ -2,18 +2,12 @@
 // 결과 증거는 outputs/gates 아래 JSON으로 남겨 다음 검수자가 재확인할 수 있게 한다.
 using System.Diagnostics;
 using System.Text;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 internal static class DiCompletionCheckCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // di-completion-check 진입점이다. exit 0=모든 기대 exit 일치, 1=불일치 또는 fail-closed.
     internal static int Run(string[] args)
@@ -82,7 +76,7 @@ internal static class DiCompletionCheckCli
             report["note"] = "Pass/fail is decided by expectedExit versus actual exit code. stdout/stderr are diagnostic evidence.";
 
             WriteEvidence(root, taskId, report);
-            Console.WriteLine(report.ToJsonString(JsonOptions));
+            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
             return failures.Count == 0 ? 0 : 1;
         }
         catch (JsonException ex)
@@ -214,7 +208,7 @@ internal static class DiCompletionCheckCli
             ["generated"] = DisplayPath(root, outputPath),
             ["manifest"] = DisplayPath(root, manifestPath),
             ["unlistedCount"] = unlisted.Count,
-        }.ToJsonString(JsonOptions));
+        }.ToJsonString(HarnessJson.Options));
         return 0;
     }
 
@@ -302,7 +296,7 @@ internal static class DiCompletionCheckCli
         report["failureCount"] = 1;
         report["failures"] = new JsonArray(Failure("", code, message));
         WriteEvidence(root, taskId, report);
-        Console.Error.WriteLine(report.ToJsonString(JsonOptions));
+        Console.Error.WriteLine(report.ToJsonString(HarnessJson.Options));
         return 1;
     }
 
@@ -329,7 +323,7 @@ internal static class DiCompletionCheckCli
         report["newestSource"] = freshness.NewestSource;
         report["newestSourceWrittenAt"] = freshness.NewestSourceWrittenAt;
         WriteEvidence(root, taskId, report);
-        Console.Error.WriteLine(report.ToJsonString(JsonOptions));
+        Console.Error.WriteLine(report.ToJsonString(HarnessJson.Options));
         return 2;
     }
 
@@ -340,7 +334,7 @@ internal static class DiCompletionCheckCli
         Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, $"{SanitizeFileName(taskId)}.gate.json");
         report["evidencePath"] = DisplayPath(root, path);
-        File.WriteAllText(path, report.ToJsonString(JsonOptions), new UTF8Encoding(false));
+        File.WriteAllText(path, report.ToJsonString(HarnessJson.Options), new UTF8Encoding(false));
     }
 
     // 문서화된 CLI 인자만 값 규칙에 맞춰 해석한다.
@@ -546,7 +540,7 @@ internal static class DiCompletionCheckCli
                 ["critical"] = HarnessRegistry.RegisteredNames.Contains(command, StringComparer.OrdinalIgnoreCase)
                     || command is "state-transition" or "projection" or "measure",
             }).ToArray()),
-        }.ToJsonString(JsonOptions));
+        }.ToJsonString(HarnessJson.Options));
         return 0;
     }
 

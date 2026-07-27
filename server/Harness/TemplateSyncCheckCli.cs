@@ -2,17 +2,10 @@
 // 실제 저장소는 건드리지 않고 temp copy에서 dispatch-executor를 실행한다.
 using System.Diagnostics;
 using System.Text;
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 internal static class TemplateSyncCheckCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // template-sync-check 진입점. exit 0=템플릿 적용 후 빌드 성공, 1=동기화 실패, 2=하네스 오류.
     internal static int Run(string[] args)
@@ -52,7 +45,7 @@ internal static class TemplateSyncCheckCli
                 ["buildStderrTail"] = Tail(build.Stderr, 1200),
                 ["note"] = "Applies dispatch templates in a temp copy and uses build exit code as the source of truth.",
             };
-            Console.WriteLine(report.ToJsonString(JsonOptions));
+            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
             return ok ? 0 : 1;
         }
         catch (Exception ex)

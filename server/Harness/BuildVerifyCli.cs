@@ -1,17 +1,10 @@
 // dotnet build 종료 코드를 정본으로 삼고 임시 경로에서 실행하는 빌드 검증 하네스.
 using System.Diagnostics;
 using System.Text;
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 internal static class BuildVerifyCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // build-verify 진입점. exit 0=빌드 성공, 1=빌드 실패, 2=하네스 오류.
     internal static int Run(string[] args)
@@ -83,7 +76,7 @@ internal static class BuildVerifyCli
                 ["note"] = "PASS/FAIL is decided only by dotnet build exit code. Text is diagnostic context.",
             };
 
-            Console.WriteLine(report.ToJsonString(JsonOptions));
+            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
             return result.ExitCode == 0 ? 0 : 1;
         }
         catch (Exception ex)

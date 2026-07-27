@@ -1,17 +1,10 @@
 // 실행자의 자기보고(문서의 "완료" 주장)를 실체(코드·커밋)와 대조하는 하네스 CLI.
 // FIX-01은 문서가 완료를 주장하는데 코드에 심볼이 없는 상태로 3회 반복됐다. 그 수작업 대조를 코드로 고정한다.
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 internal static class ClaimCheckCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // claim-check 진입점. exit 0=주장과 실체 일치, 1=불일치 존재, 2=오류.
     internal static int Run(string[] args)
@@ -75,7 +68,7 @@ internal static class ClaimCheckCli
                 ["claims"] = claims,
                 ["note"] = "주장과 실체의 대조만 한다. 문서 정정은 실행자·조율자·사람의 몫이다.",
             };
-            Console.WriteLine(report.ToJsonString(JsonOptions));
+            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
             return mismatch == 0 ? 0 : 1;
         }
         catch (Exception ex)

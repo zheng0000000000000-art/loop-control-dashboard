@@ -1,18 +1,11 @@
 // 지식 승격 심사(HS-GATE)의 트리거를 기계가 탐지하는 하네스 CLI.
 // 점수화(판단)는 하지 않는다 — 그건 skills/common/hs-gate.md(LLM)의 몫이다.
 using System.Globalization;
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 internal static class HsScanCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // 실패 '메커니즘'이 아니라 분류 꼬리표라 반복해도 승격 신호가 아니다(노이즈 차단).
     private static readonly HashSet<string> MetaClasses = new(StringComparer.OrdinalIgnoreCase)
@@ -86,7 +79,7 @@ internal static class HsScanCli
                     ? "HS-GATE 수행 의무 — skills/common/hs-gate.md 절차로 점수화 후 HS-CANDIDATES.md에 기록"
                     : "트리거 없음 — 이번 회차 심사 불요",
             };
-            Console.WriteLine(report.ToJsonString(JsonOptions));
+            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
             return triggered ? 1 : 0;
         }
         catch (Exception ex)

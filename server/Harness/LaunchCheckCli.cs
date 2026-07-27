@@ -1,17 +1,11 @@
 // 발사 프롬프트 전송 증거의 해시와 replay 이벤트 수를 검사하는 하네스 CLI.
 // 모델 출력이 아니라 CLI가 되돌린 user 메시지 바이트의 무결성만 판정한다.
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 internal static class LaunchCheckCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     private static readonly Regex Sha256Pattern = new("^[0-9a-fA-F]{64}$", RegexOptions.Compiled);
 
@@ -352,7 +346,7 @@ internal static class LaunchCheckCli
             ["note"] = "This verdict proves only byte-level transport integrity between payload and CLI replay.",
         };
 
-        Console.WriteLine(report.ToJsonString(JsonOptions));
+        Console.WriteLine(report.ToJsonString(HarnessJson.Options));
         return valid ? 0 : 1;
     }
 

@@ -2,17 +2,10 @@
 // raw git status는 줄바꿈 같은 표현 차이만으로 dirty가 되어 발사 게이트를 영구 잠근다(FAIL-2026-010).
 using System.Diagnostics;
 using System.Text;
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 internal static class GateCleanCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // gate-clean 진입점. exit 0=통과(실내용 변경 0), 1=실내용 변경 존재, 2=오류.
     internal static int Run(string[] args)
@@ -60,7 +53,7 @@ internal static class GateCleanCli
             {
                 ["error"] = "검사 대상 경로가 없습니다.",
                 ["missingPaths"] = new JsonArray(missingPaths.Select(path => (JsonNode)path).ToArray()),
-            }.ToJsonString(JsonOptions));
+            }.ToJsonString(HarnessJson.Options));
             return 2;
         }
 
@@ -123,7 +116,7 @@ internal static class GateCleanCli
                 ? $"표현만 다른 파일 {representationOnly}건 — 어떤 도구가 파일을 되쓰고 있다(FAIL-2026-010)."
                 : null,
         };
-        Console.WriteLine(report.ToJsonString(JsonOptions));
+        Console.WriteLine(report.ToJsonString(HarnessJson.Options));
         return contentDirty == 0 ? 0 : 1;
     }
 
@@ -148,7 +141,7 @@ internal static class GateCleanCli
             {
                 ["error"] = "status fixture 파일이 없습니다.",
                 ["missingPath"] = fixtureArg,
-            }.ToJsonString(JsonOptions));
+            }.ToJsonString(HarnessJson.Options));
             return 2;
         }
 
@@ -161,7 +154,7 @@ internal static class GateCleanCli
             ["statusFixture"] = Path.GetRelativePath(repoRoot, full).Replace('\\', '/'),
             ["statusLength"] = porcelain.Length,
             ["gate"] = dirty ? "DIRTY" : "CLEAN",
-        }.ToJsonString(JsonOptions));
+        }.ToJsonString(HarnessJson.Options));
         return dirty ? 1 : 0;
     }
 
@@ -234,7 +227,7 @@ internal static class GateCleanCli
             ["caseCount"] = cases.Length,
             ["mismatchCount"] = mismatchCount,
             ["cases"] = results,
-        }.ToJsonString(JsonOptions));
+        }.ToJsonString(HarnessJson.Options));
         return mismatchCount == 0 ? 0 : 1;
     }
 }

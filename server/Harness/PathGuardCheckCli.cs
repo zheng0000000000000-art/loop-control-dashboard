@@ -1,16 +1,9 @@
 // 경로 root 검사가 separator-bounded인지 확인하는 하네스 CLI.
 // sibling-prefix escape 회귀(FAIL-2026-006/007)를 내장 케이스와 직접 입력으로 검증한다.
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 internal static class PathGuardCheckCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // path-guard-check 진입점. exit 0=모든 케이스 기대값 일치, 1=경계 실패, 2=사용법 오류.
     internal static int Run(string[] args)
@@ -50,7 +43,7 @@ internal static class PathGuardCheckCli
                 ["cases"] = results,
                 ["note"] = "Root containment must be full path equality or root plus directory separator, not raw prefix.",
             };
-            Console.WriteLine(report.ToJsonString(JsonOptions));
+            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
             return failures == 0 ? 0 : 1;
         }
         catch (Exception ex)

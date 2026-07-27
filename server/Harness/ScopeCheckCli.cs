@@ -1,8 +1,6 @@
 // 지시서 allowlist와 파일 claim을 git 변경분에 대조하는 읽기 전용 하네스.
 // 범위 밖 변경과 활성 claim 충돌을 보고만 하고 파일·프로세스는 수정하지 않는다.
 using System.Diagnostics;
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
@@ -19,11 +17,6 @@ internal static class ScopeCheckCli
         "**/*.pid",
     ];
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // CLI 인자를 해석해 allowlist 대조와 claim 충돌 검사를 실행한다.
     internal static int Run(string[] args)
@@ -95,7 +88,7 @@ internal static class ScopeCheckCli
                 ["note"] = "Read-only check. Out-of-scope files and active claim conflicts must be handled by the orchestrator or implementer.",
             };
 
-            Console.WriteLine(report.ToJsonString(JsonOptions));
+            Console.WriteLine(report.ToJsonString(HarnessJson.Options));
             return outOfScope.Count == 0 && conflictCount == 0 ? 0 : 1;
         }
         catch (Exception ex)

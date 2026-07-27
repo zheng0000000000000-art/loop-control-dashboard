@@ -1,16 +1,9 @@
 // 프로젝트 조회 API의 엣지 입력이 500이 아니라 계약된 4xx로 거부되는지 확인한다.
 // 실행 중인 서버를 대상으로 GET만 수행하며, 상태를 바꾸지 않는다.
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 internal static class ProjectApiEdgeCheckCli
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
 
     // project-api-edge-check 진입점. exit 0=모든 HTTP 상태 기대값 일치, 1=계약 위반, 2=사용법/실행 오류.
     internal static int Run(string[] args)
@@ -57,7 +50,7 @@ internal static class ProjectApiEdgeCheckCli
                 ["verdict"] = failureCount == 0 ? "PASS" : "FAIL",
                 ["checks"] = results,
                 ["note"] = "Missing project read APIs must return 4xx, not 5xx. This harness performs GET requests only.",
-            }.ToJsonString(JsonOptions));
+            }.ToJsonString(HarnessJson.Options));
 
             return failureCount == 0 ? 0 : 1;
         }
@@ -67,7 +60,7 @@ internal static class ProjectApiEdgeCheckCli
             {
                 ["harness"] = "project-api-edge-check",
                 ["error"] = error.Message,
-            }.ToJsonString(JsonOptions));
+            }.ToJsonString(HarnessJson.Options));
             return 2;
         }
     }
