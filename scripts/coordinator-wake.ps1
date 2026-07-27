@@ -31,7 +31,11 @@ param(
   [int]$MaxChain          = 20,
   [string[]]$ActiveStatuses = @('TODO','READY','IN_PROGRESS','REVIEW','BLOCKED'),
   # 이 표식으로 시작하는 보드 태스크는 사람만 할 수 있다. 실행자가 안 집는다.
-  [string]$HumanGateMarker = '[사람 게이트]',
+  # 조율자가 판단할 일. 세션이 임의로 집지 않는다 - 비용이 걸린 판단이기 때문이다.
+  # 2026-07-28 부터 사람 결재가 아니라 조율자 재량이다(ADR-021). 막지 않고 인계함으로 올린다.
+  [string]$HumanGateMarker = '[조율자 판단]',
+  # 예전 표식. 이미 보드에 올라간 것들이 있어 같이 인식한다.
+  [string]$LegacyGateMarker = '[사람 게이트]',
   # 25분이면 24분 공백을 "살아 있다"로 읽는다(2026-07-27 실측: 11:15 커밋 후 11:36 판정이 alive).
   # 깨우기는 알림보다 싸므로 짧게 잡는다. 조율자가 도는 중이면 어차피 하트비트가 갱신된다.
   [int]$StaleMinutes      = 10,
@@ -131,7 +135,7 @@ if (Test-Path $BoardPath) {
     # 제목이 사람 게이트 표식으로 시작하는 것도 안 집는다. 발사와 approve/reject 와 기준 파일
     # 변경은 사람 결재다(CLAUDE.md). 보드에 올려 폰에서 보이게는 하되 실행자가 집으면
     # 못 하고 나와서 깨우기 한 번이 헛돈다. 보이는 것과 집히는 것을 가른다.
-    $boardReady = @($tasks | Where-Object { $_.status -and (@('TODO','READY') -contains $_.status) -and (-not $_.blocked) -and (-not (($_.title -as [string]).StartsWith($HumanGateMarker))) -and (@(@($_.dependsOnTaskIds) | Where-Object { $_ -and ($doneIds -notcontains $_) }).Count -eq 0) } | Sort-Object { [int]$_.priority })
+    $boardReady = @($tasks | Where-Object { $_.status -and (@('TODO','READY') -contains $_.status) -and (-not $_.blocked) -and (-not (($_.title -as [string]).StartsWith($HumanGateMarker))) -and (-not (($_.title -as [string]).StartsWith($LegacyGateMarker))) -and (@(@($_.dependsOnTaskIds) | Where-Object { $_ -and ($doneIds -notcontains $_) }).Count -eq 0) } | Sort-Object { [int]$_.priority })
   } catch { $pendingWork = 0 }
 }
 
@@ -182,6 +186,19 @@ if ($inboxPending -eq 0 -and $unread.Count -eq 0 -and $boardReady.Count -eq 0 -a
 # 조율자 인계함에 안 다뤄진 항목이 있으면 그것이 최우선이다. 막혀서 올라온 것이므로
 # 그대로 두면 그 줄기 전체가 선다. 2026-07-28: 인계함이 방아쇠가 아니어서, 막힘이 쌓여도
 # 사람이 말을 걸어야 조율자가 읽었다. 스스로 깨우는 고리가 여기서 끊겨 있었다.
+# 조율자 판단이 필요한 보드 태스크를 인계함으로 올린다. 건너뛰기만 하면 아무도 결정하지 않고
+# 보드에 영원히 남는다 - 2026-07-27 territory-check 가 그렇게 875분 방치됐다.
+# 같은 태스크로 두 번 올리지 않는다. 인계함에 이미 그 id 가 있으면 넘어간다.
+$decisionTasks = @($tasks | Where-Object { $_.status -and (@('TODO','READY') -contains $_.status) -and ((($_.title -as [string]).StartsWith($HumanGateMarker)) -or (($_.title -as [string]).StartsWith($LegacyGateMarker))) })
+foreach ($decisionTask in $decisionTasks) {
+  $already = (Test-Path $InboxPath) -and (Select-String -Path $InboxPath -Pattern ([regex]::Escape($decisionTask.id)) -Quiet)
+  if ($already) { continue }
+  $stampNow = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $InboxPath) | Out-Null
+  Add-Content -Path $InboxPath -Encoding UTF8 -Value "- [ ] $stampNow decision-needed : $($decisionTask.id) $($decisionTask.title)"
+  Write-Line "decision-queued $($decisionTask.id)"
+}
+
 $inboxPending = 0
 if (Test-Path $InboxPath) {
   $inboxPending = @(Select-String -Path $InboxPath -Pattern '^\s*-\s\[\s\]\s' -AllMatches).Count
@@ -338,7 +355,10 @@ $reviewPrompt = @'
 지켜라.
 - **네가 실행한 것은 네가 승인하지 않는다.** 승인은 실행한 세션이 아닌 판정 세션의 일이다.
   이 세션이 방금 실행도 했다면 승인하지 말고 [~] 로 두고 다음 판정 세션에 넘겨라.
-- **발사(sonnet/codex spawn)는 하지 않는다.** 비용이 발생한다. 사람 게이트다.
+- **발사(sonnet/codex spawn)는 조율자 재량이다**(2026-07-28, ADR-021). 비용이 발생하므로
+  왜 쐈는지와 무엇을 기대했는지를 반드시 남긴다. 근거 없이 쏘지 마라.
+  보드에서 [조율자 판단] 이나 [사람 게이트] 로 시작하는 태스크는 네가 임의로 집지 마라 -
+  그건 조율자가 인계함에서 판단한다.
 - 기준 파일(blueprint.json, workflow-definition.json)이나 측정 코드를 고쳐서 통과시키지 마라.
   **여기만은 사람 결재다.** 측정 기준을 스스로 고쳐 통과하면 나머지 측정이 전부 의미를 잃는다.
 '@
@@ -380,7 +400,10 @@ $executePrompt = @'
   네가 직접 밀면 브랜치가 엉킨다.
 - **네가 한 일을 네가 승인하지 마라.** [~] 까지만 옮기고 판정 세션에 넘긴다.
   approve/verify_task/import 는 판정 세션의 일이다(ADR-020).
-- **발사(sonnet/codex spawn)는 하지 않는다.** 비용이 발생한다. 사람 게이트다.
+- **발사(sonnet/codex spawn)는 조율자 재량이다**(2026-07-28, ADR-021). 비용이 발생하므로
+  왜 쐈는지와 무엇을 기대했는지를 반드시 남긴다. 근거 없이 쏘지 마라.
+  보드에서 [조율자 판단] 이나 [사람 게이트] 로 시작하는 태스크는 네가 임의로 집지 마라 -
+  그건 조율자가 인계함에서 판단한다.
   보드에서 제목이 [사람 게이트] 로 시작하는 태스크는 집지 마라.
 - 확신이 없으면 추측으로 진행하지 말고 대화 채널에 질문을 남기고 멈춰라.
 '@
