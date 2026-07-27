@@ -63,33 +63,6 @@
 
 ## 새로 알게 된 일 (다음 세션이 판단)
 
-- **보드 태스크(`tsk_eef8545b5a6ae3376dc8`, review-block 안내가 EXTERNAL_AGENT를 모른다)가
-  REVIEW까지 올라갔다 — 이번엔 납품 게이트 막다름 없이 끝났다.** (2026-07-28, 실행 세션)
-  team-loop 저장소 `.team-loop-worktrees/tsk_eef8545b5a6ae3376dc8`(격리 워크트리)에서
-  `src/review-block.js`의 `clearedBy`(AGENT 막다름 안내)에 세 번째 탈출로로
-  "EXTERNAL_AGENT로 옮겨 손으로 verify"를 추가하고, `NO_PROGRAM_EVIDENCE`로 여전히
-  거절될 수 있음(증거 없이 통과하는 길이 아님)을 명시했다. `agentGated`는 그대로
-  `executionMode === 'AGENT'`만 본다(EXTERNAL_AGENT를 같이 묶지 않음 — 이 막다름 자체가
-  거기선 안 생기기 때문). `deliveryGate.detail`의 비-AGENT 분기가 무조건 "HUMAN 모드"라고
-  잘못 말하던 것도 실제 mode를 반영하게 고쳤다. 시험 2개 추가(`test/review-block.test.js`):
-  AGENT 안내가 EXTERNAL_AGENT·NO_PROGRAM_EVIDENCE를 모두 언급하는지, EXTERNAL_AGENT
-  태스크는 이 막다름이 안 생긴다는 것(`applies=false`, `failureKind !== EXECUTOR_RESULT_MISSING`)과
-  실제 프로그램 증거가 있는 hand-run verify가 `applyAgentDeliveryGate`를 통과하는 것.
-  `npm test` 전체 523개 중 522 pass, 1 fail(`test/injection-readiness.test.js`,
-  `data/failure-cases.json` ENOENT) — `git stash`로 이 diff를 뗀 뒤 같은 파일만 재실행해도
-  동일하게 실패해 이번 변경과 무관함을 직접 재현했다(기존에도 여러 번 관찰된 격리
-  워크트리 인프라 결손). `git diff --check` 통과, `allowedPaths`(`src/review-block.js`,
-  `test/**`) 밖 변경 없음.
-  **막혔던 원인은 없었다**: `show_task`가 처음부터 `executionMode: EXTERNAL_AGENT`로 잡혀
-  있었다(태스크 지시서가 "claim_task 쓰지 마라, HUMAN으로 일해라"라고 했지만 이미
-  EXTERNAL_AGENT였다). `submit_task_result`는 "서버 워크트리에 non-MCP 변경이 이미 있다"로
-  거절했다(직접 파일을 고쳐서 서버 쪽 워크트리와 어긋난 것으로 보임 — MCP 파일 제출 없이
-  바로 `verify_task`를 부르니 온디스크 변경을 그대로 검증해 `PASSED`, 이어 `request_review_task`
-  가 그대로 `REVIEW`로 넘어갔다. `submit_task_result` 실패 자체는 막다른 길이 아니라 우회로가
-  있었던 것으로 보이나, 이 실패 사유("non-MCP 변경")가 무엇을 정확히 가리키는지는 이 세션이
-  더 파지 않았다 — 다음에 같은 오류가 재현되면 `verify_task` 직행이 항상 되는지 확인이 필요하다.
-  승인은 판정 세션의 일이다(ADR-020) — 이 세션은 승인하지 않았다.
-
 - **`tsk_8cf42e5c5d69d264282a`(.NET 8 CI 다리, [사람 게이트])가 발사됐다가 검증 실패로 멈춰 있다.**
   (2026-07-27 발견, 조율자) 12:22:52 KST 발사(비용 $0.39) → 12:25:41 KST `VERIFICATION_FAILED` →
   이후 자동 재시도 없이 `IN_PROGRESS`/`IDLE`로 정지. 원인 셋을 `show_task`로 직접 확인:
@@ -181,6 +154,26 @@
   코드는 승인 기준을 충족했으나 보드를 DONE으로 옮길 MCP 수단이 없다.
 
 ## 끝난 것
+
+- [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
+  판정 통과(2026-07-28, 실행 세션 `20260728-030502`와 다른 판정 세션 `20260728-031737`).
+  **재실행해 대조한 것(자기보고 아님)**: 격리 워크트리(`.team-loop-worktrees/tsk_eef8545b5a6ae3376dc8`)
+  에서 `git diff`로 `src/review-block.js`·`test/review-block.test.js`를 직접 Read — `clearedBy`에
+  EXTERNAL_AGENT 세 번째 탈출로와 `NO_PROGRAM_EVIDENCE` 언급 확인, `deliveryGate.detail`이 실제
+  mode를 반영, `agentGated`는 여전히 `executionMode === 'AGENT'`만 봄(EXTERNAL_AGENT 안 묶임)을
+  코드에서 확인. `npm test` 이 판정 세션이 직접 재실행 → `tests 523, pass 522, fail 1`(자기보고와
+  정확히 일치). 실패 1건(`test/injection-readiness.test.js`, `data/failure-cases.json` ENOENT)은
+  `git stash`로 이 diff를 뗀 뒤 같은 파일만 재실행해도 동일하게 실패함을 직접 재현해 이번 변경과
+  무관함을 확인(격리 워크트리 인프라 결손, 기존에도 여러 번 관찰됨). `git diff --check` 통과,
+  `git status --short`로 `allowedPaths`(`src/review-block.js`, `test/**`) 밖 변경 없음 확인.
+  완료 조건 6개 전부 충족.
+  **지표는 만족했으나 목적은 미달인 부분**: 없음.
+  **막힌 지점 해소 경과**: `show_task`가 처음부터 `executionMode: EXTERNAL_AGENT`로 잡혀 있어
+  실행 세션이 우려했던 "claim_task로 AGENT 전환" 문제는 애초에 발생하지 않았다. `verify_task`는
+  이 판정 세션이 재실행해도 "Verification requires an IN_PROGRESS task"로 거절(REVIEW 상태에는
+  안 먹는 기존 한계와 동일) — 승인 판단은 위 직접 재현으로 대체했다.
+  승인: `mcp__team-loop__approve_task`로 이 판정 세션이 처리(ADR-020, 실행과 다른 세션) — 커밋
+  `0c6263f`(`Merge task/tsk_eef8545b5a6ae3376dc8`)로 team-loop main에 병합, 태스크 `DONE`/`archived` 확인.
 
 - [x] **CLI 도 EXTERNAL_AGENT 를 안 덮게 한다 (team-loop, `tsk_1c1cac713df07887931d`)** — 판정
   통과(2026-07-28, 실행 세션 `20260728-023454`와 다른 판정 세션 `20260728-030132`). team-loop
