@@ -63,6 +63,44 @@
 
 ## 새로 알게 된 일 (다음 세션이 판단)
 
+- **team-loop 보드 태스크(`tsk_1d8eb8f26ff6124bd476`, 경매장 밸런스 게이트 음성 사례)는 코드는 끝났는데
+  같은 부류의 격리 워크트리 인프라 결손으로 `verify_task`가 FAILED다.** (2026-07-28, 실행 세션)
+  **한 일(완료 기준 6개 실측 확인)**: `examples/balance/broken-blind-risk-auction-economy.json` 신설 —
+  `unknown-auction-economy.json`(안 건드림, `git diff` 없음 확인)과 같은 metrics/parameters를 쓰되
+  `baseline.information.blindValueErrorRate`만 0으로 깨서(블라인드 구매의 리스크 제거 →
+  "Keep blind play risky" 목적 직접 위반) `blindTransactionRoiMean`이 20.24로 상한 14를 넘게 만들었다.
+  `mode: evaluate`로 고정했다 — `tune` 모드는 파라미터 공간을 탐색해 위반을 스스로 지워버릴 수 있어
+  음성 고정 사례에 안 맞는다(이번에 확인). `test/balance-gate-examples.test.js` 신설 — (1)
+  `unknown-auction-economy.json`(evaluate)이 `passed:true, violations:0`인 것과 (2) 새 음성 사례가
+  `exit 1, passed:false, violations>=1, failedMetrics`에 `blindTransactionRoiMean`이 20.24로
+  "above 14"라 걸렸다는 것까지 출력에 드러남을 둘 다 단언. 로컬(메인 트리) `npm test` 직접 재실행 →
+  `tests 525, pass 525`(기존 523 + 신설 2). `git diff --check` 통과, `git status --short`로
+  allowedPaths(`examples/balance/**`, `test/**`, `tools/verification/check-balance-gate.mjs`) 밖
+  변경 없음(작업 중 라이브 서버가 재직렬화한 `data/harnesses.json`·`data/skills.json`·`data/wiki.json`은
+  `git checkout --`로 원복해 트리를 깨끗이 했다).
+  **막힌 지점(직접 진단, 추정 아님)**: `verify_task`가 `.team-loop-worktrees/tsk_1d8eb8f26ff6124bd476`에서
+  `node --test`를 돌리며 `525개 중 524 pass, 1 fail` — 실패는 `test/injection-readiness.test.js:50`,
+  `ENOENT: data/failure-cases.json`. 이 격리 워크트리에서 `git ls-files data/` → `.gitkeep`·
+  `harnesses.json`·`skills.json`·`wiki.json`만 나오고 `failure-cases.json`은 애초에 git 추적 대상이
+  아니다 — 메인 트리에서 `git check-ignore -v data/failure-cases.json` → `.gitignore:1:data/*.json`에
+  걸림을 확인했다. 즉 이 파일은 **라이브 서버가 런타임에 쓰는 gitignore 파일**이라 신선한 `git worktree`
+  체크아웃에는 원천적으로 없다 — 이번 태스크의 diff와 무관한, 기존에 여러 번 기록된 격리 워크트리
+  인프라 결손(아래 `tsk_06ba445c1ee0e40aa5fe`·`tsk_1c1cac...` 항목과 동일 종류)과 정확히 같다.
+  같은 실행에서 내가 새로 붙인 시험(`balance gate rejects a fixture...`)은 ✔ 로 통과했다 — 실패는
+  내 변경이 아니라 이 워크트리의 런타임 데이터 결손 탓임을 직접 확인.
+  `request_review_task`도 "A passing verification is required"로 거절(REVIEW로 못 넘어감).
+  **지금 상태**: `IN_PROGRESS`/`verification FAILED`로 뒀다. 코드는 서버의 격리 워크트리에
+  `submit_task_result`(MCP_FILES)로 정확히 두 파일만 반영돼 있다. `data/failure-cases.json`은
+  allowedPaths 밖이고, 워크트리 프로비저닝(gitignore 런타임 파일을 안 복사하는 것) 자체를 고치는 건
+  이 태스크 범위 밖이라 손대지 않았다. `data/discussions.json`에도 같은 내용을 남겼다.
+  **balance-gate 하네스 scope 참고(태스크가 위임한 자유재량)**: `data/harnesses.json`의 `balance-gate`
+  항목이 `"scope": "global"`이다 — 경매장 전용 지식이 team-loop 전역에 섞이면 안 된다는 기존 결정과
+  어긋나지만, `data/harnesses.json` 수정은 allowedPaths 밖이라 고치지 않고 여기 기록만 남긴다.
+  **사람이 정할 것**: 위 '외부 에이전트를 위한 제3의 실행 모드' 항목·`tsk_06ba445c1ee0e40aa5fe` 항목과
+  동일한 근본 원인(격리 워크트리가 gitignore 런타임 데이터를 못 받음)이 해소되면 이 태스크도 같이
+  풀린다. 판정 세션이 격리 워크트리에서 diff를 직접 대조하고 메인 트리에서 `npm test`를 독립
+  재실행하는 방식(기존 판정 세션들의 선례)으로 REVIEW 상당 판단을 대신할 수 있을 것으로 보인다.
+
 - **`tsk_8cf42e5c5d69d264282a`(.NET 8 CI 다리, [사람 게이트])가 발사됐다가 검증 실패로 멈춰 있다.**
   (2026-07-27 발견, 조율자) 12:22:52 KST 발사(비용 $0.39) → 12:25:41 KST `VERIFICATION_FAILED` →
   이후 자동 재시도 없이 `IN_PROGRESS`/`IDLE`로 정지. 원인 셋을 `show_task`로 직접 확인:
