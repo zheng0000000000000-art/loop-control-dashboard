@@ -15,6 +15,9 @@ while IFS= read -r c; do
     echo "$out" | tail -20 | sed 's/^/    /'
     FAILED=1
   fi
+  # 하네스 하나 끝날 때마다 하트비트를 갱신한다 — 도커 측정·CI 대기처럼 이 묶음 전체가
+  # 10분을 넘겨도 깨우기가 "조율자 없음"으로 안 읽게 한다. 최소 간격은 스크립트 안에서 지킨다.
+  bash scripts/heartbeat-touch.sh "run-gates: $c" || true
 done < scripts/harness-list.txt
 dotnet run --project server --no-build -- projection > /dev/null 2>&1
 exit $FAILED
