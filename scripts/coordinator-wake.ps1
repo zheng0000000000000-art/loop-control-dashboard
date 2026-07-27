@@ -23,7 +23,10 @@ param(
   [string]$QueuePath      = 'C:\Users\1\Documents\Local-First Workflow Dashboard\docs\handoff\WORK-QUEUE.md',
   [string]$BaseBranch     = 'wp/state-integrity',
   [int]$ChainDepth        = 0,
-  [int]$MaxChain          = 5,
+  # 상한은 폭주 방지용 백스톱일 뿐이다. 진짜 정지는 queue-drained(할 일 없음)와
+  # no-progress(아무것도 안 줄었음)다. 5로 두면 일이 남아 있는데도 끊겨서 다음 5분 주기를
+  # 기다린다 - 사람이 기다릴 이유가 없는 대기다.
+  [int]$MaxChain          = 20,
   [string[]]$ActiveStatuses = @('TODO','READY','IN_PROGRESS','REVIEW','BLOCKED'),
   # 이 표식으로 시작하는 보드 태스크는 사람만 할 수 있다. 실행자가 안 집는다.
   [string]$HumanGateMarker = '[사람 게이트]',
@@ -52,6 +55,19 @@ function Write-Line([string]$text) {
 }
 
 $loopLogScriptEarly = Join-Path (Split-Path -Parent $PSCommandPath) 'loop-log.ps1'
+
+# 일이 남았는데 멈출 때는 반드시 남긴다. 조용히 끝나면 사람이 알아챌 때까지 아무 일도 안 일어난다.
+# 2026-07-28: 사람이 "작업 막힌 것 확인해줄래"라고 물어야 풀리는 상태가 반복됐다.
+function Report-Stop([string]$reason, [string]$detail) {
+  Write-Line "$reason - $detail"
+  $inbox = Join-Path (Split-Path -Parent $HeartbeatPath) 'coordinator-inbox.md'
+  $stamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+  try { Add-Content -Path $inbox -Encoding UTF8 -Value "- [$stamp] $reason : $detail" } catch { }
+  if (Test-Path $loopLogScriptEarly) {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $loopLogScriptEarly `
+      -Text "멈춤 · $reason · $detail" 2>&1 | Out-Null
+  }
+}
 
 # 명시적 정지 표식. 조율자가 "지금은 멈춰라"고 말할 때만 만든다.
 # 있다는 사실 자체가 킬 스위치다 - 내가 살아 있다는 사실이 아니라.
@@ -511,7 +527,7 @@ try {
     } else {
       # 브랜치를 지우지 않는다. 일한 결과를 버리지 않는다.
       # exit 하면 아래 finally 가 Pop-Location 을 한다. 여기서 또 하면 스택이 어긋난다.
-      Write-Line 'land-failed - 브랜치를 남기고 멈춘다. 사람 확인이 필요하다'
+      Report-Stop 'land-failed' "브랜치 session/$sessionId 를 남기고 멈춘다. 착지가 안 됐다"
       exit 4
     }
   }
@@ -527,7 +543,10 @@ try {
 
 # 작업이 끝나면 스스로 다음을 부른다. 안 그러면 매번 스케줄러를 기다려 루프가 느려진다.
 # 깊이를 제한하는 이유는 실패한 항목이 큐에 남아 무한히 재시도하면 토큰만 태우기 때문이다.
-if ($ChainDepth -ge $MaxChain) { Write-Line "chain-limit reached ($MaxChain)"; exit 0 }
+if ($ChainDepth -ge $MaxChain) {
+  Report-Stop 'chain-limit' "$MaxChain 회 연쇄했다. 남은 일이 있으면 다음 주기에 이어진다"
+  exit 0
+}
 
 # 진행 여부는 큐와 보드를 **같이** 센다. 큐만 세면 보드 태스크를 끝낸 세션이
 # "진전 없음"으로 판정돼 루프가 멈춘다 — 정작 일은 됐는데.
@@ -555,7 +574,7 @@ if ($after -eq 0) { Write-Line 'queue-drained'; exit 0 }
 $moved = ($stillReview -ne $queueReview) -or ($stillBoardReview -ne $boardReview.Count)
 if (($after -ge $before) -and (-not $moved) -and ($unread.Count -eq 0)) {
   # 아무것도 안 줄고 아무것도 안 옮겨갔다. 같은 항목을 또 시도하면 같은 자리에서 막힌다.
-  Write-Line "no-progress before=$before after=$after - 사람 확인이 필요하다"
+  Report-Stop 'no-progress' "before=$before after=$after - 아무것도 줄지 않았다"
   exit 4
 }
 
