@@ -476,3 +476,61 @@ JSON을 다시 직렬화하므로 **다른 것이 망가지지 않는지 확인�
 | `at` 3분 전 / `mtime` 5분 전 (쓸 때 2분 미래) | `heartbeat-fabricated at 이 mtime 보다 119초 앞선다 - 손으로 쓴 값이다. 깨운다` |
 | 손으로 2분 미래로 씀 | `heartbeat-in-future skew=2m` (기존 검사가 잡음) |
 | `heartbeat-touch.sh`가 씀 | `coordinator-alive age=0m` |
+
+---
+
+# 보드 태스크는 `claim_task` 를 쓰지 않는다 (2026-07-28)
+
+## 무엇에 막혔나
+
+깨어난 세션이 보드 태스크(`tsk_aa08207b993b422a4fdf`)의 코드를 다 짜고도
+**리뷰로 올리지 못했다.** `request_review_task`가 *"A passing verification is required"*로 거절했고,
+`verify_task`는 `EXECUTOR_RESULT_MISSING`으로 실패했다.
+
+## 코드로 확인한 원인 — 결함이 아니라 범주 오류
+
+```js
+// src/delivery-gate.js
+if (task?.executionMode !== 'AGENT') return result;              // AGENT 에서만 검사
+if (!Number.isFinite(reportedExitCode(executionResult))) return 'EXECUTOR_RESULT_MISSING';
+```
+
+- `claim_task`가 태스크를 **`HUMAN` → `AGENT`로 바꾼다**(`src/cli/main.js:776,1193,1314,1494`)
+- `AGENT`면 납품 게이트가 **team-loop이 spawn한 실행자의 종료 코드**를 요구한다
+- 깨어난 우리 세션은 **그 실행자가 아니다** → 기록이 없다 → 거절
+
+**게이트가 옳다.** 같은 저장소의 시험이 *"돌지 않은 검사는 아무것도 증명하지 않는다"*고 단언한다.
+틀린 것은 **우리가 `AGENT`를 주장한 것**이다. team-loop은 이 막다름을 이미 알고 있었고
+(`src/review-block.js`) 탈출로도 적어뒀다.
+
+## 결정 — `HUMAN` 모드 그대로 일한다
+
+사용자 결정(2026-07-28). 보드 태스크에서 **`claim_task`를 쓰지 않는다.**
+
+```
+작업 → submit_task_result → verify_task → request_review_task
+```
+
+우리 세션은 team-loop의 실행자가 아니라 **조율자 쪽 실행자**다. 검증은 조율자 게이트
+(`run-gates.sh`, `npm test`)와 **판정 세션**이 한다. `AGENT`를 주장하지 않는 것이 사실에 맞다.
+
+### 실측 (2026-07-28)
+
+| 단계 | 결과 |
+| --- | --- |
+| `AGENT` 모드에서 `verify_task` | `FAILED` — `agent-executor` `EXECUTOR_RESULT_MISSING` |
+| `HUMAN`으로 되돌린 뒤 | **`deliveryGate: null`** — 그 검사 자체가 안 돈다 |
+| `verify_task` | `PASSED` |
+| `request_review_task` | `status: REVIEW`, `executionRun: VERIFIED` |
+
+## 이 길의 약점 — 숨기지 않는다
+
+**`HUMAN` 모드는 "실제로 뭔가 납품했는가"를 안 본다.**
+`allowNoChanges` 검사가 납품 게이트 안에 있어서 `AGENT`에서만 돈다.
+실제로 이번 통과의 `changedPaths`는 **비어 있었다**(작업을 이미 커밋해서 diff가 없다).
+즉 프로그램이 통과시킨 것은 *"공백 오류 없음 + 범위 위반 없음"*이지 *"일이 됐다"*가 아니다.
+
+**그 자리를 판정 세션이 메운다.** 그리고 이번 건은 조율자가 워크트리에서 `npm test`를
+직접 돌려 **508/508**을 확인했다 — 자기보고가 아니다.
+
+장기적으로는 외부 에이전트의 게이트 결과를 증거로 받는 **제3의 모드**가 맞다. 큐에 남긴다.

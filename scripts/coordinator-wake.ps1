@@ -287,8 +287,13 @@ $boardTask = if ($boardReview.Count -gt 0) { $boardReview[0] }
 if ($boardTask) {
   $prompt = $prompt + "`n`n--- 이번에 할 것 (WORK-QUEUE 보다 이것이 먼저다) ---`n" +
     (Format-BoardTask $boardTask) +
-    "`n`n이 태스크를 team-loop MCP 로 처리한다. claim_task 로 집고, 끝나면 submit_task_result 와" +
-    "`nrequest_review_task 로 REVIEW 까지만 올린다. verify_task 로 스스로 통과시키지 마라 — 판정은 따로다." +
+    "`n`n이 태스크를 team-loop MCP 로 처리한다. **claim_task 를 쓰지 마라.**" +
+    "`nclaim_task 는 executionMode 를 AGENT 로 바꾸는데, AGENT 모드에서는 납품 게이트가" +
+    "`nteam-loop 이 spawn 한 실행자의 종료 코드를 요구한다(src/delivery-gate.js)." +
+    "`n너는 그 실행자가 아니라서 기록이 없고 EXECUTOR_RESULT_MISSING 으로 막힌다." +
+    "`n2026-07-27 실측: 한 세션이 코드를 다 짜고도 여기서 막혀 리뷰로 못 올렸다." +
+    "`n`nHUMAN 모드 그대로 일해라. submit_task_result -> verify_task -> request_review_task 순이다." +
+    "`nREVIEW 까지만 올린다. 승인은 판정 세션의 일이다." +
     "`n`n대상 저장소는 태스크 설명에 적힌 것을 따른다. 보드는 team-loop 것이지만 태스크는" +
     "`n다른 저장소를 가리킬 수 있다. 안 적혀 있으면 team-loop($TeamLoopRoot) 이다."
 }
