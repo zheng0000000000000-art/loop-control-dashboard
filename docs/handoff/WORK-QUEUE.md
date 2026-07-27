@@ -51,6 +51,20 @@
 
 ---
 
+## 새로 알게 된 일 (다음 세션이 판단)
+
+- **`tsk_8cf42e5c5d69d264282a`(.NET 8 CI 다리, [사람 게이트])가 발사됐다가 검증 실패로 멈춰 있다.**
+  (2026-07-27 발견, 조율자) 12:22:52 KST 발사(비용 $0.39) → 12:25:41 KST `VERIFICATION_FAILED` →
+  이후 자동 재시도 없이 `IN_PROGRESS`/`IDLE`로 정지. 원인 셋을 `show_task`로 직접 확인:
+  ①worktree가 `team-loop-lite-ai-learning`을 가리켜 실제 대상(Local-First 저장소)에 접근 불가
+  ②태스크 본문이 스스로 "사람만 할 수 있다"고 적었는데도 AGENT 모드로 발사됨
+  ③`NO_DELIVERABLE` 검증이 "정당한 거절"과 "실패"를 구분 못해 오탐 — 실행자는 아무것도 고치지 않고
+  이유만 설명했는데 실패로 찍혔다(자기보고 확인, `fail_c94438cd0e00bbdd2c1c`).
+  **여기서 안 고친 이유**: 검증 로직 수정은 측정 코드 변경(사람 결재 대상, CLAUDE.md), 재발사도 비용
+  드는 사람 게이트. **사람이 정할 것**: worktree를 Local-First 저장소로 바로 잡아 재발사할지,
+  아니면 `NET8-01-R1` 지시서대로 사람이 직접 실행할지. discussions.json에 상세 답변 남김
+  (`msg_board36stuck20260727`).
+
 ## 끝난 것
 
 - [x] **`buildSkillPolicy`의 두 벌 출처를 하나로** — team-loop 작업보드가 지시큐로 실측된 첫 사례
