@@ -49,24 +49,6 @@
 
 ## 대기 중
 
-- [~] **team-loop 쪽 세션 격리** — 실행 끝, 판정 대기
-  - 한 것: `scripts/teamloop-isolate.ps1`. 깨우기가 보드 태스크를 넘기기 전에 team-loop의
-    **격리 워크트리를 만들어 그 경로를 프롬프트에 박고**, 세션이 끝나면 메인 트리를 검사한다.
-    team-loop에 이미 있던 `createTaskWorktree`를 쓴다 — 그 파일 머리가 이미
-    *"에이전트가 자기 체크아웃 밖 파일을 물리적으로 건드릴 수 없다"*고 적고 있었다.
-  - **이미 있는 워크트리는 안 건드린다.** `createTaskWorktree`는 `-B`로 브랜치를 되감고
-    기존 워크트리를 지우므로, 앞 세션이 남긴 작업을 날린다. `Ensure`는 있으면 그대로 쓴다.
-  - **오염을 되돌리지 않는다.** 남의 작업일 수 있고 조용히 지우는 것이 더 나쁘다.
-    검사해서 로그와 대화 채널에 남긴다.
-  - 확인한 것(실측): 깨끗하면 `teamloop-clean` exit 0 · `src/ntfy.js`를 더럽히면
-    `teamloop-contaminated 1건` exit 1 · 기존 워크트리에 `Ensure`하면 작업(`M src/worktree.js`,
-    `M test/worktree.test.js`)이 그대로 남는다.
-  - **만들다 잡은 함정**: `"$out"`으로 배열을 문자열화하면 PowerShell이 **줄바꿈이 아니라 공백**으로
-    합친다. 세 줄이 한 줄로 붙어 `data/`로 시작하는 바람에 오염이 통째로 걸러졌고
-    **음성 사례가 조용히 통과했다.** 배열은 배열로 다루게 고쳤다.
-  - **판정자가 볼 것**: 실제 깨우기 한 번이 보드 태스크에 격리 경로를 주고, 세션이 그 안에서만
-    일하는지. 위 실측은 스크립트 단위다.
-
 - [ ] **외부 에이전트를 위한 제3의 실행 모드 (team-loop)**
   - 무엇: team-loop의 `executionMode`는 `HUMAN`(사람) 아니면 `AGENT`(team-loop이 spawn한 실행자)뿐이다.
     우리 깨어난 세션은 **둘 다 아니다** — 외부 에이전트다. 그래서 `claim_task`를 쓰면
@@ -171,8 +153,39 @@
   **막힌 지점**: `submit_task_result`를 통해 제출하니 `task.executionMode`가 `HUMAN`→`AGENT`로 바뀌었다(상세는 위 대기 중 항목 참조). `verify_task` → `agent-executor` 체크가 `EXECUTOR_RESULT_MISSING`으로 FAILED(scopeViolations 없음, `git diff --check` PASS). `request_review_task` → "A passing verification is required"로 거절. block/unblock HTTP 우회는 이전 세션들과 같은 이유(MCP 처리 범위 밖, 판정층 코드는 사람 결재)로 시도하지 않았다.
   **지금 상태**: `IN_PROGRESS`/`verification FAILED`로 그대로 뒀다. 코드는 서버의 격리 워크트리(`.team-loop-worktrees/tsk_06ba445c1ee0e40aa5fe`)에 그대로 있다. `data/discussions.json`에도 같은 내용을 남겼다(`msg_boardtask_06ba445c_deliverygate_20260728`).
   **사람이 정할 것**: 위 '외부 에이전트를 위한 제3의 실행 모드' 항목과 동일 — 해소되면 이 태스크도 같이 풀린다.
+  **판정 세션 갱신(2026-07-28, 실행 세션과 다른 판정 세션)**: 위 "지금 상태"는 낡았다 —
+  `show_task`로 다시 보니 이미 `status: REVIEW`(`verification PASSED`, `review.status PENDING`)로
+  넘어가 있었다(누가 언제 넘겼는지는 이 세션에서 재구성 못 함 — 주체 미상). 이 판정 세션이
+  **재실행해 대조**: 격리 워크트리(`.team-loop-worktrees/tsk_06ba445c1ee0e40aa5fe`)에서 diff를
+  직접 Read, `npm test` 독립 재실행 → `tests 510, pass 509, fail 1`(fail 1건은
+  `test/injection-readiness.test.js`가 이 워크트리에 없는 `data/failure-cases.json`을 찾다 나는
+  것 — `git stash`로 이 태스크의 diff를 뗀 뒤 같은 파일만 재실행해도 똑같이 실패함을 확인해
+  **이번 변경과 무관함을 직접 재현**). 호출부 네 곳(`createTaskWorktree` 50행 catch 유지,
+  `commitTaskWorktree` 173행 무변경, `mergePreparedWorktree` 196행 `worktreeCleanup` 필드로 전환,
+  `server.js` 2289행 기존 `.then/.catch`가 새 에러 경로도 그대로 흡수) 전부 소스에서 대조 완료.
+  `git diff --check` 통과, allowedPaths 밖 변경 없음. **완료 기준 6개 전부 충족(코드는 PASS)**.
+  **막힌 지점은 그대로**: 이 판정 세션이 `verify_task`를 다시 돌리자 "Verification requires an
+  IN_PROGRESS task"로 거절(REVIEW 상태에는 안 먹는다 — `tsk_aa08207`과 동일 원인).
+  MCP 도구 목록 전체를 다시 확인해도 REVIEW→DONE 도구가 없다. HTTP `action=review` 우회는
+  같은 이유(actor 인증 없음·merge+archive는 비가역)로 이 세션도 쓰지 않았다. `data/discussions.json`에
+  판정 결과를 남겼다(`msg_boardtask_06ba445c_judgment_20260728`). **REVIEW 상태 그대로 둔다** —
+  코드는 승인 기준을 충족했으나 보드를 DONE으로 옮길 MCP 수단이 없다.
 
 ## 끝난 것
+
+- [x] **team-loop 쪽 세션 격리 — 워크트리 분리 (2차, 2026-07-28)** — 판정 통과(실행 세션과 다른
+  판정 세션, 커밋 `835a097`). **재실행해 대조한 것**: `scripts/teamloop-isolate.ps1 -Action Check`를
+  깨끗한 메인 트리에서 직접 실행 → `teamloop-clean` exit 0. `src/ntfy.js`를 실제로 더럽힌 뒤 재실행 →
+  `teamloop-contaminated 1건` exit 1(확인 후 `git checkout --`로 원복). 기존 워크트리
+  (`tsk_06ba445c1ee0e40aa5fe`, `M src/worktree.js`·`M test/worktree.test.js` 보유)에 대해
+  `-Action Ensure`를 실행 → `teamloop-worktree-exists` exit 0, 두 파일의 수정 내용이 실행 전후
+  그대로 남음(브랜치를 되감지 않음을 직접 확인). `measure dev-pack`(violationCount 0),
+  `handoff-integrity`(failures 없음, exit 0), `doc-integrity`(전부 intact, exit 0) 전부 재실행.
+  **판정자가 볼 것으로 남겨졌던 지점("실제 깨우기 한 번이 보드 태스크에 격리 경로를 주는지")도
+  이 판정 세션 자체로 실증됨**: 이 세션을 깨운 프롬프트 본문에 `coordinator-wake.ps1`이 새로
+  주입하는 그 문구("team-loop 코드는 반드시 이 격리 워크트리 안에서만 고쳐라: ...")가 실제로
+  박혀 있었다 — 스크립트 단위 재현이 아니라 실사 배선 확인.
+  승인: 이 세션이 처리(ADR-020, 실행과 다른 세션).
 
 - [x] **루프가 하는 일이 사람 눈에 보이게** — 세션이 8분째 도는데 보드는 `READY / IDLE`이었고,
   큐 항목으로 도는 바퀴는 폰에서 **전혀 안 보였다**. `board-claim.ps1`이 보드에 `IN_PROGRESS`를

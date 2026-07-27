@@ -32328,6 +32328,52 @@
         "subscriptionCalls": 0,
         "role": "runtime"
       }
+    },
+    {
+      "createdAt": "2026-07-28T01:49:50.2141358+09:00",
+      "event": "measure.completed",
+      "params": {
+        "providerId": "dev-pack-checks",
+        "violationCount": 0,
+        "durationMs": 647
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 13,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-28T01:51:55.7957926+09:00",
+      "event": "measure.completed",
+      "params": {
+        "providerId": "dev-pack-checks",
+        "violationCount": 0,
+        "durationMs": 169
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 13,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
     }
   ]
 }
