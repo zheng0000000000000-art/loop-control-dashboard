@@ -14,7 +14,8 @@ param(
   [string]$Action = 'List',
   [string]$RepoRoot = 'C:\Users\1\Documents\Local-First Workflow Dashboard',
   [string]$WorktreeRoot = 'C:\NHN Project\_ops\worktrees',
-  [int]$SessionPid = 0,
+  # 깨우기는 세션을 띄우기 전에 워크트리를 만들어야 해서 pid 를 모른다. 깨우기 시각을 id 로 쓴다.
+  [string]$SessionId = '',
   [string]$BaseBranch = 'wp/state-integrity'
 )
 
@@ -53,8 +54,8 @@ function Test-Generated([string]$path) {
   return $false
 }
 
-$branch = "session/$SessionPid"
-$dir = Join-Path $WorktreeRoot "session-$SessionPid"
+$branch = "session/$SessionId"
+$dir = Join-Path $WorktreeRoot "session-$SessionId"
 
 switch ($Action) {
   'List' {
@@ -63,7 +64,7 @@ switch ($Action) {
   }
 
   'Create' {
-    if ($SessionPid -le 0) { Write-Output 'create-needs-session-pid'; exit 2 }
+    if (-not $SessionId) { Write-Output 'create-needs-session-id'; exit 2 }
     if (Test-Path $dir) { Write-Output "worktree-exists $dir"; exit 0 }
     New-Item -ItemType Directory -Force -Path $WorktreeRoot | Out-Null
     # 기존 브랜치가 남아 있으면 지운다. 앞 세션이 착지에 실패해 남긴 것이면 Land 가 이미 보고했다.
@@ -75,7 +76,7 @@ switch ($Action) {
   }
 
   'Remove' {
-    if ($SessionPid -le 0) { Write-Output 'remove-needs-session-pid'; exit 2 }
+    if (-not $SessionId) { Write-Output 'remove-needs-session-id'; exit 2 }
     Invoke-Git $RepoRoot @('worktree', 'remove', '--force', $dir) | Out-Null
     Invoke-Git $RepoRoot @('branch', '-D', $branch) | Out-Null
     Invoke-Git $RepoRoot @('worktree', 'prune') | Out-Null
@@ -84,7 +85,7 @@ switch ($Action) {
   }
 
   'Land' {
-    if ($SessionPid -le 0) { Write-Output 'land-needs-session-pid'; exit 2 }
+    if (-not $SessionId) { Write-Output 'land-needs-session-id'; exit 2 }
 
     $ahead = Invoke-Git $RepoRoot @('rev-list', '--count', "$BaseBranch..$branch")
     if ($ahead.Code -ne 0) { Write-Output "land-no-branch $branch"; exit 0 }
@@ -102,7 +103,7 @@ switch ($Action) {
       exit 1
     }
 
-    $merge = Invoke-Git $RepoRoot @('merge', '--no-ff', '-m', "세션 $SessionPid 작업 착지 ($branch)", $branch)
+    $merge = Invoke-Git $RepoRoot @('merge', '--no-ff', '-m', "세션 $SessionId 작업 착지 ($branch)", $branch)
     if ($merge.Code -eq 0) {
       Write-Output "landed $branch ($($ahead.Text.Trim()) 커밋)"
       exit 0
@@ -123,7 +124,7 @@ switch ($Action) {
       Invoke-Git $RepoRoot @('checkout', '--theirs', '--', $c) | Out-Null
       Invoke-Git $RepoRoot @('add', '--', $c) | Out-Null
     }
-    $commit = Invoke-Git $RepoRoot @('commit', '--no-verify', '-m', "세션 $SessionPid 작업 착지 ($branch) - 생성물 충돌 $($conflicts.Count)건은 세션 것을 취하고 재측정으로 덮는다")
+    $commit = Invoke-Git $RepoRoot @('commit', '--no-verify', '-m', "세션 $SessionId 작업 착지 ($branch) - 생성물 충돌 $($conflicts.Count)건은 세션 것을 취하고 재측정으로 덮는다")
     if ($commit.Code -ne 0) {
       Invoke-Git $RepoRoot @('merge', '--abort') | Out-Null
       Write-Output "land-conflict-resolve-failed`n$($commit.Text)"

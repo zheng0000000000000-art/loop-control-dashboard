@@ -19,6 +19,7 @@ param(
   [string]$TeamLoopRoot   = 'C:\NHN Project\team-loop-lite-ai-learning',
   [string]$BoardPath      = 'C:\NHN Project\team-loop-lite-ai-learning\data\tasks.json',
   [string]$QueuePath      = 'C:\Users\1\Documents\Local-First Workflow Dashboard\docs\handoff\WORK-QUEUE.md',
+  [string]$BaseBranch     = 'wp/state-integrity',
   [int]$ChainDepth        = 0,
   [int]$MaxChain          = 5,
   [string[]]$ActiveStatuses = @('TODO','READY','IN_PROGRESS','REVIEW','BLOCKED'),
@@ -227,7 +228,9 @@ $executePrompt = @'
 
 지켜라.
 - 커밋 전에 measure dev-pack 이 violations 0 이어야 한다. 아니면 커밋하지 마라.
-- push 는 게이트가 전부 통과했을 때만 한다.
+- **push 하지 마라.** 너는 세션 전용 워크트리의 session/<id> 브랜치에서 일하고 있다.
+  커밋만 해라. 본 저장소가 네 브랜치를 병합해서 착지시키고 그때 한 번만 민다.
+  네가 직접 밀면 브랜치가 엉킨다.
 - **네가 한 일을 네가 승인하지 마라.** [~] 까지만 옮기고 판정 세션에 넘긴다.
   approve/verify_task/import 는 판정 세션의 일이다(ADR-020).
 - **발사(sonnet/codex spawn)는 하지 않는다.** 비용이 발생한다. 사람 게이트다.
@@ -268,7 +271,25 @@ Set-Content -Path $marker -Value $markerValue -Encoding UTF8
 
 # 프롬프트를 명령행 인자로 넘기지 않는다. 콘솔 코드페이지를 거치면서 한글이 깨진다 —
 # 2026-07-27 실측: 깨어난 세션이 "?덈뒗" 을 받았다. UTF-8 파일을 stdin 으로 넣으면 온전하다.
-Push-Location $WorkingDir
+# 세션마다 별도 워크트리를 준다. 두 세션이 같은 파일을 만지는 창을 닫는다 -
+# 커밋 구간 잠금과 큐의 진행 중 표기는 절반만 막았다(2026-07-27).
+# 만들기에 실패하면 본 저장소에서 돈다. 격리를 못 해도 루프를 죽이지는 않는다.
+$worktreeScript = Join-Path (Split-Path -Parent $PSCommandPath) 'session-worktree.ps1'
+$sessionDir = $WorkingDir
+$sessionId = ''
+if (Test-Path $worktreeScript) {
+  $created = & powershell -NoProfile -ExecutionPolicy Bypass -File $worktreeScript `
+    -Action Create -SessionId $stamp -RepoRoot $WorkingDir 2>&1
+  if ($LASTEXITCODE -eq 0) {
+    $sessionId = $stamp
+    $sessionDir = Join-Path 'C:\NHN Project\_ops\worktrees' "session-$stamp"
+    Write-Line "worktree $sessionDir"
+  } else {
+    Write-Line "worktree-failed - 본 저장소에서 돈다: $created"
+  }
+}
+
+Push-Location $sessionDir
 try {
   $proc = Start-Process -FilePath 'claude.exe' `
     -ArgumentList @('-p', '--output-format', 'text', '--permission-mode', 'bypassPermissions') `
@@ -297,6 +318,24 @@ try {
   if (Test-Path $lockScript) {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $lockScript -Action Release `
       -SessionPid $proc.Id -Quiet 2>&1 | Out-Null
+  }
+  if ($sessionId) {
+    $landed = & powershell -NoProfile -ExecutionPolicy Bypass -File $worktreeScript `
+      -Action Land -SessionId $sessionId -RepoRoot $WorkingDir 2>&1
+    $landCode = $LASTEXITCODE
+    foreach ($line in @($landed)) { Write-Line "land: $line" }
+    if ($landCode -eq 0) {
+      & powershell -NoProfile -ExecutionPolicy Bypass -File $worktreeScript `
+        -Action Remove -SessionId $sessionId -RepoRoot $WorkingDir 2>&1 | Out-Null
+      # 푸시는 여기서 한 번만. 세션이 각자 밀면 브랜치가 엉킨다.
+      & git -C $WorkingDir push -q origin $BaseBranch 2>&1 | Out-Null
+      if ($LASTEXITCODE -ne 0) { Write-Line 'push-failed - 다음 착지에서 함께 밀린다' }
+    } else {
+      # 브랜치를 지우지 않는다. 일한 결과를 버리지 않는다.
+      # exit 하면 아래 finally 가 Pop-Location 을 한다. 여기서 또 하면 스택이 어긋난다.
+      Write-Line 'land-failed - 브랜치를 남기고 멈춘다. 사람 확인이 필요하다'
+      exit 4
+    }
   }
   Write-Line "woke exit=$($proc.ExitCode) trigger=$trigger mode=$(if ($isReview) { 'review' } else { 'execute' }) log=$log"
 } finally {
