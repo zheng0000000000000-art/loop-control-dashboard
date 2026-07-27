@@ -65,6 +65,21 @@
   아니면 `NET8-01-R1` 지시서대로 사람이 직접 실행할지. discussions.json에 상세 답변 남김
   (`msg_board36stuck20260727`).
 
+- **위 항목에 대한 사용자 답(08:03:45Z "b해보고 다시 이러면 a로 해줘")을 이 세션이 확인했다.**
+  착수 전 team-loop 소스(`src/worktree.js`의 `createTaskWorktree`, `src/cli/main.js:744`
+  `repoRoot = bootstrap.workspace?.root || process.cwd()`)를 읽어 "worktree가 잘못 잡혔다"의
+  성격을 재확인했다: 이 실행 경로는 `git worktree add`로 워크스페이스를 만드는데, git worktree는
+  **같은 저장소**의 다른 체크아웃일 뿐이다. repoRoot가 team-loop-lite-ai-learning인 이상 그
+  worktree 안에는 애초에 Local-First 저장소 파일이 존재할 수 없다 — 설정 오타가 아니라 팀루프
+  보드의 AGENT 실행 경로 자체가 **같은 저장소 안에서만** 도는 구조다.
+  **판단**: 지난번과 같은 방식(단순 재발사)으로 b를 다시 쏘면 같은 실패를 반복할 가능성이 높다.
+  b가 실제로 다르려면 발사 시 workspaceRoot를 Local-First 경로로 직접 지정해야 하는데, 그
+  발사 진입점을 이 세션에서 찾지 못했다(발사는 사람 게이트라 관찰도 불가). discussions.json에
+  판단 근거와 함께 남기고(`msg_net8worktreestructural20260727`) 코드는 손대지 않았다.
+  **사람이 정할 것**: (i) 발사 시 workspace를 Local-First로 지정하는 법을 알고 있어 b를 그
+  방식으로 다시 시도할지, (ii) 구조적 실패로 보고 바로 a(조율자가 직접 고치고 사람이
+  TERRITORY-EXCEPTIONS.json에 등재)로 갈지.
+
 - **8시간 넘게 놓쳤던 사용자 승인을 찾았다(2026-07-27, 이 세션).** `data/discussions.json`의
   `msg_8dc5ea1dad04f13326fe`(05:01:27Z "응 해줘. 답장이 너무 느린데 이부분도 어떻게 해봐")가
   안 읽힌 채 있었다 — NET8-01-R1을 조율자가 직접 실행하는 방식(옵션 b)에 대한 승인이었는데,
