@@ -21,14 +21,25 @@ param(
   [int]$ChainDepth        = 0,
   [int]$MaxChain          = 5,
   [string[]]$ActiveStatuses = @('TODO','READY','IN_PROGRESS','REVIEW','BLOCKED'),
-  [int]$StaleMinutes      = 25,
+  # 25분이면 24분 공백을 "살아 있다"로 읽는다(2026-07-27 실측: 11:15 커밋 후 11:36 판정이 alive).
+  # 깨우기는 알림보다 싸므로 짧게 잡는다. 조율자가 도는 중이면 어차피 하트비트가 갱신된다.
+  [int]$StaleMinutes      = 10,
   [int]$TimeoutMinutes    = 30,
   [switch]$DryRun
 )
 
 $ErrorActionPreference = 'Stop'
 
-function Write-Line([string]$text) { Write-Output $text }
+# 판정을 전부 남긴다. 깨운 것만 기록하면 "왜 안 깨웠나"를 추론해야 하고, 추론은 증거가 아니다.
+$DecisionLog = Join-Path $LogDir 'decisions.log'
+function Write-Line([string]$text) {
+  Write-Output $text
+  try {
+    New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+    $stampedLine = '{0}  depth={1}  {2}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $ChainDepth, $text
+    Add-Content -Path $DecisionLog -Value $stampedLine -Encoding UTF8
+  } catch { }
+}
 
 if (-not (Test-Path $DiscussionPath)) { Write-Line 'discussion-missing'; exit 2 }
 
