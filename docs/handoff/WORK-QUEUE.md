@@ -42,18 +42,6 @@
 > **순서는 사람이 정한다.** 2026-07-27 사용자 지시로 작업보드를 맨 위로 올렸다 —
 > *"작업보드 쪽 먼저 하는 게 확실하지 않을까?"*
 
-- [~] **team-loop 작업보드를 지시큐로 잇기** — 실행 끝, 판정 대기
-  - 무엇: 보드 태스크가 깨우기만 하고 세션은 `WORK-QUEUE.md`에서 **엉뚱한 항목**을 집었다.
-    이제 보드 태스크를 프롬프트에 **직접 박는다**(제목·설명·완료 조건·허용 경로·스킬).
-  - 한 것: 방아쇠 우선순위를 `보드 REVIEW > 큐 [~] > 안 읽은 글 > 보드 READY > 큐 [ ]`로.
-    막힌 것·선행 미완·보관된 것은 제외. `-DryRun`이 프롬프트 파일을 남겨 대조 가능하게.
-  - 확인한 것(실측):
-    - READY 4건(막힘·선행미완·보관 포함) → `trigger=board=1 task=tsk_pick`, 나머지 셋 프롬프트에 없음
-    - REVIEW 1건 추가 → `trigger=board-review=1 mode=review task=tsk_judge`, 실행 문구 안 섞임
-    - 실제 보드(전부 DONE) → `trigger=queue=4 mode=execute task=none`
-  - **판정자가 볼 것**: 실제 보드에 태스크를 올려 **진짜 깨우기 한 번**이 그것을 집는지.
-    위 실측은 전부 `-DryRun`이다 — 프롬프트가 맞는 것과 세션이 그대로 하는 것은 다른 문제다.
-
 - [ ] **`buildSkillPolicy`의 두 벌 출처를 하나로**
   - 무엇: `src/skill-policy.js`가 `workspaceRoot/data/skills.json`을 읽는데, MCP `list_skills`는
     서버 `dataDirectory`의 레지스트리를 읽는다. **에이전트가 보는 스킬과 실제 적용 스킬이 다르다.**
@@ -70,6 +58,23 @@
 ---
 
 ## 끝난 것
+
+- [x] **team-loop 작업보드를 지시큐로 잇기** — 판정 통과(2026-07-27, 실행 세션과 다른 판정 세션).
+  다시 돌려 대조: `measure dev-pack`(violations=0), `handoff-integrity`(failures=[]),
+  `doc-integrity`(전부 intact), `gate-clean server`(PASS) 전부 exit 0.
+  `check-script-encoding.ps1`은 저장소 기준 `ps1-bom ok`(exit 0); BOM 없는 한글 `.ps1`을 합성해
+  독립 재현 — 미검출 없이 `missing=1`/exit 1, `-Fix` 후 `ok`/exit 0.
+  자기보고가 지목한 미검증 지점("실제 보드에 태스크를 올려 진짜 깨우기가 그것을 집는지")은
+  합성 보드 데이터(픽 가능 1 + 막힘 1 + 선행미완 1 + 보관 1 + 사람게이트 1)로 독립 재현—
+  `trigger=board=1 task=t1`만 집히고 프롬프트에 나머지 넷은 안 실림. 실제 프로덕션 보드·큐로도
+  재확인: 사람게이트 태스크 2건(READY·IN_PROGRESS)은 안 집히고 `trigger=review=1`로 정확히 떨어짐.
+  **부가 확인**: 이 판정 세션 자체가 `review=1` 트리거의 **실사 발사** 결과다 — 마커 파일에
+  `review:1`이 이미 있었고 이번 세션의 시작 프롬프트가 `$reviewPrompt`와 일치한다.
+  즉 검토(review) 경로는 dry-run이 아니라 실제 발사로 이미 실증됐다.
+  **미달로 남기는 것(자진 신고, 감점 아님)**: `board=N` 실행(execute) 경로는 여전히 실제 발사로는
+  미확인이다 — 그걸 확인하려면 진짜 costed 발사가 필요한데, 그건 판정 세션도 할 수 없는
+  사람 게이트다. 합성 재현으로 로직은 검증했으나 "진짜 claude.exe가 그 프롬프트를 받아 그대로
+  하는지"는 다음에 보드 READY 실태스크가 자연 발생해 발사될 때 확인된다.
 
 - [x] **team-loop 서버 재시작** — 사람 승인 후 실시(2026-07-27 12:02). 새 pid로 뜨고 `http=200`.
   서버가 읽는 코드·데이터로 재현해 확인: 기본 29건, 경매장 스킬 0건 섞임, `allScopes`로는 33건.
