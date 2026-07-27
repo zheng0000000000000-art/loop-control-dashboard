@@ -135,6 +135,12 @@
   게이트 자체 결함으로 보고 티켓화)를 남겼다(`msg_boardtask_aa08207_deliverygate_20260727`).
   **사람이 정할 것**: 위 셋 중 어느 쪽으로 갈지.
 
+- **team-loop 보드 태스크(`tsk_aa08207b993b422a4fdf`)는 판정 통과인데 REVIEW→DONE 을 옮기는 MCP 도구가 없다.** (2026-07-28 발견, 실행 세션과 다른 판정 세션)
+  **재실행해 대조한 것(자기보고 아님)**: `git log`로 `1708c59`가 `8af99b3`로 `fusion/judgment-layer`에 이미 병합돼 있음을 확인. `src/coordinator-presence.js`·`test/coordinator-presence.test.js`를 직접 Read — `DEFAULT_STALE_MINUTES=25` 삭제, `appsettings.json`의 `Coordinator.StaleMinutes`를 읽고 실패/누락 시 10으로 떨어지는 `resolveStaleMinutes` 신설, `future`/`skewMinutes` 반환, `absenceNotice`가 future 분기에서 "고장"/"미래" 문구를 내고 "조용하다"는 안 냄을 코드에서 확인. `npm test` 이 세션이 직접 재실행 → `tests 508, pass 508, fail 0`(자기보고와 일치). `git diff 48a2fbf..1708c59 --stat`로 scope 재확인 → 두 파일만 변경(allowedPaths 일치). `appsettings.json` 실측 → `Coordinator.StaleMinutes=10` 이미 반영됨. 완료 조건 6개 전부 코드+시험으로 대조 완료.
+  **판정**: 완료 기준 충족.
+  **막힌 지점**: `show_task`로 보면 이미 `status: REVIEW`(`verification PASSED`, `review.status PENDING`). 이 판정 세션이 `verify_task`로 승인하려 했으나 서버가 "Verification requires an IN_PROGRESS task"로 거절 — `verify_task`는 REVIEW 상태에는 안 먹는다(이미 실행 세션이 IN_PROGRESS일 때 한 번 돌려 PASSED를 받은 뒤 `request_review_task`로 REVIEW로 넘어간 상태라서다). MCP 도구 목록 어디에도 REVIEW→DONE 승인 도구가 없다. `server.js`에서 찾은 유일한 경로는 HTTP `POST action=review`(decision=APPROVE, 실제 merge+DONE+archive까지 함)뿐인데, 이건 이전 실행 세션이 `msg_boardtask_aa08207_deliverygate_20260727`에 남긴 것과 같은 종류의 "MCP 처리 범위 밖" HTTP 우회다 — actor 인증도 이 세션엔 없고 merge+archive는 되돌리기 번거로운 상태 변화라 직접 호출하지 않았다.
+  **사람이 정할 것**: (a) 대시보드에서 직접 승인 클릭 (b) 이 세션류가 HTTP `action=review`를 직접 호출해도 되는지 명시 허가 (c) `verify_task`가 REVIEW 상태에서도 승인으로 동작하게 하거나 별도 `approve_task` MCP 도구를 신설(게이트/판정층 코드 변경 — 사람 결재 대상). `data/discussions.json`에도 같은 내용을 남겼다(`msg_boardtask_aa08207_reviewgap_20260728`).
+
 ## 끝난 것
 
 - [x] **보드 납품 게이트 막힘 해소** — `claim_task`가 `executionMode`를 `AGENT`로 바꿔
