@@ -49,39 +49,6 @@
 
 ## 대기 중
 
-- [~] **외부 에이전트를 위한 제3의 실행 모드 (team-loop)** — team-loop 저장소 `server.js` 두 곳을 고쳤다(커밋 `05ffa81`, `fusion/judgment-layer`).
-  - 무엇: team-loop의 `executionMode`는 `HUMAN`(사람) 아니면 `AGENT`(team-loop이 spawn한 실행자)뿐이었다.
-    우리 깨어난 세션은 **둘 다 아니다** — 외부 에이전트다. `EXTERNAL_AGENT` 모드 자체는 이미
-    커밋 `35cdcf7`로 반입돼 있었다(`src/delivery-gate.js`가 실행자 종료 코드 대신 프로그램 증거를
-    요구하는 분기).
-  - **이번에 좁힌 두 지점을 실제로 고쳤다**:
-    (1) `submit_task_result`(`action==='submit'`, server.js:~1712)가 제출을 받으며 `executionMode`를
-    **무조건 `'AGENT'`로 되돌리고 있었다** — `work_start_next`가 `EXTERNAL_AGENT`를 지켜도 제출
-    한 번으로 도로 AGENT가 돼, 뒤이은 `verify`가 실행자 종료 코드를 요구하는 AGENT 분기를 탔다.
-    현재 상태가 `EXTERNAL_AGENT`면 그대로 지키게 고쳤다(`AGENT`가 아니면 종전대로 `AGENT`).
-    (2) `work_start_next`(`/api/orchestration/start-next`, server.js:~588) 자신도 `status`를
-    `HUMAN`일 때만 `IN_PROGRESS`로 올리고 `EXTERNAL_AGENT`는 `READY`에 그대로 뒀다 — `AGENT`는
-    나중에 spawn된 워커가 `claim`으로 `IN_PROGRESS`를 찍어주지만, `EXTERNAL_AGENT`에는 그 워커가
-    없어(워커가 곧 이 세션이다) `verify`가 "IN_PROGRESS 아님"(409)으로 영원히 거절했다. `HUMAN`과
-    같이 `EXTERNAL_AGENT`도 여기서 바로 `IN_PROGRESS`로 두게 고쳤다.
-  - **확인한 것**: 새 시험 `test/external-agent-submit.test.js` — 임시 git 워크스페이스 + 실제
-    HTTP 서버로 시작(`start-next` executionMode:'EXTERNAL_AGENT') → 파일 제출(`submit`) → 검증
-    (`verify`) 전 구간을 재현. 고치기 전엔 두 지점 각각 재현됨을 먼저 확인했다(제출 뒤
-    `executionMode`가 `'AGENT'`로 바뀜, 그다음 `verify`가 409) — 그다음 고쳐서 통과로 바뀌는 것도
-    확인했다(`verification.status==='PASSED'`, 실제 `git diff --check` 실행이 증거). 증거 없는
-    제출이 여전히 거절되는 음성 사례는 `test/delivery-gate.test.js`(`35cdcf7`에서 이미 추가된
-    "external agent is rejected when no check actually ran")가 갖고 있어 새로 만들지 않았다.
-    `npm test` 전체 재실행 → `518/518` 통과. `git diff --check` 통과, 변경은 `server.js`(2곳) +
-    새 시험 파일뿐 — allowedPaths 밖 없음(team-loop 저장소는 이 CLAUDE.md의 dispatch/outbox
-    적용 대상이 아니라 직접 커밋했다, 선례: `35cdcf7`·`415cc7d`·`66012cb`).
-  - **판정 세션이 볼 것**: 이 세션이 실행 세션이라 승인은 다음 판정 세션의 몫이다(ADR-020).
-    판정 시 team-loop 저장소(`C:\NHN Project\team-loop-lite-ai-learning`)에서 `git show 05ffa81`로
-    diff를, `npm test`로 518/518을 직접 재실행해 대조할 것.
-  - 주의(그대로 유효): 이건 판정층 변경이다. `unverified-claims.js`가 지키는 원칙
-    ("돌지 않은 검사는 아무것도 증명하지 않는다")을 깨지 않는 형태였는지도 판정이 함께 볼 것 —
-    이번 수정은 게이트의 요구 수준 자체(프로그램 증거 필수)는 그대로 두고, 그 요구가 적용되는
-    모드가 중간에 뒤바뀌던 배선만 고쳤다.
-
 (현재 대기 없음 — 아래 사람 게이트 2건은 실행자가 집지 않는다.)
 
 > **순서는 사람이 정한다.** 2026-07-27 사용자 지시로 작업보드를 맨 위로 올렸다 —
@@ -187,6 +154,28 @@
   코드는 승인 기준을 충족했으나 보드를 DONE으로 옮길 MCP 수단이 없다.
 
 ## 끝난 것
+
+- [x] **외부 에이전트를 위한 제3의 실행 모드 (team-loop)** — 판정 통과(2026-07-28, 실행 세션과
+  다른 판정 세션). team-loop 저장소 `server.js` 두 곳을 고쳤다(커밋 `05ffa81`, `fusion/judgment-layer`):
+  (1) `submit_task_result`가 제출을 받으며 `executionMode`를 무조건 `'AGENT'`로 되돌리던 것을,
+  현재 상태가 `EXTERNAL_AGENT`면 그대로 지키게 고쳤다. (2) `work_start_next`가 `HUMAN`일 때만
+  `IN_PROGRESS`로 올리던 것을 `EXTERNAL_AGENT`도 같이 올리게 고쳤다(그 모드엔 나중에 claim할
+  spawn 워커가 없어 — 워커가 곧 이 세션이라서 — `READY`에 남으면 `verify`가 영원히 409로 거절했다).
+  **재실행해 대조한 것(자기보고 아님)**: `git show 05ffa81`의 diff를 직접 Read — 자기보고와 일치
+  (server.js 2군데 + 새 시험 `test/external-agent-submit.test.js`). `npm test` 전체를 이 판정
+  세션이 직접 재실행 → `tests 518, pass 518, fail 0`(자기보고와 일치). **음성 사례를 이 판정
+  세션이 직접 재현**: 고친 `server.js`를 수정 전(`05ffa81~1`) 버전으로 임시로 되돌리고 새 시험만
+  단독 재실행 → `409 !== 200`으로 실패(자기보고의 "고치기 전엔 두 지점 각각 재현됨"을 독립
+  재현·확인) → 고친 버전으로 원복 후 재실행 → 통과. `git diff --check` 통과, 변경 파일 스코프
+  (`server.js`+시험 1개)도 대조 완료 — allowedPaths 밖 없음(team-loop 저장소는 이 CLAUDE.md의
+  dispatch/outbox 대상이 아니라 직접 커밋한다, 선례 `35cdcf7`·`415cc7d`·`66012cb`).
+  원 항목이 남긴 우려("`unverified-claims.js`의 원칙을 깨지 않는 형태였는지")도 확인 — 게이트의
+  증거 요구 수준(프로그램 증거 필수)은 그대로이고, 요구가 적용되는 모드 배선만 고친 것이 diff로
+  확인됨. 검증 중 team-loop 워크스페이스에 부수적으로 발생한 `data/harnesses.json`·
+  `data/skills.json`의 필드 순서 변경(라이브 서버 재직렬화, 이 판정과 무관)은 `git checkout --`로
+  원복해 트리를 깨끗이 했다.
+  **지표는 만족했으나 목적은 미달인 부분**: 없음.
+  승인: 이 판정 세션이 처리(ADR-020, 실행과 다른 세션).
 
 - [x] **team-loop 쪽 세션 격리 — 워크트리 분리 (2차, 2026-07-28)** — 판정 통과(실행 세션과 다른
   판정 세션, 커밋 `835a097`). **재실행해 대조한 것**: `scripts/teamloop-isolate.ps1 -Action Check`를
