@@ -48,11 +48,12 @@ $dir = Join-Path $TeamLoopRoot ".team-loop-worktrees\$TaskId"
 # 지우고 다시 만든다 - 앞 세션이 남긴 작업이 있으면 그것을 날린다.
 if (Test-Path $dir) { Write-Output "teamloop-worktree-exists $dir"; exit 0 }
 
-$script = @"
-import { createTaskWorktree } from './src/worktree.js';
-const made = await createTaskWorktree(process.argv[1], process.argv[2]);
-console.log(made.dir);
-"@
+# node -e 는 기준 URL 이 없어서 상대 경로 import 를 해석하지 못한다. 절대 file:// 로 준다.
+# 2026-07-28 실측: './src/worktree.js' 로 줬더니 esm/resolve 에서 죽었고 연쇄가 끊겼다.
+# 내 시험이 이미 있는 워크트리로만 돌아 일찍 반환되는 가지만 봤고, 만드는 가지는 안 태웠다.
+# 시험이 지나간 자리와 코드가 도는 자리가 다르면 그 시험은 그 코드를 안 잰 것이다.
+$moduleUrl = ([uri](Join-Path $TeamLoopRoot 'src\worktree.js')).AbsoluteUri
+$script = "import { createTaskWorktree } from '$moduleUrl'; const made = await createTaskWorktree(process.argv[1], process.argv[2]); console.log(made.dir);"
 $made = & node --input-type=module -e $script $TeamLoopRoot $TaskId 2>&1
 if ($LASTEXITCODE -ne 0) { Write-Output "teamloop-worktree-failed`n$made"; exit 1 }
 Write-Output "teamloop-worktree-created $($made | Select-Object -Last 1)"
