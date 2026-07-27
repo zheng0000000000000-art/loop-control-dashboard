@@ -1,0 +1,36 @@
+#!/bin/sh
+# 다른 세션이 이 저장소를 쓰고 있으면 커밋을 막는다.
+#
+# 왜 커밋 시점인가: 동시 편집 자체는 못 막아도, 피해가 확정되는 곳은 커밋이다.
+# 2026-07-27 실측 — 두 세션이 같은 트리를 만졌고 한쪽의 `git add -A` 가 다른 쪽 파일을
+# 자기 커밋에 쓸어 담아 메시지와 내용이 어긋났다(c081dc4, 9bfda28).
+#
+# 프롬프트로 "동시에 하지 마라"고 적는 것으로는 안 지켜진다. 그래서 코드가 막는다.
+# 사람이 손으로 커밋할 때는 claude.exe 조상이 없어 그대로 통과한다 — 사람을 막지 않는다.
+
+REPO=$(git rev-parse --show-toplevel)
+GUARD="$REPO/scripts/session-lock.ps1"
+[ -f "$GUARD" ] || exit 0
+
+OUT=$(powershell -NoProfile -ExecutionPolicy Bypass -File "$GUARD" -Action Status 2>&1)
+CODE=$?
+
+case "$OUT" in
+  *lock-held-by-other*)
+    echo "커밋을 막는다: 다른 세션이 이 저장소를 쓰고 있다."
+    echo "  $OUT"
+    echo ""
+    echo "그 세션이 끝날 때까지 기다려라. 주인 세션이 죽었다면 다음 실행에서 자동 회수된다."
+    echo "이 검사를 끄려면(권장하지 않는다): git -c core.hooksPath=/dev/null commit ..."
+    exit 1
+    ;;
+esac
+
+# 세션 안인데 잠금이 없으면 지금 잡는다. 잡아둬야 다음 세션이 막힌다.
+case "$OUT" in
+  *lock-free*)
+    powershell -NoProfile -ExecutionPolicy Bypass -File "$GUARD" -Action Acquire -Label "pre-commit" -Quiet >/dev/null 2>&1
+    ;;
+esac
+
+exit 0

@@ -1,0 +1,8 @@
+#!/bin/sh
+# 커밋이 끝나면 잠금을 놓는다. 잠금은 커밋 구간에만 쥔다 —
+# 세션이 살아 있는 내내 쥐고 있으면 깨우기가 영원히 막힌다(claude.exe 는 세션 내내 산다).
+REPO=$(git rev-parse --show-toplevel)
+GUARD="$REPO/scripts/session-lock.ps1"
+[ -f "$GUARD" ] || exit 0
+powershell -NoProfile -ExecutionPolicy Bypass -File "$GUARD" -Action Release -Quiet >/dev/null 2>&1
+exit 0

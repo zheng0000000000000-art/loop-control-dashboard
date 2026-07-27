@@ -138,6 +138,17 @@ if (Test-Path $HeartbeatPath) {
   if (($null -ne $age) -and ($age -lt $StaleMinutes)) { Write-Line "coordinator-alive age=${age}m"; exit 0 }
 }
 
+# 다른 세션이 커밋 중이면 깨우지 않는다. 두 세션이 같은 트리를 만지면 한쪽의 스테이징이
+# 다른 쪽 파일을 쓸어 담는다(2026-07-27 실측: c081dc4, 9bfda28).
+$lockScript = Join-Path (Split-Path -Parent $PSCommandPath) 'session-lock.ps1'
+if (Test-Path $lockScript) {
+  $lockState = & powershell -NoProfile -ExecutionPolicy Bypass -File $lockScript -Action Status 2>&1
+  if ("$lockState" -match 'lock-held-by-other') {
+    Write-Line "session-locked - $lockState"
+    exit 0
+  }
+}
+
 # 같은 글로 두 번 깨우지 않는다. 실패한 세션이 무한히 재시도하면 토큰만 태운다.
 # 큐가 방아쇠일 때는 남은 개수를 표식으로 쓴다. 하나 끝나면 개수가 줄어 다음 깨우기가 열린다.
 $markerValue = if ($boardReview.Count -gt 0) { "board-review:$($boardReview[0].id)" }
@@ -254,10 +265,21 @@ try {
     -RedirectStandardInput $promptFile `
     -RedirectStandardOutput $log -RedirectStandardError "$log.err" `
     -NoNewWindow -PassThru
+  # 띄운 세션이 사는 동안 잠금을 쥐어준다. 커밋 구간만 쥐면 그 사이에 다른 세션이 끼어든다 -
+  # 2026-07-27 실측: 조율자가 도커·CI 를 기다리는 동안 하트비트가 낡아 깨우기가 판정 세션을
+  # 띄웠고, 두 세션이 같은 항목을 동시에 했다. 하트비트만으로는 긴 작업을 못 덮는다.
+  if (Test-Path $lockScript) {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $lockScript -Action Acquire `
+      -SessionPid $proc.Id -Label "wake:$trigger" -Quiet 2>&1 | Out-Null
+  }
   if (-not $proc.WaitForExit($TimeoutMinutes * 60 * 1000)) {
     $proc.Kill()
     Write-Line "wake-timeout after ${TimeoutMinutes}m log=$log"
     exit 3
+  }
+  if (Test-Path $lockScript) {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $lockScript -Action Release `
+      -SessionPid $proc.Id -Quiet 2>&1 | Out-Null
   }
   Write-Line "woke exit=$($proc.ExitCode) trigger=$trigger mode=$(if ($isReview) { 'review' } else { 'execute' }) log=$log"
 } finally {
