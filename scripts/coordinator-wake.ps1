@@ -13,6 +13,8 @@
 param(
   [string]$DiscussionPath = 'C:\NHN Project\team-loop-lite-ai-learning\data\discussions.json',
   [string]$HeartbeatPath  = 'C:\NHN Project\_ops\coordinator-heartbeat.json',
+  # 이 파일이 있으면 깨우지 않는다. 조율자가 명시적으로 멈출 때만 만든다.
+  [string]$HoldPath       = 'C:\NHN Project\_ops\coordinator-hold.flag',
   [string]$WorkingDir     = 'C:\Users\1\Documents\Local-First Workflow Dashboard',
   [string]$LogDir         = 'C:\NHN Project\_ops\wake-logs',
   [string]$ReaderId       = 'usr_claude_coordinator',
@@ -43,6 +45,14 @@ function Write-Line([string]$text) {
     $stampedLine = '{0}  depth={1}  {2}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $ChainDepth, $text
     Add-Content -Path $DecisionLog -Value $stampedLine -Encoding UTF8
   } catch { }
+}
+
+# 명시적 정지 표식. 조율자가 "지금은 멈춰라"고 말할 때만 만든다.
+# 있다는 사실 자체가 킬 스위치다 - 내가 살아 있다는 사실이 아니라.
+if (Test-Path $HoldPath) {
+  $reason = try { (Get-Content -Raw -Encoding UTF8 $HoldPath).Trim() } catch { '' }
+  Write-Line "coordinator-hold - $(if ($reason) { $reason } else { '사유 없음' })"
+  exit 0
 }
 
 if (-not (Test-Path $DiscussionPath)) { Write-Line 'discussion-missing'; exit 2 }
@@ -186,7 +196,14 @@ if (Test-Path $HeartbeatPath) {
     Write-Line "heartbeat-in-future skew=$([Math]::Abs($age))m - 고장으로 보고 깨운다"
     $age = $null
   }
-  if (($null -ne $age) -and ($age -lt $StaleMinutes)) { Write-Line "coordinator-alive age=${age}m"; exit 0 }
+  # 하트비트로 깨우기를 막지 않는다. 조율자가 살아 있다는 것과 루프가 멈춰야 한다는 것은 다르다.
+  # 이 검사는 원래 "두 세션이 같은 트리를 망가뜨리는 것"을 막으려던 대리 판단이었는데,
+  # 그 진짜 위험은 이제 다른 것들이 막는다 - 세션별 워크트리, 커밋 구간 잠금,
+  # 진행 중 표기, 착지 전 clean 요구.
+  # 2026-07-28 실측: 스케줄러가 133번 돌면서 전부 coordinator-alive 로 물러났다.
+  # 조율자가 일하고 있다는 이유로 루프가 멈춰 있었다. 지시하는 쪽이 존재하는 것이
+  # 실행을 막는 스위치면 안 된다. 킬 스위치는 파일 하나여야 한다.
+  if ($null -ne $age) { Write-Line "coordinator-heartbeat age=${age}m (막지 않는다)" }
 }
 
 # 본 저장소가 dirty 면 시작하지 않는다. 세 가지가 한꺼번에 어긋난다 -
