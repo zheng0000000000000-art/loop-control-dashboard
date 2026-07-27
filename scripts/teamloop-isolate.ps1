@@ -43,10 +43,36 @@ if ($Action -eq 'Check') {
 
 if (-not $TaskId) { Write-Output 'ensure-needs-task-id'; exit 2 }
 
+# gitignore 된 data/ 를 워크트리에 씨딩한다.
+# 왜 필요한가: 검증은 태스크 워크트리에서 도는데 data/ 가 git 추적 밖이라 거기 없다.
+# 그래서 node --test 가 data/failure-cases.json 부재로 1건 실패한다(2026-07-28 실측: 522/523).
+# 코드 결함이 아니라 환경 결핍인데, 그 상태로 강한 검증 프로파일을 켜면 모든 태스크가 떨어진다.
+# 게이트가 늘 빨가면 그 게이트는 무시된다(FAIL-2026-010).
+#
+# 덮어쓰지 않는다. 워크트리에 이미 있는 파일은 그 태스크가 만든 것일 수 있다.
+function Copy-DataSeed([string]$targetDir) {
+  $source = Join-Path $TeamLoopRoot 'data'
+  $target = Join-Path $targetDir 'data'
+  if (-not (Test-Path $source)) { return 0 }
+  New-Item -ItemType Directory -Force -Path $target | Out-Null
+  $copied = 0
+  foreach ($item in Get-ChildItem -Path $source -File) {
+    $dest = Join-Path $target $item.Name
+    if (Test-Path $dest) { continue }
+    Copy-Item -LiteralPath $item.FullName -Destination $dest -Force
+    $copied++
+  }
+  return $copied
+}
+
 $dir = Join-Path $TeamLoopRoot ".team-loop-worktrees\$TaskId"
 # 이미 있으면 그대로 쓴다. createTaskWorktree 는 -B 로 브랜치를 되감고 기존 워크트리를
 # 지우고 다시 만든다 - 앞 세션이 남긴 작업이 있으면 그것을 날린다.
-if (Test-Path $dir) { Write-Output "teamloop-worktree-exists $dir"; exit 0 }
+if (Test-Path $dir) {
+  $seeded = Copy-DataSeed $dir
+  Write-Output "teamloop-worktree-exists $dir (data 씨딩 $seeded 개)"
+  exit 0
+}
 
 # node -e 는 기준 URL 이 없어서 상대 경로 import 를 해석하지 못한다. 절대 file:// 로 준다.
 # 2026-07-28 실측: './src/worktree.js' 로 줬더니 esm/resolve 에서 죽었고 연쇄가 끊겼다.
@@ -56,5 +82,6 @@ $moduleUrl = ([uri](Join-Path $TeamLoopRoot 'src\worktree.js')).AbsoluteUri
 $script = "import { createTaskWorktree } from '$moduleUrl'; const made = await createTaskWorktree(process.argv[1], process.argv[2]); console.log(made.dir);"
 $made = & node --input-type=module -e $script $TeamLoopRoot $TaskId 2>&1
 if ($LASTEXITCODE -ne 0) { Write-Output "teamloop-worktree-failed`n$made"; exit 1 }
-Write-Output "teamloop-worktree-created $($made | Select-Object -Last 1)"
+$seeded = Copy-DataSeed $dir
+Write-Output "teamloop-worktree-created $($made | Select-Object -Last 1) (data 씨딩 $seeded 개)"
 exit 0
