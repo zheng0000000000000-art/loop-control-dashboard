@@ -59,6 +59,13 @@
     통과할 수 있다. 증거 없는 제출은 여전히 거절되는 것을 **음성 사례로 확인**한다.
   - 주의: 이건 판정층 변경이다. `unverified-claims.js`가 지키는 원칙
     ("돌지 않은 검사는 아무것도 증명하지 않는다")을 깨지 않는 형태여야 한다.
+  - **원인 지점이 더 좁혀짐(2026-07-28, `tsk_06ba445c1ee0e40aa5fe` 실측)**: `work_start_next`를
+    `executionMode: 'HUMAN'` 명시로 호출해 실제로 `task.executionMode='HUMAN'`, `worker: null`
+    (발사 없음) 상태로 시작하는 것까지는 성공했다. 그런데 바로 이어서 `submit_task_result`를
+    호출하니 응답의 `task.executionMode`가 `'AGENT'`로 바뀌어 있었다(version 2→3) —
+    `work_start_next`가 아니라 **`submit_task_result` 핸들러 자체가 제출을 받으며 AGENT로
+    넘긴다.** HUMAN으로 시작해도 피할 수 없다는 뜻이라, 이전 진단("work_start_next 기본값
+    문제")보다 더 구체적인 원인이다.
 
 (현재 대기 없음 — 아래 사람 게이트 2건은 실행자가 집지 않는다.)
 
@@ -140,6 +147,12 @@
   **판정**: 완료 기준 충족.
   **막힌 지점**: `show_task`로 보면 이미 `status: REVIEW`(`verification PASSED`, `review.status PENDING`). 이 판정 세션이 `verify_task`로 승인하려 했으나 서버가 "Verification requires an IN_PROGRESS task"로 거절 — `verify_task`는 REVIEW 상태에는 안 먹는다(이미 실행 세션이 IN_PROGRESS일 때 한 번 돌려 PASSED를 받은 뒤 `request_review_task`로 REVIEW로 넘어간 상태라서다). MCP 도구 목록 어디에도 REVIEW→DONE 승인 도구가 없다. `server.js`에서 찾은 유일한 경로는 HTTP `POST action=review`(decision=APPROVE, 실제 merge+DONE+archive까지 함)뿐인데, 이건 이전 실행 세션이 `msg_boardtask_aa08207_deliverygate_20260727`에 남긴 것과 같은 종류의 "MCP 처리 범위 밖" HTTP 우회다 — actor 인증도 이 세션엔 없고 merge+archive는 되돌리기 번거로운 상태 변화라 직접 호출하지 않았다.
   **사람이 정할 것**: (a) 대시보드에서 직접 승인 클릭 (b) 이 세션류가 HTTP `action=review`를 직접 호출해도 되는지 명시 허가 (c) `verify_task`가 REVIEW 상태에서도 승인으로 동작하게 하거나 별도 `approve_task` MCP 도구를 신설(게이트/판정층 코드 변경 — 사람 결재 대상). `data/discussions.json`에도 같은 내용을 남겼다(`msg_boardtask_aa08207_reviewgap_20260728`).
+
+- **team-loop 보드 태스크(`tsk_06ba445c1ee0e40aa5fe`, removeTaskWorktree 빈 폴더 회수)는 코드는 끝났는데 같은 납품 게이트 충돌로 REVIEW를 못 올렸다.** (2026-07-28, 실행 세션)
+  **한 일(완료 기준 6개 전부 실측 확인)**: `src/worktree.js`의 `removeTaskWorktree` — `git worktree remove --force` 뒤에도 디렉터리가 남으면 `fs.rm`으로 직접 지우고, 그래도 남으면(git 에러 또는 새 에러)에 `worktreeRemoveFailed=true`를 달아 던진다(성공한 척 조용히 넘어가지 않음). 반환값에 `{ dir, removed, forced }`. `mergePreparedWorktree`(164행)의 `.catch(() => {})`는 정리 실패를 완전히 삼키던 것을 고쳐 반환값 `worktreeCleanup` 필드에 남기도록(병합 자체는 실패시키지 않음 — 병합은 이미 끝난 뒤라서). `createTaskWorktree`(46행)의 `.catch(() => {})`는 그대로 뒀다 — 못 지워도 바로 다음 `git worktree add`가 실패를 그대로 드러내기 때문. `commitTaskWorktree`(remove=true, 145행)는 원래도 안 삼켰다. 시험 2개 추가(leftover 디렉터리 재현 + fs.rm 몽키패치로 진짜 실패 재현) — 둘 다 통과. `npm test` 전체 재실행 → `tests 510, pass 510`(기존 508 + 신설 2). `git diff --check` 통과. 허용 경로(`src/worktree.js`, `test/**`) 밖은 안 건드림.
+  **막힌 지점**: `submit_task_result`를 통해 제출하니 `task.executionMode`가 `HUMAN`→`AGENT`로 바뀌었다(상세는 위 대기 중 항목 참조). `verify_task` → `agent-executor` 체크가 `EXECUTOR_RESULT_MISSING`으로 FAILED(scopeViolations 없음, `git diff --check` PASS). `request_review_task` → "A passing verification is required"로 거절. block/unblock HTTP 우회는 이전 세션들과 같은 이유(MCP 처리 범위 밖, 판정층 코드는 사람 결재)로 시도하지 않았다.
+  **지금 상태**: `IN_PROGRESS`/`verification FAILED`로 그대로 뒀다. 코드는 서버의 격리 워크트리(`.team-loop-worktrees/tsk_06ba445c1ee0e40aa5fe`)에 그대로 있다. `data/discussions.json`에도 같은 내용을 남겼다(`msg_boardtask_06ba445c_deliverygate_20260728`).
+  **사람이 정할 것**: 위 '외부 에이전트를 위한 제3의 실행 모드' 항목과 동일 — 해소되면 이 태스크도 같이 풀린다.
 
 ## 끝난 것
 
