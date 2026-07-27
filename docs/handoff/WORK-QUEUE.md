@@ -155,6 +155,25 @@
 
 ## 끝난 것
 
+- [x] **CLI 도 EXTERNAL_AGENT 를 안 덮게 한다 (team-loop, `tsk_1c1cac713df07887931d`)** — 판정
+  통과(2026-07-28, 실행 세션 `20260728-023454`와 다른 판정 세션 `20260728-030132`). team-loop
+  저장소 `src/cli/main.js`의 claim/start-next 네 자리(781·1198·1319·1499)가 `executionMode:
+  'AGENT'`를 그대로 박아 보내던 것을 `claimExecutionMode(task)` 헬퍼로 교체 — 현재 모드가
+  `EXTERNAL_AGENT`면 그것을 지키고 아니면 종전대로 `AGENT`.
+  **재실행해 대조한 것(자기보고 아님)**: 격리 워크트리(`.team-loop-worktrees/tsk_1c1cac...`)에서
+  `git diff`로 네 자리 전부 헬퍼 경유·하드코딩 `'AGENT'` 잔존 없음을 직접 확인.
+  `test/cli-external-agent-claim.test.js` 3개(양성·음성·소스스캔)를 직접 Read해 내용 대조.
+  `npm test` 이 판정 세션이 직접 재실행 → `tests 521, pass 520, fail 1`. 실패 1건
+  (`test/injection-readiness.test.js`, `data/failure-cases.json` ENOENT)은 `git stash`로 이
+  태스크의 diff를 뗀 뒤 같은 파일만 재실행해도 동일하게 실패함을 독립 재현해 **이번 변경과
+  무관함을 직접 확인**(메인 트리엔 그 파일이 있고 격리 워크트리에만 없는 기존 인프라 결손).
+  `verification.scopeViolations=[]` 재확인, allowedPaths(`src/cli/main.js`, `test/**`) 밖 변경 없음.
+  **지표는 만족했으나 목적은 미달인 부분**: `main.js` 1052행의 무관한 주석에서 "얹혀 있는지는"이
+  "얹혔 있는지는"으로 바뀐 오타 1건 발견(기능 영향 없음, 스코프 위반도 아니나 불필요한 부수 변경 —
+  자진 신고).
+  승인: `mcp__team-loop__approve_task`로 이 판정 세션이 처리(ADR-020, 실행과 다른 세션) — 태스크
+  `DONE`/`archived`로 확인.
+
 - [x] **외부 에이전트를 위한 제3의 실행 모드 (team-loop)** — 판정 통과(2026-07-28, 실행 세션과
   다른 판정 세션). team-loop 저장소 `server.js` 두 곳을 고쳤다(커밋 `05ffa81`, `fusion/judgment-layer`):
   (1) `submit_task_result`가 제출을 받으며 `executionMode`를 무조건 `'AGENT'`로 되돌리던 것을,
