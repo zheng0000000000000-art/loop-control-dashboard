@@ -149,3 +149,33 @@ Unregister-ScheduledTask -TaskName 'CoordinatorHeartbeatWatch' -Confirm:$false
 Unregister-ScheduledTask -TaskName 'CoordinatorWake' -Confirm:$false
 Unregister-ScheduledTask -TaskName 'CoordinatorHeartbeatWatch' -Confirm:$false
 ```
+
+
+---
+
+# 스크립트 인코딩 검사 (`check-script-encoding.ps1`)
+
+**한글이 든 `.ps1`에 UTF-8 BOM이 없으면 exit 1.**
+
+## 왜 검사가 되었나
+
+같은 함정을 **하루에 세 번** 밟았다. 셋째는 편집 도구가 BOM을 조용히 떼어냈고,
+PowerShell이 ANSI로 읽어 한글이 깨지면서 **없는 `}`가 66번째 줄에서** 났다.
+나는 문법을 의심하며 블록을 하나씩 잘라 파싱했고, 전부 따로는 통과하는데 합치면 실패했다.
+원인은 문법이 아니라 **파일 첫 3바이트**였다.
+
+**규칙으로 두면 또 밟는다.** 그래서 검사로 올렸다 —
+이 저장소의 판단 기준 그대로다: *"프롬프트로 시키지 말고 코드로 강제하라."*
+
+## 실측 (2026-07-27)
+
+| 상황 | 결과 |
+| --- | --- |
+| 도입 즉시 | **기존 위반 1건 적발** — `scripts/setup-ollama.ps1`이 BOM 없이 들어와 있었다 |
+| BOM 뗀 파일 하나 추가 | `ps1-bom missing=2`, exit **1** |
+| `-Fix` 후 재검사 | `ps1-bom ok`, exit **0** |
+
+한글이 없는 `.ps1`은 BOM이 없어도 안 깨지므로 검사하지 않는다 — 안 깨지는 것을 막으면
+검사가 잔소리가 되고, 잔소리는 무시된다(FAIL-2026-010).
+
+CI 윈도우 잡의 **build보다 먼저** 돈다. 싸고, 여기서 걸리면 뒤가 다 무의미하다.

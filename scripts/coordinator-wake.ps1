@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 # 원격에서 조율자를 깨운다 — 사람이 집 컴퓨터 앞에 없어도.
 #
 # 왜 필요한가: 조율자는 채팅 메시지가 와야 턴이 시작된다. 대화 채널에 글을 남겨도 깨어나지 않는다.
@@ -16,6 +16,7 @@ param(
   [string]$WorkingDir     = 'C:\Users\1\Documents\Local-First Workflow Dashboard',
   [string]$LogDir         = 'C:\NHN Project\_ops\wake-logs',
   [string]$ReaderId       = 'usr_claude_coordinator',
+  [string]$TeamLoopRoot   = 'C:\NHN Project\team-loop-lite-ai-learning',
   [string]$BoardPath      = 'C:\NHN Project\team-loop-lite-ai-learning\data\tasks.json',
   [string]$QueuePath      = 'C:\Users\1\Documents\Local-First Workflow Dashboard\docs\handoff\WORK-QUEUE.md',
   [int]$ChainDepth        = 0,
@@ -51,12 +52,38 @@ $unread = @($discussion.messages | Where-Object {
 # 2026-07-27: 334분 공백 동안 할 일이 남아 있었는데 아무도 이어가지 않았다.
 # 지시큐는 작업보드다 — 사람이 태스크를 올려두면 조율자가 그것을 집어간다.
 $pendingWork = 0
+$boardReady  = @()   # 지금 집을 수 있는 것
+$boardReview = @()   # 판정만 남은 것
 if (Test-Path $BoardPath) {
   try {
     $board = Get-Content -Raw -Encoding UTF8 $BoardPath | ConvertFrom-Json
-    $tasks = if ($board.tasks) { $board.tasks } else { $board }
+    $tasks = @(if ($board.tasks) { $board.tasks } else { $board })
+    $tasks = @($tasks | Where-Object { -not $_.archived })
     $pendingWork = @($tasks | Where-Object { $_.status -and $ActiveStatuses -contains $_.status }).Count
+
+    $doneIds = @($tasks | Where-Object { $_.status -eq 'DONE' } | ForEach-Object { $_.id })
+    $boardReview = @($tasks | Where-Object { $_.status -eq 'REVIEW' } | Sort-Object { [int]$_.priority })
+    # 막힌 것과 선행이 안 끝난 것은 집지 않는다. 집어봐야 같은 자리에서 막힌다.
+    $boardReady = @($tasks | Where-Object { $_.status -and (@('TODO','READY') -contains $_.status) -and (-not $_.blocked) -and (@(@($_.dependsOnTaskIds) | Where-Object { $_ -and ($doneIds -notcontains $_) }).Count -eq 0) } | Sort-Object { [int]$_.priority })
   } catch { $pendingWork = 0 }
+}
+
+# 보드 태스크를 깨어난 세션이 읽을 수 있는 지시로 편다.
+# 이것이 없으면 보드가 깨우기만 하고, 세션은 WORK-QUEUE 에서 엉뚱한 항목을 집는다.
+function Format-BoardTask($task) {
+  $lines = @("[작업보드 태스크] $($task.id)", "제목: $($task.title)")
+  if ($task.priority)    { $lines += "우선순위: $($task.priority)" }
+  if ($task.description) { $lines += "", "설명:", $task.description }
+  if ($task.acceptanceCriteria) {
+    $lines += "", "완료 조건(이것을 만족해야 끝난 것이다):"
+    foreach ($c in @($task.acceptanceCriteria)) { $lines += "  - $c" }
+  }
+  if ($task.allowedPaths) {
+    $lines += "", "허용 경로(이 밖은 건드리지 마라):"
+    foreach ($a in @($task.allowedPaths)) { $lines += "  - $a" }
+  }
+  if ($task.skillIds)  { $lines += "", "참조할 스킬: $(@($task.skillIds) -join ', ')" }
+  return ($lines -join "`n")
 }
 
 # 작업 큐의 미완 항목도 방아쇠다. 사람이 다음 작업까지 적어두면 끝날 때까지 이어진다.
@@ -74,9 +101,11 @@ if ($unread.Count -eq 0 -and $pendingWork -eq 0 -and $queueOpen -eq 0 -and $queu
 }
 # 검토 대기가 있으면 그것이 최우선이다. 실행보다 판정이 먼저 밀린다 —
 # 판정이 안 나면 그다음 실행이 무엇 위에 쌓이는지 아무도 모른다.
-$trigger = if ($queueReview -gt 0) { "review=$queueReview" }
+$trigger = if ($boardReview.Count -gt 0) { "board-review=$($boardReview.Count)" }
+  elseif ($queueReview -gt 0) { "review=$queueReview" }
   elseif ($unread.Count -gt 0) { "unread=$($unread.Count)" }
-  elseif ($pendingWork -gt 0) { "board=$pendingWork" }
+  elseif ($boardReady.Count -gt 0) { "board=$($boardReady.Count)" }
+  elseif ($pendingWork -gt 0) { "board-stuck=$pendingWork" }
   else { "queue=$queueOpen" }
 
 # 조율자가 지금 돌고 있으면 깨우지 않는다. 두 세션이 같은 저장소를 동시에 만지면
@@ -89,9 +118,10 @@ if (Test-Path $HeartbeatPath) {
 
 # 같은 글로 두 번 깨우지 않는다. 실패한 세션이 무한히 재시도하면 토큰만 태운다.
 # 큐가 방아쇠일 때는 남은 개수를 표식으로 쓴다. 하나 끝나면 개수가 줄어 다음 깨우기가 열린다.
-$markerValue = if ($queueReview -gt 0) { "review:$queueReview" }
+$markerValue = if ($boardReview.Count -gt 0) { "board-review:$($boardReview[0].id)" }
+  elseif ($queueReview -gt 0) { "review:$queueReview" }
   elseif ($unread.Count -gt 0) { $unread[0].id }
-  elseif ($pendingWork -gt 0) { "board:$pendingWork" }
+  elseif ($boardReady.Count -gt 0) { "board:$($boardReady[0].id)" }
   else { "queue:$queueOpen" }
 $marker = "$HeartbeatPath.woke"
 if ((Test-Path $marker) -and ((Get-Content -Raw $marker).Trim() -eq $markerValue)) {
@@ -152,17 +182,33 @@ $executePrompt = @'
 '@
 
 # 판정과 실행은 다른 일이다. 한 프롬프트로 둘 다 시키면 실행자가 자기 일을 자기가 통과시킨다.
-$isReview = $queueReview -gt 0
+$isReview = ($queueReview -gt 0) -or ($boardReview.Count -gt 0)
 $prompt = if ($isReview) { $reviewPrompt } else { $executePrompt }
 
-if ($DryRun) { Write-Line "would-wake trigger=$trigger mode=$(if ($isReview) { 'review' } else { 'execute' })"; exit 1 }
+# 보드가 방아쇠면 그 태스크를 프롬프트에 박는다. "보드를 봐라"가 아니라 무엇을 할지를 준다 —
+# 깨어난 세션은 이 대화의 기억이 없어서, 가리키기만 하면 다른 것을 집는다.
+$boardTask = if ($boardReview.Count -gt 0) { $boardReview[0] }
+  elseif ((-not $isReview) -and ($unread.Count -eq 0) -and ($boardReady.Count -gt 0)) { $boardReady[0] }
+  else { $null }
+if ($boardTask) {
+  $prompt = $prompt + "`n`n--- 이번에 할 것 (WORK-QUEUE 보다 이것이 먼저다) ---`n" +
+    (Format-BoardTask $boardTask) +
+    "`n`n이 태스크를 team-loop MCP 로 처리한다. claim_task 로 집고, 끝나면 submit_task_result 와" +
+    "`nrequest_review_task 로 REVIEW 까지만 올린다. verify_task 로 스스로 통과시키지 마라 — 판정은 따로다." +
+    "`nteam-loop 저장소는 $TeamLoopRoot 이다."
+}
 
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $stamp = (Get-Date).ToString('yyyyMMdd-HHmmss')
-$log = Join-Path $LogDir "wake-$stamp.log"
 $promptFile = Join-Path $LogDir "wake-$stamp.prompt.txt"
 [IO.File]::WriteAllText($promptFile, $prompt, [Text.UTF8Encoding]::new($false))
 
+if ($DryRun) {
+  Write-Line "would-wake trigger=$trigger mode=$(if ($isReview) { 'review' } else { 'execute' }) task=$(if ($boardTask) { $boardTask.id } else { 'none' }) prompt=$promptFile"
+  exit 1
+}
+
+$log = Join-Path $LogDir "wake-$stamp.log"
 Set-Content -Path $marker -Value $markerValue -Encoding UTF8
 
 # 프롬프트를 명령행 인자로 넘기지 않는다. 콘솔 코드페이지를 거치면서 한글이 깨진다 —

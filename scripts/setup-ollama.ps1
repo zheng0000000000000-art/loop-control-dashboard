@@ -1,4 +1,4 @@
-# Ollama 설치, 서비스 확인, 모델 준비, definition 모델 자동 갱신을 수행한다.
+﻿# Ollama 설치, 서비스 확인, 모델 준비, definition 모델 자동 갱신을 수행한다.
 # 이미 준비된 단계는 건너뛰고 필요한 단계만 실행한다.
 param(
   [string]$Endpoint = "http://127.0.0.1:11434"
