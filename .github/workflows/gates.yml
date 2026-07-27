@@ -22,11 +22,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # "8.0"이 빠져 있는 것은 잊어서가 아니다. 2026-07-27 실측: .NET 8에서 hs-scan이
-        # TypeInfoResolver 미지정으로 exit 2를 내 POST-COMMIT이 FAIL이다. 아직 안 고쳤다.
-        # 지금 넣으면 이 다리는 영구 적색이 되고, 영구히 빨간 게이트는 무시된다(FAIL-2026-010).
-        # NET8-01 지시서가 server/Harness의 옵션을 한 벌로 모으고 **이 목록에 "8.0"을 넣는다.**
-        sdk: ["10.0"]
+        # 2026-07-27: NET8-01-R1이 server/Harness의 옵션을 HarnessJson.Options 한 벌로 모으고
+        # TypeInfoResolver를 줬다. 그전에는 .NET 8에서 hs-scan이 exit 2였다(음성 사례로 재현 확인).
+        # 컨테이너 실측에서 하네스 22개 exit code 표가 .NET 8과 .NET 10에서 한 줄도 다르지 않다.
+        # 그 증거로 이 다리를 켠다. 빨간 채로 켜면 그 게이트는 무시된다(FAIL-2026-010) —
+        # 초록으로 도착하지 않으면 이 줄을 되돌린다.
+        sdk: ["10.0", "8.0"]
     steps:
       - uses: actions/checkout@v4
         with:

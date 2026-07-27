@@ -39,20 +39,38 @@
 
 ## 대기 중
 
-- [~] **`.NET 8` 하네스 JSON 옵션 통합 (NET8-01-R1, 옵션 a)** — 실행 끝, 판정 대기
-  - 한 것: `server/Harness/` **18개** 파일의 개별 `JsonSerializerOptions`를 `HarnessJson.Options` 한 벌로.
+- [ ] **`.NET 8` 하네스 JSON 옵션 통합 (NET8-01-R1, 옵션 a)** — 판정 완료, **미달로 반려**(2026-07-27, 실행과 다른 판정 세션)
+  - 한 것(그대로 유효): `server/Harness/` **18개** 파일의 개별 `JsonSerializerOptions`를 `HarnessJson.Options` 한 벌로.
     `TypeInfoResolver = new DefaultJsonTypeInfoResolver()` 추가. `using`은 파일마다 판단해
-    **5개 파일이 `System.Text.Json`을 유지**(앞 시도가 여기서 깨졌다 — 지시서가 지목한 2개 + 발견 3개).
-  - 확인한 것(컨테이너 실측):
-    - 수정 전 `.NET 8` `hs-scan` = **2** (`TypeInfoResolver` 미지정 예외) → 수정 후 = **1**(기대값)
-    - 하네스 22개 exit code 표가 **`.NET 8`과 `.NET 10`에서 한 줄도 다르지 않다**
-    - 양쪽 컨테이너 `build` = 0 warning / 0 error
-  - **판정자가 볼 것 둘**:
-    1. **이 커밋은 코덱스 영토(`server/Harness/`)를 직접 건드렸다.** `TERRITORY-EXCEPTIONS.json`에
-       sha 등재가 필요하다. **작성자가 등재하면 자기승인이라 안 했다.**
-    2. **`gates.yml` matrix에 `"8.0"`은 아직 안 넣었다.** 컨테이너에서 POST-COMMIT `PASS 22/22`를
-       직접 보이지 못했다(복사본에 `.git`·`outputs/` 없음). CI가 초록으로 도착해야 켠다 — FAIL-2026-010.
-  - 보고: `docs/qa/gate-witness/NET8-01-R1.md` (자진 신고 3건 있음)
+    **5개 파일이 `System.Text.Json`을 유지**. 이 부분(JSON 옵션 통합 자체)은 재작업 불필요 —
+    아래 반려 사유는 이것과 무관하다.
+  - **다시 돌려 대조한 것**(판정 세션 직접 실행, 격리 빌드 `/tmp/net8-01-r1-verify`):
+    `dotnet build server` 0 warning/0 error, `measure dev-pack` violations=0,
+    `handoff-integrity` verdict=PASS, `doc-integrity` verdict=INTACT,
+    `territory-check --commit c5c1f21` → violations **20**(보고의 자기신고와 일치, ledger 미등재 상태).
+  - **반려 사유(지시서 자체 기준)**: `docs/directives/NET8-01-R1-harness-json-options.md` §7·목적 기준이
+    명시적으로 `di-completion-check --gate POST-COMMIT` **PASS 22/22**, `--gate LAND` **PASS**,
+    `.NET 10` 회귀 없음을 요구하고 "**컨테이너 `.NET 8`이 빨간 채로 제출하면 반려다**"라고 못박는다.
+    그런데 보고 자신의 표가 **POST-COMMIT·LAND 둘 다 `.NET 8`·`.NET 10` 양쪽에서 exit 1**이다.
+    보고는 이것을 ".git·outputs/ 없는 복사본이라서"로 **추정**했을 뿐 확인하지 않았다고 스스로 적었다.
+  - **판정 세션이 실체로 확인한 것(추정 아님)**: `gh run view`로 실제 GitHub Actions를 직접 봤다.
+    이 커밋의 실제 push(`30265507200`)가 **CI에서 FAIL**했고, 원인은 `context-pack-integrity`
+    (POST-COMMIT 22개 중 하나)가 `crossDirectivePinCollisionCount:10`, `staleCount:2`를 낸 것 —
+    `docs/handoff/queue/directive-DLINT-01`이 `server/Harness/`의 파일 두 개를 sha256으로 고정해
+    뒀는데 이번 통합이 그 파일들을 고쳐 pin이 stale해졌다. 즉 보고의 "복사본 탓" 추정은 **틀렸다** —
+    진짜 원인은 이 diff가 만든 실제 회귀다. **동시에 떠 있던 다른 세션이 이 세션과 별개로 같은
+    원인을 진단해(`c62ca33` 커밋, 이 판정 도중 관측) DLINT-01 해시를 재계산하고 로컬/CI 하네스
+    목록을 `scripts/harness-list.txt` 한 벌로 합치는 수정을 이미 반입 중이다** — 그 세션의
+    `.github/workflows/gates.yml` 수정은 아직 워킹트리에 uncommitted라 이 판정 세션은 건드리지 않았다.
+  - **이 판정 세션이 처리한 것**: `TERRITORY-EXCEPTIONS.json`에 `c5c1f21` sha+사유를 등재했다
+    (TERR-01 설계상 "조율자가 반입 시점에" 하는 일 — 실행 세션이 자기승인이라 비워뒀던 것).
+    등재 후 `territory-check --commit c5c1f21` 재확인 → exit **0**(exempted 20건). 이 등재는
+    이번 반려와 무관하게 유효하다 — 커밋은 이미 저장소 역사에 있고, 감사 기록은 남아야 한다.
+  - **다음 실행자가 할 것**: `c62ca33`류 수정이 완주해 실제 CI(`gh run list` 최신)가 초록으로
+    도착하는 것을 직접 확인한 뒤 재제출한다. JSON 옵션 통합 자체는 다시 안 해도 된다 —
+    빠진 것은 DLINT-01 pin 갱신 확인과 실제 CI green뿐이다. 그 뒤에야 `gates.yml` matrix에
+    `"8.0"`을 조율자가 넣는다.
+  - 보고: `docs/qa/gate-witness/NET8-01-R1.md` (자진 신고 3건 있었으나 근본 원인 진단은 빗나갔다)
 
 
 > **순서는 사람이 정한다.** 2026-07-27 사용자 지시로 작업보드를 맨 위로 올렸다 —
