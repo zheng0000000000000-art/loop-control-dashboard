@@ -348,6 +348,25 @@ try {
       -QueuePath $claimPath -SessionPid $proc.Id 2>&1 | ForEach-Object { Write-Line "queue-$_" }
   }
 
+  # 보드에 "지금 이걸 하고 있다"를 찍는다. claim_task 를 못 쓰게 하면서 이 표시가 사라졌다 -
+  # 2026-07-28 실측: 세션이 8분째 도는데 보드는 READY / IDLE 이었다.
+  # executionMode 는 건드리지 않는다. 그것을 AGENT 로 바꾸는 것이 원래 문제였다.
+  $boardClaimScript = Join-Path (Split-Path -Parent $PSCommandPath) 'board-claim.ps1'
+  if ($boardTask -and (Test-Path $boardClaimScript)) {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $boardClaimScript -Action Claim `
+      -BoardPath $BoardPath -TaskId $boardTask.id -SessionId $stamp 2>&1 |
+      ForEach-Object { Write-Line "$_" }
+  }
+
+  # 사람이 보는 자리에 남긴다. decisions.log 도 잠금 파일도 워크트리도 전부 로컬이라 폰에서 안 보인다.
+  # 세션에게 시키지 않는다 - 세션이 잊거나 죽으면 그만이다. 깨우기가 직접 쓴다.
+  $loopLogScript = Join-Path (Split-Path -Parent $PSCommandPath) 'loop-log.ps1'
+  if (Test-Path $loopLogScript) {
+    $what = if ($boardTask) { "보드 · $($boardTask.title)" } else { $trigger }
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $loopLogScript `
+      -Text "시작 · $(if ($isReview) { '판정' } else { '실행' }) · $what · $stamp" 2>&1 | Out-Null
+  }
+
   # 띄운 세션이 사는 동안 잠금을 쥐어준다. 커밋 구간만 쥐면 그 사이에 다른 세션이 끼어든다 -
   # 2026-07-27 실측: 조율자가 도커·CI 를 기다리는 동안 하트비트가 낡아 깨우기가 판정 세션을
   # 띄웠고, 두 세션이 같은 항목을 동시에 했다. 하트비트만으로는 긴 작업을 못 덮는다.
@@ -364,6 +383,11 @@ try {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $lockScript -Action Release `
       -SessionPid $proc.Id -Quiet 2>&1 | Out-Null
   }
+  if ($boardTask -and (Test-Path $boardClaimScript)) {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $boardClaimScript -Action Release `
+      -BoardPath $BoardPath -TaskId $boardTask.id 2>&1 | ForEach-Object { Write-Line "$_" }
+  }
+
   if ($sessionId) {
     $landed = & powershell -NoProfile -ExecutionPolicy Bypass -File $worktreeScript `
       -Action Land -SessionId $sessionId -RepoRoot $WorkingDir 2>&1
@@ -381,6 +405,11 @@ try {
       Write-Line 'land-failed - 브랜치를 남기고 멈춘다. 사람 확인이 필요하다'
       exit 4
     }
+  }
+  if (Test-Path $loopLogScript) {
+    $tail = if ($sessionId) { "$landed" } else { '워크트리 없이 본 저장소에서 돌았다' }
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $loopLogScript `
+      -Text "끝 · $stamp · $tail" 2>&1 | Out-Null
   }
   Write-Line "woke exit=$($proc.ExitCode) trigger=$trigger mode=$(if ($isReview) { 'review' } else { 'execute' }) log=$log"
 } finally {
