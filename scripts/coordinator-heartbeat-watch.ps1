@@ -9,6 +9,9 @@
 param(
   [string]$HeartbeatPath = 'C:\NHN Project\_ops\coordinator-heartbeat.json',
   [int]$StaleMinutes = 25,
+  [string]$DiscussionPath = 'C:\NHN Project\team-loop-lite-ai-learning\data\discussions.json',
+  [string]$ReaderId = 'usr_claude_coordinator',
+  [int]$UnreadMinutes = 10,
   [string]$NtfyServer = 'https://ntfy.sh',
   [string]$Topic = '',
   [switch]$DryRun
@@ -24,6 +27,38 @@ if (-not $Topic) {
   }
 }
 if (-not $Topic) { Write-Output 'topic-missing'; exit 2 }
+
+# 조율자에게 안 읽힌 대화가 있으면 알린다.
+# 2026-07-27 실측: 사용자가 05:14:47과 05:17:40에 대화 채널에 글을 남겼는데 조율자의 턴은
+# 05:14:11에 이미 끝나 있었다. 대화 채널은 조율자를 깨우지 못한다 — 채팅만 턴을 시작한다.
+# 그래서 334분 동안 아무도 읽지 않았고 사람이 물어봐서 알았다.
+if (Test-Path $DiscussionPath) {
+  $discussion = Get-Content -Raw -Encoding UTF8 $DiscussionPath | ConvertFrom-Json
+  $unread = @($discussion.messages | Where-Object {
+    $_.authorUserId -ne $ReaderId -and -not ($_.readBy | Where-Object { $_.userId -eq $ReaderId })
+  })
+  $unreadMarker = "$HeartbeatPath.unread"
+  if ($unread.Count -gt 0) {
+    $oldest = [datetimeoffset]::Parse($unread[0].createdAt)
+    $waited = [int]([datetimeoffset]::UtcNow - $oldest).TotalMinutes
+    $seen = (Test-Path $unreadMarker) -and ((Get-Content -Raw $unreadMarker).Trim() -eq $unread[0].id)
+    if (-not $seen -and $waited -ge $UnreadMinutes) {
+      $text = "조율자가 안 읽은 대화 $($unread.Count)건. 가장 오래된 것 ${waited}분째. 채팅으로 깨워야 읽는다."
+      if ($DryRun) { Write-Output "would-alert-unread: $text" }
+      else {
+        $f = [IO.Path]::GetTempFileName()
+        [IO.File]::WriteAllText($f, $text, [Text.UTF8Encoding]::new($false))
+        try {
+          Invoke-RestMethod -Uri "$NtfyServer/$Topic" -Method Post `
+            -Headers @{ Title = 'Unread message'; Tags = 'envelope'; Priority = '4' } `
+            -ContentType 'text/plain; charset=utf-8' -InFile $f | Out-Null
+        } finally { Remove-Item $f -Force -ErrorAction SilentlyContinue }
+        Set-Content -Path $unreadMarker -Value $unread[0].id -Encoding UTF8
+        Write-Output "alerted-unread count=$($unread.Count) waited=${waited}m"
+      }
+    }
+  } elseif (Test-Path $unreadMarker) { Remove-Item $unreadMarker -Force }
+}
 
 if (-not (Test-Path $HeartbeatPath)) { Write-Output 'heartbeat-missing'; exit 2 }
 

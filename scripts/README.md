@@ -1,4 +1,4 @@
-# 조율자 하트비트 — 멈춘 것을 사람이 먼저 알게 한다
+# 조율자 운영 스크립트 — 멈추면 알리고, 할 일이 남으면 깨운다
 
 ## 왜 있는가
 
@@ -56,5 +56,72 @@
 ## 끄는 법
 
 ```powershell
+Unregister-ScheduledTask -TaskName 'CoordinatorHeartbeatWatch' -Confirm:$false
+```
+
+
+---
+
+# 원격 깨우기 (`coordinator-wake.ps1`)
+
+## 왜 있는가
+
+**조율자는 채팅 메시지가 와야 턴이 시작된다.** 대화 채널에 글을 남겨도, 작업이 남아 있어도
+스스로 다시 돌지 않는다. 사용자는 폰에서 대시보드에는 붙을 수 있지만 **조율자를 깨울 수 없었다** —
+집 컴퓨터 앞에 있어야 했다.
+
+그리고 2026-07-27의 334분 공백이 보여준 것: **그건 루프가 아니라 응답이었다.**
+할 일이 남아 있었는데 아무도 이어가지 않았다.
+
+## 방아쇠 셋
+
+| 방아쇠 | 무엇 |
+| --- | --- |
+| **안 읽은 대화** | `discussions.json`에 `readBy`가 없는 사람 글 |
+| **작업 큐** | `docs/handoff/WORK-QUEUE.md`의 `- [ ]` 항목 |
+| **작업보드** | team-loop `tasks.json`의 활성 태스크 |
+
+셋 다 없으면 `nothing-to-do`. **조율자가 이미 돌고 있으면 깨우지 않는다**(하트비트 25분 미만) —
+두 세션이 같은 저장소를 만지면 커밋이 엉킨다.
+
+## 끝나면 스스로 다음을 부른다
+
+한 항목이 끝나면 큐를 다시 세고 **남아 있으면 즉시 다음 세션을 띄운다.** 스케줄러를 기다리지 않는다.
+
+**멈추는 조건 셋** — 무한 재시도로 토큰만 태우는 것을 막는다:
+
+- `queue-drained` — 남은 항목이 없다
+- `chain-limit` — 연쇄 5회에 도달했다
+- **`no-progress`** — 큐가 줄지 않았다. 같은 항목을 또 시도하면 같은 자리에서 막힌다. **exit 4로 멈추고 사람을 기다린다.**
+
+## 깨어난 세션의 성격
+
+**이 대화의 기억이 없는 다른 세션이다.** 인수인계 문서로만 이어붙는다 —
+`RUNTIME-INDEX.md` → `WORK-QUEUE.md` → 안 읽은 대화 순으로 읽는다.
+그래서 **큐에 "무엇을·완료 조건·주의"를 적어두는 것이 곧 인수인계**다.
+
+## 인코딩 함정 (셋째)
+
+**프롬프트를 명령행 인자로 넘기면 한글이 깨진다.** 실측: 깨어난 세션이 `"?덈뒗"`을 받고
+"입력이 깨져서 들어왔다"고 답했다. **UTF-8 파일을 stdin으로** 넣으면 온전하다.
+
+```
+-ArgumentList @('-p', $prompt, ...)          → 깨짐
+-ArgumentList @('-p', ...) -RedirectStandardInput $promptFile  → 온전
+```
+
+## 실측 (2026-07-27)
+
+| 상황 | 결과 |
+| --- | --- |
+| 안 읽은 글 1건 + 하트비트 40분 | `would-wake trigger=unread=1` |
+| 실제 실행 | 세션이 떠서 `readBy` 추가 + 답글 + **지시 밖 작업 안 함**(다른 14건 그대로) |
+| 조율자가 도는 중 | `coordinator-alive age=0m` — 안 깨움 |
+| 큐 4건 남음 | `would-wake trigger=queue=4` |
+
+## 끄는 법
+
+```powershell
+Unregister-ScheduledTask -TaskName 'CoordinatorWake' -Confirm:$false
 Unregister-ScheduledTask -TaskName 'CoordinatorHeartbeatWatch' -Confirm:$false
 ```
