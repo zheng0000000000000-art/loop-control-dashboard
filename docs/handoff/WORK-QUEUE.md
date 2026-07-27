@@ -49,54 +49,10 @@
 
 ## 대기 중
 
-- [~] **긴 작업 중 하트비트가 낡아 깨우기가 끼어든다**
-  - 무엇: 깨우기는 하트비트가 10분 넘으면 "조율자 없음"으로 읽는다. 그런데 도커 컨테이너 측정이나
-    CI 대기는 **한 번에 10분을 넘긴다.** 2026-07-27 실측 — 조율자가 `NET8-01-R1`을 하는 동안
-    하트비트가 낡아 깨우기가 21:31에 판정 세션을 띄웠고, 두 세션이 같은 항목을 동시에 했다.
-    워크트리 분리로 피해는 줄었지만 **원인은 그대로다.** 지금도 긴 작업 한 번이면 또 끼어든다.
-  - 완료 조건:
-    - 오래 걸리는 지점이 **작업 중에도** 하트비트를 갱신한다. 최소한 `scripts/run-gates.sh`가
-      하네스 하나 끝날 때마다 갱신한다.
-    - **음성 사례로 확인한다** — 갱신 없이 12분 걸리는 작업을 흉내내면 깨우기가 끼어드는 것,
-      갱신을 넣으면 안 끼어드는 것을 각각 `-DryRun`으로 재서 표로 남긴다.
-    - 하트비트는 **반드시 UTC `Z`** 형식으로 쓴다(`2026-07-27T13:00:00Z`).
-      로컬 시각에 `+09:00`을 붙이면 미래로 찍혀 루프가 죽는다 — 그 사고가 이미 한 번 있었다.
-  - 주의: 하트비트를 너무 자주 쓰면 파일 경합이 생긴다. 갱신 간격에 하한을 둬라(예: 60초).
-  - 참고: `scripts/README.md`의 "6시간 47분 정지" 절, `docs/handoff/KNOWN-ISSUES.md`
-  - **한 것(2026-07-27, 이 세션)**: `scripts/heartbeat-touch.sh` 신설 — 하트비트 파일 mtime이
-    최소 간격(기본 60초, `HEARTBEAT_MIN_INTERVAL_SEC`로 조절) 이상 지났을 때만 `at`(UTC `Z`)과
-    `note`를 갱신한다(`session` 필드는 보존). 파일이 없으면(이 컴퓨터가 아니면, 즉 CI 컨테이너)
-    조용히 넘어간다. `scripts/run-gates.sh`의 하네스 루프 안, 각 명령이 끝난 직후에 이걸 호출하게
-    붙였다 — 완료 조건이 요구한 최소선("하네스 하나 끝날 때마다 갱신")과 정확히 일치한다.
-  - **확인한 것(실측, 자기보고 아님)**:
-    - 단위 시험: mtime을 5분 전으로 되돌린 뒤 호출 → `at`·`note` 갱신됨. 곧바로 다시 호출(간격
-      미만) → `at`·`note` **그대로**(파일 경합 방지 확인).
-    - 격리된 임시 저장소(git init, clean)와 임시 `discussions.json`(빈 배열)·`WORK-QUEUE.md`
-      (`- [ ]` 1건)·`heartbeat.json`을 만들고 `coordinator-wake.ps1 -DryRun`에 각 경로를 override해
-      실제 하트비트·큐·대화 파일과 분리한 상태로 양성·음성 사례를 재봤다(표):
-
-      | 사례 | 하트비트 상태 | `coordinator-wake.ps1 -DryRun` 결과 | exit |
-      | --- | --- | --- | --- |
-      | 음성(갱신 없음) | `at`을 12분 전으로 고정 | `would-wake trigger=queue=1 mode=execute` (끼어듦) | 1 |
-      | 양성(갱신 있음) | `heartbeat-touch.sh`를 3회 호출해 방금 갱신된 상태로 마무리 | `coordinator-alive age=0m` (안 끼어듦) | 0 |
-
-    - `measure dev-pack` → `violationCount: 0` 재확인.
-    - `dotnet build server` → 0 warning/0 error.
-    - `bash scripts/run-gates.sh` 전체 재실행 → `trust-origin --self-test`만 exit 1(FAIL).
-      **이 실패는 내 변경과 무관하다** — `git stash`로 이번 변경(scripts/run-gates.sh,
-      scripts/heartbeat-touch.sh)을 전부 뺀 클린 HEAD에서도 같은 명령을 직접 재실행해보니
-      **출력이 바이트 단위로 동일하고 exit 1도 동일**했다(`diff`로 확인, 무변화). `measure dev-pack`이
-      요구하는 게이트(violations 0)는 이 실패와 별개이며 통과한다. 원인은 조사하지 않았다 —
-      이 항목의 범위 밖이다.
-  - **지표는 만족했으나 목적은 미달인 부분**: 없음. 완료 조건 셋(작업 중 갱신, 음성/양성 표,
-    UTC Z 형식) 모두 실측으로 확인했다.
-  - **주체**: 이 조율자 세션(claude.exe pid 47524, 워크트리 `session-20260727-223026`).
-  - **승인은 다음 판정 세션의 몫이다**(ADR-020) — 이 항목을 자기승인하지 않는다.
+(현재 대기 없음 — 아래 사람 게이트 2건은 실행자가 집지 않는다.)
 
 > **순서는 사람이 정한다.** 2026-07-27 사용자 지시로 작업보드를 맨 위로 올렸다 —
 > *"작업보드 쪽 먼저 하는 게 확실하지 않을까?"*
-
-(현재 대기 없음 — 아래 사람 게이트 2건은 실행자가 집지 않는다.)
 
 > **사람 게이트 2건은 보드로 옮겼다.** 발사가 필요해서 실행자가 집을 수 없다.
 > 폰에서 보이되 안 집히도록 제목을 `[사람 게이트]`로 시작하게 했다.
@@ -148,6 +104,37 @@
   남기고 **코드는 손대지 않았다**. 다음 세션은 사용자 답을 확인한 뒤 진행한다.
 
 ## 끝난 것
+
+- [x] **긴 작업 중 하트비트가 낡아 깨우기가 끼어든다** — 판정 통과(2026-07-27, 실행 세션
+  `session-20260727-223026`과 다른 판정 세션 `session-20260727-224243`).
+  - **재실행해 대조한 것(자기보고 아님)**:
+    - `git show 31404ca --stat`로 diff 확인 — `scripts/heartbeat-touch.sh` 신설,
+      `scripts/run-gates.sh`의 하네스 루프 안 각 명령 직후 `bash scripts/heartbeat-touch.sh` 호출이
+      실제로 배선돼 있음을 소스에서 직접 확인.
+    - `dotnet build server` 직접 재실행 → 경고 0개, 오류 0개.
+    - `dotnet run --project server --no-build -- measure dev-pack` 직접 재실행 →
+      `violationCount: 0`.
+    - `bash scripts/run-gates.sh` 전체를 이 판정 세션에서 직접 재실행 → 보고와 정확히 같은 패턴:
+      `trust-origin --self-test`만 FAIL exit 1(원인: `required-commands-match-manifest`·
+      `required-commands-drift-detected` — 명령 매니페스트 드리프트, heartbeat-touch.sh나
+      run-gates.sh 변경과 무관함을 실패 내용에서 직접 확인), 나머지 9개 하네스 전부 ok.
+      실제 `/c/NHN Project/_ops/coordinator-heartbeat.json`을 재실행 전후로 대조 —
+      `note`가 `"run-gates: measure dev-pack"`로, `session` 필드는 실행 세션(`session-20260727-223026`)
+      그대로 보존된 채 갱신됨을 확인(운영 파일에서 실사 배선 확인, 합성 아님).
+    - `heartbeat-touch.sh` 단위 재현: 격리된 heartbeat.json의 mtime을 12분 전으로 고정 →
+      호출 시 `at`(UTC `Z`)·`note` 갱신, `session` 보존 확인. 곧바로 재호출(간격 미만) → 그대로.
+    - `coordinator-wake.ps1 -DryRun`을 별도 격리 저장소(git init)에서 6개 경로 전부 override해
+      재현: 하트비트 12분 전 → `would-wake ...` exit 1(끼어듦). 하트비트를 방금으로 갱신 →
+      `coordinator-alive age=0m` exit 0(안 끼어듦). 보고의 표와 게이트 판정(끼어듦/안 끼어듦, exit
+      1/0)이 일치. (트리거 사유 문자열만 `queue=1`이 아니라 `unread=1`로 나왔는데, 원인은 이
+      판정 세션이 만든 임시 `discussions.json`을 빈 배열 `[]`로 둔 것 — 실제 스키마는
+      `{schemaVersion, messages:[...]}`이고 빈 배열을 최상위에 두면 PowerShell이 `$null`을
+      파이프라인에 태워 유령 unread 1건으로 센다. 이건 이 판정 세션의 시험 픽스처 실수이지
+      하트비트 게이트 자체의 결함이 아니다 — 하트비트 나이 판정 분기는 트리거 사유와 무관하게
+      동일하게 통과/차단됨을 코드에서 확인했다.)
+  - **지표는 만족했으나 목적은 미달인 부분**: 없음. 완료 조건 셋(작업 중 갱신, 음성/양성 표,
+    UTC Z 형식) 모두 이 판정 세션이 독립 재현으로 재확인했다.
+  - 관련 커밋: `31404ca`.
 
 - [x] **세션 격리 — 워크트리 분리** — 판정 통과(2026-07-27, 실행 세션과 다른 판정 세션 —
   이 판정 세션 자체가 `session-20260727-221340` 워크트리에서 돈다. 커밋 459ce46은 이 세션

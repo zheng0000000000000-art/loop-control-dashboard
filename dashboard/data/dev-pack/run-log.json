@@ -32075,6 +32075,75 @@
         "subscriptionCalls": 0,
         "role": "runtime"
       }
+    },
+    {
+      "createdAt": "2026-07-27T22:43:17.0998783+09:00",
+      "event": "measure.completed",
+      "params": {
+        "providerId": "dev-pack-checks",
+        "violationCount": 0,
+        "durationMs": 640
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 13,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-27T22:43:40.2793798+09:00",
+      "event": "measure.completed",
+      "params": {
+        "providerId": "dev-pack-checks",
+        "violationCount": 0,
+        "durationMs": 157
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 13,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
+    },
+    {
+      "createdAt": "2026-07-27T22:47:43.8903237+09:00",
+      "event": "measure.completed",
+      "params": {
+        "providerId": "dev-pack-checks",
+        "violationCount": 0,
+        "durationMs": 151
+      },
+      "level": "info",
+      "producedBy": {
+        "provider": "rule-engine",
+        "model": null
+      },
+      "attempt": 1,
+      "loopIteration": 13,
+      "cost": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "estimatedUSD": 0,
+        "subscriptionCalls": 0,
+        "role": "runtime"
+      }
     }
   ]
 }
