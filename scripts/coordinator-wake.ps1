@@ -30,6 +30,10 @@ param(
   # 25분이면 24분 공백을 "살아 있다"로 읽는다(2026-07-27 실측: 11:15 커밋 후 11:36 판정이 alive).
   # 깨우기는 알림보다 싸므로 짧게 잡는다. 조율자가 도는 중이면 어차피 하트비트가 갱신된다.
   [int]$StaleMinutes      = 10,
+  # 같은 방아쇠로 다시 시도하기까지 기다리는 시간. 짧으면 헛돌고 길면 막힌 채로 오래 있는다.
+  [int]$RetryAfterMinutes = 15,
+  # 이 횟수를 넘도록 진전이 없으면 조율자에게 넘긴다.
+  [int]$MaxAttempts       = 3,
   [int]$TimeoutMinutes    = 30,
   [switch]$DryRun
 )
@@ -46,6 +50,8 @@ function Write-Line([string]$text) {
     Add-Content -Path $DecisionLog -Value $stampedLine -Encoding UTF8
   } catch { }
 }
+
+$loopLogScriptEarly = Join-Path (Split-Path -Parent $PSCommandPath) 'loop-log.ps1'
 
 # 명시적 정지 표식. 조율자가 "지금은 멈춰라"고 말할 때만 만든다.
 # 있다는 사실 자체가 킬 스위치다 - 내가 살아 있다는 사실이 아니라.
@@ -234,9 +240,47 @@ $markerValue = if ($boardReview.Count -gt 0) { "board-review:$($boardReview[0].i
   elseif ($boardReady.Count -gt 0) { "board:$($boardReady[0].id)" }
   else { "queue:$queueOpen" }
 $marker = "$HeartbeatPath.woke"
+$attemptMarker = "$HeartbeatPath.attempts"
+
+# 같은 값으로 두 번 깨우지 않는다. 그런데 그것만 있으면 재시도가 영구히 막힌다 -
+# 2026-07-28 실측: 세션이 진전 없이 끝난 뒤 already-woke-for 로 계속 걸려 아무도 다시 안 집었고,
+# 사람이 알려줘서야 풀렸다. 사람이 알려줘야 풀리면 그건 감시가 아니다.
+#
+# 그래서 식은 뒤에는 다시 시도하고, 정해진 횟수를 넘으면 조율자에게 넘긴다.
+# 무한 재시도는 토큰만 태우고, 영구 차단은 루프를 죽인다. 둘 사이를 시간과 횟수로 가른다.
 if ((Test-Path $marker) -and ((Get-Content -Raw $marker).Trim() -eq $markerValue)) {
-  Write-Line "already-woke-for $markerValue"
-  exit 0
+  $markerAge = [int]([datetimeoffset]::UtcNow - [datetimeoffset](Get-Item $marker).LastWriteTimeUtc).TotalMinutes
+  $attempts = 0
+  if (Test-Path $attemptMarker) {
+    $recorded = (Get-Content -Raw $attemptMarker).Trim() -split ' ', 2
+    if ($recorded.Count -eq 2 -and $recorded[1] -eq $markerValue) { $attempts = [int]$recorded[0] }
+  }
+  if ($markerAge -lt $RetryAfterMinutes) {
+    Write-Line "already-woke-for $markerValue (${markerAge}분 전, ${RetryAfterMinutes}분 뒤 재시도)"
+    exit 0
+  }
+  if ($attempts -ge $MaxAttempts) {
+    # 보드를 얼려두지 않는다. 세션이 못 하는 일이면 조율자가 가져간다 -
+    # 막힌 항목 하나가 보드 전체를 굳히면 그게 제일 나쁘다.
+    Write-Line "stalled $markerValue - ${attempts}회 시도했고 진전이 없다. 조율자에게 넘긴다"
+    $escalation = Join-Path (Split-Path -Parent $HeartbeatPath) 'coordinator-inbox.md'
+    $stamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    Add-Content -Path $escalation -Encoding UTF8 -Value "- [$stamp] $markerValue : ${attempts}회 시도 무진전. 조율자가 직접 볼 것."
+    if (Test-Path $loopLogScriptEarly) {
+      & powershell -NoProfile -ExecutionPolicy Bypass -File $loopLogScriptEarly `
+        -Text "막힘 · $markerValue · ${attempts}회 시도 무진전 · 조율자 처리 대기" 2>&1 | Out-Null
+    }
+    # 표식을 지운다. 다음 방아쇠(다른 일)가 이것 때문에 막히면 안 된다.
+    Remove-Item $marker -Force -ErrorAction SilentlyContinue
+    Remove-Item $attemptMarker -Force -ErrorAction SilentlyContinue
+    exit 5
+  }
+  $attempts = $attempts + 1
+  Set-Content -Path $attemptMarker -Value "$attempts $markerValue" -Encoding UTF8
+  Write-Line "retrying $markerValue (${attempts}/${MaxAttempts}회, 표식 ${markerAge}분 됨)"
+} elseif (Test-Path $attemptMarker) {
+  # 방아쇠가 바뀌었으면 시도 횟수를 잊는다. 다른 일에서 막힌 것을 이월하면 안 된다.
+  Remove-Item $attemptMarker -Force -ErrorAction SilentlyContinue
 }
 
 $reviewPrompt = @'
