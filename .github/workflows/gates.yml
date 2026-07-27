@@ -49,6 +49,8 @@ jobs:
         run: dotnet build server -v q --nologo
 
       # 개별 하네스. 어느 것이 깨졌는지 로그에서 바로 보이게 한 줄씩 돌린다.
+      # 출력을 버리지 않는다 - 실패하면 그 출력이 유일한 단서다. 2026-07-27 실측:
+      # windows 다리에서 measure가 exit 1인데 stdout을 /dev/null로 보내 아무 단서도 안 남았다.
       - name: 하네스
         run: |
           set -e
@@ -57,7 +59,11 @@ jobs:
                    "verify-behavior" "gate-witness-check" "state-transition-callsite-check" \
                    "context-pack-integrity"; do
             echo "--- $c"
-            dotnet run --project server --no-build -- $c > /dev/null
+            if ! dotnet run --project server --no-build -- $c > /tmp/h.out 2>&1; then
+              echo "!!! $c 실패 - 출력:"
+              cat /tmp/h.out
+              exit 1
+            fi
           done
 
       # 통합 게이트는 clean 트리에서 시작해야 한다 — 위 measure가 dashboard/data를 다시 썼다.
@@ -113,7 +119,11 @@ jobs:
                    "verify-behavior" "gate-witness-check" "state-transition-callsite-check" \
                    "context-pack-integrity"; do
             echo "--- $c"
-            dotnet run --project server --no-build -- $c > /dev/null
+            if ! dotnet run --project server --no-build -- $c > /tmp/h.out 2>&1; then
+              echo "!!! $c 실패 - 출력:"
+              cat /tmp/h.out
+              exit 1
+            fi
           done
 
       - name: LAND
