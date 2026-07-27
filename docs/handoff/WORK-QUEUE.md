@@ -39,40 +39,6 @@
 
 ## 대기 중
 
-- [ ] **`.NET 8` 하네스 JSON 옵션 통합 (NET8-01-R1, 옵션 a)** — 판정 완료, **미달로 반려**(2026-07-27, 실행과 다른 판정 세션)
-  - 한 것(그대로 유효): `server/Harness/` **18개** 파일의 개별 `JsonSerializerOptions`를 `HarnessJson.Options` 한 벌로.
-    `TypeInfoResolver = new DefaultJsonTypeInfoResolver()` 추가. `using`은 파일마다 판단해
-    **5개 파일이 `System.Text.Json`을 유지**. 이 부분(JSON 옵션 통합 자체)은 재작업 불필요 —
-    아래 반려 사유는 이것과 무관하다.
-  - **다시 돌려 대조한 것**(판정 세션 직접 실행, 격리 빌드 `/tmp/net8-01-r1-verify`):
-    `dotnet build server` 0 warning/0 error, `measure dev-pack` violations=0,
-    `handoff-integrity` verdict=PASS, `doc-integrity` verdict=INTACT,
-    `territory-check --commit c5c1f21` → violations **20**(보고의 자기신고와 일치, ledger 미등재 상태).
-  - **반려 사유(지시서 자체 기준)**: `docs/directives/NET8-01-R1-harness-json-options.md` §7·목적 기준이
-    명시적으로 `di-completion-check --gate POST-COMMIT` **PASS 22/22**, `--gate LAND` **PASS**,
-    `.NET 10` 회귀 없음을 요구하고 "**컨테이너 `.NET 8`이 빨간 채로 제출하면 반려다**"라고 못박는다.
-    그런데 보고 자신의 표가 **POST-COMMIT·LAND 둘 다 `.NET 8`·`.NET 10` 양쪽에서 exit 1**이다.
-    보고는 이것을 ".git·outputs/ 없는 복사본이라서"로 **추정**했을 뿐 확인하지 않았다고 스스로 적었다.
-  - **판정 세션이 실체로 확인한 것(추정 아님)**: `gh run view`로 실제 GitHub Actions를 직접 봤다.
-    이 커밋의 실제 push(`30265507200`)가 **CI에서 FAIL**했고, 원인은 `context-pack-integrity`
-    (POST-COMMIT 22개 중 하나)가 `crossDirectivePinCollisionCount:10`, `staleCount:2`를 낸 것 —
-    `docs/handoff/queue/directive-DLINT-01`이 `server/Harness/`의 파일 두 개를 sha256으로 고정해
-    뒀는데 이번 통합이 그 파일들을 고쳐 pin이 stale해졌다. 즉 보고의 "복사본 탓" 추정은 **틀렸다** —
-    진짜 원인은 이 diff가 만든 실제 회귀다. **동시에 떠 있던 다른 세션이 이 세션과 별개로 같은
-    원인을 진단해(`c62ca33` 커밋, 이 판정 도중 관측) DLINT-01 해시를 재계산하고 로컬/CI 하네스
-    목록을 `scripts/harness-list.txt` 한 벌로 합치는 수정을 이미 반입 중이다** — 그 세션의
-    `.github/workflows/gates.yml` 수정은 아직 워킹트리에 uncommitted라 이 판정 세션은 건드리지 않았다.
-  - **이 판정 세션이 처리한 것**: `TERRITORY-EXCEPTIONS.json`에 `c5c1f21` sha+사유를 등재했다
-    (TERR-01 설계상 "조율자가 반입 시점에" 하는 일 — 실행 세션이 자기승인이라 비워뒀던 것).
-    등재 후 `territory-check --commit c5c1f21` 재확인 → exit **0**(exempted 20건). 이 등재는
-    이번 반려와 무관하게 유효하다 — 커밋은 이미 저장소 역사에 있고, 감사 기록은 남아야 한다.
-  - **다음 실행자가 할 것**: `c62ca33`류 수정이 완주해 실제 CI(`gh run list` 최신)가 초록으로
-    도착하는 것을 직접 확인한 뒤 재제출한다. JSON 옵션 통합 자체는 다시 안 해도 된다 —
-    빠진 것은 DLINT-01 pin 갱신 확인과 실제 CI green뿐이다. 그 뒤에야 `gates.yml` matrix에
-    `"8.0"`을 조율자가 넣는다.
-  - 보고: `docs/qa/gate-witness/NET8-01-R1.md` (자진 신고 3건 있었으나 근본 원인 진단은 빗나갔다)
-
-
 > **순서는 사람이 정한다.** 2026-07-27 사용자 지시로 작업보드를 맨 위로 올렸다 —
 > *"작업보드 쪽 먼저 하는 게 확실하지 않을까?"*
 
@@ -128,6 +94,37 @@
   남기고 **코드는 손대지 않았다**. 다음 세션은 사용자 답을 확인한 뒤 진행한다.
 
 ## 끝난 것
+
+- [x] **`.NET 8` 하네스 JSON 옵션 통합 + CI 다리 (NET8-01-R1, 옵션 a)** — 판정 통과
+  (2026-07-27, 실행과 다른 판정 세션. 아래 이력은 판정 도중 상태가 바뀐 드문 사례라 그대로 남긴다).
+  - **1차 판정(반려)**: `c5c1f21`만 놓고 보면 `docs/directives/NET8-01-R1-harness-json-options.md`
+    §7·목적 기준이 명시한 "컨테이너 `.NET 8`이 빨간 채로 제출하면 반려다"에 걸렸다 — 보고 자신의
+    표가 `di-completion-check --gate POST-COMMIT`·`LAND` 둘 다 `.NET 8`·`.NET 10` 양쪽에서 exit 1.
+    보고는 원인을 ".git·outputs 없는 복사본이라서"로 **추정**만 했다. 판정 세션이 `gh run view`로
+    실제 GitHub Actions push(`30265507200`)를 직접 봐 **FAIL**을 확인했고, 진짜 원인은 복사본 탓이
+    아니라 `context-pack-integrity`가 잡은 실제 회귀였다 — `directive-DLINT-01`이 sha256으로 고정해
+    둔 `server/Harness/` 파일 두 개를 이번 통합이 고쳐 pin이 stale해졌다. 1차 판정을 `[ ]`로
+    되돌리고 이 근거를 적었다.
+  - **판정 도중 이 근거가 낡았다**: 판정 세션이 대조하는 동안 **동시에 떠 있던 다른 세션**이 같은
+    원인을 독립적으로 진단해(`c62ca33` "하네스 목록을 한 벌로", `c081dc4` "정정: 앞 커밋 메시지가
+    사실과 달랐다") DLINT-01 pin을 재계산하고 로컬/CI 하네스 목록을 `scripts/harness-list.txt`
+    한 벌로 합쳤다. 이어서 `b80f39f`로 `gates.yml` matrix에 `"8.0"`을 직접 켰다(그 세션도 조율자
+    역할 — TERR-01·NET8-01-R1 지시서 모두 "matrix 켜기는 조율자가 반입 때 한다"고 명시).
+  - **최종 재확인(이 판정 세션이 직접, 추정 아님)**: `docker run ... mcr.microsoft.com/dotnet/sdk:8.0`으로
+    현재 HEAD를 다시 컨테이너에서 쟀다 — `dotnet build server` 0 warning/0 error,
+    `hs-scan` exit **1**(기대값), `di-completion-check --gate POST-COMMIT` → `checkCount 24,
+    failureCount 0, verdict PASS`, `--gate WP-STATE-INTEGRITY-LAND` → `checkCount 18, failureCount 0,
+    verdict PASS`. 그리고 `b80f39f` push의 실제 CI 실행(`gh run view 30267163723`)이
+    끝날 때까지 직접 지켜봤다 — `linux/8.0`·`linux/10.0`·`windows/10.0` **전부 ✓**, 처음으로
+    실제 CI에서 `.NET 8` 다리가 초록으로 도착했다.
+  - **판정 세션이 처리한 것**: `TERRITORY-EXCEPTIONS.json`에 `c5c1f21` sha+사유를 등재(TERR-01 설계상
+    "조율자가 반입 시점에" 하는 일 — 이 등재는 `c081dc4`에 우연히 함께 커밋됐지만 내용은 유효).
+    `territory-check --commit c5c1f21` 재확인 → exit 0(exempted 20건).
+  - **지표는 만족했으나 목적은 미달인 부분(자진 신고 승계)**: 원 보고(`NET8-01-R1.md`)의 근본 원인
+    진단("복사본 탓")은 틀렸다 — 로컬 검사 목록이 CI의 10개보다 적어(`context-pack-integrity` 누락)
+    실행 세션이 자기 diff가 만든 실제 회귀를 못 잡았다. 이번에 `scripts/harness-list.txt`로
+    로컬·CI 목록이 통일됐으니 같은 함정은 재발 가능성이 낮다.
+  - 관련 커밋: `c5c1f21`(본작업), `c62ca33`·`c081dc4`(회귀 진단+수정), `b80f39f`(matrix 점등).
 
 - [x] **`buildSkillPolicy`의 두 벌 출처를 하나로** — team-loop 작업보드가 지시큐로 실측된 첫 사례
   (2026-07-27). `tsk_6890ae63a52af48e9539`가 보드에서 `board=1` 트리거로 실제 발사(claude-code/claude-opus-5)
