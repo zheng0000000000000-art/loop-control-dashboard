@@ -54,6 +54,15 @@ $unread = @($discussion.messages | Where-Object {
 # 작업이 남아 있으면 메시지가 없어도 깨운다. 메시지에만 반응하면 그건 루프가 아니라 응답이다.
 # 2026-07-27: 334분 공백 동안 할 일이 남아 있었는데 아무도 이어가지 않았다.
 # 지시큐는 작업보드다 — 사람이 태스크를 올려두면 조율자가 그것을 집어간다.
+# 보드의 좀비를 먼저 회수한다. 큐 sweep 의 거울이다 - 없으면 발사 실패마다 하나씩 쌓이고
+# boardReady 는 IN_PROGRESS 를 안 세므로 아무에게도 안 보인다.
+# 2026-07-27 실측: 실패한 발사가 태스크를 IN_PROGRESS 로 두고 10.2시간 방치돼 있었다.
+$boardSweepScript = Join-Path (Split-Path -Parent $PSCommandPath) 'board-sweep.ps1'
+if ((Test-Path $boardSweepScript) -and (Test-Path $BoardPath)) {
+  $boardSwept = & powershell -NoProfile -ExecutionPolicy Bypass -File $boardSweepScript -BoardPath $BoardPath 2>&1
+  foreach ($line in @($boardSwept)) { if ("$line" -match 'revived') { Write-Line "$line" } }
+}
+
 $pendingWork = 0
 $boardReady  = @()   # 지금 집을 수 있는 것
 $boardReview = @()   # 판정만 남은 것
