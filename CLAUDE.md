@@ -34,8 +34,10 @@
 
 - **기준 파일(`dashboard/data/*/blueprint.json`·`workflow-definition.json`)이나 측정 코드를 고쳐 게이트를 통과하는 것.**
   기준 변경은 **사람 결재**다. 바꿨으면 `docs/handoff/BASELINE-CHANGES.md`에 **①주체 ②근거 ③되돌리는 법**을 남긴다. 근거 없으면 커밋 금지 + HUMAN-INBOX.
-- **approve/reject/import 대행.** 결재는 사람 몫이다.
-- **발사(sonnet spawn)와 push.** 사람 게이트다.
+- **자기가 한 일을 자기가 승인하는 것.** 2026-07-27부터 approve/reject/import는 에이전트가 할 수 있다(ADR-020).
+  단 **실행한 세션과 승인하는 세션이 달라야 한다.** 실행자는 `- [~]`(검토 대기)까지만 옮기고,
+  승인은 판정 세션이 한다. 판정은 **하네스를 직접 재실행해 대조**하고, 자기보고를 근거로 삼지 않는다.
+- **발사(sonnet/codex spawn).** 사람 게이트다 — 비용이 발생한다. 보드에서는 제목 `[사람 게이트]`로 표시한다.
 - **`Engine.cs`·`Storage.cs`·`Guardrails.cs`에 도메인 지식**(게임 용어·metricId·ollama 코드)을 넣는 것.
 - **기록 파일을 통째로 읽어 통째로 다시 쓰는 것.** `outputs/review-log.md`·`outputs/reviewer-log.md`·`docs/handoff/sessions/*`·`HUMAN-INBOX.md`·`BASELINE-CHANGES.md`는 **append만.**
   고칠 게 있으면 **새 항목으로 정정을 덧붙인다.** (이유: 저장소에 이미 깨진 한글이 박혀 있어 재작성하면 조용히 오염된다 — RULES-RATIONALE 참조)
@@ -47,6 +49,7 @@
 - `outputs/reviewer-log.md`는 **검수자가 직접 커밋한다**(ADR-003 단일 기록자. 다른 주체는 쓰지 않는다).
 - 대안 중 하나를 골랐으면 **ADR을 남긴다**(`docs/handoff/decisions/`).
 - 커밋 전 `git status`로 bin/·obj/·history/ 미포함 확인.
+- **push는 게이트가 전부 통과했을 때만.** 2026-07-27 사용자 허가(ADR-020). 하나라도 빨간 채로 밀지 않는다.
 
 ## 작업 보고(verification 문서)에 반드시 적는 것
 

@@ -22,6 +22,8 @@ param(
   [int]$ChainDepth        = 0,
   [int]$MaxChain          = 5,
   [string[]]$ActiveStatuses = @('TODO','READY','IN_PROGRESS','REVIEW','BLOCKED'),
+  # 이 표식으로 시작하는 보드 태스크는 사람만 할 수 있다. 실행자가 안 집는다.
+  [string]$HumanGateMarker = '[사람 게이트]',
   # 25분이면 24분 공백을 "살아 있다"로 읽는다(2026-07-27 실측: 11:15 커밋 후 11:36 판정이 alive).
   # 깨우기는 알림보다 싸므로 짧게 잡는다. 조율자가 도는 중이면 어차피 하트비트가 갱신된다.
   [int]$StaleMinutes      = 10,
@@ -64,7 +66,10 @@ if (Test-Path $BoardPath) {
     $doneIds = @($tasks | Where-Object { $_.status -eq 'DONE' } | ForEach-Object { $_.id })
     $boardReview = @($tasks | Where-Object { $_.status -eq 'REVIEW' } | Sort-Object { [int]$_.priority })
     # 막힌 것과 선행이 안 끝난 것은 집지 않는다. 집어봐야 같은 자리에서 막힌다.
-    $boardReady = @($tasks | Where-Object { $_.status -and (@('TODO','READY') -contains $_.status) -and (-not $_.blocked) -and (@(@($_.dependsOnTaskIds) | Where-Object { $_ -and ($doneIds -notcontains $_) }).Count -eq 0) } | Sort-Object { [int]$_.priority })
+    # 제목이 사람 게이트 표식으로 시작하는 것도 안 집는다. 발사와 approve/reject 와 기준 파일
+    # 변경은 사람 결재다(CLAUDE.md). 보드에 올려 폰에서 보이게는 하되 실행자가 집으면
+    # 못 하고 나와서 깨우기 한 번이 헛돈다. 보이는 것과 집히는 것을 가른다.
+    $boardReady = @($tasks | Where-Object { $_.status -and (@('TODO','READY') -contains $_.status) -and (-not $_.blocked) -and (-not (($_.title -as [string]).StartsWith($HumanGateMarker))) -and (@(@($_.dependsOnTaskIds) | Where-Object { $_ -and ($doneIds -notcontains $_) }).Count -eq 0) } | Sort-Object { [int]$_.priority })
   } catch { $pendingWork = 0 }
 }
 
@@ -145,14 +150,19 @@ $reviewPrompt = @'
 - 게이트를 직접 재실행한다: measure dev-pack, handoff-integrity, doc-integrity, 그리고 그 항목에 해당하는 검사.
 - 지표는 맞는데 목적이 미달인 부분이 있는가. 있으면 그것을 적는다.
 
-결론을 낸다.
+결론을 낸다. **승인은 네 몫이다**(2026-07-27 사용자 결재, ADR-020).
 - 통과면 [~] 를 [x] 로 바꾸고 **무엇을 다시 돌려서 확인했는지** 한 줄 적는다.
+  보드 태스크면 verify_task 로 승인한다. 대시보드 결재면 approve 한다. 코덱스 산출물이면 import 한다.
 - 미달이면 [~] 를 [ ] 로 되돌리고 **무엇이 부족한지** 적는다. 네가 직접 고치지 마라 — 다음 실행자가 집는다.
+  보드 태스크면 REVIEW 에서 되돌린다. 코덱스 산출물이면 reject 하고 사유를 남긴다.
 - 판단이 갈리면 대화 채널에 남기고 멈춘다. 애매한 것을 통과시키지 마라.
 
 지켜라.
-- approve/reject/import 대행과 sonnet 발사는 하지 않는다. 그건 사람 몫이다.
+- **네가 실행한 것은 네가 승인하지 않는다.** 승인은 실행한 세션이 아닌 판정 세션의 일이다.
+  이 세션이 방금 실행도 했다면 승인하지 말고 [~] 로 두고 다음 판정 세션에 넘겨라.
+- **발사(sonnet/codex spawn)는 하지 않는다.** 비용이 발생한다. 사람 게이트다.
 - 기준 파일(blueprint.json, workflow-definition.json)이나 측정 코드를 고쳐서 통과시키지 마라.
+  **여기만은 사람 결재다.** 측정 기준을 스스로 고쳐 통과하면 나머지 측정이 전부 의미를 잃는다.
 '@
 
 $executePrompt = @'
@@ -177,7 +187,10 @@ $executePrompt = @'
 지켜라.
 - 커밋 전에 measure dev-pack 이 violations 0 이어야 한다. 아니면 커밋하지 마라.
 - push 는 게이트가 전부 통과했을 때만 한다.
-- approve/reject/import 대행과 sonnet 발사는 하지 않는다.
+- **네가 한 일을 네가 승인하지 마라.** [~] 까지만 옮기고 판정 세션에 넘긴다.
+  approve/verify_task/import 는 판정 세션의 일이다(ADR-020).
+- **발사(sonnet/codex spawn)는 하지 않는다.** 비용이 발생한다. 사람 게이트다.
+  보드에서 제목이 [사람 게이트] 로 시작하는 태스크는 집지 마라.
 - 확신이 없으면 추측으로 진행하지 말고 대화 채널에 질문을 남기고 멈춰라.
 '@
 
@@ -195,7 +208,8 @@ if ($boardTask) {
     (Format-BoardTask $boardTask) +
     "`n`n이 태스크를 team-loop MCP 로 처리한다. claim_task 로 집고, 끝나면 submit_task_result 와" +
     "`nrequest_review_task 로 REVIEW 까지만 올린다. verify_task 로 스스로 통과시키지 마라 — 판정은 따로다." +
-    "`nteam-loop 저장소는 $TeamLoopRoot 이다."
+    "`n`n대상 저장소는 태스크 설명에 적힌 것을 따른다. 보드는 team-loop 것이지만 태스크는" +
+    "`n다른 저장소를 가리킬 수 있다. 안 적혀 있으면 team-loop($TeamLoopRoot) 이다."
 }
 
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
@@ -234,18 +248,37 @@ try {
 # 깊이를 제한하는 이유는 실패한 항목이 큐에 남아 무한히 재시도하면 토큰만 태우기 때문이다.
 if ($ChainDepth -ge $MaxChain) { Write-Line "chain-limit reached ($MaxChain)"; exit 0 }
 
+# 진행 여부는 큐와 보드를 **같이** 센다. 큐만 세면 보드 태스크를 끝낸 세션이
+# "진전 없음"으로 판정돼 루프가 멈춘다 — 정작 일은 됐는데.
 $stillOpen = 0; $stillReview = 0
 if (Test-Path $QueuePath) {
   $stillOpen = @(Select-String -Path $QueuePath -Pattern '^\s*-\s\[\s\]\s' -AllMatches).Count
   $stillReview = @(Select-String -Path $QueuePath -Pattern '^\s*-\s\[~\]\s' -AllMatches).Count
 }
-if ($stillOpen -eq 0 -and $stillReview -eq 0) { Write-Line 'queue-drained'; exit 0 }
-if ($stillOpen -ge $queueOpen -and $stillReview -eq $queueReview -and $unread.Count -eq 0) {
-  # 큐가 줄지 않았다. 같은 항목을 다시 시도하면 같은 자리에서 또 막힌다.
-  Write-Line "no-progress open=$stillOpen (was $queueOpen) — 사람 확인이 필요하다"
+$stillBoardReady = 0; $stillBoardReview = 0
+if (Test-Path $BoardPath) {
+  try {
+    $laterBoard = Get-Content -Raw -Encoding UTF8 $BoardPath | ConvertFrom-Json
+    $laterTasks = @(if ($laterBoard.tasks) { $laterBoard.tasks } else { $laterBoard })
+    $laterTasks = @($laterTasks | Where-Object { -not $_.archived })
+    $stillBoardReady = @($laterTasks | Where-Object { @('TODO','READY') -contains $_.status }).Count
+    $stillBoardReview = @($laterTasks | Where-Object { $_.status -eq 'REVIEW' }).Count
+  } catch { }
+}
+
+$before = $queueOpen + $queueReview + $boardReady.Count + $boardReview.Count
+$after = $stillOpen + $stillReview + $stillBoardReady + $stillBoardReview
+if ($after -eq 0) { Write-Line 'queue-drained'; exit 0 }
+
+# 개수가 같아도 상태가 옮겨갔으면 진전이다. READY 하나가 REVIEW 로 가면 합계는 그대로다.
+$moved = ($stillReview -ne $queueReview) -or ($stillBoardReview -ne $boardReview.Count)
+if (($after -ge $before) -and (-not $moved) -and ($unread.Count -eq 0)) {
+  # 아무것도 안 줄고 아무것도 안 옮겨갔다. 같은 항목을 또 시도하면 같은 자리에서 막힌다.
+  Write-Line "no-progress before=$before after=$after - 사람 확인이 필요하다"
   exit 4
 }
 
-Write-Line "chaining depth=$($ChainDepth + 1) remaining=$stillOpen"
+Write-Line "chaining depth=$($ChainDepth + 1) queue=$stillOpen/$stillReview board=$stillBoardReady/$stillBoardReview"
+
 & $PSCommandPath -ChainDepth ($ChainDepth + 1) -MaxChain $MaxChain -TimeoutMinutes $TimeoutMinutes
 exit $LASTEXITCODE
