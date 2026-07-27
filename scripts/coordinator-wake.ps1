@@ -101,8 +101,11 @@ if (Test-Path $QueuePath) {
   $queueReview = @(Select-String -Path $QueuePath -Pattern '^\s*-\s\[~\]\s' -AllMatches).Count
 }
 
-if ($unread.Count -eq 0 -and $pendingWork -eq 0 -and $queueOpen -eq 0 -and $queueReview -eq 0) {
-  Write-Line 'nothing-to-do'; exit 0
+# pendingWork 로 깨우지 않는다. 거기엔 사람 게이트 태스크가 섞여 있어서
+# 아무도 집을 수 없는 일로 깨우고, 그다음 no-progress 로 멈춘다.
+# 2026-07-27 실측: board-stuck=2 로 깨어나 no-progress before=0 after=1 로 끝났다.
+if ($unread.Count -eq 0 -and $boardReady.Count -eq 0 -and $boardReview.Count -eq 0 -and $queueOpen -eq 0 -and $queueReview -eq 0) {
+  Write-Line "nothing-to-do (사람 게이트 대기 $pendingWork 건)"; exit 0
 }
 # 검토 대기가 있으면 그것이 최우선이다. 실행보다 판정이 먼저 밀린다 —
 # 판정이 안 나면 그다음 실행이 무엇 위에 쌓이는지 아무도 모른다.
@@ -110,15 +113,29 @@ $trigger = if ($boardReview.Count -gt 0) { "board-review=$($boardReview.Count)" 
   elseif ($queueReview -gt 0) { "review=$queueReview" }
   elseif ($unread.Count -gt 0) { "unread=$($unread.Count)" }
   elseif ($boardReady.Count -gt 0) { "board=$($boardReady.Count)" }
-  elseif ($pendingWork -gt 0) { "board-stuck=$pendingWork" }
   else { "queue=$queueOpen" }
 
 # 조율자가 지금 돌고 있으면 깨우지 않는다. 두 세션이 같은 저장소를 동시에 만지면
 # 커밋이 엉킨다. 판정은 하트비트 나이 하나다 — 프로세스 존재로 판정하지 않는다.
 if (Test-Path $HeartbeatPath) {
-  $beat = Get-Content -Raw -Encoding UTF8 $HeartbeatPath | ConvertFrom-Json
-  $age = [int]([datetimeoffset]::UtcNow - [datetimeoffset]::Parse($beat.at)).TotalMinutes
-  if ($age -lt $StaleMinutes) { Write-Line "coordinator-alive age=${age}m"; exit 0 }
+  $age = $null
+  try {
+    $beat = Get-Content -Raw -Encoding UTF8 $HeartbeatPath | ConvertFrom-Json
+    $age = [int]([datetimeoffset]::UtcNow - [datetimeoffset]::Parse($beat.at)).TotalMinutes
+  } catch {
+    # 못 읽으면 살아 있다고 말하지 않는다. 모르는 것은 통과가 아니다.
+    Write-Line 'heartbeat-unreadable - 깨운다'
+    $age = $null
+  }
+  # 미래로 찍힌 하트비트는 살아 있다의 증거가 아니다. 고장의 증거다.
+  # 2026-07-27 실측: 한 세션이 오프셋을 두 번 적용해 하트비트를 미래로 찍었고,
+  # age 가 음수가 되면서 age -lt 10 을 통과해 6시간 47분 동안 아무도 안 깨웠다.
+  # 이 검사가 fail-open 이었다. 음수는 전부 통과였다.
+  if (($null -ne $age) -and ($age -lt 0)) {
+    Write-Line "heartbeat-in-future skew=$([Math]::Abs($age))m - 고장으로 보고 깨운다"
+    $age = $null
+  }
+  if (($null -ne $age) -and ($age -lt $StaleMinutes)) { Write-Line "coordinator-alive age=${age}m"; exit 0 }
 }
 
 # 같은 글로 두 번 깨우지 않는다. 실패한 세션이 무한히 재시도하면 토큰만 태운다.
@@ -183,6 +200,9 @@ $executePrompt = @'
   **[x] 로 직접 넘기지 마라. 실행자는 자기 일을 완료로 선언하지 않는다.**
   하다가 새로 알게 된 일이 있으면 큐 아래에 추가한다 — 다음 세션이 그것을 집는다.
 - 작업하는 동안 C:\NHN Project\_ops\coordinator-heartbeat.json 의 at 을 갱신한다.
+  **반드시 UTC 로 쓴다. 형식은 2026-07-27T11:53:22Z 처럼 Z 로 끝나야 한다.**
+  로컬 시각에 +09:00 을 붙이지 마라 - 2026-07-27 에 한 세션이 오프셋을 두 번 적용해
+  하트비트가 미래로 찍혔고, 그 뒤 6시간 47분 동안 루프가 죽었다.
 
 지켜라.
 - 커밋 전에 measure dev-pack 이 violations 0 이어야 한다. 아니면 커밋하지 마라.
