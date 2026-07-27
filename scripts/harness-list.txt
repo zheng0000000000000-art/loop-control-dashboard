@@ -1,0 +1,13 @@
+# CI와 로컬이 함께 읽는 하네스 목록. 두 벌로 두면 한쪽만 늘어난다 —
+# 2026-07-27 실측: 로컬에서 4개만 돌리고 커밋했는데 CI는 10개를 돌려
+# context-pack-integrity 가 거기서 처음 깨졌다. 목록은 여기 하나뿐이다.
+measure dev-pack
+state-transition --self-test
+recovery --self-test
+trust-origin --self-test
+doc-integrity
+handoff-integrity
+verify-behavior
+gate-witness-check
+state-transition-callsite-check
+context-pack-integrity
