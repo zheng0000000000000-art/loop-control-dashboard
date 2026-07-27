@@ -92,6 +92,14 @@ function Format-BoardTask($task) {
 }
 
 # 작업 큐의 미완 항목도 방아쇠다. 사람이 다음 작업까지 적어두면 끝날 때까지 이어진다.
+# 주인이 죽은 "진행 중"을 먼저 대기로 되돌린다. 안 그러면 크래시 한 번에 항목이 영구히 잠긴다.
+# [>] 는 [ ] 가 아니므로 아래 세기에서 자동으로 빠진다 — 살아 있는 세션이 잡은 것은 안 집힌다.
+$queueScript = Join-Path (Split-Path -Parent $PSCommandPath) 'queue-state.ps1'
+if (Test-Path $queueScript) {
+  $sweep = & powershell -NoProfile -ExecutionPolicy Bypass -File $queueScript -Action Status -QueuePath $QueuePath 2>&1
+  if ("$sweep" -match 'sweep:') { Write-Line "queue-sweep - $sweep" }
+}
+
 $queueOpen = 0
 $queueReview = 0
 if (Test-Path $QueuePath) {
@@ -207,7 +215,9 @@ $executePrompt = @'
 - 같은 파일에 authorUserId 를 usr_claude_coordinator 로 해서 답을 남긴다.
 - 사람이 시킨 것이 있으면 그것이 최우선이다.
 - WORK-QUEUE.md 의 **맨 위 미완 항목([ ]) 하나만** 한다. 여러 개를 몰아 하지 마라.
+- 네가 맡은 항목은 [>] (진행 중) 으로 표시돼 있다. 그것을 해라. 다른 항목을 집지 마라.
 - 실행이 끝나면 그 항목을 [~](검토 대기) 로 바꾸고 무엇을 했는지·무엇으로 확인했는지 한 줄 덧붙인다.
+  제목 뒤의 "진행 중 (session=...)" 꼬리표는 지운다.
   **[x] 로 직접 넘기지 마라. 실행자는 자기 일을 완료로 선언하지 않는다.**
   하다가 새로 알게 된 일이 있으면 큐 아래에 추가한다 — 다음 세션이 그것을 집는다.
 - 작업하는 동안 C:\NHN Project\_ops\coordinator-heartbeat.json 의 at 을 갱신한다.
@@ -265,6 +275,13 @@ try {
     -RedirectStandardInput $promptFile `
     -RedirectStandardOutput $log -RedirectStandardError "$log.err" `
     -NoNewWindow -PassThru
+  # 이 세션이 무엇을 하는지 큐에 찍는다. 안 찍으면 다음 세션이 같은 항목을 집는다 -
+  # 2026-07-27 실측: 한 세션이 세션 격리를 만드는 동안 다른 세션이 같은 항목을 잡았다.
+  if ((Test-Path $queueScript) -and (-not $isReview) -and (-not $boardTask)) {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $queueScript -Action Claim `
+      -QueuePath $QueuePath -SessionPid $proc.Id 2>&1 | ForEach-Object { Write-Line "queue-$_" }
+  }
+
   # 띄운 세션이 사는 동안 잠금을 쥐어준다. 커밋 구간만 쥐면 그 사이에 다른 세션이 끼어든다 -
   # 2026-07-27 실측: 조율자가 도커·CI 를 기다리는 동안 하트비트가 낡아 깨우기가 판정 세션을
   # 띄웠고, 두 세션이 같은 항목을 동시에 했다. 하트비트만으로는 긴 작업을 못 덮는다.
