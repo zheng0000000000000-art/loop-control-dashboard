@@ -54,17 +54,19 @@ jobs:
       - name: 하네스
         run: |
           set -e
-          for c in "measure dev-pack" "state-transition --self-test" "recovery --self-test" \
-                   "trust-origin --self-test" "doc-integrity" "handoff-integrity" \
-                   "verify-behavior" "gate-witness-check" "state-transition-callsite-check" \
-                   "context-pack-integrity"; do
+          # 목록은 scripts/harness-list.txt 한 벌이다. 로컬 scripts/run-gates.sh 도 같은 파일을 읽는다.
+          # 목록이 두 벌이면 한쪽만 늘어난다 - 2026-07-27 실측: 로컬 4개 / CI 10개로 갈려 있었고
+          # context-pack-integrity 가 CI 에서 처음 깨졌다.
+          while IFS= read -r c; do
+            [ -z "$c" ] && continue
+            case "$c" in "#"*) continue;; esac
             echo "--- $c"
             if ! dotnet run --project server --no-build -- $c > /tmp/h.out 2>&1; then
               echo "!!! $c 실패 - 출력:"
               cat /tmp/h.out
               exit 1
             fi
-          done
+          done < scripts/harness-list.txt
 
       # 통합 게이트는 clean 트리에서 시작해야 한다 — 위 measure가 dashboard/data를 다시 썼다.
       - name: LAND
@@ -114,17 +116,19 @@ jobs:
         shell: bash
         run: |
           set -e
-          for c in "measure dev-pack" "state-transition --self-test" "recovery --self-test" \
-                   "trust-origin --self-test" "doc-integrity" "handoff-integrity" \
-                   "verify-behavior" "gate-witness-check" "state-transition-callsite-check" \
-                   "context-pack-integrity"; do
+          # 목록은 scripts/harness-list.txt 한 벌이다. 로컬 scripts/run-gates.sh 도 같은 파일을 읽는다.
+          # 목록이 두 벌이면 한쪽만 늘어난다 - 2026-07-27 실측: 로컬 4개 / CI 10개로 갈려 있었고
+          # context-pack-integrity 가 CI 에서 처음 깨졌다.
+          while IFS= read -r c; do
+            [ -z "$c" ] && continue
+            case "$c" in "#"*) continue;; esac
             echo "--- $c"
             if ! dotnet run --project server --no-build -- $c > /tmp/h.out 2>&1; then
               echo "!!! $c 실패 - 출력:"
               cat /tmp/h.out
               exit 1
             fi
-          done
+          done < scripts/harness-list.txt
 
       - name: LAND
         shell: bash

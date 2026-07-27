@@ -1,4 +1,9 @@
 {
   "_comment": "조율자가 코덱스 영토(CodexTerritory.Roots)에 직접 쓴 커밋의 사람 승인 목록. sha + reason. territory-check가 HEAD 커밋만 보므로 여기 없는 커밋은 판정 대상이 아니다. 저장소에 없는 sha가 남으면 stale-exception으로 실패한다. 2026-07-27 이전의 직접 수정은 넣지 않았다 — BASELINE-CHANGES.md와 verification 문서에 이미 기록돼 있다.",
-  "exceptions": []
+  "exceptions": [
+    {
+      "sha": "c5c1f2114826da473d409d2c34d5496a613d468e",
+      "reason": "NET8-01-R1(옵션 a) — 사용자 승인(2026-07-27 08:03:45Z 'b해보고 다시 이러면 a로 해줘', 21:11 '헛돌리지 말고 바로 a로 가줘')으로 조율자가 server/Harness/ 18개 파일의 JsonSerializerOptions를 HarnessJson.Options로 통합. 판정 세션이 다른 세션임을 확인 후(git log 저자·시각 대조) 등재. 근거: docs/qa/gate-witness/NET8-01-R1.md, 판정 기록 docs/verification/net8-01-r1.md"
+    }
+  ]
 }
