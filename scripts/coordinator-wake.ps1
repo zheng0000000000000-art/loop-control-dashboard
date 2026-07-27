@@ -145,6 +145,22 @@ if (Test-Path $HeartbeatPath) {
     Write-Line 'heartbeat-unreadable - 깨운다'
     $age = $null
   }
+  # 파일이 주장하는 시각(at)이 실제로 쓰인 시각(mtime)보다 뒤면 그건 지어낸 값이다.
+  # mtime 은 파일 시스템이 찍으므로 위조할 수 없다. 2026-07-28 확인: 하트비트를 쓰는 코드가
+  # 저장소에 없어서 모델이 시각을 손으로 계산해 타이핑해 왔고, 그래서 값이 흔들렸다.
+  # skew 크기와 무관하게 잡힌다 - 2분이든 9시간이든 지어낸 것은 지어낸 것이다.
+  if ($null -ne $age) {
+    try {
+      $writtenAt = [datetimeoffset](Get-Item $HeartbeatPath).LastWriteTimeUtc
+      $claimedAt = [datetimeoffset]::Parse($beat.at)
+      $fabricated = [int](($claimedAt - $writtenAt).TotalSeconds)
+      if ($fabricated -gt 30) {
+        Write-Line "heartbeat-fabricated at 이 mtime 보다 ${fabricated}초 앞선다 - 손으로 쓴 값이다. 깨운다"
+        $age = $null
+      }
+    } catch { }
+  }
+
   # 미래로 찍힌 하트비트는 살아 있다의 증거가 아니다. 고장의 증거다.
   # 2026-07-27 실측: 한 세션이 오프셋을 두 번 적용해 하트비트를 미래로 찍었고,
   # age 가 음수가 되면서 age -lt 10 을 통과해 6시간 47분 동안 아무도 안 깨웠다.
@@ -239,10 +255,13 @@ $executePrompt = @'
   제목 뒤의 "진행 중 (session=...)" 꼬리표는 지운다.
   **[x] 로 직접 넘기지 마라. 실행자는 자기 일을 완료로 선언하지 않는다.**
   하다가 새로 알게 된 일이 있으면 큐 아래에 추가한다 — 다음 세션이 그것을 집는다.
-- 작업하는 동안 C:\NHN Project\_ops\coordinator-heartbeat.json 의 at 을 갱신한다.
-  **반드시 UTC 로 쓴다. 형식은 2026-07-27T11:53:22Z 처럼 Z 로 끝나야 한다.**
-  로컬 시각에 +09:00 을 붙이지 마라 - 2026-07-27 에 한 세션이 오프셋을 두 번 적용해
-  하트비트가 미래로 찍혔고, 그 뒤 6시간 47분 동안 루프가 죽었다.
+- 작업하는 동안 하트비트를 갱신한다. **JSON 을 손으로 쓰지 마라. 이 명령을 돌려라:**
+
+    bash scripts/heartbeat-touch.sh "지금 무엇을 하는 중인지"
+
+  **시각을 네가 계산하지 마라.** 2026-07-27~28 실측 - 시각을 손으로 타이핑해 온 탓에
+  값이 흔들렸다. 한 번은 9시간 미래로 찍혀 루프가 6시간 47분 죽었고, 다른 때는 2분 미래였다.
+  이제 깨우기가 at 을 파일 mtime 과 대조한다. 손으로 쓴 미래 값은 그 자리에서 잡힌다.
 
 지켜라.
 - 커밋 전에 measure dev-pack 이 violations 0 이어야 한다. 아니면 커밋하지 마라.
