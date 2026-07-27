@@ -147,6 +147,15 @@ if (Test-Path $HeartbeatPath) {
   if (($null -ne $age) -and ($age -lt $StaleMinutes)) { Write-Line "coordinator-alive age=${age}m"; exit 0 }
 }
 
+# 본 저장소가 dirty 면 시작하지 않는다. 세 가지가 한꺼번에 어긋난다 -
+# 깨우기는 커밋 안 된 큐를 읽는데 워크트리는 커밋된 HEAD 에서 뜨므로 세션이 그 항목을 못 본다.
+# 게다가 착지가 어차피 clean 을 요구해서 거부된다. 2026-07-27 실측: 세션 하나를 헛돌렸다.
+$mainDirty = & git -C $WorkingDir status --porcelain 2>&1
+if ("$mainDirty".Trim() -ne '') {
+  Write-Line "main-tree-dirty - 커밋되지 않은 변경이 있다. 착지가 거부되므로 시작하지 않는다"
+  exit 0
+}
+
 # 다른 세션이 커밋 중이면 깨우지 않는다. 두 세션이 같은 트리를 만지면 한쪽의 스테이징이
 # 다른 쪽 파일을 쓸어 담는다(2026-07-27 실측: c081dc4, 9bfda28).
 $lockScript = Join-Path (Split-Path -Parent $PSCommandPath) 'session-lock.ps1'
@@ -299,8 +308,11 @@ try {
   # 이 세션이 무엇을 하는지 큐에 찍는다. 안 찍으면 다음 세션이 같은 항목을 집는다 -
   # 2026-07-27 실측: 한 세션이 세션 격리를 만드는 동안 다른 세션이 같은 항목을 잡았다.
   if ((Test-Path $queueScript) -and (-not $isReview) -and (-not $boardTask)) {
+    # 워크트리 쪽 큐에 찍는다. 본 저장소에 찍으면 트리가 dirty 가 되어 착지가 거부된다.
+    # 이 표기는 세션의 커밋과 함께 착지한다.
+    $claimPath = if ($sessionId) { Join-Path $sessionDir 'docs\handoff\WORK-QUEUE.md' } else { $QueuePath }
     & powershell -NoProfile -ExecutionPolicy Bypass -File $queueScript -Action Claim `
-      -QueuePath $QueuePath -SessionPid $proc.Id 2>&1 | ForEach-Object { Write-Line "queue-$_" }
+      -QueuePath $claimPath -SessionPid $proc.Id 2>&1 | ForEach-Object { Write-Line "queue-$_" }
   }
 
   # 띄운 세션이 사는 동안 잠금을 쥐어준다. 커밋 구간만 쥐면 그 사이에 다른 세션이 끼어든다 -
