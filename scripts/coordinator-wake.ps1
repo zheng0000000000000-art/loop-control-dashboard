@@ -372,7 +372,7 @@ try {
   $boardClaimScript = Join-Path (Split-Path -Parent $PSCommandPath) 'board-claim.ps1'
   if ($boardTask -and (Test-Path $boardClaimScript)) {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $boardClaimScript -Action Claim `
-      -BoardPath $BoardPath -TaskId $boardTask.id -SessionId $stamp 2>&1 |
+      -BoardPath $BoardPath -TaskId $boardTask.id -SessionId $stamp -SessionPid $proc.Id 2>&1 |
       ForEach-Object { Write-Line "$_" }
   }
 
