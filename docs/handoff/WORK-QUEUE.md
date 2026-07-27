@@ -191,6 +191,29 @@
   판정 결과를 남겼다(`msg_boardtask_06ba445c_judgment_20260728`). **REVIEW 상태 그대로 둔다** —
   코드는 승인 기준을 충족했으나 보드를 DONE으로 옮길 MCP 수단이 없다.
 
+- **team-loop 보드 태스크(`tsk_1d8eb8f26ff6124bd476`, 경매장 밸런스 게이트 음성 사례)의 막힘이 이 세션에서 해소돼 REVIEW까지 올라갔다.** (2026-07-28, 이 세션 `session-20260728-035106` — 코드를 만든 세션(`20260728-033107`)과 다른 세션)
+  위 바로 위 항목(같은 태스크, 2026-07-28 실행 세션 기록)이 남긴 상태는 낡았다 — `[루프]`가 3회 무진전으로 막힘 보고(`msg_ae3150ba862642c5aa98`)까지 했었다.
+  **재확인한 것(자기보고 아님)**: `show_task`로 대조하니 코드(`examples/balance/broken-blind-risk-auction-economy.json`, `test/balance-gate-examples.test.js`)는 이전 세션이 이미 `submit_task_result`로 격리 워크트리에 정확히 두 파일만 반영해뒀다 — 이 세션은 그 코드를 만들지 않았다. `verify_task`가 계속 FAILED였던 원인은 이번 diff와 무관한 `test/injection-readiness.test.js:50`의 `ENOENT`(격리 워크트리에 gitignore된 `data/failure-cases.json`이 없어서) — 다른 여러 태스크(`tsk_06ba445c1ee0e40aa5fe`·`tsk_aa08207b993b422a4fdf`·`tsk_eef8545b5a6ae3376dc8`)에서 반복 관찰된 것과 정확히 같은 격리 워크트리 인프라 결손이었다.
+  이 세션이 격리 워크트리(`.team-loop-worktrees/tsk_1d8eb8f26ff6124bd476`)를 직접 다시 보니 `data/failure-cases.json`이 이제 존재했다(메인 트리와 바이트 동일, mtime이 이전 실패한 `verify_task` 실행보다 10분쯤 뒤 — 주체 미상, 라이브 서버가 이 워크스페이스에서 돌며 채운 것으로 보이나 단정하지 않는다). `node --test`를 이 격리 워크트리에서 직접 재실행 → `525/525 전부 통과`(자기보고 아님, 이 세션이 직접 실행). `git status --short`/`git diff --stat` 로 allowedPaths(`examples/balance/**`, `test/**`, `tools/verification/check-balance-gate.mjs`) 밖 변경 없음 재확인.
+  이걸 근거로 `verify_task`를 다시 불렀다 → `{"status":"PASSED","passed":true,"failureCaseIds":[]}`. `request_review_task` → `status: REVIEW`로 전환 확인.
+  **이 세션이 안 한 것**: 승인(`approve_task`)은 하지 않았다(ADR-020, 실행과 판정은 다른 세션이어야 한다 — 이 세션이 코드를 만들지 않았어도 재검증·상태전환을 한 세션이라 승인까지 하면 자기 판단을 자기가 승인하는 모양이 된다). `data/harnesses.json`의 `balance-gate` scope가 `"global"`인 기존 문제는 이전 세션 기록대로 여전히 미해결(allowedPaths 밖).
+  **사람/판정 세션이 볼 것**: 격리 워크트리 인프라 결손(`data/failure-cases.json` 부재)이 이번엔 우연히 해소돼 넘어갔다 — 근본 원인(워크트리 프로비저닝이 gitignore 런타임 데이터를 안 복사하는 것)은 그대로다. 다음에 같은 결손이 다른 태스크를 다시 막을 수 있다. `data/discussions.json`에도 같은 내용을 남겼다(`msg_balancegate_negcase_unblocked_20260728`).
+
+- **team-loop 메인 트리(격리 워크트리 밖)에 `tsk_1d8eb8f26ff6124bd476`의 미추적 파일 사본이 남아 있다.** (2026-07-28, 이 세션 발견)
+  `C:\NHN Project\team-loop-lite-ai-learning\examples\balance\broken-blind-risk-auction-economy.json`·
+  `C:\NHN Project\team-loop-lite-ai-learning\test\balance-gate-examples.test.js` 가 **메인 트리**에도
+  untracked 로 존재한다(mtime 03:34 KST, `git log`로 대조 — 이 경로들은 메인 트리에 커밋된 적이 없다).
+  이건 `msg_ec4d0aa39ed449c9b76f`("세션이 격리 밖에서 team-loop 을 고쳤다")가 이미 경고했던
+  이전 세션(`20260728-033107`)의 격리 위반 흔적이다 — 그 세션의 **공식 제출은** `submit_task_result`로
+  격리 워크트리(`.team-loop-worktrees/tsk_1d8eb8f26ff6124bd476`)에 정상적으로 들어갔고(이번 판정도
+  그걸 근거로 REVIEW까지 올렸다), 메인 트리 쪽은 그 부산물로 보인다.
+  **이 세션이 안 한 것**: 지우지 않았다 — 이 파일들은 이번 태스크 allowedPaths(격리 워크트리 기준)
+  안에 있는 내용과 같지만, 메인 트리 자체는 이 태스크의 작업 공간이 아니라서 확신 없이 삭제하지
+  않았다(untracked라 되돌리기는 쉽지만, 판단은 사람/다음 세션에 넘긴다).
+  **사람이 정할 것**: 메인 트리의 이 두 untracked 파일을 지워도 되는지(안전해 보인다 — git에
+  한 번도 커밋된 적 없고 격리 워크트리 쪽 정식 제출과 내용이 같다), 그리고 근본 원인
+  (어떤 세션이 격리를 우회해 메인 트리에 직접 쓴 경로)을 더 조사할지.
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
