@@ -284,6 +284,23 @@ $prompt = if ($isReview) { $reviewPrompt } else { $executePrompt }
 $boardTask = if ($boardReview.Count -gt 0) { $boardReview[0] }
   elseif ((-not $isReview) -and ($unread.Count -eq 0) -and ($boardReady.Count -gt 0)) { $boardReady[0] }
   else { $null }
+# team-loop 코드를 고치는 태스크면 격리 워크트리를 먼저 만들고 그 경로를 준다.
+# 공유 메인 트리에서 작업하면 team-loop 이 소유권을 판별하지 못해 스스로 차단한다
+# (2026-07-28 실측). 프롬프트로 "워크트리에서 해라"고 시키는 것으로는 안 지켜진다 -
+# 경로를 만들어서 건네주는 것이 코드가 할 수 있는 최선이고, 오염은 끝나고 검사한다.
+$teamLoopIsolation = ''
+$isolateScript = Join-Path (Split-Path -Parent $PSCommandPath) 'teamloop-isolate.ps1'
+if ($boardTask -and (Test-Path $isolateScript) -and ("$($boardTask.description)" -notmatch 'Local-First Workflow Dashboard')) {
+  $ensured = & powershell -NoProfile -ExecutionPolicy Bypass -File $isolateScript `
+    -Action Ensure -TeamLoopRoot $TeamLoopRoot -TaskId $boardTask.id 2>&1
+  foreach ($line in @($ensured)) { Write-Line "$line" }
+  $teamLoopWorktree = Join-Path $TeamLoopRoot ".team-loop-worktrees\$($boardTask.id)"
+  $teamLoopIsolation = "`n`n**team-loop 코드는 반드시 이 격리 워크트리 안에서만 고쳐라:**`n" +
+    "  $teamLoopWorktree`n" +
+    "메인 트리($TeamLoopRoot)의 src/ 나 test/ 를 건드리지 마라. 건드리면 team-loop 이 변경물의" +
+    "`n소유권을 판별하지 못해 태스크를 스스로 차단한다. 끝나고 조율자가 검사한다."
+}
+
 if ($boardTask) {
   $prompt = $prompt + "`n`n--- 이번에 할 것 (WORK-QUEUE 보다 이것이 먼저다) ---`n" +
     (Format-BoardTask $boardTask) +
@@ -294,6 +311,7 @@ if ($boardTask) {
     "`n2026-07-27 실측: 한 세션이 코드를 다 짜고도 여기서 막혀 리뷰로 못 올렸다." +
     "`n`nHUMAN 모드 그대로 일해라. submit_task_result -> verify_task -> request_review_task 순이다." +
     "`nREVIEW 까지만 올린다. 승인은 판정 세션의 일이다." +
+    $teamLoopIsolation +
     "`n`n대상 저장소는 태스크 설명에 적힌 것을 따른다. 보드는 team-loop 것이지만 태스크는" +
     "`n다른 저장소를 가리킬 수 있다. 안 적혀 있으면 team-loop($TeamLoopRoot) 이다."
 }
@@ -383,6 +401,19 @@ try {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $lockScript -Action Release `
       -SessionPid $proc.Id -Quiet 2>&1 | Out-Null
   }
+  # 격리를 지켰는지 본다. 되돌리지는 않는다 - 남의 작업일 수 있고 조용히 지우는 것이 더 나쁘다.
+  if ($boardTask -and (Test-Path $isolateScript)) {
+    $contamination = & powershell -NoProfile -ExecutionPolicy Bypass -File $isolateScript `
+      -Action Check -TeamLoopRoot $TeamLoopRoot 2>&1
+    if ($LASTEXITCODE -ne 0) {
+      foreach ($line in @($contamination)) { Write-Line "$line" }
+      if (Test-Path $loopLogScript) {
+        & powershell -NoProfile -ExecutionPolicy Bypass -File $loopLogScript `
+          -Text "경고 · 세션이 격리 밖에서 team-loop 을 고쳤다 · $stamp" 2>&1 | Out-Null
+      }
+    }
+  }
+
   if ($boardTask -and (Test-Path $boardClaimScript)) {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $boardClaimScript -Action Release `
       -BoardPath $BoardPath -TaskId $boardTask.id 2>&1 | ForEach-Object { Write-Line "$_" }
