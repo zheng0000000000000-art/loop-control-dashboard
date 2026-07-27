@@ -103,6 +103,27 @@
   불명확 — 추측하지 않고 discussions.json에 선택지 3개(직접+예외등재 / 재발사 / 보류)를
   남기고 **코드는 손대지 않았다**. 다음 세션은 사용자 답을 확인한 뒤 진행한다.
 
+- **team-loop 보드 태스크(`tsk_aa08207b993b422a4fdf`, coordinator-presence.js)가 코드는 끝났는데
+  REVIEW로 못 올라간다 — AGENT 납품 게이트와 수작업 제출이 충돌한다.** (2026-07-27 발견, 조율자)
+  `src/coordinator-presence.js`의 staleMinutes 두 벌 정의·fail-open 버그는 지시대로 고쳤고
+  (`npm test` 508/508, scope 위반 없음, `git diff --check` 통과) `submit_task_result`로 격리
+  워크트리(`.team-loop-worktrees/tsk_aa08207b993b422a4fdf`)에 정확히 두 파일만 반영됐다.
+  그런데 `request_review_task`가 "A passing verification is required"로 막고, `verify_task`를
+  돌리면(다른 우회로가 없어 1회 실행) `EXECUTOR_RESULT_MISSING`으로 FAILED다 — 이 태스크가
+  `work_start_next`로 `executionMode: AGENT`가 잡혀야 `claim_task`가 먹혔는데(HUMAN+READY로는
+  `claim_task`가 "Agent execution requires a queued task"로 거절), AGENT 모드 납품 게이트는
+  실제 spawn된 실행자의 종료 코드를 요구한다. 나는 발사 없이 이 세션이 직접 작업해 MCP_FILES로
+  제출했으니 그 종료 코드가 없다. `src/review-block.js`에 이미 이 충돌이 주석으로 적혀 있다 —
+  기존에 알려진 막다름이다. 해법 둘: (1) 진짜 spawn으로 재실행(비용 발생, 사람 게이트, 내가
+  못 누른다) (2) `block`→`unblock` HTTP 액션으로 executionMode를 HUMAN으로 되돌린 뒤 손으로
+  verify(server.js 2214~2238행, `unblock`이 명시적으로 `executionMode='HUMAN'`으로 되돌린다) —
+  단 이 액션은 MCP 도구 목록에 없어 HTTP API를 직접 두드려야 하고, 그건 이 태스크가 지시한
+  "MCP로 처리" 범위 밖이라 확신 없이 진행하지 않았다. 태스크는 `IN_PROGRESS`/`verification
+  FAILED`로 그대로 뒀고, 게이트 코드는 건드리지 않았다(allowedPaths 밖 + 기준 코드 수정은
+  사람 결재 대상). discussions.json에 선택지 3개(block/unblock 허용 / 다른 진입 경로로 재청구 /
+  게이트 자체 결함으로 보고 티켓화)를 남겼다(`msg_boardtask_aa08207_deliverygate_20260727`).
+  **사람이 정할 것**: 위 셋 중 어느 쪽으로 갈지.
+
 ## 끝난 것
 
 - [x] **보드 좀비 회수(`board-sweep.ps1`)** — 큐 sweep의 거울. 큐만 회수되고 보드는 안 되던
