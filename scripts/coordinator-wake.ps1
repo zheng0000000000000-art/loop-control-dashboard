@@ -751,6 +751,8 @@ if (Test-Path $BoardPath) {
     $laterBoard = Get-Content -Raw -Encoding UTF8 $BoardPath | ConvertFrom-Json
     $laterTasks = @(if ($laterBoard.tasks) { $laterBoard.tasks } else { $laterBoard })
     $laterTasks = @($laterTasks | Where-Object { -not $_.archived })
+    # 이번 주기에 무엇이 새로 끝났는지를 개수가 아니라 id 로 본다.
+    $stillDoneIds = @($laterTasks | Where-Object { $_.status -eq 'DONE' } | ForEach-Object { [string]$_.id })
     $stillBoardReady = @($laterTasks | Where-Object { @('TODO','READY') -contains $_.status }).Count
     $stillBoardReview = @($laterTasks | Where-Object { $_.status -eq 'REVIEW' }).Count
   } catch { }
@@ -780,7 +782,16 @@ if ($after -eq 0) {
 }
 
 # 개수가 같아도 상태가 옮겨갔으면 진전이다. READY 하나가 REVIEW 로 가면 합계는 그대로다.
-$moved = ($stillReview -ne $queueReview) -or ($stillBoardReview -ne $boardReview.Count) -or ($stillInbox -ne $inboxPending)
+# 개수로만 재면 하나가 끝나는 사이 새 일이 하나 들어왔을 때 1 -> 1 이라 진전이 없다고 읽는다.
+# 2026-07-29 00:53 실측: 재검증 태스크가 DONE 으로 끝난 바로 그 주기가 before=1 after=1 로
+# no-progress 판정을 받고 멈췄다. 보드에 집을 수 있는 일이 남아 있는데도 이어가지 않았다.
+# 무엇이 새로 끝났는지는 id 로 보면 개수와 무관하게 알 수 있다.
+$completedThisCycle = @()
+if ($null -ne $stillDoneIds) {
+  $completedThisCycle = @($stillDoneIds | Where-Object { @($doneIds) -notcontains $_ })
+}
+if ($completedThisCycle.Count -gt 0) { Write-Line ('completed-this-cycle ' + ($completedThisCycle -join ' ')) }
+$moved = ($stillReview -ne $queueReview) -or ($stillBoardReview -ne $boardReview.Count) -or ($stillInbox -ne $inboxPending) -or ($completedThisCycle.Count -gt 0)
 if (($after -ge $before) -and (-not $moved) -and ($unread.Count -eq 0)) {
   # 아무것도 안 줄고 아무것도 안 옮겨갔다. 같은 항목을 또 시도하면 같은 자리에서 막힌다.
   Report-Stop 'no-progress' "before=$before after=$after - 아무것도 줄지 않았다"
