@@ -1254,3 +1254,31 @@
     그대로 따랐고, 지금 상태는 REVIEW가 아니라 READY라 `approve_task`도 애초에 대상이 아니다.
     사람이 (a)(b)(c) 중 아직 아무것도 답하지 않았다 — **여전히 사람 결정 대기**, 코드/보드
     변경 없음.
+
+- **위 `tsk_19e56ea3cea3be04f8fd` 사슬이 완전히 풀렸다 — 근본 원인(`deliveredCount`의 비멱등성)이
+  고쳐졌고, 그 직접 수혜로 이 태스크도 승인·병합됐다.** (2026-07-28, 이 조율자 세션
+  `session-20260728-220605` — team-loop 작업보드 태스크 `tsk_dcc3edbd825611198304`
+  "검증을 멱등하게" 처리 중 발견)
+  **경위**: 이 세션이 `tsk_dcc3edbd825611198304`(위에서 여러 세션이 근본 원인으로 지목한
+  바로 그 `deliveredCount`/`changedPaths` 비멱등 버그를 고치는 보드 태스크)를 맡아 격리
+  워크트리(`.team-loop-worktrees/tsk_dcc3edbd825611198304`)를 열었더니, 이미 다른 세션이
+  수정 코드(`src/delivery-gate.js`·`src/verifier.js`에 `committedPaths` 세 번째 출처 추가,
+  `test/delivery-idempotency.test.js` 신설 4개 — 임시 git 저장소로 격리, 커밋 전/후 판정
+  동일함을 회귀 시험으로 확인)를 커밋해둔 상태였다(`7046764`, 이후 스코프 위반 파일
+  `data/tasks.json.bak-park` 제거 재커밋 `3e72360`). 이 세션이 코드를 직접 재검증하는 사이
+  사람(또는 판정 세션 pid 23748)이 병합(`8b383eb`)·서버 재시작까지 이미 끝냈다 — `show_task`로
+  `status DONE`/`review APPROVED` 확인, review 코멘트에 "보드 흐름으로는 마감 못 해 조율자가
+  직접 병합, 서버 재시작해 새 게이트를 살렸다"고 명시.
+  **직접 확인한 효과**: 서버 재시작 이후 `tsk_19e56ea3cea3be04f8fd`(바로 위 여러 항목이 기록한
+  그 태스크)를 다시 조회하니 `verification.committedPaths`에 실제로
+  `src/gate-report.js`·`src/gate-report-cli.js`·`test/gate-report.test.js`+fixture 3개가
+  잡혀 `verification.status PASSED`로 REVIEW까지 올라와 있었다 — 새 게이트가 실전에서 정확히
+  의도대로 동작함을 실측으로 확인. 이 세션은 그 태스크의 실행자가 아니므로(실행은
+  `coord-proof` 세션) 독립 재검증(격리 워크트리에서 diff 직접 대조, `npm test` 543/543 재실행,
+  완료 기준 7개 전부 코드+시험 대조)을 거쳐 `approve_task`로 승인·병합했다(`status DONE`).
+  **다음 세션이 알아둘 것**: 이 항목과 위 여러 `tsk_19e56ea3cea3be04f8fd` 재확인 기록들이
+  가리키던 "사람 결정 대기"는 이제 해소됐다 — 더 이상 이 태스크를 재조사할 필요 없다.
+  `deliveredCount`의 committedPaths 보완이 라이브 서버에 살아 있으므로, 앞으로 team-loop이
+  태스크 브랜치에 스스로 커밋한 뒤 재검증해도 더는 `NO_DELIVERABLE`로 잘못 읽지 않는다(단,
+  scope 검사는 committedPaths에도 그대로 걸린다 — 게이트가 무를어진 게 아니다).
+  코드/보드 변경 없음(이 항목은 기록만).
