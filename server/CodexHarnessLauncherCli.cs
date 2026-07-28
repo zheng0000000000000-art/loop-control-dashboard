@@ -120,7 +120,7 @@ internal static class CodexHarnessLauncherCli
         // 요청이 영토를 선언하면 그것을 쓰고, 아니면 이 저장소의 기본 영토를 쓴다(2026-07-27 결재).
         // 선언한 영토 자체가 저장소 전체이거나 밖으로 나가면 거절한다 — 그러면 검사가 있으나 마나다.
         var declaredRoots = Array(request, "territoryRoots");
-        IReadOnlyList<string> roots = declaredRoots.Count > 0 ? declaredRoots : CodexTerritory.Roots;
+        IReadOnlyList<string> roots = declaredRoots.Count > 0 ? declaredRoots : CodexTerritory.EffectiveRoots(root);
         var rootsRejection = declaredRoots.Count > 0 ? CodexTerritory.RootsRejection(declaredRoots) : null;
         if (rootsRejection is not null) return rootsRejection;
 

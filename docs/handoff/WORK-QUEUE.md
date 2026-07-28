@@ -701,6 +701,54 @@
   대상이라 커밋 불필요).
   **사람이 볼 것**: 위 선택지 3개 중 하나를 답해달라 — 답이 오면 다음 세션이 바로 착수한다.
 
+- **사람이 "a로 해줘"(discussions.json `msg_3b687da001b2e7c37b97`, 2026-07-28 08:09:32Z)로
+  위 결재 질문의 (a) "지금 2-1·2-3 착수"를 승인했다 — 이 세션이 둘 다 착수했다.**
+  (2026-07-28, 이 조율자 세션 `session-20260728-171106`)
+  **확인한 것(실체)**: `unread` 필터를 직접 돌려 사람이 쓴 unread가 이 메시지 1건임을 확인 —
+  직전 순서(시간순 정렬)로 대조하니 바로 앞이 `msg_985db5e2ee3240d9dca8`(a/b/c 선택지 질문)라
+  "a"가 그 질문에 대한 답임이 명확했다.
+  **2-1(Local-First `CodexTerritory` 영토 원본 배선, 첫 조각)**: 이 세션이 직접 구현·커밋
+  (`e5c2c88`). `CodexTerritory.EffectiveRoots(root)`를 신설 — 대상 저장소의
+  `docs/context/team-loop-contract/territory-roots.json`을 읽되 없거나 무효하면 하드코딩
+  `Roots`로 fail-closed 떨어진다. `CodexHarnessLauncherCli`(쏘는 문)·`TerritoryCheckCli`(잡는 문)
+  둘 다 이 메서드 하나를 거치게 바꿔 "목록이 두 벌이면 한쪽만 낡는다"는 이 저장소가 이미 두 번
+  겪은 병을 피했다. **행동은 안 바뀐다** — production에는 override 파일을 아직 안 만들었다
+  (그 파일을 실제로 채우는 것 자체가 `Roots` 값 변경과 같은 무게의 별도 사람 결재 대상이라는
+  파일 헤더의 기존 선언을 그대로 지켰다).
+  **재실행해 확인한 것**: `dotnet build server`(경고 0·오류 0) · `build-verify` PASS ·
+  `verify-behavior`(`behaviorEqual:true`) · `measure dev-pack`(`violationCount:0`) ·
+  `handoff-integrity`(`failures:[]`) · `doc-integrity`(전부 intact) · `territory-check`(HEAD,
+  `violations:0`, 변경 전과 동일). OS temp에 임시 fixture git 저장소를 만들어(커밋 대상 아님)
+  6개 조합을 `codex-launch validate`로 직접 실행 — override 없음(하드코딩 유지, `src/` 거절
+  유지) / 유효 override `{roots:["src/"]}`(`src/` 허용, 구 하드코딩 `server/Harness/`는 반대로
+  거절돼 override가 병합이 아니라 대체함을 확인) / override `{roots:["."]}`·`{roots:[]}`·파싱
+  불가 JSON 셋 다 fail-closed로 하드코딩 복귀. 같은 fixture로 `territory-check`도 override
+  유무에 따라 `src/` 변경을 잡거나(violations 1) 안 잡음(violations 0)을 재현 — 쏘는 문과 잡는
+  문이 같은 답을 낸다.
+  **직접 커밋 사유(예외 사용 신고)**: `CodexTerritory.cs`는 `server/` 루트(코덱스 영토 밖,
+  "경계를 긋는 조율자 영역") — `codex-launch` 자체가 이 경로를 거절해 codex dispatch로는
+  구조적으로 못 건드린다. 같은 종류의 직접 커밋 선례(`tsk_3b9760b2`, `CodexHarnessLauncherCli.cs`
+  targetRepo 작업)를 따랐다.
+  **2-3(team-loop이 Local-First 게이트 매니페스트를 외부 실행)**: Local-First 쪽은 이미
+  `docs/handoff/GATE-MANIFEST.json`(schemaVersion 1, §2-1 스키마 그대로)과 CLI 서브커맨드들이
+  존재해 **이 저장소 코드를 더 고칠 필요가 없다** — 빠진 것은 team-loop 쪽에서 그 매니페스트를
+  읽어 외부 프로세스로 돌리고 §2-2 게이트 보고를 조립하는 코드였다(ADR-023 §2-3 본문이 이미
+  이렇게 지목함). team-loop 보드에 태스크를 새로 만들었다(`tsk_19e56ea3cea3be04f8fd`,
+  제목 `[조율자 판단] ADR-023 2-3: ...`, `allowedPaths: src/**,test/**`, 완료 기준 7개에 스키마
+  요약을 그대로 옮겨 적어 실행자가 이 저장소를 못 읽어도 근거로 쓸 수 있게 했다) — 사람이 이미
+  2-3 착수를 승인한 상태라 `create_task`로 새 스코프를 만드는 것이 이번엔 임의 발명이 아니라고
+  판단했다(기존 세션들이 "할 일 없음"에서 `create_task`를 거절해온 것과는 전제가 다르다).
+  `work_start_next`(`executionMode: AGENT`)로 발사까지 했다(ADR-021, 조율자 재량) — 근거: 사람이
+  "a로 해줘"로 2-1·2-3 둘 다 명시적으로 승인했고, 2-1은 이미 이 세션이 끝냈고 2-3은 team-loop
+  저장소 코드라 이 저장소 쪽에서 더 할 수 있는 일이 없어 다음 진전은 발사뿐이었다. 결과:
+  `executionState QUEUED`, `executor claude-opus-5`, `workBudget.maxTurns 40`.
+  **이 세션이 안 한 것**: `docs/context/team-loop-contract/territory-roots.json`을 실제로 채우지
+  않았다(2-1의 나머지 절반 — team-loop이 실제로 값을 발행하는 경로는 이 커밋 밖, 별도 결정
+  필요). `tsk_19e56ea3cea3be04f8fd`의 진행 결과를 승인하지 않았다(ADR-020, 판정은 다른 세션).
+  `data/discussions.json`에도 진행 상황을 남겼다.
+  **사람이 볼 것**: 2-1 커밋(`e5c2c88`)이 세션 브랜치에 있다 — 본 저장소 병합 시점에 검토.
+  2-3 태스크(`tsk_19e56ea3cea3be04f8fd`)는 진행 중이니 다음 조율자 세션이 진행 상황을 볼 것.
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —

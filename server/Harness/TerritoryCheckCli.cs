@@ -21,8 +21,9 @@ internal static class TerritoryCheckCli
             var ledgerPath = ledgerOption ?? DefaultLedger;
             var dispositionsRoot = Option(args, "dispositions");
             var commit = Git(root, "rev-parse", "--verify", requestedCommit + "^{commit}").Trim();
+            var effectiveRoots = CodexTerritory.EffectiveRoots(root);
             var territoryPaths = ChangedPaths(root, commit)
-                .Where(CodexTerritory.Contains)
+                .Where(path => CodexTerritory.Contains(path, effectiveRoots))
                 .Order(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
             var exceptions = LoadExceptions(root, ledgerPath, ledgerOption is null);
