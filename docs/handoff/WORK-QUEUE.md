@@ -1401,3 +1401,56 @@
   **다음(판정) 세션이 볼 것**: `docs/qa/tsk_fa2ef969a0bd09e563ea-independent-reverification.md`와
   이 항목을 대조하고, 원하면 `npm test`를 한 번 더 독립 재실행해 567/567을 재확인한 뒤
   `approve_task`로 승인.
+
+- **`tsk_a3ff8c75da7ca6ceea40`(승인 독립성 검사를 게이트로 옮긴다)를 이 세션(`session-20260729-005606`)이
+  처리 — REVIEW까지 올렸다.** 이번 깨우기 프롬프트가 WORK-QUEUE보다 먼저 직접 지정한 태스크 —
+  큐 자체는 건드리지 않았다(대기 중 절 여전히 비어 있음).
+  **원인(태스크가 지목한 것, 이 세션이 소스 대조로 재확인)**: 독립성 검사가
+  `mcp/team-loop-mcp.mjs`의 `approve_task` 도구 안에만 있었다 — `/api/tasks/<id>/review`를
+  직접 부르면(HTTP 우회) 검사가 통째로 없었다. `mcp/`는 이 태스크의 allowedPaths(`src/**`,
+  `test/**`, `server.js`) 밖이라 건드리지 않았다 — 클라이언트 쪽 검사는 그대로 두고 서버 쪽에
+  최소선을 추가하는 것이 이 태스크의 범위다.
+  **한 일**: `server.js`의 `action === 'review'` 핸들러(약 2094행)에 `decision === 'APPROVE'`일
+  때만 도는 게이트 두 줄을 추가 — ①`reviewSessionPid`가 0 이하(생략·0 포함)면 400으로 거절
+  ②`actor.role === 'admin' && (assignee 본인이거나 지정된 reviewer와 다른 admin)`인
+  adminOverride 상황인데 `comment`가 빈 문자열이면 400으로 거절. `REJECT`는 그대로 두었다(태스크
+  완료 기준이 APPROVE만 지목함 — REJECT까지 막으면 반려 자체가 막혀 범위 밖의 새 제약이 된다).
+  `progressAfterApproval`/`MAX_TURNS_RECOVERY_COMPLETED`(약 2946~2968행, automaticRecovery
+  경로)는 전혀 건드리지 않았다 — 이 경로는애초에 `/review` HTTP 액션을 다시 부르지 않고
+  부모 태스크의 `review` 필드를 직접 채우므로 새 게이트가 물리적으로 닿지 않는다. 그 필드가
+  `automaticRecovery: true`를 찍고 `reviewSessionPid`는 아예 안 넣는 것(undefined, 0이 아님)도
+  기존 그대로라 세션 승인과는 이미 구분된다 — 코드를 안 건드렸으니 회귀도 없다.
+  **신설 시험**: `test/review-session-gate.test.js`(6개) — 실제 HTTP 서버(`server-security.test.js`·
+  `external-agent-submit.test.js`와 같은 패턴, `node:test`+`fetch`로 회원가입→태스크 생성→
+  EXTERNAL_AGENT로 시작→제출→검증→request-review까지 실제로 돌려 REVIEW 상태를 만든 뒤)로
+  ①`reviewSessionPid` 생략 APPROVE → 400, 태스크 상태 REVIEW 그대로 ②`reviewSessionPid: 0`
+  APPROVE → 400 ③adminOverride 상황(유일한 등록 사용자가 admin이자 assignee라 자기 승인이 곧
+  adminOverride 케이스)인데 `comment` 빈 문자열 → 400 ④`reviewSessionPid`+사유 있으면 지금처럼
+  200·DONE·`review.reviewSessionPid`/`review.adminOverride` 그대로 기록 ⑤`REJECT`는 게이트 밖이라
+  `reviewSessionPid` 없이도 여전히 통과 ⑥`progressAfterApproval` 소스를 직접 슬라이스해
+  `automaticRecovery: true`는 있고 `reviewSessionPid` 문자열은 전혀 없음을 확인(자동 경로가
+  세션 pid를 지어내지 않는다는 것).
+  **음성 시험이 고치기 전에 실제로 실패하는 것까지 확인**: `git stash`로 `server.js` 변경만
+  일시적으로 떼어내고 같은 시험 파일을 재실행 → 위 ①②③ 세 시험이 전부 `200 !== 400`으로
+  실패함을 직접 재현(스택 원복 후 재확인). 즉 고치기 전에는 실패, 고친 뒤에는 통과 —
+  이 게이트가 실제로 뭔가를 막고 있다는 것의 증거.
+  **하네스**: `npm test` 전체 이 세션이 직접 재실행 → **573/573 통과**(기존 567 + 신설 6).
+  `verify_task`(`{"status":"PASSED","passed":true,"failureCaseIds":[]}`, `scopeViolations: []`,
+  `changedPaths: ["server.js","test/review-session-gate.test.js"]` — allowedPaths와 정확히 일치)
+  → `request_review_task`(`status: REVIEW`, `review.status PENDING`). `submit_task_result`는
+  쓰지 않았다 — 이 태스크가 이미 격리 워크트리(`.team-loop-worktrees/tsk_a3ff8c75da7ca6ceea40`)
+  안에서 직접 작업하도록 지정돼 있었고, `verify` 액션이 그 워크트리 경로에서 직접 도는 것을
+  `server.js:1916`(`worktreePath` 존재 시 그것을 `verifyRoot`로 씀)에서 확인해 파일을 다시
+  submit할 필요가 없었다.
+  **지표는 만족했으나 목적은 미달인 부분(자진 신고)**: adminOverride 판정 조건을 `current`
+  스냅샷(요청 시작 시점)으로 계산했다 — 실제 `review` 객체에 기록되는 adminOverride는
+  `mutateTask` 콜백 안에서 `next`로 다시 계산한다(기존 코드 그대로 둠, 동시성 재시도 시
+  이론적으로 아주 짧은 창에서 두 값이 어긋날 여지가 있으나 기존 코드의 다른 검사들도 같은
+  패턴을 쓰고 있어 이 태스크 범위에서 새로 만든 문제는 아니다).
+  **이 세션이 안 한 것**: 승인(`approve_task`)은 하지 않았다 — 이 세션이 직접 코드를 만들고
+  검증했으므로 자기 판정을 자기가 승인하는 모양이 된다(ADR-020). `mcp/team-loop-mcp.mjs`의
+  클라이언트 쪽 검사(세션 pid 비교)도 건드리지 않았다 — allowedPaths 밖이고, 이번 태스크는
+  서버 쪽 최소선만 요구했다.
+  **다음(판정) 세션이 볼 것**: 격리 워크트리에서 diff(`server.js` 13줄 추가, `test/review-session-gate.test.js`
+  신설)를 직접 대조하고, 원하면 `npm test`를 한 번 더 독립 재실행해 573/573을 재확인한 뒤
+  `approve_task`로 승인.
