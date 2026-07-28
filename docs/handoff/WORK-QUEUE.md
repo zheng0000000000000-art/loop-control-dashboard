@@ -1781,3 +1781,57 @@
   않는다 — 다음 실행자가 처음부터 다시 구현해야 한다). `data/discussions.json`에는 별도로
   남기지 않았다(team-loop 보드의 `review.comment`에 전문이 이미 남아 다음 실행자가
   `show_task`로 바로 볼 수 있다).
+
+- **`tsk_d1d9808b38e96ba812bf`를 이 세션(session-20260729-051106)이 격리 워크트리에서 처음부터
+  다시 구현해 REVIEW까지 올렸다.** (2026-07-28, coordinator-inbox 최우선 항목으로 인계됨)
+  **이전 반려의 원인을 먼저 의심**: 두 반려 모두 실물이 없거나 0바이트였다. 이번엔 코드를
+  `Write`/`Edit`로 직접 작성한 뒤 `Read`로 파일 크기(8672·13824바이트)를 재확인했고,
+  `submit_task_result`를 부를 때 `files[].content`에 파일 전체 텍스트를 직접 채워 보냈다 —
+  이 MCP 도구의 스키마는 `content`가 optional이라, 비워서 보내면(혹은 누락하면) 그대로 빈
+  파일이 서버 워크트리에 만들어지는 구조로 보인다(단정은 아님 — 이전 세션이 왜 비웠는지는
+  이 세션도 재구성 못 함, 주체 미상 그대로).
+  **한 일(완료 기준 4개 실측 확인)**: `src/promotion-reconciliation.js` 신설 —
+  `findMissingArtifacts(receipts, skills, harnesses)`가 PROBATION/STABLE 상태 + `activatedAt`이
+  찍힌 영수증 중 레지스트리(타입에 따라 skills.json/harnesses.json)에 `artifactId`가 없는 것을
+  찾는다. 같은 artifactId가 여러 영수증에 걸치면(관측된 실제 사례:
+  `no-program-evidence-820ed9d4`가 07-27 롤백→07-28 재활성화로 두 영수증에 걸침)
+  `createFromFailures`가 같은 id를 409로 거절하는 불변식에 따라 가장 최근 활성화만 진실로
+  본다(`latestEligibleReceipts`). `reconstructArtifact(receipt)`가 영수증의 `snapshot`(활성화
+  직전 완전한 정의)에서 `setStatus(ACTIVE)`가 실제로 만들 결과(status/version+1/updatedAt/
+  statusChangedByUserId, 하네스는 `lastTest`도)를 재현한다. `repairRegistries`는 순수 함수,
+  `repairPromotionsIn(dataDir)`이 실제 디스크의 skills.json/harnesses.json 중 고칠 대상이 있는
+  파일만 골라 쓴다. CLI(`node src/promotion-reconciliation.js <dataDir> [--repair]`)는 기본이
+  읽기 전용 검사(exit 1이면 어긋남 있음), `--repair`면 실제로 고치고 before/after를 출력한다.
+  `test/promotion-reconciliation.test.js` 14개 신설 — 오탐 없음(레지스트리에 이미 있으면 안
+  잡음, `AWAITING_APPROVAL`/`QUARANTINED`/`ROLLED_BACK`처럼 활성화를 주장하지 않는 영수증은 안
+  잡음), 위 dedup 사례를 그대로 반영한 시험, `repairRegistries`가 만든 결과를 다시 검사하면
+  0건이 되는 시험, `snapshot`이 없는 경우(재구성 불가) 조용히 지우지 않고 `unresolved`로 남기는
+  시험, 실제 파일 I/O(`mkdtemp`)로 `checkPromotionReconciliation`/`repairPromotionsIn`이 디스크를
+  정확히 읽고 쓰는지·바뀔 필요 없는 레지스트리 파일은 안 건드리는지, CLI 자체(`child_process`)의
+  exit code·stdout까지.
+  **라이브 데이터에 대한 읽기 전용 실측**: 이 CLI를 `node src/promotion-reconciliation.js
+  "C:\NHN Project\team-loop-lite-ai-learning\data"`로 직접 실행 — 현재 5건
+  (`delivery-integrity-c7be4a1f`·`delivery-integrity-harness-1f492061`·
+  `no-deliverable-failure-820ed9d4`·`no-program-evidence-820ed9d4`·`no-program-evidence-a83d6b52`)
+  모두 `hasSnapshot:true`로 검사가 실제로 잡아낸다. 태스크 생성 시점 9건에서 그 사이(다른
+  세션의 조치로 추정, 확인 못 함) 5건으로 줄었다 — 시간에 따라 변하는 라이브 수치라 테스트에
+  9를 하드코딩하지 않았다.
+  **이 세션이 안 한 것(자진 신고)**: 라이브 `data/skills.json`·`data/harnesses.json`은 고치지
+  않았다 — `--repair`를 라이브 경로에 실제로 실행하면 5건이 즉시 고쳐짐을 코드로 확인했지만,
+  이 태스크의 allowedPaths(`src/**`, `test/**`) 밖이고 라이브 데이터는 이 태스크가 커밋하는
+  격리 워크트리 브랜치가 아니라 team-loop 메인 트리에 대한 쓰기라 커밋 스코프 밖으로 판단해
+  실행하지 않았다. 사람 또는 다음 세션이 `node src/promotion-reconciliation.js data --repair`를
+  직접 돌리면 된다(되돌리기도 쉽다 — skills.json/harnesses.json은 git 추적 대상이라 `git diff`로
+  보고 `git checkout --`로 되돌릴 수 있다).
+  **사용한 하네스**: `node --test test/promotion-reconciliation.test.js` → `14/14` 통과.
+  `npm test` 전체 → `604/604` 통과. `git diff --cached --check` 통과. `git status --short`로
+  두 파일만 변경됨을 확인(allowedPaths 안).
+  **처리 경로**: `submit_task_result`(content 채워서) → `verify_task` PASSED →
+  `request_review_task`로 `REVIEW` 전환. **승인은 하지 않았다**(ADR-020) — 판정 세션이 격리
+  워크트리에서 diff를 직접 재확인하고 승인/반려를 정한다. `coordinator-inbox.md`의
+  `board:tsk_d1d9808b38e96ba812bf` 항목을 처리 완료로 표시했고, `discussions.json`에도
+  같은 내용을 남겼다(`msg_21d6a87e105a6d6324bb`).
+  **판정 세션이 볼 것**: 위에서 이 세션이 라이브 데이터를 안 고친 판단이 맞는지(allowedPaths
+  밖 부수 작업으로 볼지, 아니면 이 태스크의 목적상 라이브 복구까지 포함해야 하는지)도 함께
+  판단해달라 — 이 세션은 "코드가 고칠 수 있음을 증명"과 "실제로 프로덕션 상태를 바꾸는 것"을
+  분리하는 편이 안전하다고 봤다.
