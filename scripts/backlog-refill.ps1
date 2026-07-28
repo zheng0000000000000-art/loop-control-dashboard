@@ -107,7 +107,11 @@ if ($candidates.Count -eq 0) {
   }
   exit 0
 }
-$pick = @($candidates | Sort-Object -Property @{ Expression = { [int]$_.priority }; Descending = $true })[0]
+# 동점이면 id 오름차순으로 가른다. 정렬이 흔들리면 같은 상태에서 다른 것이 뽑혀
+# 재현이 안 된다 - BACKLOG-POLICY.md 1절.
+$pick = @($candidates |
+  Sort-Object -Property @{ Expression = { [int]$_.priority }; Descending = $true },
+                        @{ Expression = { [string]$_.id }; Descending = $false })[0]
 
 # 이 보드는 team-loop 것이다. 다른 저장소를 겨냥한 항목은 올릴 곳이 다르므로 올리지 않는다 -
 # 조용히 엉뚱한 보드에 올리느니 안 올리는 편이 낫다.

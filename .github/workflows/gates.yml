@@ -114,7 +114,14 @@ jobs:
       - name: 스크립트 함정
         shell: pwsh
         run: |
-          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-script-traps.ps1 -SelfTest
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-script-traps.ps1
+
+      # 우선순위가 tier·factors 에서 계산한 값과 같은지. 숫자를 손으로 고치면 여기서 걸린다.
+      - name: 백로그 우선순위 정책
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/backlog-policy-check.ps1 -SelfTest
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/backlog-policy-check.ps1 -SelfTest
           powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-script-traps.ps1
 
       - name: build
