@@ -31,6 +31,8 @@ param(
   # 상한은 폭주 방지용 백스톱일 뿐이다. 진짜 정지는 queue-drained(할 일 없음)와
   # no-progress(아무것도 안 줄었음)다. 5로 두면 일이 남아 있는데도 끊겨서 다음 5분 주기를
   # 기다린다 - 사람이 기다릴 이유가 없는 대기다.
+  # 처치 하나가 이 시간을 넘으면 끊는다. 처치가 루프를 멈추면 그건 처치가 아니다.
+  [int]$RemedyTimeoutSeconds = 150,
   [int]$MaxChain          = 20,
   [string[]]$ActiveStatuses = @('TODO','READY','IN_PROGRESS','REVIEW','BLOCKED'),
   # 이 표식으로 시작하는 보드 태스크는 사람만 할 수 있다. 실행자가 안 집는다.
@@ -140,8 +142,33 @@ function Invoke-Remedy([string]$shape, [string]$subject) {
   if (-not (Test-Path $remedyScript)) { return $false }
   $callArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $remedyScript, '-Shape', $shape)
   if ($subject) { $callArgs += @('-Subject', $subject) }
-  $out = & powershell @callArgs 2>&1
-  $code = $LASTEXITCODE
+  # 파이프로 잡지 않는다. 처치가 데몬을 띄우면 그 손자가 손잡이를 물고 있어 캡처가 안 끝난다 -
+  # 2026-07-29 00:16 실측: 처치는 성공했는데(장부·재시작 확인) 부르는 쪽이 8분간 매달렸고
+  # 그 주기 전체가 멈췄다. 처치 안에는 시간 제한을 뒀는데 부르는 쪽에는 없었다.
+  # 처치가 새 장애가 되면 그건 처치가 아니다. 여기서도 끊는다.
+  $outFile = Join-Path $env:TEMP ('wake-remedy-' + [guid]::NewGuid().ToString('N') + '.txt')
+  # 공백이 든 경로는 인용해서 넘긴다. remedy.ps1 에서 고친 것을 여기 안 옮겨서 같은 실수를
+  # 두 번 했다 - 2026-07-29 00:26 실측: -File 'C:\NHN' 까지만 넘어가 처치가 실패했다.
+  $quoted = @()
+  foreach ($a in $callArgs) {
+    $text = [string]$a
+    if ($text -match '\s') { $quoted += ([char]34 + $text + [char]34) } else { $quoted += $text }
+  }
+  $proc = Start-Process -FilePath 'powershell' -ArgumentList $quoted -PassThru -NoNewWindow -RedirectStandardOutput $outFile -RedirectStandardError ($outFile + '.err')
+  $null = $proc.Handle
+  $code = 5
+  if ($proc.WaitForExit($RemedyTimeoutSeconds * 1000)) { $code = $proc.ExitCode }
+  else {
+    try { Stop-Process -Id $proc.Id -Force -ErrorAction Stop } catch { }
+    Write-Line ('처치 - remedy-call-timeout ' + $shape + ' (' + $RemedyTimeoutSeconds + '초)')
+  }
+  $out = @()
+  foreach ($f in @($outFile, ($outFile + '.err'))) {
+    if (Test-Path $f) {
+      $out += @(Get-Content -Encoding UTF8 $f | Where-Object { $_ -and $_.Trim() })
+      Remove-Item -Force $f -ErrorAction SilentlyContinue
+    }
+  }
   foreach ($line in @($out)) { Write-Line "처치 - $line" }
   # 처치가 안 듣는 것은 원래 증상보다 중요한 신호다. 그때는 사람에게 올린다.
   if ($code -eq 4 -or $code -eq 5) { Report-Stop "remedy-$shape" "$(($out | Select-Object -Last 1))" }
@@ -160,9 +187,14 @@ if (Test-Path $staleServerScript) {
     }
     # 경고만 하고 지나가지 않는다. 2026-07-28 22:26 이 자리에서 경고를 찍고 그대로 진행했고
     # 재시작은 사람이 손으로 했다. 감지기와 처치가 연결돼 있지 않으면 감지기는 호출벨일 뿐이다.
-    if (Invoke-Remedy 'server-stale' '') {
-      $staleOut = & powershell -NoProfile -ExecutionPolicy Bypass -File $staleServerScript -TeamLoopRoot $TeamLoopRoot 2>&1
-      Write-Line "처치 후 재확인 - $(($staleOut | Select-Object -Last 1))"
+    [void](Invoke-Remedy 'server-stale' '')
+    # 처치했다는 말을 믿지 않고 다시 잰다. 판정은 재확인의 종료 코드다 -
+    # 2026-07-29 실측: 처치가 실패했는데 종료 코드가 0 이라 성공으로 읽혔다.
+    $recheck = & powershell -NoProfile -ExecutionPolicy Bypass -File $staleServerScript -TeamLoopRoot $TeamLoopRoot 2>&1
+    if ($LASTEXITCODE -eq 0) {
+      Write-Line '처치 확인 - 서버가 최신이다'
+    } else {
+      Report-Stop 'server-stale-persists' ('재시작 처치 뒤에도 여전히 stale 이다: ' + (($recheck | Select-Object -First 1)))
     }
   }
 }
@@ -732,7 +764,20 @@ if (Test-Path $InboxPath) {
 }
 $before = $queueOpen + $queueReview + $boardReady.Count + $boardReview.Count + $inboxPending
 $after = $stillOpen + $stillReview + $stillBoardReady + $stillBoardReview + $stillInbox
-if ($after -eq 0) { Write-Line 'queue-drained'; exit 0 }
+if ($after -eq 0) {
+  # 주기 끝에서 다 비었을 때도 보충을 탄다. 시작 분기에만 붙여 놓으니 이 자리로 빠지는
+  # 주기는 보드가 비어도 다음 일을 안 꺼냈다 - 2026-07-29 00:13 queue-drained 로 끝났고
+  # 그 뒤 10분 동안 보드가 빈 채였다. 마른 것을 본 자리마다 보충해야 한다.
+  Write-Line 'queue-drained'
+  $refillScript2 = Join-Path (Split-Path -Parent $PSCommandPath) 'backlog-refill.ps1'
+  if (Test-Path $refillScript2) {
+    $refillArgs2 = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $refillScript2)
+    if ($BacklogPath) { $refillArgs2 += @('-BacklogPath', $BacklogPath) }
+    $refillOut2 = & powershell @refillArgs2 2>&1
+    foreach ($line in @($refillOut2)) { Write-Line ('backlog - ' + $line) }
+  }
+  exit 0
+}
 
 # 개수가 같아도 상태가 옮겨갔으면 진전이다. READY 하나가 REVIEW 로 가면 합계는 그대로다.
 $moved = ($stillReview -ne $queueReview) -or ($stillBoardReview -ne $boardReview.Count) -or ($stillInbox -ne $inboxPending)
