@@ -33,9 +33,12 @@ if (-not $Topic) { Write-Output 'topic-missing'; exit 2 }
 # 05:14:11에 이미 끝나 있었다. 대화 채널은 조율자를 깨우지 못한다 — 채팅만 턴을 시작한다.
 # 그래서 334분 동안 아무도 읽지 않았고 사람이 물어봐서 알았다.
 if (Test-Path $DiscussionPath) {
+  # readBy 는 객체({userId,at})와 과거 손편집이 남긴 문자열이 섞여 있다 — 둘 다 인정한다.
+  # (coordinator-wake.ps1 과 동일 근거: 2026-07-28 실측, 객체 전용 매칭이 이미 읽은 메시지를
+  # 영구히 unread 로 오판했다)
   $discussion = Get-Content -Raw -Encoding UTF8 $DiscussionPath | ConvertFrom-Json
   $unread = @($discussion.messages | Where-Object {
-    $_.authorUserId -ne $ReaderId -and -not ($_.readBy | Where-Object { $_.userId -eq $ReaderId })
+    $_.authorUserId -ne $ReaderId -and -not ($_.readBy | Where-Object { $_ -eq $ReaderId -or $_.userId -eq $ReaderId })
   })
   $unreadMarker = "$HeartbeatPath.unread"
   if ($unread.Count -gt 0) {

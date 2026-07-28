@@ -94,9 +94,14 @@ if (Test-Path $HoldPath) {
 
 if (-not (Test-Path $DiscussionPath)) { Write-Line 'discussion-missing'; exit 2 }
 
+# readBy 항목은 서버 API(POST /api/discussions/read)가 쓰는 {userId,at} 객체가 정본이지만,
+# 과거 세션들이 파일을 손으로 고치며 문자열만 넣은 항목이 섞여 있다(2026-07-28 실측:
+# msg_83e1246d..., msg_9698b225... 둘 다 readBy=["usr_claude_coordinator"] 뿐인데
+# 객체 전용 매칭($_.userId -eq $ReaderId)이 이를 못 잡아 이미 읽은 메시지가 영구히
+# unread=2 로 잡혀 매 깨우기마다 헛방아쇠가 됐다). 두 모양 다 인정한다.
 $discussion = Get-Content -Raw -Encoding UTF8 $DiscussionPath | ConvertFrom-Json
 $unread = @($discussion.messages | Where-Object {
-  $_.authorUserId -ne $ReaderId -and -not ($_.readBy | Where-Object { $_.userId -eq $ReaderId })
+  $_.authorUserId -ne $ReaderId -and -not ($_.readBy | Where-Object { $_ -eq $ReaderId -or $_.userId -eq $ReaderId })
 })
 # 작업이 남아 있으면 메시지가 없어도 깨운다. 메시지에만 반응하면 그건 루프가 아니라 응답이다.
 # 2026-07-27: 334분 공백 동안 할 일이 남아 있었는데 아무도 이어가지 않았다.
