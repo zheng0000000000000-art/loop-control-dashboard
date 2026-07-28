@@ -1186,3 +1186,57 @@
 - [x] **ntfy 알림** — 토픽을 강한 값으로 바꾸고 켬. 되읽어 확인.
 - [x] **하트비트 감시자** — 25분 이상 조용하면 알린다.
 - [x] **원격 깨우기** — 안 읽은 글이나 미완 큐가 있으면 헤드리스 세션을 띄운다. 실측 통과.
+
+- **team-loop 보드 태스크(`tsk_19e56ea3cea3be04f8fd`, ADR-023 §2-3 게이트 매니페스트 외부 실행)를
+  코드는 완전히 검증했는데, 이 판정 세션이 승인을 시도하다 `verify_task`의 재실행 비멱등성
+  버그를 건드려 `REVIEW`(verification PASSED)에서 `IN_PROGRESS`(verification FAILED)로
+  떨어뜨렸다.** (2026-07-28, 이 조율자 세션 `session-20260728-213107`)
+  **코드 판정(완료 기준 7개 전부 실측 확인, 코드 자체는 문제없음)**: 격리 워크트리
+  (`.team-loop-worktrees/tsk_19e56ea3cea3be04f8fd`)에서 `src/gate-report.js`·
+  `src/gate-report-cli.js`·`test/gate-report.test.js`+fixture 3개를 직접 Read. 이 저장소의
+  실제 `docs/handoff/GATE-MANIFEST.json`(schemaVersion 1, gates[].checks[].{command,args,
+  expectedExit,mutatesState})을 직접 대조 — 필드명 1:1 일치. `dotnetInvocation`이
+  `dotnet run --project <targetRepo>/server -- <command> <args>`(cwd=targetRepo)로 ADR-023
+  §2-3 배선과 일치. `node --test test/gate-report.test.js` 10/10 통과(요구한 4개보다 많음:
+  정상 PASS·음성 FAIL·mutatesState 보존·manifest 없음/파싱불가/schemaVersion 불일치/targetRepo
+  없음 4종 에러까지). 격리 워크트리에서 `npm test` 전체 재실행 → `543/543 통과`(회귀 없음).
+  `git status --short` → allowedPaths(`src/**`,`test/**`) 밖 변경 없음.
+  **이 세션이 상태를 깬 경위(자백)**: 시작 시점 `status REVIEW`,
+  `verification.status PASSED`(git diff --check 1건만, changedPaths 6개), 실행 세션
+  (`coord-gatereport`, 이 세션과 다름 — ADR-020상 승인 가능)임을 확인하고 `approve_task`를
+  불렀다. 첫 시도는 **이 태스크와 무관한** 메인 트리(`team-loop-lite-ai-learning`, 격리
+  워크트리 아님)의 서버 atomic-write 임시파일 `data/tasks.json.<pid>.<hash>.tmp`(살아있는
+  서버 pid와 일치 확인)가 `git merge`를 막아 실패 — 런타임 잔여물로 판단해 지우고 재시도.
+  두 번째 시도는 `approve_task` 내부가 "검증 후 워크스페이스가 변경되었습니다"로 거절하며
+  태스크를 `IN_PROGRESS`/`verification STALE`로 자동 되돌렸다(격리 워크트리 자체는
+  `git status`로 clean 확인 — 내가 그 안에서 돌린 `npm test`/`node --test`가 무엇을 건드려
+  fingerprint를 흔들었는지는 재구성 못 함, 주체는 이 세션이지만 정확한 트리거는 불명).
+  이후 이전 판정 세션들의 선례(`tsk_1d8eb8f26ff6124bd476` 항목 등)를 따라 `verify_task`로
+  재검증을 시도했다 — 그런데 이번엔 `agent-delivery` 체크가 새로 붙어 `NO_DELIVERABLE`로
+  FAILED됐다(`changedPaths: []`로 바뀜, `task.delivery.files`도 비어 있음).
+  **근본 원인(코드 실측, `src/delivery-gate.js` 직접 Read)**: `deliveredCount()`가
+  `verification.changedPaths.length + task.delivery.files.length`로 "납품량"을 센다.
+  `changedPaths`는 워크트리의 **커밋 안 된** diff만 잡는다(`src/verifier.js`, git diff HEAD
+  방식으로 추정). 최초 `verify_task`(coord-gatereport 세션)는 파일이 아직 커밋 전이라
+  changedPaths 6개를 잡았지만, 그 뒤 `request_review_task`(또는 그 경로의 다른 단계)가
+  워크트리를 커밋한 것으로 보인다 — 그래서 이번 재실행은 커밋된 상태의 워크트리를 보고
+  "아무 변경 없음"으로 읽었다. `EXTERNAL_AGENT` 모드는 `verify_task`가 **한 번만** 정확히
+  통과하고 그 뒤로는 재실행할 수 없는 구조다(비멱등). 코드는 `task/tsk_19e56ea3cea3be04f8fd`
+  브랜치에 정상 커밋돼 있고(`0cd6a8c`, 메인 트리 `fusion/judgment-layer`엔 아직 미병합,
+  merge-in-progress 흔적 없음 — `git status`/`.git/MERGE_HEAD` 확인) 이 세션이 지웠거나
+  되돌린 것은 없다.
+  **이 세션이 안 한 것**: `request_review_task`를 한 번 더 불러 "A passing verification is
+  required"로 재확인만 했다(부작용 없는 조회성 재시도). `submit_task_result`로 같은 파일을
+  다시 제출해 `task.delivery.files`를 채우는 우회는 시도하지 않았다 — 실행자 몫을 판정
+  세션이 대신하는 모양이 될 수 있어 애매하다고 판단해 멈췄다. `src/delivery-gate.js`도
+  고치지 않았다(공유 판정층 코드, 이 보드 태스크의 allowedPaths 밖, team-loop 자체 관례상
+  격리 워크트리 밖 직접 수정 금지).
+  **사람이 정할 것**: (a) 대시보드에서 이 태스크를 수작업으로 승인(근거: 위 코드 판정 전체 +
+  브랜치 `0cd6a8c`) (b) `deliveredCount`가 커밋된-그러나-미병합 워크트리를 "납품 없음"으로
+  오판하는 것을 버그로 보고 고칠지(판정층 코드라 사람 결재 대상) (c) 이 상태
+  (`IN_PROGRESS`/`verification FAILED`)를 그대로 두고 다음 세션이 다른 경로를 찾을지.
+  **다음 세션 주의**: 이 태스크가 다시 REVIEW/PASSED로 보이더라도 **`verify_task`를 다시
+  부르지 마라** — 위와 같은 비멱등 재실행 때문에 멀쩡한 PASS를 FAILED로 깨뜨릴 수 있다.
+  REVIEW 상태에서는 `approve_task`만 시도하고, 그것도 실패하면(이번처럼 무관한 메인 트리
+  잔여물 때문일 수 있으니) 원인을 먼저 확인한 뒤 재시도하고, 재시도가 상태를 되돌리면
+  거기서 멈추고 사람에게 넘겨라.
