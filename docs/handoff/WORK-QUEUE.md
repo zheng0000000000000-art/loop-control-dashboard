@@ -1373,3 +1373,31 @@
   대조 — 이것도 이미 `status DONE`(사람 승인, 별도 판정 세션 `20260729-000841`이 이미 상세 재검증
   코멘트를 남겨둠). `list_tasks(status REVIEW|IN_PROGRESS)` 둘 다 빈 배열 — 보드에 판정 대기 항목
   없음. 이 세션이 새로 만든 코드나 발사는 없다.
+
+- **`tsk_fa2ef969a0bd09e563ea`(독립 재검증: tsk_dcc3edbd825611198304 검증 멱등성 고침)를
+  이 세션(`session-20260729-004406`)이 처리 — REVIEW까지 올렸다.** 이번 깨우기 프롬프트가
+  WORK-QUEUE보다 먼저 직접 지정한 태스크 — 큐 자체는 건드리지 않았다(대기 중 절 여전히 비어 있음).
+  **한 일**: `.team-loop-worktrees/tsk_fa2ef969a0bd09e563ea`(브랜치 `task/tsk_fa2ef969a0bd09e563ea`,
+  `8b383eb` 병합의 후손)에서 `npm test` 전체를 이 세션이 직접 재실행 → **567/567 통과**(2회
+  독립 재실행, 재현). 완료 기준 4개를 코드 대조 + **뮤테이션 재현**(읽기만으로 판단하지 않고
+  `deliveredCount`의 `committed` 항 제거·`scopeCheckPaths`를 `changedPaths`로 축소·
+  `deliveredCount`에 `+1` 위조, 세 가지 모두 임시로 되돌린 뒤 해당 시험이 정확히 그 실패를
+  잡는 것까지 직접 재현하고 원복)으로 확인: ①`deliveredCount`가 `changedPaths`+`committedPaths`+
+  `delivery.files` 세 출처를 다 세는 것 맞음 ②`committedButUnlandedPaths`가 `src/worktree.js`의
+  `taskBranchExists`·`taskBranchMerged`를 재구현 없이 그대로 import해 쓰므로 기준점이
+  물리적으로 동일(어긋날 수 없는 구조) ③음성 시험(무변경·무커밋 태스크)이 실제로 NO_DELIVERABLE을
+  잡는 것을 확인 + `+1` 위조 뮤테이션으로 게이트가 무뎌지면 이 시험이 정확히 깨지는 것도 확인
+  ④커밋 경로로 얻은 변경도 `scopeCheckPaths`에 합쳐져 scope 검사를 건너뛰지 않음(allowedPaths
+  밖 커밋이 실제로 `scopeViolations`에 잡히는 시험으로 확인). 발견된 결함 없음 —
+  `docs/qa/tsk_fa2ef969a0bd09e563ea-independent-reverification.md`(team-loop 저장소, 이 태스크의
+  allowedPaths `docs/**` 안)에 근거를 남겼다.
+  **하네스**: `submit_task_result`(baseCommit `db7227d67416d1c0dcc2a0f2da4216fe9d0cb72e`) →
+  `verify_task`(`{"status":"PASSED","passed":true,"failureCaseIds":[]}`, `scopeViolations: []`) →
+  `request_review_task`(`status: REVIEW`, `review.status PENDING`).
+  **이 세션이 안 한 것**: 승인(`approve_task`)은 하지 않았다 — 이 세션이 재검증을 직접 수행했으므로
+  자기 판정을 자기가 승인하는 모양이 된다(ADR-020). `tsk_dcc3edbd825611198304`를 만든 세션
+  (reviewSessionPid 23748)과도 다른 세션이라 독립성 요건은 충족했지만, 승인은 또 다른 판정
+  세션의 몫으로 남긴다.
+  **다음(판정) 세션이 볼 것**: `docs/qa/tsk_fa2ef969a0bd09e563ea-independent-reverification.md`와
+  이 항목을 대조하고, 원하면 `npm test`를 한 번 더 독립 재실행해 567/567을 재확인한 뒤
+  `approve_task`로 승인.
