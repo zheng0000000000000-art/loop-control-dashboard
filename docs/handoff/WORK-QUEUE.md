@@ -900,6 +900,34 @@
   **여전히 사람 확인 대기** — (a) 대시보드 수동 재큐잉/발사 (b) 스케줄러 로그로 발사 실패
   원인 확인, 둘 중 하나가 필요하다.
 
+- **`tsk_19e56ea3cea3be04f8fd` attempt 2/2 발사 정체의 근본 원인을 이 세션이 소스 코드로
+  찾았다(2026-07-28, 이 조율자 세션 `session-20260728-210606`, 추정 아니고 코드 대조).**
+  재큐잉(`ORCHESTRATION_WORK_STARTED` 10:43:06.776Z) 이후 83분 넘게 `BOARD_WORKER_LAUNCHED`가
+  안 찍히는 것을 여러 세션이 "발사 메커니즘이 걸렸다"로만 추정해왔는데, `team-loop-lite-ai-learning`
+  소스를 직접 읽어 구조적 이유를 확인했다.
+  **확인한 것(실체, 자기보고 아님)**: `server.js:531-611`(`work_start_next` MCP 도구가 부르는
+  `POST /api/orchestration/start-next` 핸들러)는 `launchBoardWorker`를 **`body.launchWorker`가
+  참일 때만** 부른다(535·607행). `mcp/team-loop-mcp.mjs:160-179`의 `work_start_next` 도구
+  정의를 직접 읽었다 — `inputSchema.properties`에 `launchWorker`가 아예 없고, `run(client, args)`도
+  `{ ...args, executionMode }`만 서버로 보내 `launchWorker`를 절대 채우지 않는다. 즉
+  **`work_start_next`를 몇 번을 다시 불러도 서버는 `executionState`만 `QUEUED`로 바꿀 뿐 워커
+  프로세스를 절대 띄우지 않는다.** 대조군으로 `public/app.js:176`(대시보드 UI 시작 버튼)를
+  확인하니 `launchWorker: true`를 명시적으로 보낸다 — 사람이 대시보드에서 클릭할 때만 실제로
+  워커가 뜨는 구조다. attempt 1이 08:27:54Z에 뜬 것(큐잉→발사가 6ms 안에 연쇄)도 이 패턴과
+  일치한다 — 그 3분21초 전(08:24:26Z) `work_start_next`만으로 큐잉된 첫 시도는 실제로 발사
+  안 됐다가, 그 뒤 무언가(대시보드 클릭으로 추정, 단정은 아님 — 그 시점 로그에 다른 근거 없음)가
+  `launchWorker:true`로 다시 불러 그제서야 떴다. `delegate_work` MCP 도구는 `launchWorker`를
+  스키마에 노출한다(236행, default false) — `work_start_next`만 빠져 있다.
+  **결론**: attempt 2가 "안 뜨는 것"이 아니라 **이 MCP 경로로는 원래 못 뜬다.**
+  **이 세션이 안 한 것**: `mcp/team-loop-mcp.mjs` 수정 — team-loop 저장소 코드 변경이고
+  `tsk_19e56ea3cea3be04f8fd`의 allowedPaths(`src/**`, `test/**`) 밖이라 이 태스크 범위로
+  고치지 않았다. `coordinator-inbox.md`의 `tsk_19e56ea3cea3be04f8fd` 줄과 `discussions.json`
+  (`msg_b070a77f417937f0eee6`)에 같은 내용을 남겼다.
+  **사람이 정할 것**: (a) 지금 대시보드에서 이 태스크 시작 버튼을 직접 클릭해 attempt 2를
+  띄운다(가장 빠름) (b) `mcp/team-loop-mcp.mjs`의 `work_start_next`가 `launchWorker: true`를
+  보내도록 고친다(team-loop 쪽 코드 변경 — 새 board 태스크로 만들지, 조율자가 직접 고치고
+  사람이 사후 검토할지는 사람이 정할 것).
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
