@@ -31,6 +31,28 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# 한도는 scripts/loop-limits.json 에서 읽는다. 사람이 손으로 고치는 파일이다.
+# 명령줄로 직접 준 값이 있으면 그것이 우선한다 - 일회성 실험이 파일을 안 건드리게 한다.
+# 파일이 없거나 못 읽으면 매개변수 기본값을 그대로 쓴다. 한도를 모른다고 멈추지는 않는다.
+function Read-LoopLimit([string]$name, [int]$fallback, $bound) {
+  if ($bound.ContainsKey($name)) { return $fallback }
+  $limitsPath = Join-Path (Split-Path -Parent $PSCommandPath) 'loop-limits.json'
+  if (-not (Test-Path $limitsPath)) { return $fallback }
+  try {
+    $doc = Get-Content -Raw -Encoding UTF8 $limitsPath | ConvertFrom-Json
+    $key = $name.Substring(0,1).ToLower() + $name.Substring(1)
+    $entry = $doc.limits.$key
+    if ($null -eq $entry) { return $fallback }
+    $v = 0
+    if ([int]::TryParse([string]$entry.value, [ref]$v)) { return $v }
+  } catch { }
+  return $fallback
+}
+
+$LowWater = Read-LoopLimit 'BacklogLowWater' $LowWater $PSBoundParameters
+$NotifyEveryHours = Read-LoopLimit 'BacklogNotifyEveryHours' $NotifyEveryHours $PSBoundParameters
+
+
 if (-not (Test-Path $BacklogPath)) { Write-Output 'backlog-missing'; exit 2 }
 if (-not (Test-Path $BoardPath)) { Write-Output 'board-missing'; exit 2 }
 
