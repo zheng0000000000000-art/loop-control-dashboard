@@ -132,6 +132,22 @@ $unread = @($discussion.messages | Where-Object {
 # 그중 하나는 approve_task 가 보낸 reviewSessionPid 를 옛 서버가 버려서 기록이 유실됐다.
 # 그때 나는 "세션이 도구를 안 썼다"고 잘못 읽을 뻔했다. 사람이 기억할 일이 아니다.
 # 깨우지는 않는다 - 재시작은 사람이 볼 수 있을 때 하는 편이 낫다. 대신 반드시 남긴다.
+# 선언된 실패 모양에 선언된 처치를 적용한다. 표에 없으면 아무것도 하지 않는다 -
+# 처치를 추론하게 두면 증상만 지우고 원인을 덮는다. 판정은 종료 코드로 한다.
+# 0=처치했다 · 2=모르는 모양 · 3=자동 처치 없음 · 4=한도 초과(처치가 안 듣는다) · 5=처치 실패
+function Invoke-Remedy([string]$shape, [string]$subject) {
+  $remedyScript = Join-Path (Split-Path -Parent $PSCommandPath) 'remedy.ps1'
+  if (-not (Test-Path $remedyScript)) { return $false }
+  $callArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $remedyScript, '-Shape', $shape)
+  if ($subject) { $callArgs += @('-Subject', $subject) }
+  $out = & powershell @callArgs 2>&1
+  $code = $LASTEXITCODE
+  foreach ($line in @($out)) { Write-Line "처치 - $line" }
+  # 처치가 안 듣는 것은 원래 증상보다 중요한 신호다. 그때는 사람에게 올린다.
+  if ($code -eq 4 -or $code -eq 5) { Report-Stop "remedy-$shape" "$(($out | Select-Object -Last 1))" }
+  return ($code -eq 0)
+}
+
 $staleServerScript = Join-Path (Split-Path -Parent $PSCommandPath) 'check-stale-server.ps1'
 if (Test-Path $staleServerScript) {
   $staleOut = & powershell -NoProfile -ExecutionPolicy Bypass -File $staleServerScript -TeamLoopRoot $TeamLoopRoot 2>&1
@@ -141,6 +157,12 @@ if (Test-Path $staleServerScript) {
       & powershell -NoProfile -ExecutionPolicy Bypass `
         -File (Join-Path (Split-Path -Parent $PSCommandPath) 'loop-log.ps1') `
         -Text "경고 · team-loop 서버가 옛 코드로 돌고 있다. 재시작해야 최근 변경이 반영된다" 2>&1 | Out-Null
+    }
+    # 경고만 하고 지나가지 않는다. 2026-07-28 22:26 이 자리에서 경고를 찍고 그대로 진행했고
+    # 재시작은 사람이 손으로 했다. 감지기와 처치가 연결돼 있지 않으면 감지기는 호출벨일 뿐이다.
+    if (Invoke-Remedy 'server-stale' '') {
+      $staleOut = & powershell -NoProfile -ExecutionPolicy Bypass -File $staleServerScript -TeamLoopRoot $TeamLoopRoot 2>&1
+      Write-Line "처치 후 재확인 - $(($staleOut | Select-Object -Last 1))"
     }
   }
 }
@@ -170,6 +192,14 @@ if (Test-Path $BoardPath) {
     # 제목이 사람 게이트 표식으로 시작하는 것도 안 집는다. 발사와 approve/reject 와 기준 파일
     # 변경은 사람 결재다(CLAUDE.md). 보드에 올려 폰에서 보이게는 하되 실행자가 집으면
     # 못 하고 나와서 깨우기 한 번이 헛돈다. 보이는 것과 집히는 것을 가른다.
+    # 회로 차단기가 열린 태스크는 자동 실행이 막혀 아무도 못 집는다. 깨우기는 이걸 보지도
+    # 않고 있었다 - 2026-07-28 tsk_1a113f64adb67331dac2 가 그래서 사람이 물을 때까지 섰다.
+    # 선언된 처치만 돌린다. 하루 한 번이고, 또 닫히면 처치가 안 듣는 것이므로 사람에게 올라간다.
+    $circuitOpen = @($tasks | Where-Object { $_.automationGuard -and $_.automationGuard.circuitOpen })
+    foreach ($broken in $circuitOpen) {
+      Write-Line "board-circuit-open $($broken.id)"
+      [void](Invoke-Remedy 'board-circuit-open' ([string]$broken.id))
+    }
     $boardReady = @($tasks | Where-Object { $_.status -and (@('TODO','READY') -contains $_.status) -and (-not $_.blocked) -and (-not (($_.title -as [string]).StartsWith($HumanGateMarker))) -and (-not (($_.title -as [string]).StartsWith($LegacyGateMarker))) -and (@(@($_.dependsOnTaskIds) | Where-Object { $_ -and ($doneIds -notcontains $_) }).Count -eq 0) } | Sort-Object { [int]$_.priority })
   } catch { $pendingWork = 0 }
 }
