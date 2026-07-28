@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-28T23:28:30.5304567+09:00",
+  "measuredAt": "2026-07-28T23:51:51.4833977+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
@@ -16,9 +16,9 @@
     },
     {
       "metricId": "directiveAcceptanceCriteria",
-      "value": 3,
+      "value": 10,
       "evidence": [
-        "docs/directives/_template.md"
+        "docs/directives/GCLEAN-01-path-must-exist.md"
       ]
     },
     {
