@@ -1454,3 +1454,35 @@
   **다음(판정) 세션이 볼 것**: 격리 워크트리에서 diff(`server.js` 13줄 추가, `test/review-session-gate.test.js`
   신설)를 직접 대조하고, 원하면 `npm test`를 한 번 더 독립 재실행해 573/573을 재확인한 뒤
   `approve_task`로 승인.
+
+- **`tsk_2ff749d26651088379d6`(민감도 표 §4)를 이 세션(`session-20260729-011106`)이 손으로 붙었다가,
+  같은 태스크를 board가 이미 자동으로 실행 중이던 걸 뒤늦게 발견해 중단했다 — 완료 아님, 실패 기록.**
+  **경위(실체 확인, 자기보고 아님)**: `loop_enter`가 이 READY 태스크(HUMAN/IDLE로 보였다)를 가리켜
+  코드를 직접 작성(`src/engine/sensitivity-analysis.js` 신설, `balance-engine.js`의 `setAtPath` export,
+  시험 5개, `node --test` 578/578)한 뒤 `submit_task_result`로 격리 워크트리에 제출했다. `verify_task`가
+  `EXECUTOR_RESULT_MISSING`으로 FAILED — `show_task`를 다시 보니 `executionMode`가 이미 `AGENT`였고
+  `executionRun`이 16:19:00Z부터 `claude-opus-5`로 **이미 돌고 있었다**(이 세션의 `loop_enter` 16:11:48Z
+  보다 7분 뒤, board 스케줄러가 독립적으로 발사한 것 — 이 세션이 시킨 게 아니다). 워크트리에
+  내가 안 만든 파일(`src/engine/sensitivity-table.js`·`sensitivity-table-cli.js`)이 있어 그 워커의
+  산출물로 보고 지웠는데, 몇 분 뒤 그 워커(attempt 1/2)가 여전히 살아서 같은 파일을 다시 쓰고
+  `test/sensitivity-table.test.js`까지 새로 만드는 걸 파일 mtime(01:26 KST, 관찰 시각 01:27 KST 1분 전)과
+  `Get-Process`(`claude.exe pid 47852`, 01:27:06 시작)로 실측 확인했다. attempt 1은 결국 max_turns(40)로
+  `EXECUTOR_FAILED`(exitCode 1) 됐고, 그 직후 board가 attempt 2/2를 자동 발사해 **이 글을 쓰는 지금도
+  같은 워크트리에서 RUNNING 중**(`show_task` `executionState: RUNNING`, heartbeat 실시간 갱신 확인).
+  **이 세션이 한 일 중 되돌릴 수 없는 것**: attempt 1이 만든 두 파일을 삭제한 것 — attempt 1은 그
+  뒤로도 계속 그 파일들에 의존해 작업하다 결국 실패했으므로, 내 삭제가 실패에 기여했을 가능성을
+  배제 못 한다(단정은 아님 — 원인은 stdout에 남은 대로 `node src/engine/sensitivity-table-cli.js`를
+  반복 실행하며 시간을 쓰다 40턴을 다 쓴 것으로 보이고, 내 삭제 직후에도 파일을 계속 재생성했으므로
+  삭제 자체가 치명타는 아니었을 가능성이 크다 — 그래도 확신할 근거는 없다).
+  **이 세션이 지금부터 안 할 것**: attempt 2/2(마지막 시도, RUNNING)가 끝날 때까지 이 워크트리를
+  다시 건드리지 않는다 — 파일 편집·`submit_task_result`·`verify_task` 전부 중단. 내 초기 제출
+  (`delivery.submittedAt 16:20:44Z`)은 attempt 1이 아직 살아 있을 때 같은 워크트리에 겹쳐 들어간
+  것이라 최종 산출물로 볼 수 없다 — 판정 세션은 이 델타를 신뢰하지 말고 attempt 2 결과를 봐야 한다.
+  **새로 드러난 구조적 위험(사람이 볼 것)**: `loop_enter`가 가리킨 READY/HUMAN 태스크를 조율자가
+  손으로 집었는데, 같은 순간 board 스케줄러가 그 태스크를 AGENT로 독립 발사할 수 있다 — 둘이
+  같은 격리 워크트리를 동시에 쓰면 파일이 서로 덮어써진다. 기존에 기록된 "board가 완료된 태스크를
+  다시 발사한다"(`tsk_3b9760b2`)와는 다른 패턴이다 — 이번엔 **진행 중에** 충돌했다. 재발 방지책은
+  이 세션 범위 밖(board 스케줄러 코드는 team-loop 자신의 판정층)이라 코드는 고치지 않았다.
+  `data/discussions.json`에도 같은 내용을 남겼다(`msg_coordreply_concurrent_worker_collision_20260729`).
+  **사람/다음 세션이 볼 것**: attempt 2/2가 끝난 뒤(성공/실패 무관) 그 결과만 판정 근거로 삼는다.
+  성공하면 REVIEW로 올라올 것이고, 실패하면(`maxAttempts 2` 소진) 사람 수작업이 필요하다.
