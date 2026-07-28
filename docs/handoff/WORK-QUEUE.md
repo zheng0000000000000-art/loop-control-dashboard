@@ -767,6 +767,48 @@
   **사람/다음 세션이 볼 것**: 이 태스크가 완료(`status DONE` 또는 `REVIEW`)되면 코드·시험을
   실측으로 대조한 뒤 판정(다른 세션이 `approve_task`)까지 이어가면 된다.
 
+- **위 `tsk_19e56ea3cea3be04f8fd`(ADR-023 2-3, 게이트 매니페스트 외부 실행)가 실행됐지만
+  `EXECUTOR_FAILED`로 끝났다 — 코드는 완성·정확한데 실행자 세션 자신의 샌드박스가 Bash 호출을
+  거의 다 거부해 40턴을 검증 한 번 못 돌리고 소진했다.** (2026-07-28, 이 조율자 세션
+  `session-20260728-174106`, 코드는 만들지 않음 — 실측 재확인만)
+  **확인한 것(실체, 자기보고 아님)**: `show_task`로 대조하니 08:27:55Z에 워커(`claude-opus-5`,
+  attempt 1/2)가 붙어 08:35:14Z에 `exitCode 1`로 종료, `verification.status FAILED`
+  (`deliveryGate.failureKinds: ["EXECUTOR_FAILED"]`, `agent-executor` 체크 `actualExit 1`,
+  `terminal_reason: "max_turns"`, `errors: ["Reached maximum number of turns (40)"]`).
+  격리 워크트리(`.team-loop-worktrees/tsk_19e56ea3cea3be04f8fd`)를 이 세션이 직접 열어
+  `git status --short` → `src/gate-report.js`·`src/gate-report-cli.js`·
+  `test/gate-report.test.js`·`test/fixtures/gate-manifest/*.json`(3개) untracked로 존재
+  (`changedPaths`와 일치, allowedPaths `src/**`·`test/**` 안). 코드를 직접 Read해 §2-2 스키마
+  (gateId/verdict/baselineCommit/worktreeCleanAtStart/checks[]{order,command,args,expectedExit,
+  actualExit,startedAt,durationMs,verdict,stdoutTail,stderrTail})와 필드 하나하나 대조, 실제
+  `docs/handoff/GATE-MANIFEST.json`(Local-First 저장소, order/command/args/expectedExit/
+  mutatesState)과도 1:1로 맞음을 확인. `node --test test/gate-report.test.js`를 이 세션이 직접
+  재실행 → `10/10 통과`(양성 PASS·음성 FAIL·매니페스트 없음/파싱 불가 에러·mutatesState 보존·
+  CLI 종료코드 0/1/2 전부 개별 시험으로 확인). 격리 워크트리에서 `npm test` 전체 재실행 →
+  `542/543`, 유일한 실패는 `test/injection-readiness.test.js:50`의 `data/failure-cases.json`
+  ENOENT(이 diff의 changedPaths 밖 — 여러 태스크에서 이미 반복 기록된 격리 워크트리 gitignore
+  런타임 데이터 결손과 동일 종류, 이번 diff와 무관).
+  **막힌 진짜 원인(새로운 실패 모드)**: `agent-executor` 체크의 `executorFailure.outputExcerpt`
+  안 실행자 세션 자신의 `permission_denials` 로그를 보면 Local-First 경로 읽기 시도뿐 아니라
+  `node --test`·`npm test`·`node -e "console.log(1)"` 같은 기본 명령까지 Bash/PowerShell로
+  반복 시도하며 전부(또는 대부분) 거부당한 흔적이 남아 있다 — 결국 자기 코드가 통과하는지
+  한 번도 확인 못 하고 40턴을 소진했다. 이건 기존에 기록된 `tsk_1a113f64`류(무관한 실패를
+  자기 탓으로 오인해 반복 실행하다 턴 소진)와 증상은 비슷하지만 원인이 다르다 — 그쪽은 실행은
+  됐는데 결과 해석을 잘못한 것이고, 이쪽은 애초에 검증 명령 자체가 실행 환경에서 거부됐다.
+  스폰된 실행자 세션의 권한 프롬프트가 비대화형 환경에서 자동 거부(또는 무응답 타임아웃)되는
+  것으로 보인다 — 단정은 아님, 이 세션은 그 스폰의 권한 설정을 직접 들여다볼 수단이 없었다.
+  **이 세션이 안 한 것**: 재발사하지 않았다 — 같은 샌드박스 문제가 재발할 가능성이 높고 비용이
+  든다(ADR-021 재량 범위 안이지만 근거 없는 반복 발사는 하지 않는다). `submit_task_result` 등
+  상태를 바꾸는 조작도 하지 않았다 — 이미 다른 태스크들(`tsk_06ba445c`·`tsk_aa08207`)에서 같은
+  종류의 "AGENT 납품 게이트가 사람/수동 제출을 못 받는다" 충돌이 기록돼 있어 반복하지 않았다.
+  사람 질문("작업이 되고 있는거야?", `data/discussions.json` `msg_78c7de12654ec4defa8b`,
+  08:43:09Z)에 위 내용으로 회신(`msg_coordreply_gatereport2260728174106`)하고 `coordinator-inbox.md`의
+  해당 항목에도 같은 내용을 덧붙였다(그 줄은 여전히 `[ ]`).
+  **사람이 정할 것**: (a) 코드가 이미 완성·검증됐으니(이 기록 근거) 대시보드에서 수작업으로
+  다음 단계(REVIEW 상당)로 옮길지 (b) 스폰 환경의 권한 거부 문제 자체를 조사해 근본 원인을
+  고칠지(그러면 `attempt 2/2`가 자동으로 성공할 가능성) (c) 그대로 두고 자동 재시도(있다면)를
+  기다릴지.
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
