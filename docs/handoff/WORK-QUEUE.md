@@ -426,6 +426,43 @@
   안 돌지는 이 세션에서 확인하지 않았다(`review.status`는 제출 시점에 `PENDING`이었다).
   discussions.json에도 남겼다(`msg_coordreply_targetrepo_review_20260728_124813`).
 
+- **team-loop 보드 태스크(`tsk_3b9760b2f47c055baecb`, 발사기 targetRepo)를 이 판정 세션이 승인했다 —
+  team-loop 쪽엔 새 발견 하나를 신고 없이 남겼다.** (2026-07-28, 이 판정 세션 `session-20260728-125719`,
+  코드를 만든 세션(`20260728-114105`)·제출한 세션(`20260728-124813`) 둘 다와 다름 — ADR-020 조건 충족)
+  **재실행해 대조한 것(자기보고 아님)**: `dotnet build server` → 0 warning/0 error. 완료 조건 7개 중
+  코드 관련 4개(요청 스키마 targetRepo·미선언시 자기 저장소·없는 경로 거절·git 아닌 경로 거절·절대경로
+  territoryRoots 거절)를 이 세션이 **새로 작성한 fresh fixture**로 독립 재현했다 — 원 fixture 5개의
+  `baselineCommit`이 이미 낡아(저장소가 그 뒤로 진행) 그대로 재생하면 전부 `baseline-commit-mismatch`로
+  막혀 의도한 시나리오에 도달하지 못했다(직접 재현으로 확인). 대신 Write로 같은 5개 시나리오를
+  현재 HEAD(Local-First `a9788a5`)·team-loop HEAD(`8dbf385`) 기준으로 다시 써서 실행 →
+  targetRepo 미선언→`ACCEPTED`(자기 저장소) / 없는 경로→`target-repo-not-found` exit 2 /
+  git 아닌 경로(`docs/qa/gate-witness/build-verify-ok`, `.git` 없음 확인)→`target-repo-not-a-git-repository`
+  exit 2 / 유효 targetRepo+절대경로 territoryRoots→`territory-root-is-absolute` exit 2(그대로 거절 유지) /
+  유효 targetRepo+상대경로 territoryRoots→`ACCEPTED`. 다섯 다 원 보고와 정확히 일치. 기존 요청 파일 3개
+  (GCLEAN-01·TERR-01·NET8-01, targetRepo 미선언)도 재실행 → 전부 이 변경과 무관한 기존
+  `baseline-commit-mismatch`로만 거절, 새 실패 모드 없음(회귀 없음 확인). `measure dev-pack` →
+  `violationCount 0`(재측정 과정에서 생긴 `dashboard/data/dev-pack/*.json` 재직렬화 잡음은
+  `git checkout --`로 원복해 트리를 깨끗이 함, 기존 판정 세션들의 선례와 동일).
+  **이 판정 세션이 새로 발견해 신고하는 것**: 태스크 본문의 "주의" 절이 "영토 검사에 걸리는지
+  먼저 확인하고, 걸리면 그 사실을 보고에 적어라"고 명시했는데, 실제 `territory-check --commit 98663a4`를
+  이 세션이 직접 돌려보니 **`violations:5`**(`docs/qa/gate-witness/codex-launch-targetrepo-*.request.json`
+  다섯 개 전부 — `CodexTerritory.Roots`의 `"docs/qa/"`에 걸림, outbox 경유 아닌 직접 커밋,
+  `TERRITORY-EXCEPTIONS.json` 면제도 없음). 제출측이 커밋 메시지에 적은 "territory-check → violations 0
+  (커밋 전 기준)"은 그 커밋이 존재하기 **전** 상태를 본 것이라 이 위반을 애초에 잡을 수 없는 확인이었다 —
+  `territory-check`는 특정 커밋의 diff만 보므로(`TerritoryCheckCli.cs`), 커밋 전에 돌리면 diff가 없어
+  항상 무해하게 나온다. **완료 조건 7개 어디에도 territory-check가 명시돼 있지 않아 이 판정의 승인
+  여부는 막지 않았다** — 이 태스크의 산출물(`server/CodexHarnessLauncherCli.cs`·`server/CodexTerritory.cs`)
+  자체는 완료 조건을 전부 충족한다. 하지만 미해소 상태로 남아 있다.
+  **이 세션이 안 한 것**: `TERRITORY-EXCEPTIONS.json`에 `98663a4`를 등재하지 않았다 — 그 원장의
+  `_comment`가 스스로 "조율자가 코덱스 영토에 직접 쓴 커밋의 **사람 승인** 목록"이라고 명시하고,
+  기존 유일한 선례(`c5c1f21`, NET8-01-R1)는 실제 사용자 채팅 승인 인용을 근거로 달았다 — 이번 건은
+  team-loop 보드 태스크 자신의 `allowedPaths`가 `docs/qa/gate-witness/**`를 명시했다는 정황은 있지만,
+  그것이 "이 저장소의 codex 영토 규칙을 알고 승인한 것"인지는 불명확해 임의로 등재하지 않았다.
+  team-loop 쪽 `approve_task` 코멘트에도 같은 내용을 남겼다.
+  **사람이 정할 것**: (a) `TERRITORY-EXCEPTIONS.json`에 `98663a4` 등재 (b) `docs/qa/gate-witness/`의
+  이 5개 QA 증거 파일을 outbox 경유로 다시 반입하거나 다른 경로로 옮기기 (c) 이대로 낮은 심각도의
+  기지 gap으로 남겨두기.
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
