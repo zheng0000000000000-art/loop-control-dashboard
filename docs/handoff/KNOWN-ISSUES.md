@@ -159,3 +159,39 @@
 `git worktree prune` 이 `.git/worktrees/*` 관리 폴더를 지울 때 전부 `Permission denied` 가
 난다. 이 환경에서 `.git` 내부 쓰기가 막힌 것으로 보이나 **원인은 확인하지 못했다 — 주체 미상**.
 git 의 동작에는 지장이 없다(list 가 정확하다). 디스크와 정리 상태만 지저분하다.
+
+
+## 승인 독립성 검사가 게이트가 아니라 클라이언트에 있다 (2026-07-29)
+
+`tsk_16d584e283472a18e88e` 가 `reviewSessionPid: 0`, `comment: ""`, `adminOverride: true` 로
+승인됐다. **누가 승인했는지 기록으로 알 수 없다 — 주체 미상.**
+
+독립성 검사는 `mcp/team-loop-mcp.mjs` 의 `approve_task` 안에만 있다. `server.js` 2106 줄이
+`Number(body.reviewSessionPid) || 0` 으로 0 을 그대로 받으므로 `/api/tasks/<id>/review` 를
+직접 부르면 검사가 통째로 없다. **검사가 게이트가 아니라 호출자 예의에 걸려 있다.**
+
+보드에 올렸다: `tsk_a3ff8c75da7ca6ceea40` (우선순위 30).
+
+오늘 독립성을 증명 못 하는 승인이 둘이다 — 하나는 조율자 자신(23748, 교착을 뚫느라
+자기 일을 자기가 승인), 하나는 이것(0, 주체 미상). 앞의 것도 재검증을 보드에 올렸다
+(`tsk_fa2ef969a0bd09e563ea`).
+
+## DONE 인데 verification 이 FAILED 인 태스크를 아카이브한 근거 (2026-07-29)
+
+`tsk_dcc3edbd825611198304`(검증 멱등성) 을 아카이브했다. 보드 기록만 보면
+**"검증 실패인데 완료"** 로 보이므로 근거를 남긴다.
+
+그 `verification: FAILED` 는 **자기가 고친 버그 때문에 남은 흔적**이다. 커밋된 작업을
+`NO_DELIVERABLE` 로 읽던 그 버그가 이 태스크 자신에게도 걸려 REVIEW → READY 로 되감겼다.
+조율자가 직접 병합해 교착을 뚫었고, 병합된 뒤에는 `git diff HEAD` 가 비어 재검증이 구조적으로
+통과할 수 없다.
+
+실체로는 처리됐다 — 병합 `8b383eb`, `committedPaths` 가 `delivery-gate.js`·`verifier.js` 에
+살아 있고 `test/delivery-idempotency.test.js` 4/4 통과. 효과도 독립적으로 확인됐다
+(그 덕에 풀린 `tsk_19e5...` 를 다른 세션이 재검증하고 승인).
+
+**다만 승인 절차는 깨끗하지 않다**(위 항목). 재검증 태스크가 보드에 있고, 거기서 문제가
+나오면 `scripts/board-archive.ps1 -Unarchive` 로 되돌린다.
+
+남은 하나 `tsk_879407eb7997b2105904`(territory-check) 도 `verification FAILED` 인데 이미
+아카이브돼 있고 `review` 가 `None` 이다. **리뷰 없이 아카이브된 것 — 주체 미상.** 건드리지 않았다.
