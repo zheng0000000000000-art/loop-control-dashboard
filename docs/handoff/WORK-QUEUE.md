@@ -1512,3 +1512,40 @@
   없음(워커가 실제로 지웠다). **완료 기준 4개 전부 코드+시험으로 충족 확인.**
   **판정 세션이 볼 것**: 이 세션은 코드의 절반을 만들었으므로 `approve_task`는 하지 않았다 —
   위 재실행 결과를 근거로 다른 세션이 승인하면 된다.
+
+- **team-loop 보드 태스크(`tsk_8e84cdaac82555324b29`, "처리 안 된 실패사례를 백로그 후보로 올린다")를
+  이 조율자 세션(`session-20260729-014606`)이 만들어 REVIEW까지 올렸다.** (2026-07-28)
+  **한 일**: 격리 워크트리(`.team-loop-worktrees/tsk_8e84cdaac82555324b29`)에
+  `src/backlog-candidates.js`(신설)를 만들었다 - `buildBacklogCandidates(cases)`는 실패사례
+  배열에서 `status`가 `OPEN`/`FIXTURE_CANDIDATE`인 것만 후보로 남기고(RESOLVED/IGNORED는
+  이미 처리된 것으로 보고 제외), 각 후보에 `failureCaseId`·`occurrences`·`reason`(OPEN이면
+  "하네스/스킬 미연결", FIXTURE_CANDIDATE면 "픽스처 후보로 연결됐지만 아직 활성 하네스로
+  안 굳음" + `fixtureCandidateId`)을 근거로 붙인다. `listBacklogCandidates(store)`는
+  `FailureCaseStore.list()`를 읽기만 하고 아무것도 쓰지 않는다. `test/backlog-candidates.test.js`
+  10개 - 필터링, 근거 필드, 정렬, 빈 입력, `FailureCaseStore` 실제 상태 전이(OPEN→RESOLVED로
+  후보에서 빠짐, FIXTURE_CANDIDATE 유지, `resolveCoveredByActiveArtifacts`로 덮이면 빠짐),
+  후보 0건, 그리고 **음성 시험 2개** - (1) 실제 `data/failure-cases.json` 사본으로 후보를
+  뽑아도 원본 파일 바이트가 그대로임을 `readFile` 전/후 비교로 확인, (2) 모듈 소스 자체에
+  `mutateTask`/`createTask`/`tasks.json`/`store.js` 참조가 없음을 정규식으로 확인(구조적으로
+  보드에 쓸 방법이 코드에 없음).
+  **CLI 배선은 하지 않기로 했다** - 처음에 `src/cli/main.js`·`src/cli/format.js`에
+  `team-loop backlog-candidates` 명령을 붙였으나(`/api/failures`를 읽어 순수 함수에 통과),
+  완료 기준이 "코드로 있다"까지만 요구하고 CLI 배선은 범위를 넘는 추가 기능이라 판단해
+  되돌렸다(`git checkout --`) - 제출 파일을 신설 2개로만 좁혔다.
+  **사용한 하네스**: `node --test test/backlog-candidates.test.js` → `10/10 통과`. 전체
+  `npm test` → `590/590 통과`(기존 588 + 신설 2 - 직전 590 기준과 일치, 회귀 없음).
+  `git diff --check` 통과. `git status --short` → 신설 2개 파일만, 둘 다 allowedPaths
+  (`src/**`, `test/**`) 안.
+  **제출 중 겪은 함정**: `submit_task_result`를 처음 부를 때 "server worktree already
+  contains non-MCP changes" 로 거절당했다 - 이 세션이 Write 도구로 격리 워크트리에 파일을
+  직접 써둔 뒤(git 상태는 깨끗했지만 untracked) MCP로 다시 제출하려 했기 때문으로 보인다.
+  그 두 파일을 지워 워크트리를 완전히 clean 상태로 되돌린 뒤 같은 내용으로 재제출하니 통과했다
+  - **다음 세션 참고**: MCP로 제출할 파일은 디스크에 미리 만들어두지 말고 `submit_task_result`가
+  직접 쓰게 둬야 한다.
+  `verify_task` → `{"status":"PASSED","passed":true,"failureCaseIds":[]}`.
+  `request_review_task` → `status REVIEW`, `review.status PENDING`(`reviewerProfileId
+  codex-review`). 완료 기준 4개 전부 코드+시험으로 충족.
+  **이 세션이 안 한 것**: 승인하지 않았다(ADR-020, 코드를 만든 세션이라 자기 판단을 자기가
+  승인하는 모양이 된다) - `- [~]`가 아니라 team-loop 보드 상태로는 `REVIEW`까지만 옮겼다.
+  다음 판정 세션이 격리 워크트리에서 diff를 직접 대조하고 `npm test`를 독립 재실행해 승인
+  여부를 정하면 된다.
