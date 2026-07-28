@@ -1282,3 +1282,36 @@
   태스크 브랜치에 스스로 커밋한 뒤 재검증해도 더는 `NO_DELIVERABLE`로 잘못 읽지 않는다(단,
   scope 검사는 committedPaths에도 그대로 걸린다 — 게이트가 무를어진 게 아니다).
   코드/보드 변경 없음(이 항목은 기록만).
+
+- **team-loop 보드 태스크(`tsk_b63d72341610fa0bca67`, "탐색이 실제로 일을 하는지")를 이 세션이
+  직접 구현해 REVIEW까지 올렸다.** (2026-07-28, `session-20260728-231607`, 사람이 직접 지정한
+  태스크 — HUMAN 모드, MCP `submit_task_result -> verify_task -> request_review_task`)
+  **한 일**: `.team-loop-worktrees/tsk_b63d72341610fa0bca67`에서 `src/engine/balance-engine.js`의
+  `tuneBalance()`가 늘 `changed:false`만 돌려주던 원인을 실측 — 기존 combat 픽스처(4칸
+  explicit-grid, room2Attack 4~10)는 baseline 자체가 이미 completionRate=99(상한 70 초과)로
+  실패였는데, 그 4칸 범위 안에는 해가 정말 없어서 `changed:false`가 **정직한 결과**였다(공간
+  전체를 다 봤는데 해가 없는 경우). `parameterSpace`를 [10,14] step1(5칸)로 넓히면
+  room2Attack=14(completionRate=55.5)에서 탐색이 실제로 `changed:true`·`solved:true`를 내는
+  것을 새 시험으로 확인해 "탐색이 실제로 일을 한다"는 것을 증명했다. `tuneBalance()`에
+  `search.spaceSize`/`candidatesEvaluated`/`exhaustive`와 `unsolvedReason`
+  (`no-parameter-space`/`no-solution-in-space`/`space-not-fully-searched`) 필드를 추가해,
+  해를 못 찾았을 때 "공간을 다 봤는데 없다"(exhaustive)와 "공간 일부만 봤다"(밖에 해가 있을
+  수도)를 코드로 구분해 남기게 했다 — 기존 4칸 픽스처가 전자, 넓은 100칸 공간에 예산 5로
+  탐색시킨 새 픽스처가 후자를 실증한다. `balance-result-view.js`의 `compactResult`에도 두
+  필드를 실어 summary 뷰에서도 숨지 않게 했다.
+  **사용한 하네스**: `node --test test/balance-engine.test.js` → 8/8 통과(신설 2개 포함).
+  전체 `node --test` → 558/559(유일한 실패는 이 diff와 무관한 `test/usage.test.js`의 타이밍
+  플레이크 — 단독 재실행하면 5/5 통과함을 확인). `git diff --check` 통과. `git status --short`로
+  allowedPaths(`src/**`, `test/**`) 밖 변경 없음 확인.
+  **막혔다가 고친 것**: 처음에 격리 워크트리 파일을 Edit 툴로 직접 고쳐 검증했더니
+  `submit_task_result`가 "The server worktree already contains non-MCP changes."로 거절 —
+  `git checkout --`로 직접 편집분을 되돌려 워크트리를 HEAD로 깨끗이 한 뒤 같은 내용을
+  MCP `submit_task_result`로 다시 제출하니 통과했다(`src/remote-submission.js:99`,
+  `task.delivery.type`이 `MCP_FILES`가 아닌데 워크트리에 diff가 있으면 거절하는 기존 안전장치).
+  **지금 상태**: `status REVIEW`, `verification.status PASSED`, `review.status PENDING`.
+  **이 세션이 안 한 것**: 승인(`approve_task`)은 하지 않았다 — 실행한 세션이 자기 일을
+  승인하지 않는다(ADR-020). `data/discussions.json`에도 같은 내용을 남겼다
+  (`msg_tsk_b63d72_search_realwork_20260728_143100`).
+  **다음(판정) 세션이 볼 것**: 격리 워크트리에서 diff 직접 대조 + `npm test` 독립 재실행으로
+  완료 기준 4개(실패 기준선에서 changed:true / 못 찾았을 때 이유 구분 / 후보수-공간크기 대조
+  수치 / 이 셋을 단언하는 시험)를 재확인한 뒤 `approve_task`로 승인·병합.
