@@ -130,8 +130,8 @@
                       "priority":  24,
                       "targetRepo":  "team-loop",
                       "source":  "2026-07-28 실측 - tsk_1a113f64adb67331dac2 회로 차단기, 이후 반복 수작업",
-                      "status":  "READY",
-                      "boardTaskId":  null,
+                      "status":  "IN_BOARD",
+                      "boardTaskId":  "tsk_16d584e283472a18e88e",
                       "addedBy":  "조율자 세션 23748",
                       "addedAt":  "2026-07-28",
                       "tier":  "P0",
@@ -166,5 +166,6 @@
                   }
               ],
     "policyVersion":  1,
-    "policy":  "docs/plan/BACKLOG-POLICY.md - priority 는 tier 와 factors 에서 계산한다. 손으로 정하지 않는다. scripts/backlog-policy-check.ps1 이 강제한다."
+    "policy":  "docs/plan/BACKLOG-POLICY.md - priority 는 tier 와 factors 에서 계산한다. 손으로 정하지 않는다. scripts/backlog-policy-check.ps1 이 강제한다.",
+    "lastAlertAt":  "2026-07-28T15:26:07Z"
 }
