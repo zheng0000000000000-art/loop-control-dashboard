@@ -886,6 +886,19 @@
   항목(`2026-07-28T11:11:33Z`)에 같은 내용을 남기고 후자는 닫았다. **여전히 사람 확인 대기** —
   정체 시간이 계속 늘어나는 추세라 다음 세션은 "정상 지연"으로 볼 근거가 더 옅어졌다는 점만
   참고하면 된다.
+  **재확인(2026-07-28T11:56Z 근처, session-20260728-205606)**: 조회 전용 서브에이전트로
+  `loop_enter`·`show_task`·`work_inspect`·`list_tasks`를 다시 대조 — `status READY`,
+  `executionState QUEUED`, `version 102`(10:43:06.771Z 재큐잉 이후 여전히 불변),
+  `automationGuard.circuitOpen false`. `BOARD_WORKER_LAUNCHED`는 여전히 08:27:54Z(attempt 1)
+  단 1건뿐 — 재큐잉 이후 **73분 넘게** 새 발사 이벤트 없음(53분이었던 직전 세션보다 더
+  벌어졌다). `discussions.json` non-coordinator unread 재확인 — 0건(10:30:00Z 이후 사람의
+  새 메시지 없음). `src/discussions.js`의 `DiscussionStore.addMessage`(정본 API)로 후속
+  메시지 남김(`msg_2608c498dad8d4928223`). 이 세션도 `work_start_next`를 다시 부르지 않았다
+  (같은 이유: `maxAttempts 2` 소진 위험, 새 근거 없음). `coordinator-inbox.md`의
+  `tsk_19e56ea3cea3be04f8fd` 줄과 신규 no-progress/inbox 항목(`2026-07-28T11:40:07Z`·
+  `2026-07-28T11:51:07Z`)에 같은 내용을 남기고 후자 둘은 닫았다. 코드/보드 변경 없음.
+  **여전히 사람 확인 대기** — (a) 대시보드 수동 재큐잉/발사 (b) 스케줄러 로그로 발사 실패
+  원인 확인, 둘 중 하나가 필요하다.
 
 ## 끝난 것
 
