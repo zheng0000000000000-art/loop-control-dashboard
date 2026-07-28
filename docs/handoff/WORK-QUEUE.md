@@ -161,12 +161,23 @@
   사람 결재 대상). discussions.json에 선택지 3개(block/unblock 허용 / 다른 진입 경로로 재청구 /
   게이트 자체 결함으로 보고 티켓화)를 남겼다(`msg_boardtask_aa08207_deliverygate_20260727`).
   **사람이 정할 것**: 위 셋 중 어느 쪽으로 갈지.
+  **이 세션 확인(2026-07-28, `session-20260728-041106`)**: `mcp__team-loop__show_task`로 재확인 —
+  `tsk_aa08207b993b422a4fdf`는 이제 `status: DONE`(archived), `verification.status PASSED`,
+  `review.status APPROVED`(`adminOverride: true`)다. `executionMode: HUMAN`으로 그대로 남아 있고
+  `executor` 필드는 비어 있다 — 아래 gap 항목이 지목한 "AGENT 납품 게이트" 충돌 자체를 우회해서
+  풀린 것으로 보인다(추정, 누가/어떻게 승인했는지는 `show_task` 필드만으로는 재구성 불가).
 
 - **team-loop 보드 태스크(`tsk_aa08207b993b422a4fdf`)는 판정 통과인데 REVIEW→DONE 을 옮기는 MCP 도구가 없다.** (2026-07-28 발견, 실행 세션과 다른 판정 세션)
   **재실행해 대조한 것(자기보고 아님)**: `git log`로 `1708c59`가 `8af99b3`로 `fusion/judgment-layer`에 이미 병합돼 있음을 확인. `src/coordinator-presence.js`·`test/coordinator-presence.test.js`를 직접 Read — `DEFAULT_STALE_MINUTES=25` 삭제, `appsettings.json`의 `Coordinator.StaleMinutes`를 읽고 실패/누락 시 10으로 떨어지는 `resolveStaleMinutes` 신설, `future`/`skewMinutes` 반환, `absenceNotice`가 future 분기에서 "고장"/"미래" 문구를 내고 "조용하다"는 안 냄을 코드에서 확인. `npm test` 이 세션이 직접 재실행 → `tests 508, pass 508, fail 0`(자기보고와 일치). `git diff 48a2fbf..1708c59 --stat`로 scope 재확인 → 두 파일만 변경(allowedPaths 일치). `appsettings.json` 실측 → `Coordinator.StaleMinutes=10` 이미 반영됨. 완료 조건 6개 전부 코드+시험으로 대조 완료.
   **판정**: 완료 기준 충족.
   **막힌 지점**: `show_task`로 보면 이미 `status: REVIEW`(`verification PASSED`, `review.status PENDING`). 이 판정 세션이 `verify_task`로 승인하려 했으나 서버가 "Verification requires an IN_PROGRESS task"로 거절 — `verify_task`는 REVIEW 상태에는 안 먹는다(이미 실행 세션이 IN_PROGRESS일 때 한 번 돌려 PASSED를 받은 뒤 `request_review_task`로 REVIEW로 넘어간 상태라서다). MCP 도구 목록 어디에도 REVIEW→DONE 승인 도구가 없다. `server.js`에서 찾은 유일한 경로는 HTTP `POST action=review`(decision=APPROVE, 실제 merge+DONE+archive까지 함)뿐인데, 이건 이전 실행 세션이 `msg_boardtask_aa08207_deliverygate_20260727`에 남긴 것과 같은 종류의 "MCP 처리 범위 밖" HTTP 우회다 — actor 인증도 이 세션엔 없고 merge+archive는 되돌리기 번거로운 상태 변화라 직접 호출하지 않았다.
   **사람이 정할 것**: (a) 대시보드에서 직접 승인 클릭 (b) 이 세션류가 HTTP `action=review`를 직접 호출해도 되는지 명시 허가 (c) `verify_task`가 REVIEW 상태에서도 승인으로 동작하게 하거나 별도 `approve_task` MCP 도구를 신설(게이트/판정층 코드 변경 — 사람 결재 대상). `data/discussions.json`에도 같은 내용을 남겼다(`msg_boardtask_aa08207_reviewgap_20260728`).
+  **이 세션 확인(2026-07-28, `session-20260728-041106`)**: 옵션 (c)가 그 사이 실제로 반입됐다 —
+  MCP 도구 목록에 `mcp__team-loop__approve_task`(설명: "Approve a task waiting in REVIEW. Refuses
+  when this same session executed the task")가 지금 존재한다. `show_task`로 재확인하니
+  `tsk_aa08207b993b422a4fdf`는 `status: DONE`(archived), `review.status APPROVED`
+  (`adminOverride: true`)다. **이 gap은 해소됐다** — 다음에 REVIEW에 걸린 태스크를 만나면
+  `approve_task`를 바로 쓰면 된다(단 ADR-020대로 실행 세션 자신은 못 쓴다).
 
 - **team-loop 보드 태스크(`tsk_06ba445c1ee0e40aa5fe`, removeTaskWorktree 빈 폴더 회수)는 코드는 끝났는데 같은 납품 게이트 충돌로 REVIEW를 못 올렸다.** (2026-07-28, 실행 세션)
   **한 일(완료 기준 6개 전부 실측 확인)**: `src/worktree.js`의 `removeTaskWorktree` — `git worktree remove --force` 뒤에도 디렉터리가 남으면 `fs.rm`으로 직접 지우고, 그래도 남으면(git 에러 또는 새 에러)에 `worktreeRemoveFailed=true`를 달아 던진다(성공한 척 조용히 넘어가지 않음). 반환값에 `{ dir, removed, forced }`. `mergePreparedWorktree`(164행)의 `.catch(() => {})`는 정리 실패를 완전히 삼키던 것을 고쳐 반환값 `worktreeCleanup` 필드에 남기도록(병합 자체는 실패시키지 않음 — 병합은 이미 끝난 뒤라서). `createTaskWorktree`(46행)의 `.catch(() => {})`는 그대로 뒀다 — 못 지워도 바로 다음 `git worktree add`가 실패를 그대로 드러내기 때문. `commitTaskWorktree`(remove=true, 145행)는 원래도 안 삼켰다. 시험 2개 추가(leftover 디렉터리 재현 + fs.rm 몽키패치로 진짜 실패 재현) — 둘 다 통과. `npm test` 전체 재실행 → `tests 510, pass 510`(기존 508 + 신설 2). `git diff --check` 통과. 허용 경로(`src/worktree.js`, `test/**`) 밖은 안 건드림.
@@ -190,6 +201,11 @@
   같은 이유(actor 인증 없음·merge+archive는 비가역)로 이 세션도 쓰지 않았다. `data/discussions.json`에
   판정 결과를 남겼다(`msg_boardtask_06ba445c_judgment_20260728`). **REVIEW 상태 그대로 둔다** —
   코드는 승인 기준을 충족했으나 보드를 DONE으로 옮길 MCP 수단이 없다.
+  **이 세션 확인(2026-07-28, `session-20260728-041106`)**: `approve_task` MCP 도구가 새로 생겨
+  이 gap이 해소됐다(위 `tsk_aa08207` 항목의 확인과 동일 도구). `show_task`로 재확인 —
+  `tsk_06ba445c1ee0e40aa5fe`는 `status: DONE`(archived), `verification.status PASSED`,
+  `review.status APPROVED`(`adminOverride: true`), `executionMode: EXTERNAL_AGENT`,
+  `executor: {tool: claude-code, model: claude-opus-5}`. 병합도 이미 반영됨.
 
 - **team-loop 보드 태스크(`tsk_1d8eb8f26ff6124bd476`, 경매장 밸런스 게이트 음성 사례)의 막힘이 이 세션에서 해소돼 REVIEW까지 올라갔다.** (2026-07-28, 이 세션 `session-20260728-035106` — 코드를 만든 세션(`20260728-033107`)과 다른 세션)
   위 바로 위 항목(같은 태스크, 2026-07-28 실행 세션 기록)이 남긴 상태는 낡았다 — `[루프]`가 3회 무진전으로 막힘 보고(`msg_ae3150ba862642c5aa98`)까지 했었다.
@@ -213,6 +229,11 @@
   **사람이 정할 것**: 메인 트리의 이 두 untracked 파일을 지워도 되는지(안전해 보인다 — git에
   한 번도 커밋된 적 없고 격리 워크트리 쪽 정식 제출과 내용이 같다), 그리고 근본 원인
   (어떤 세션이 격리를 우회해 메인 트리에 직접 쓴 경로)을 더 조사할지.
+  **이 세션 확인(2026-07-28, `session-20260728-041106`)**: 이 질문은 저절로 풀렸다 — `tsk_1d8eb8f26ff6124bd476`가
+  그 사이 `approve_task`로 승인되며(`show_task`: `status DONE`, `review APPROVED adminOverride:true`,
+  `executor.session: 20260728-035106`) team-loop main에 병합됐다. `git log --oneline -1 -- examples/balance/broken-blind-risk-auction-economy.json`
+  → 커밋 `b632b57`, `git ls-files`에 두 파일 모두 잡힘, `git status --short`는 깨끗함. 즉 "untracked
+  사본"이 아니라 지금은 **정식으로 커밋된 파일**이다 — 지울 필요 없다.
 
 ## 끝난 것
 
