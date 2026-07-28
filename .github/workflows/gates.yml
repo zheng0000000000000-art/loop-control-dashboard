@@ -109,6 +109,14 @@ jobs:
         shell: pwsh
         run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-script-encoding.ps1
 
+      # 이 저장소에서 실제로 밟은 함정을 정적으로 잡는다. -SelfTest 를 먼저 돌린다 -
+      # 안 잡게 된 검사기는 통과 도장만 찍으므로 없느니만 못하다.
+      - name: 스크립트 함정
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-script-traps.ps1 -SelfTest
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-script-traps.ps1
+
       - name: build
         shell: bash
         run: dotnet build server -v q --nologo
