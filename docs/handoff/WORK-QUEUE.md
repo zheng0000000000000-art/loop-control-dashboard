@@ -611,6 +611,26 @@
   모호한 정책 질문이라 추측 진행 대신 선택지 딸린 질문으로 되물음).
   **사람이 볼 것**: 회신 내용이 질문 취지와 맞는지, 정책 변경을 원한다면 그 기준.
 
+- **사람이 "아니면 시뮬레이션을 돌려봐"·"그럼 너가 작업을 해야 되는거잖아? 정해달라는걸 상세하게
+  말해봐"(discussions.json `msg_0e1cff20531ff88e4ba5`·`msg_e67bd6bd521610d21627`, 2026-07-28
+  06:47~06:49Z)라고 이어 물었다 — 이 세션이 둘 다 처리했다.** (2026-07-28, 이 조율자 세션
+  `session-20260728-155106`)
+  **시뮬레이션**: team-loop MCP `balance_run`으로 `examples/balance/unknown-auction-economy.json`
+  그레이박스(provider `auction-economy-v1`, mode `tune`, seeds 5·runs 400·maxCandidates 100)를
+  그대로 재현해 발주 → `baljob_0a4263bd37a8b86ac1e9`, 35초 완료 → `bal_4b5efbbc3a53a6d95a32`,
+  `solved:true, changed:false`(기준 파라미터가 이미 8개 지표 전부 위반 0, 튜너가 더 나은 후보를
+  못 찾음). `balance_portfolio_list`로 대조하니 어제(2026-07-27 오후) 이미 두 번 더 돌아 있었음도
+  확인 — `FUSION-OBSERVATION-2W.md`의 §1·§2 기준선 표는 규칙대로 안 고치고 "관찰 3"으로 정정과
+  결과를 append했다(커밋 `ac43cb9`, `measure dev-pack` violations 0 확인 후 커밋).
+  **정해달라는 것 상세화**: `JUDGMENT-LAYER-CONTRACT-v1.md` §4의 4가지(①상태 원본 위치 ②합칠 범위
+  — 규칙표만/데이터 계약까지/판정 실행기까지 ③판정 실행기를 다시 쓸지(다시 쓰면 `server/Harness/`
+  5,417줄 상당을 JS로 이식) ④이 저장소 처분 — 보존/아카이브/폐기)를 각각 선택지와 함께 풀어
+  `discussions.json`에 답했다(`msg_1ddeb4d14d90af5c83d0`) — 4)가 1)~3)에 종속된다는 점,
+  ADR-018이 "범위를 미리 정하지 않는다"를 택했으니 2주 판정(~2026-08-10)까지 미뤄도 유효한
+  선택이라는 점도 함께 적었다. **이 세션이 임의로 정하지 않았다** — 방향 선택은 사람 결재 대상.
+  `DiscussionStore.markRead`/`addMessage`(정본 API)로 처리, 파일 손편집 없음.
+  **사람이 볼 것**: 4가지 질문에 대한 답(또는 "판정 시점까지 미룬다"는 결정).
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —

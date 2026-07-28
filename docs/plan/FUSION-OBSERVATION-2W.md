@@ -215,6 +215,32 @@ scope-violation-handling  →  "src/store.js 경로를 수정하지 않는다"
 
 ---
 
+## 관찰 3 (2026-07-28) — 그레이박스 시뮬레이션을 돌려봤다
+
+**질문**: 사용자 지시(`data/discussions.json` `msg_0e1cff20531ff88e4ba5`, "아니면 시뮬레이션을 돌려봐") —
+§1-3이 "그레이박스가 2026-07-26에 나왔고 아직 돌리지 않았다"고 적어둔 것을 실제로 돌려보라는 뜻으로
+받아들였다.
+
+**한 일**: team-loop MCP `balance_run`으로 `examples/balance/unknown-auction-economy.json`
+(provider `auction-economy-v1`, mode `tune`, seeds 5개, runs 400, maxCandidates 100)을 그대로 재현해
+발주 → `baljob_0a4263bd37a8b86ac1e9`, 35초 만에 `COMPLETED` → `bal_4b5efbbc3a53a6d95a32`.
+
+**결과**: `solved: true`, `changed: false` — 기준선 파라미터가 이미 8개 지표 전부
+`violations: 0`(distances 전부 0)로 통과했고, 튜너가 100개 후보를 탐색해도 기준선보다 나은 조합을
+못 찾았다. 즉 **이 그레이박스는 지금 파라미터로 이미 안정 상태**다.
+
+**정정(실체 확인)**: `balance_portfolio_list`로 보니 이 실험 전에 이미 같은 provider로 두 번
+더 돌아 있었다(`bal_9299c13b01fd54289c29` 2026-07-27T18:54Z `solved:true`,
+`bal_cbb16411368e09bb8821` 2026-07-27T18:53Z `solved:false`) — §1-3의 "아직 돌리지 않았다"는
+그 시점(2026-07-27 오전 기준선 측정) 기준으로는 맞았지만 같은 날 오후에 이미 돌았던 것으로 보인다
+(§1·§2 기준선 표는 규칙대로 고치지 않고 여기 정정만 남긴다).
+
+**이게 §3에 더하는 것**: `unknown-auction`에 balance 실험이 최소 3건 존재한다는 것 자체가
+"루프가 닫히는가"(§3-1)의 방증이다 — 단, 이건 board 태스크 완료가 아니라 balance job이라 §3-1의
+"태스크 몇 건 완료"와는 다른 지표다. 혼동하지 않도록 구분해 기록한다.
+
+---
+
 ## 추가 관찰 항목 (2026-07-28, ADR-021 완화에 따라)
 
 발사를 조율자 재량으로 넘기면서 사람 눈을 안 거치게 된 것. **2주 뒤에 센다.**
