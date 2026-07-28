@@ -20,6 +20,12 @@ param(
   # 조율자가 판단할 일은 세션이 집을 수 없다. 그래서 보드가 말랐는지 셀 때도 빼야 한다 -
   # 안 그러면 아무도 못 집는 태스크 하나 때문에 백로그가 영원히 안 열린다.
   [string[]]$UnclaimableMarkers = @('[조율자 판단]', '[사람 게이트]'),
+  # 남은 항목이 이 수 이하로 떨어지면 사람을 부른다. 루프는 일을 꺼내 쓸 수는 있어도
+  # 무엇이 할 일인지는 만들어내지 못한다 - 그건 사람이 넣어야 한다. 다 떨어진 뒤에 조용히
+  # 서면 예전과 같은 정지다. 마르기 전에 말해야 한다.
+  [int]$LowWater = 2,
+  # 같은 알림을 몇 시간 안에 다시 보내지 않는다. 5분마다 울리면 아무도 안 본다.
+  [int]$NotifyEveryHours = 12,
   [switch]$DryRun
 )
 
@@ -71,9 +77,34 @@ if ($claimable.Count -gt 0 -or $inFlight.Count -gt 0) {
 }
 
 # 여기부터는 보드가 말랐다. 백로그에서 우선순위가 가장 높은 것 하나를 꺼낸다.
+# 사람에게 알린다. 실패해도 던지지 않는다 - 알림이 안 갔다고 보충을 잃으면 안 된다.
+# 같은 알림을 반복하지 않도록 마지막 시각을 백로그 파일에 남긴다.
+function Send-BacklogAlert([string]$title, [string]$body, [string]$priority) {
+  $lastRaw = [string]$backlog.lastAlertAt
+  if ($lastRaw) {
+    $last = [datetime]::MinValue
+    if ([datetime]::TryParse($lastRaw, [ref]$last)) {
+      if (((Get-Date).ToUniversalTime() - $last.ToUniversalTime()).TotalHours -lt $NotifyEveryHours) { return $false }
+    }
+  }
+  $notify = Join-Path (Split-Path -Parent $PSCommandPath) 'notify.ps1'
+  if (Test-Path $notify) {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $notify -Title $title -Body $body -Tags 'clipboard' -Priority $priority 2>&1 | Out-Null
+  }
+  $backlog | Add-Member -NotePropertyName 'lastAlertAt' -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')) -Force
+  return $true
+}
+
 $candidates = @($backlog.items | Where-Object { $_.status -eq 'READY' -and (-not $_.boardTaskId) })
 if ($candidates.Count -eq 0) {
   Write-Output 'backlog-exhausted - 꺼낼 항목이 없다. 사람이 새 항목을 넣어야 한다'
+  if (-not $DryRun) {
+    $sent = Send-BacklogAlert '백로그가 비었다' ('보드가 말랐는데 꺼낼 일감이 없다.' + [Environment]::NewLine + 'docs/plan/BACKLOG.json 에 항목을 넣어야 루프가 다시 돈다.') '4'
+    if ($sent) {
+      Write-Output 'backlog-alert-sent exhausted'
+      [IO.File]::WriteAllText($BacklogPath, ($backlog | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
+    }
+  }
   exit 0
 }
 $pick = @($candidates | Sort-Object -Property @{ Expression = { [int]$_.priority }; Descending = $true })[0]
@@ -151,5 +182,12 @@ $pick.boardTaskId = $newId
 $pick.status = 'IN_BOARD'
 [IO.File]::WriteAllText($BacklogPath, ($backlog | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
 
-Write-Output "backlog-created $newId $($pick.id) $($pick.title)"
+$remaining = @($backlog.items | Where-Object { $_.status -eq 'READY' -and (-not $_.boardTaskId) }).Count
+if ($remaining -le $LowWater) {
+  $sent = Send-BacklogAlert '백로그가 얼마 안 남았다' ("남은 일감 $remaining 건." + [Environment]::NewLine + '다 떨어지면 루프가 선다. docs/plan/BACKLOG.json 에 넣어라.') '3'
+  if ($sent) { Write-Output "backlog-alert-sent low-water $remaining" }
+}
+[IO.File]::WriteAllText($BacklogPath, ($backlog | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
+
+Write-Output "backlog-created $newId $($pick.id) $($pick.title) (남은 $remaining 건)"
 exit 0
