@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "1",
+  "actorRole": "HARNESS_EXECUTOR",
+  "transport": "codex-cli",
+  "launchId": "QA-TARGETREPO-ABSOLUTE-TERRITORY",
+  "diId": "QA-TARGETREPO-ABSOLUTE-TERRITORY",
+  "targetRepo": "C:\\NHN Project\\team-loop-lite-ai-learning",
+  "baselineCommit": "395c4a9c58374c0c250c0584eb3356303d0a1882",
+  "directivePath": "package.json",
+  "directiveSha256": "d3eef60a33458d902f4db61ae2bc7c0cfbba30be57d9745c35bea0dfc8c69f87",
+  "contextPackPath": "package.json",
+  "contextPackSha256": "d3eef60a33458d902f4db61ae2bc7c0cfbba30be57d9745c35bea0dfc8c69f87",
+  "territoryRoots": [
+    "C:\\NHN Project\\team-loop-lite-ai-learning\\src\\"
+  ],
+  "allowedPaths": [
+    "src/skill-policy.js"
+  ],
+  "forbiddenActions": [
+    "commit",
+    "push",
+    "state-transition",
+    "pass",
+    "product-code-edit"
+  ],
+  "credentialRef": "none",
+  "timeoutSeconds": 1800,
+  "attempt": 1,
+  "maxAttempts": 1,
+  "workingCopyMode": "isolated-clean",
+  "note-qa": "대상 저장소는 유효하지만 territoryRoots가 절대 경로다 — targetRepo와 무관하게 여전히 territory-root-is-absolute로 거절돼야 한다(음성)"
+}
