@@ -808,6 +808,12 @@
   다음 단계(REVIEW 상당)로 옮길지 (b) 스폰 환경의 권한 거부 문제 자체를 조사해 근본 원인을
   고칠지(그러면 `attempt 2/2`가 자동으로 성공할 가능성) (c) 그대로 두고 자동 재시도(있다면)를
   기다릴지.
+  **재확인(2026-07-28T18:12Z 근처, session-20260728-181106)**: `show_task`/`loop_enter`로
+  다시 조회 — 08:58:16Z 이후 상태 변화 없음(`verification FAILED`/`EXECUTOR_RESULT_MISSING`,
+  `executionState IDLE`, `attempt 1/2`, `circuitOpen false`). `discussions.json`도 08:46Z
+  이후 사람 메시지 없음 — 위 (a)(b)(c) 중 아직 아무것도 사람이 고르지 않았다. 이 세션은
+  재발사하지 않았다(새 근거 없이 이전 두 세션의 판단을 뒤집지 않는다). `coordinator-inbox.md`
+  해당 줄에도 같은 내용을 덧붙였다 — **여전히 [ ]**.
 
 ## 끝난 것
 
