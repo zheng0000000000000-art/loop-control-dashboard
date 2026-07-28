@@ -25,13 +25,14 @@ $ErrorActionPreference = 'Stop'
 
 # 측정이 매번 다시 쓰는 파일들. 병합 충돌이 여기서만 나면 세션 것을 취하고 다시 생성한다.
 # 내용이 아니라 생성물이라, 어느 쪽을 고르든 재생성하면 같아진다.
-$GeneratedPaths = @(
-  'dashboard/data/',
-  'docs/context/RUNTIME-INDEX.md',
-  'docs/STATUS.md',
-  'docs/handoff/HANDOFF.md',
-  'docs/handoff/WORKSTATE.json'
-)
+# 생성물 목록은 scripts/generated-paths.txt 하나다. 여기에 또 적으면 두 벌이 되고
+# 한쪽만 늘어난다. 없으면 멈춘다 - 목록을 모르면 무엇이 생성물인지 모르는 것이고,
+# 그 상태로 충돌을 자동 해소하면 사람이 쓴 것을 덮을 수 있다.
+$generatedListPath = Join-Path (Split-Path -Parent $PSCommandPath) 'generated-paths.txt'
+if (-not (Test-Path $generatedListPath)) { Write-Output 'generated-list-missing'; exit 2 }
+$GeneratedPaths = @(Get-Content -Encoding UTF8 $generatedListPath |
+  ForEach-Object { $_.Trim() } | Where-Object { $_ -and (-not $_.StartsWith('#')) })
+if ($GeneratedPaths.Count -eq 0) { Write-Output 'generated-list-empty'; exit 2 }
 
 # PowerShell 5.1 은 native 명령의 stderr 를 2>&1 로 받으면 각 줄을 ErrorRecord 로 감싸고,
 # ErrorActionPreference=Stop 이면 그 자리에서 스크립트가 죽는다. git 은 정상적으로도 stderr 를 쓴다

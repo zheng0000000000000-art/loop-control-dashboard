@@ -1,0 +1,11 @@
+# 프로그램이 만들어 내는 파일. 세션이 손으로 고치는 것이 아니라 하네스가 다시 쓴다.
+# 착지할 때 충돌하면 세션 쪽을 취하고, 본 저장소가 이것만 더러우면 깨우기를 막지 않는다.
+#
+# 목록은 여기 하나뿐이다. 두 벌로 두면 한쪽만 늘어난다 - scripts/harness-list.txt 가
+# 같은 이유로 하나다. 2026-07-28 실측: 깨우기가 raw git status 로 판정해서 측정 산출물
+# 세 개 때문에 주기를 건너뛰었다. 착지는 그 세 개를 자동으로 해소하는데도 그랬다.
+dashboard/data/
+docs/context/RUNTIME-INDEX.md
+docs/STATUS.md
+docs/handoff/HANDOFF.md
+docs/handoff/WORKSTATE.json

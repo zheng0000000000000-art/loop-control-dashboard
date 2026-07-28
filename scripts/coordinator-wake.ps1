@@ -327,9 +327,31 @@ if (Test-Path $HeartbeatPath) {
 # 본 저장소가 dirty 면 시작하지 않는다. 세 가지가 한꺼번에 어긋난다 -
 # 깨우기는 커밋 안 된 큐를 읽는데 워크트리는 커밋된 HEAD 에서 뜨므로 세션이 그 항목을 못 본다.
 # 게다가 착지가 어차피 clean 을 요구해서 거부된다. 2026-07-27 실측: 세션 하나를 헛돌렸다.
+# 생성물만 더러운 것은 막지 않는다. 착지가 생성물 충돌을 이미 자동 해소한다 -
+# 2026-07-28 실측: 22:16 착지가 "생성물 충돌 3건 자동 해소"로 통과했는데 22:31 주기는
+# 같은 종류의 더러움으로 시작조차 못 했다. 검사가 자기가 지키려는 것보다 엄했다.
+# 목록은 scripts/generated-paths.txt 하나를 session-worktree.ps1 과 같이 읽는다.
+$generatedList = Join-Path (Split-Path -Parent $PSCommandPath) 'generated-paths.txt'
+$generatedPrefixes = @()
+if (Test-Path $generatedList) {
+  $generatedPrefixes = @(Get-Content -Encoding UTF8 $generatedList |
+    ForEach-Object { $_.Trim() } | Where-Object { $_ -and (-not $_.StartsWith('#')) })
+}
 $mainDirty = & git -C $WorkingDir status --porcelain 2>&1
-if ("$mainDirty".Trim() -ne '') {
-  Write-Line "main-tree-dirty - 커밋되지 않은 변경이 있다. 착지가 거부되므로 시작하지 않는다"
+# 목록을 못 읽으면 예전처럼 전부 막는다. 모르는 것은 통과가 아니다.
+$sourceDirty = @()
+foreach ($line in @($mainDirty)) {
+  $entry = "$line"
+  if (-not $entry.Trim()) { continue }
+  $path = if ($entry.Length -gt 3) { $entry.Substring(3).Trim() } else { $entry.Trim() }
+  if ($path.Contains(' -> ')) { $path = ($path -split ' -> ')[-1] }
+  $path = $path.Trim('"').Replace('', '/')
+  $isGenerated = $false
+  foreach ($g in $generatedPrefixes) { if ($path.StartsWith($g)) { $isGenerated = $true; break } }
+  if (-not $isGenerated) { $sourceDirty += $path }
+}
+if ($sourceDirty.Count -gt 0) {
+  Write-Line "main-tree-dirty - 소스 $($sourceDirty.Count)건이 커밋되지 않았다($($sourceDirty[0])). 착지가 거부되므로 시작하지 않는다"
   exit 0
 }
 
