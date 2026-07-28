@@ -9,10 +9,10 @@
       "evidence": "2026-07-28 22:26 판정 로그 - server-stale pid=44948, 서버 시작 22:08 < 코드 커밋 22:12. 경고만 찍고 지나갔고 재시작은 사람이 손으로 했다",
       "action": "restart-teamloop-server.ps1",
       "args": [],
-      "maxPerDay": 3,
+      "maxPerDay": 24,
       "reversible": true,
-      "why": "재시작은 되돌릴 수 있고 상태를 잃지 않는다. 세션은 서명 토큰이라 재시작해도 살아 있다(실측)",
-      "escalation": "재시작이 3회를 넘었다. 코드가 계속 바뀌고 있거나 서버가 뜨자마자 죽는다. team-loop-serve.log.err 를 봐라"
+      "why": "재시작은 되돌릴 수 있고 상태를 잃지 않는다. 세션은 서명 토큰이라 재시작해도 살아 있다(실측). 한도가 24 인 이유: 2026-07-29 실측으로 team-loop 코드가 6시간에 9번 바뀌었다 - 루프가 태스크를 성공적으로 병합할 때마다 서버가 stale 이 된다. 즉 stale 은 고장이 아니라 루프가 잘 도는 증거다. 한도 3 은 그 속도에 비해 낮아 정상 동작을 막았고, 그 때문에 remedy-exhausted 가 헛울렸다.",
+      "escalation": "하루 24회를 넘었다. 코드가 이 속도로 바뀔 리 없으니 서버가 뜨자마자 죽고 있을 가능성이 크다. team-loop-serve.log.err 를 봐라. 다만 진짜 알람은 이것이 아니라 server-stale-persists 다 - 재시작하고도 여전히 stale 이면 재시작으로 안 되는 문제다."
     },
     {
       "id": "board-circuit-open",
