@@ -749,6 +749,24 @@
   **사람이 볼 것**: 2-1 커밋(`e5c2c88`)이 세션 브랜치에 있다 — 본 저장소 병합 시점에 검토.
   2-3 태스크(`tsk_19e56ea3cea3be04f8fd`)는 진행 중이니 다음 조율자 세션이 진행 상황을 볼 것.
 
+- **`tsk_19e56ea3cea3be04f8fd`(ADR-023 2-3, 게이트 매니페스트 외부 실행) 진행 상태만 재확인 —
+  코드는 안 만들었다.** (2026-07-28, 이 조율자 세션 `session-20260728-172625`, `coordinator-inbox.md`의
+  decision-needed 항목 처리)
+  **확인한 것(실체, 자기보고 아님)**: `show_task`/`work_inspect`를 이 세션이 직접 호출 — 처음엔
+  `executionState QUEUED`, 격리 워크트리 없음(`.team-loop-worktrees/`에 이 태스크 폴더 자체가
+  없음), `changedPaths: []` — 위 항목이 "발사까지 했다"고 적었지만 실제로는 아직 워커가 안
+  붙은 상태였다. `loop_enter`로 다시 확인하는 사이 보드 스케줄러가 워커를 발사(`BOARD_WORKER_LAUNCHED
+  pid:39904`, `executor claude-opus-5`, `08:27:54.983Z`)해 지금은 `status IN_PROGRESS`,
+  `executionState RUNNING`, `TASK_AGENT_HEARTBEAT`가 몇 초 간격으로 계속 찍히고 있다 — 막힌 게
+  아니라 정상 진행 중임을 확인했다.
+  **이 세션이 안 한 것**: 재발사·재확인 이상의 개입은 하지 않았다 — 이미 워커가 살아서 돌고 있는데
+  건드릴 이유가 없고, `verification`/`review`가 아직 비어 있어 승인도 대상이 아니다(ADR-020).
+  `coordinator-inbox.md`의 해당 줄은 아직 `[ ]`로 남겨뒀다(진행 중, 결정 대상 아직 아님) —
+  다음 세션이 완료 여부만 재확인하면 된다. `discussions.json`에도 같은 내용을 남겼다
+  (`msg_3d46f177e533bab3479f`, 사람의 `msg_20b4dbe17e392bf4667d` "확인해줘"에 대한 후속 답).
+  **사람/다음 세션이 볼 것**: 이 태스크가 완료(`status DONE` 또는 `REVIEW`)되면 코드·시험을
+  실측으로 대조한 뒤 판정(다른 세션이 `approve_task`)까지 이어가면 된다.
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
