@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1",
+  "actorRole": "HARNESS_EXECUTOR",
+  "transport": "codex-cli",
+  "launchId": "QA-TARGETREPO-NOT-GIT",
+  "diId": "QA-TARGETREPO-NOT-GIT",
+  "targetRepo": "C:\\NHN Project\\_ops\\worktrees\\session-20260728-114105\\docs\\qa\\gate-witness\\build-verify-ok",
+  "baselineCommit": "c51533c9e42c922e516bd10f49f421df75098e89",
+  "directivePath": "CLAUDE.md",
+  "directiveSha256": "9d0356d09d0424469c8608d2252395a96caa62f5c607b9152bf375950a3516e3",
+  "contextPackPath": "CLAUDE.md",
+  "contextPackSha256": "9d0356d09d0424469c8608d2252395a96caa62f5c607b9152bf375950a3516e3",
+  "allowedPaths": [
+    "docs/qa/gate-witness/**"
+  ],
+  "forbiddenActions": [
+    "commit",
+    "push",
+    "state-transition",
+    "pass",
+    "product-code-edit"
+  ],
+  "credentialRef": "none",
+  "timeoutSeconds": 1800,
+  "attempt": 1,
+  "maxAttempts": 1,
+  "workingCopyMode": "isolated-clean",
+  "note-qa": "targetRepo 경로는 존재하지만 .git이 없다 — target-repo-not-a-git-repository로 거절돼야 한다(음성)"
+}

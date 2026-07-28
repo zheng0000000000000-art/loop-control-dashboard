@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1",
+  "actorRole": "HARNESS_EXECUTOR",
+  "transport": "codex-cli",
+  "launchId": "QA-TARGETREPO-ABSENT",
+  "diId": "QA-TARGETREPO-ABSENT",
+  "baselineCommit": "c51533c9e42c922e516bd10f49f421df75098e89",
+  "directivePath": "CLAUDE.md",
+  "directiveSha256": "9d0356d09d0424469c8608d2252395a96caa62f5c607b9152bf375950a3516e3",
+  "contextPackPath": "CLAUDE.md",
+  "contextPackSha256": "9d0356d09d0424469c8608d2252395a96caa62f5c607b9152bf375950a3516e3",
+  "allowedPaths": [
+    "docs/qa/gate-witness/**"
+  ],
+  "forbiddenActions": [
+    "commit",
+    "push",
+    "state-transition",
+    "pass",
+    "product-code-edit"
+  ],
+  "credentialRef": "none",
+  "timeoutSeconds": 1800,
+  "attempt": 1,
+  "maxAttempts": 1,
+  "workingCopyMode": "isolated-clean",
+  "note-qa": "targetRepo 선언 없음 — 종전대로 자기 저장소를 써야 한다(양성)"
+}

@@ -47,12 +47,17 @@ internal static class CodexHarnessLauncherCli
 
         var requestPath = Flag(args, "request");
         if (string.IsNullOrWhiteSpace(requestPath)) return Error("launch-request-required", 2);
-        var root = RepoRoot();
 
         JsonObject? request;
         try { request = JsonNode.Parse(File.ReadAllText(Path.GetFullPath(requestPath), Utf8NoBom))?.AsObject(); }
         catch { return Error("launch-request-unparsable", 2); }
         if (request is null) return Error("launch-request-unparsable", 2);
+
+        // 융합(2026-07-28, 사람 결재): 요청이 targetRepo를 선언하면 그 저장소를 대상으로 쏜다 —
+        // 안 선언하면 종전대로 이 실행자 자신의 저장소를 쓴다(기존 요청 파일 그대로 동작).
+        // 쏘기 전에 거절해야 한다 — 쏜 뒤에 대상이 없다고 알면 이미 비용이 나간 뒤다.
+        var (root, targetRepoRejection) = ResolveTargetRepo(request);
+        if (targetRepoRejection is not null) return Error(targetRepoRejection, 2);
 
         var rejection = RequestRejection(root, request);
         if (rejection is not null) return Error(rejection, 2);
@@ -391,6 +396,19 @@ internal static class CodexHarnessLauncherCli
             }
         }
         return null;
+    }
+
+    // 요청이 대상 저장소(targetRepo)를 선언했는지 본다. 선언하면 그 경로가 실존하는 git 저장소인지
+    // 검증한다 — 없는 경로나 git 저장소가 아닌 경로는 여기서 거절한다. 안 선언하면 null 사유와
+    // 이 실행자 자신의 저장소를 돌려준다.
+    private static (string Root, string? Rejection) ResolveTargetRepo(JsonObject request)
+    {
+        var declared = Str(request, "targetRepo");
+        if (string.IsNullOrWhiteSpace(declared)) return (RepoRoot(), null);
+        if (!Directory.Exists(declared)) return ("", "target-repo-not-found");
+        if (!Directory.Exists(Path.Combine(declared, ".git")) && !File.Exists(Path.Combine(declared, ".git")))
+            return ("", "target-repo-not-a-git-repository");
+        return (Path.GetFullPath(declared), null);
     }
 
     // 저장소 루트를 찾는다.
