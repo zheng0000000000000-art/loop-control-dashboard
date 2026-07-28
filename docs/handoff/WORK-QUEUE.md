@@ -63,6 +63,32 @@
 
 ## 새로 알게 된 일 (다음 세션이 판단)
 
+- **team-loop 보드 태스크(`tsk_1a113f64adb67331dac2`, "사람 게이트 태스크를 세션이 claim 못 하게 막는다")는
+  코드는 완료 기준을 다 충족했는데 자동 circuit breaker가 걸어 `BLOCKED`다.** (2026-07-28, 이 조율자 세션 —
+  `loop_enter` 추천으로 발견, 이 세션은 코드를 만들지 않았다)
+  **재확인한 것(자기보고 아님, 이 세션이 격리 워크트리를 직접 열어 실측)**: `.team-loop-worktrees/tsk_1a113f64adb67331dac2`의
+  `git status`/`git diff`로 `server.js`(수정)·`src/human-gate.js`(신설)·`test/human-gate-claim.test.js`(신설)가
+  allowedPaths(`server.js`, `src/**`, `test/**`) 안에 정확히 있음을 확인. `node --test test/human-gate-claim.test.js`를
+  이 세션이 직접 재실행 → `8/8 통과`(claim 거절·EXTERNAL_AGENT도 거절·사유에 표식+dashboard 언급·음성사례 2종
+  ·표식이 `src/human-gate.js` 한 곳에만 있음·`server.js`의 claim 처리부가 `store.mutateTask`(IN_PROGRESS 전환)
+  전에 게이트를 부르는 것까지 소스 스캔으로 확인). `show_task`가 보인 유일한 실패(`node --test` 전체 533개 중
+  1건, `test/injection-readiness.test.js:50`의 `data/failure-cases.json` ENOENT)를 `git stash`로 이 diff를
+  뗀 뒤 같은 파일만 재실행해도 동일하게 실패함을 이 세션이 직접 재현 — 다른 여러 태스크(`tsk_06ba445c...`·
+  `tsk_1d8eb8f2...` 등)에서 이미 반복 관찰된 격리 워크트리 인프라 결손(gitignore된 런타임 데이터 부재)이지
+  이 diff의 결함이 아니다. 완료 기준 7개 전부 코드+시험으로 충족 확인.
+  **막힌 진짜 원인**: `show_task`의 `verification.checks`에 `agent-executor` 체크가 `EXECUTOR_FAILED`
+  (`Reached maximum number of turns (40)`)로 잡혀 있다 — 실행 에이전트가 무관한 `injection-readiness` 실패를
+  자기 diff 탓으로 오인해 `node --test`를 여러 번 재확인하다 turn 예산을 다 썼다(자기보고 로그에서 같은
+  명령을 6~7번 반복 실행한 흔적 확인). 이게 2회 반복돼(`automationGuard.sameFailureCount: 2`)
+  circuit breaker가 자동으로 `blocked.automatic: true`를 걸었다. 누적 비용 `$2.72`, 토큰
+  `457270/500000`(91%) — 예산이 거의 소진됐다.
+  **이 세션이 안 한 것**: 재발사하지 않았다 — MCP 도구 목록에 BLOCKED/circuit 리셋 도구가 없고([[team-loop-mcp-no-unblock-tool]]
+  기존에 이미 확인된 한계), 같은 실패 신호(무관한 테스트를 자기 탓으로 오인)가 재발사에서도 반복될
+  가능성이 높은데 예산이 91% 소진된 상태라 밀어붙이지 않았다. `data/discussions.json`에도 남김
+  (`msg_boardtask_1a113f64_humangate_stuck_20260728`).
+  **사람이 정할 것**: (a) 이 격리 워크트리의 기존 diff를 사람이 대시보드/수작업으로 직접 승인·병합할지
+  (b) circuit을 리셋하고(도구 없음 — 수작업 또는 코드 변경 필요) 재발사할지.
+
 - **team-loop 보드 태스크(`tsk_1d8eb8f26ff6124bd476`, 경매장 밸런스 게이트 음성 사례)는 코드는 끝났는데
   같은 부류의 격리 워크트리 인프라 결손으로 `verify_task`가 FAILED다.** (2026-07-28, 실행 세션)
   **한 일(완료 기준 6개 실측 확인)**: `examples/balance/broken-blind-risk-auction-economy.json` 신설 —
