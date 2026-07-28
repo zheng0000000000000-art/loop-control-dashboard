@@ -10,6 +10,8 @@
 #
 # 푸시는 세션이 하지 않는다. 본 저장소가 병합한 뒤에 한 번만 한다.
 param(
+  # 착지 안 한 커밋을 일부러 버릴 때만 준다. 기본은 거부다.
+  [switch]$Force,
   [ValidateSet('Create', 'Land', 'Remove', 'List')]
   [string]$Action = 'List',
   [string]$RepoRoot = 'C:\Users\1\Documents\Local-First Workflow Dashboard',
@@ -77,6 +79,20 @@ switch ($Action) {
 
   'Remove' {
     if (-not $SessionId) { Write-Output 'remove-needs-session-id'; exit 2 }
+
+    # 착지 안 한 커밋이 있으면 지우지 않는다. branch -D 는 조건 없이 지운다 -
+    # 2026-07-28 실측: Land 가 트리 clean 아님으로 거부된 직후 Remove 가 돌아 커밋 하나가
+    # 브랜치째 사라졌다. git fsck 의 dangling 으로만 되찾았다. 되찾을 수 있었던 건 운이다.
+    # 일부러 버리려면 -Force 를 준다. 버리는 것은 말해야 하는 일이지 기본값이 아니다.
+    $unlanded = Invoke-Git $RepoRoot @('rev-list', '--count', "$BaseBranch..$branch")
+    if (($unlanded.Code -eq 0) -and (-not $Force)) {
+      $count = 0
+      [void][int]::TryParse(($unlanded.Text).Trim(), [ref]$count)
+      if ($count -gt 0) {
+        Write-Output "remove-refused-unlanded $branch ($count 커밋이 $BaseBranch 에 없다. 먼저 Land 하거나 -Force 로 버려라)"
+        exit 3
+      }
+    }
     Invoke-Git $RepoRoot @('worktree', 'remove', '--force', $dir) | Out-Null
     Invoke-Git $RepoRoot @('branch', '-D', $branch) | Out-Null
     Invoke-Git $RepoRoot @('worktree', 'prune') | Out-Null
