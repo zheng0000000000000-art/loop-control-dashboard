@@ -339,6 +339,21 @@
   않았다. discussions.json에 경고가 이미 두 번 찍혀 있다(03:11·03:16Z).
   **사람이 정할 것**: 재시작 시점(지금 or 다음에 화면 볼 때).
 
+- **사용자가 "이거 작업보드 확인해줘"(discussions.json `msg_9698b22562329037315e`, 2026-07-28
+  03:17:50Z)라고 물었다 — 이 세션이 답했다.** (2026-07-28, 이 조율자 세션
+  `session-20260728-122606`, 큐에 대기 항목이 없어 이 사용자 요청을 최우선으로 처리)
+  **재조회한 것(자기보고 아님)**: `list_tasks`(includeArchived)·`show_task`로 보드 전체를
+  직접 재조회 — 활성 태스크는 `tsk_3b9760b2f47c055baecb` 하나뿐이고 나머지는 전부 `DONE`
+  (archived, 위 여러 항목이 이미 기록한 것과 일치). 이 하나도 새 상황이 아니다 —
+  `status IN_PROGRESS`, `verification.status STALE`(03:13:40Z), `review.status REJECTED`
+  (codex-review, 03:14:05Z, "요청 스키마·시험·measure dev-pack 증거 없음")로 위
+  "team-loop 보드가 ... 자동 재발사했다" 항목이 기록한 상태 그대로 멈춰 있음을 확인했다.
+  **한 일**: discussions.json에 회신(`msg_coordreply_boardcheck_20260728_122606`)을 남기고
+  사용자 메시지+이전 조율자 메시지 3건에 `readBy: usr_claude_coordinator`를 추가했다. 코드는
+  건드리지 않았다(재발사 안 함 — 같은 실패가 반복될 구조라는 이전 진단 그대로 유효).
+  **사람이 정할 것**: 위 항목과 동일 셋 — (a) 커밋 `98663a4` 근거로 수작업 DONE (b) 외부
+  저장소 제출 경로 신설 (c) 이대로 두고 판정 세션이 커밋만 대조해 승인 대신.
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
