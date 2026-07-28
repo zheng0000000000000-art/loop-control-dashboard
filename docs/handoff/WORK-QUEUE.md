@@ -1597,3 +1597,66 @@
   한계(기존 "격리 워크트리 인프라 결손"과 같은 과) - 수용 기준 "지금 상태에서 9건을 잡는다"를
   이 하네스 안에서 어떻게 증명할지 별도 결정 필요 (c) 6건의 실제 유실 원인을 더 파볼지, 사람이
   직접 `skills.json`/`harnesses.json`에 누락 항목을 수작업 복구할지.
+
+- **team-loop 보드 태스크(`tsk_d1d9808b38e96ba812bf`, "승격 영수증이 없는 산출물을 가리킨다")를
+  위 진단(session-20260729-022606)을 근거로 이 세션이 직접 고쳤다 — codex-review가 지목한 결함
+  둘 다 해소했다.** (2026-07-29, 이 조율자 세션. 코드는 이 세션이 직접 작성, 발사 없음)
+  **한 일**: `src/promotion-reconciliation.js`에 `NEVER_ACTIVATED` 분류를 추가 —
+  `activatedAt`이 null인 영수증(진단이 찾은 2건, `failure-evidence-analysis-8e8dfe81`·
+  `autonomous-loop-stall-handling-0847b43f`, 둘 다 AWAITING_APPROVAL)은 애초에 활성화된 적이
+  없으니 어긋남이 아니라고 판정해 orphans에서 완전히 뺀다(이전엔 두 cause 중 하나로 강제
+  분류되던 결함, 진단이 "분류기 결함"이라 명시했던 부분).
+  `test/promotion-reconciliation.test.js`의 라이브 `data/`-의존 통합 시험(codex-review가
+  REJECT한 지점 — 워크트리 안에서는 레지스트리가 얼어 있어 9건이 전부 STALE_REGISTRY_SNAPSHOT으로
+  숨어버린다)을 **고정 픽스처 시험**으로 바꿨다: 2026-07-29 라이브 `data/`에서 이 세션이 직접
+  조회한 실제 9건(receiptId·artifactId·status·createdAt·activatedAt 전부 그대로)과 실제
+  registryHorizon(`2026-07-28T17:16:12.056Z`)을 코드에 못박고, `reconcilePromotions()`가
+  정확히 2건 NEVER_ACTIVATED + 7건 MISSING_ARTIFACT(구체적 receiptId 7개까지 단언)로 분류함을
+  검증한다 — 워크트리가 무엇을 얼려 넣든 이 시험 결과는 항상 같다. 라이브 `data/`를 읽는 시험은
+  "예외 없이 읽힌다"만 확인하는 존재-검증으로 남겼다(orphans 개수는 워크트리 프로비저닝에
+  따라 달라질 수 있어 단정하지 않음).
+  **확인한 것(직접 실행, 자기보고 아님)**: `node --test test/promotion-reconciliation.test.js` →
+  10/10 통과. `npm test` 전체 → `600/600 통과, 0 fail`(첫 시도의 aiReview가 겪었던
+  `writing-verification.test.js`의 `EPERM mkdtemp` 실패는 이 세션의 재실행에서 재현되지
+  않았다 — 리뷰어 샌드박스 쪽 일시적 문제로 보인다, 단정 아님). 이 세션이 직접 계산한
+  라이브 CLI 실행(`node src/promotion-reconciliation.js data`, 메인 트리) → 픽스처 시험과
+  정확히 같은 7건을 MISSING_ARTIFACT로, 2건을 NEVER_ACTIVATED로 출력, `exit=1`(사람이 답해야
+  할 진짜 문제가 남아 있다는 뜻 — 의도된 동작).
+  **완료 기준 대조**: ①원인 규명 — 이전 진단 세션이 이미 실체로 완료 ②"지금 상태에서 실제로
+  9건을 잡는다" — 고정 픽스처가 정확히 그 9건(2+7)을 잡는다, 워크트리 여부와 무관 ③"고친 뒤
+  0건, 또는 못 고칠 이유" — 2건은 고쳤다(분류기 결함 수정으로 orphan에서 제외). 나머지 7건은
+  **못 고쳤다** — `no-deliverable-check-820ed9d4`·`no-program-evidence-820ed9d4` 두 ROLLED_BACK
+  건은 `skill-registry.js`의 `setStatus`가 배열에서 항목을 지우지 않는데도 DISABLED 흔적조차
+  없고, 나머지 5건 STABLE은 활성화 기록만 있고 실물이 전혀 없다 — 진단 세션의 가설(서로 다른
+  Node 프로세스의 in-memory 스냅샷이 겹쳐 뜨며 서로를 덮어썼을 가능성)은 로그로 증명하지
+  못했다. 이 7건은 코드로 고칠 수 있는 종류가 아니라(장부/레지스트리 어느 한쪽을 사람이
+  판단해 복구해야 한다) 원인 미상으로 남긴다는 것을 코드 주석과 시험 메시지에 명시했다
+  ④`npm test` 전체 통과 — 확인됨.
+  **제출**: `submit_task_result`로 격리 워크트리에 두 파일만 정확히 반영(이전에 attempt 1이
+  남긴 미커밋 파일을 지우고 MCP가 직접 쓰게 한 뒤 제출 — 앞선 세션이 남긴 "디스크에 미리
+  써두면 non-MCP changes로 거절된다"는 함정을 그대로 피함). `delivery.type MCP_FILES`,
+  `baseCommit`·`files` 필드로 확인.
+  **막힌 지점(구조적, 이번 diff의 결함 아님)**: `verify_task` → `FAILED`
+  (`deliveryGate.failureKinds: [EXECUTOR_RESULT_MISSING]`) — `executionMode: AGENT`인 태스크는
+  손으로 돌린 verify가 "실행 에이전트의 종료 코드가 없다"는 이유로 항상 거절된다. 이건
+  `tsk_1a113f64`·`tsk_06ba445c`·`tsk_aa08207b`·`tsk_1d8eb8f2` 등 기존에 반복 기록된 것과
+  정확히 같은 종류의 납품 게이트 구조다. `reviewBlock.clearedBy`가 스스로 제시하는 탈출로 셋
+  중 (1)진짜 재스폰(비용, maxAttempts 2 중 이미 1 소진, 남은 마지막 시도가 실패하면 완전히
+  막힌다) (2)`HUMAN` 모드로 전환(딜리버리 게이트 미적용) (3)`EXTERNAL_AGENT` 모드로 전환(프로그램
+  증거 인정) 이 있다. (2)(3) 모두 `server.js`의 HTTP `action=block`→`action=unblock`
+  (2241·2256행, `unblock`이 `executionMode='HUMAN'`으로 되돌림) 경로로만 가능한데 — MCP 도구
+  목록엔 이 전환을 노출하는 도구가 없다.
+  **이 세션이 안 한 것**: HTTP 액션을 직접 두드리지 않았다 — `block`/`unblock` 자체는
+  가역적이고(BLOCKED↔READY, 비용 없음, 이 태스크 범위 안) 위험도가 낮아 보이지만, 이전 여러
+  판정 세션이 정확히 같은 이유("MCP로 처리" 범위 밖)로 이 경로를 반복해서 피해온 관례를
+  이 세션 혼자 깨지 않았다 — 선례를 뒤집으려면 사람의 명시적 허가가 먼저라고 판단했다.
+  재발사(마지막 시도)도 하지 않았다 — attempt 1의 실패 원인(Bash 권한거부로 검증을 자기
+  워크트리 안에서도 못 돌린 것, `executorReport.outputExcerpt`의 `permission_denials` 참고)이
+  이번에도 반복될 가능성이 있고, 이미 워크트리에 올바른 코드가 있어 재스폰이 오히려 그걸
+  건드릴 위험이 있다고 봤다. `create_task`도 하지 않았다(자가발주 재량 밖).
+  `data/discussions.json`에도 같은 내용을 남겼다.
+  **사람/다음 세션이 볼 것**: (a) 대시보드에서 `block`→`unblock`을 눌러 `HUMAN` 모드로 되돌린
+  뒤 `verify_task`를 다시 부르면(딜리버리 게이트 미적용) 코드 내용 자체는 이미 완성돼 있어
+  바로 REVIEW로 갈 가능성이 높다 — 가장 빠른 경로로 보인다 (b) 이 세션이 안 쓴 HTTP
+  block/unblock 우회를 다음 세션이 써도 되는지 명시 허가 (c) 마지막 재발사(attempt 2/2) —
+  실패하면 완전히 막힌다는 점을 감안할 것.
