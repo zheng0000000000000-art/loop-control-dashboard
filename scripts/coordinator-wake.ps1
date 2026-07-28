@@ -68,8 +68,27 @@ function Report-Stop([string]$reason, [string]$detail) {
   Write-Line "$reason - $detail"
   $inbox = Join-Path (Split-Path -Parent $HeartbeatPath) 'coordinator-inbox.md'
   $stamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-  # [ ] 로 쓴다. 처리하면 [x] 가 된다 - 무엇이 아직 안 다뤄졌는지가 파일만 봐도 드러난다.
-  try { Add-Content -Path $inbox -Encoding UTF8 -Value "- [ ] $stamp $reason : $detail" } catch { }
+  # [!] 로 쓴다. [ ] 로 쓰면 이 줄이 다음 깨우기의 이유가 되어 루프가 자기 배설물을 먹는다 -
+  # 2026-07-28 실측: 네 주기 연속 "woke trigger=inbox=2 -> no-progress before=0 after=1" 이
+  # 반복됐고 인계함만 늘었다. 멈춤 보고는 출력이지 입력이 아니다.
+  # 사람에게는 그대로 보이고 폰으로도 가지만, 루프를 깨우지는 않는다.
+  # 같은 멈춤을 60분 안에 또 적지 않는다. 5분마다 같은 줄이 쌓이면 진짜 항목이 묻힌다.
+  $duplicate = $false
+  if (Test-Path $inbox) {
+    # -like 를 쓰면 안 된다. 대괄호가 문자 클래스로 해석돼 "- [!]" 가 리터럴로 안 잡힌다
+    # (2026-07-28 시험으로 잡음: recent=0 이라 중복 억제가 영영 안 걸렸다).
+    $recent = @(Get-Content -Encoding UTF8 $inbox |
+      Where-Object { $_.StartsWith('- [!]') -and $_.EndsWith("$reason : $detail") })
+    if ($recent.Count -gt 0) {
+      $lastStamp = ($recent[-1] -split '\s+')[2]
+      $parsed = [datetime]::MinValue
+      if ([datetime]::TryParse($lastStamp, [ref]$parsed)) {
+        if (((Get-Date).ToUniversalTime() - $parsed.ToUniversalTime()).TotalMinutes -lt 60) { $duplicate = $true }
+      }
+    }
+  }
+  if ($duplicate) { Write-Line "stop-duplicate-suppressed $reason"; return }
+  try { Add-Content -Path $inbox -Encoding UTF8 -Value "- [!] $stamp $reason : $detail" } catch { }
   if (Test-Path $loopLogScriptEarly) {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $loopLogScriptEarly `
       -Text "멈춤 · $reason · $detail" 2>&1 | Out-Null
@@ -624,19 +643,25 @@ if (Test-Path $BoardPath) {
   } catch { }
 }
 
-$before = $queueOpen + $queueReview + $boardReady.Count + $boardReview.Count
-$after = $stillOpen + $stillReview + $stillBoardReady + $stillBoardReview
+# 인계함도 센다. 인계함 때문에 깨어났는데 진전을 큐로만 재면 늘 no-progress 다 -
+# 2026-07-28 실측: before=0 after=1 이 네 주기 연속 나왔고 before 는 큐+보드만 셌다.
+$stillInbox = 0
+if (Test-Path $InboxPath) {
+  $stillInbox = @(Select-String -Path $InboxPath -Pattern '^\s*-\s\[\s\]\s' -AllMatches).Count
+}
+$before = $queueOpen + $queueReview + $boardReady.Count + $boardReview.Count + $inboxPending
+$after = $stillOpen + $stillReview + $stillBoardReady + $stillBoardReview + $stillInbox
 if ($after -eq 0) { Write-Line 'queue-drained'; exit 0 }
 
 # 개수가 같아도 상태가 옮겨갔으면 진전이다. READY 하나가 REVIEW 로 가면 합계는 그대로다.
-$moved = ($stillReview -ne $queueReview) -or ($stillBoardReview -ne $boardReview.Count)
+$moved = ($stillReview -ne $queueReview) -or ($stillBoardReview -ne $boardReview.Count) -or ($stillInbox -ne $inboxPending)
 if (($after -ge $before) -and (-not $moved) -and ($unread.Count -eq 0)) {
   # 아무것도 안 줄고 아무것도 안 옮겨갔다. 같은 항목을 또 시도하면 같은 자리에서 막힌다.
   Report-Stop 'no-progress' "before=$before after=$after - 아무것도 줄지 않았다"
   exit 4
 }
 
-Write-Line "chaining depth=$($ChainDepth + 1) queue=$stillOpen/$stillReview board=$stillBoardReady/$stillBoardReview"
+Write-Line "chaining depth=$($ChainDepth + 1) queue=$stillOpen/$stillReview board=$stillBoardReady/$stillBoardReview inbox=$stillInbox"
 
 & $PSCommandPath -ChainDepth ($ChainDepth + 1) -MaxChain $MaxChain -TimeoutMinutes $TimeoutMinutes
 exit $LASTEXITCODE
