@@ -504,8 +504,12 @@ if ($sourceDirty.Count -gt 0) {
 
 # 다른 세션이 커밋 중이면 깨우지 않는다. 두 세션이 같은 트리를 만지면 한쪽의 스테이징이
 # 다른 쪽 파일을 쓸어 담는다(2026-07-27 실측: c081dc4, 9bfda28).
+# 모의 실행은 커밋하지 않으므로 커밋 잠금을 볼 이유가 없다. 살아 있는 세션이 잠금을 쥐고
+# 있으면 모의 실행이 판정 지점까지 못 가서 갈래를 잴 수 없다 - 2026-07-29 실측:
+# loop-smoke 의 네 갈래가 전부 session-locked 로 끊겼다.
 $lockScript = Join-Path (Split-Path -Parent $PSCommandPath) 'session-lock.ps1'
-if (Test-Path $lockScript) {
+if ($DryRun) { $lockScript = '' }
+if ($lockScript -and (Test-Path $lockScript)) {
   $lockState = & powershell -NoProfile -ExecutionPolicy Bypass -File $lockScript -Action Status 2>&1
   if ("$lockState" -match 'lock-held-by-other') {
     Write-Line "session-locked - $lockState"

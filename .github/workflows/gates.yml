@@ -120,7 +120,14 @@ jobs:
       - name: 백로그 우선순위 정책
         shell: pwsh
         run: |
-          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/backlog-policy-check.ps1 -SelfTest
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/backlog-policy-check.ps1
+
+      # 깨우기가 주요 갈래에서 기대한 모드로 가는지 모의 실행으로 확인한다.
+      # 루프가 자기 코드를 고치게 하려면 이것이 먼저 있어야 한다 - 망가뜨리면 되살릴
+      # 주체가 그 망가진 코드다.
+      - name: 루프 갈래 모의 실행
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/loop-smoke.ps1 -SelfTest
           powershell -NoProfile -ExecutionPolicy Bypass -File scripts/backlog-policy-check.ps1 -SelfTest
           powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-script-traps.ps1
 
