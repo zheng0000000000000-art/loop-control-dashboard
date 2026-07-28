@@ -1315,3 +1315,43 @@
   **다음(판정) 세션이 볼 것**: 격리 워크트리에서 diff 직접 대조 + `npm test` 독립 재실행으로
   완료 기준 4개(실패 기준선에서 changed:true / 못 찾았을 때 이유 구분 / 후보수-공간크기 대조
   수치 / 이 셋을 단언하는 시험)를 재확인한 뒤 `approve_task`로 승인·병합.
+
+- **team-loop 보드 태스크(`tsk_38d1e6d378f26cf3a725`, 재현성 시험)를 이 세션이 만들어 REVIEW까지
+  올렸다 — `search.deterministic` 플래그가 지금까지 죽은 설정이었다는 것도 이번에 코드로 밝혀졌다.**
+  (2026-07-28, 이 조율자 세션 `session-20260728-235606`, 지시대로 HUMAN 모드로 처리 — `claim_task`
+  안 씀)
+  **발견(추정 아님, 소스 대조)**: `src/contracts.js:79-83`는 `search.deterministic`을 정규화만
+  하고, `src/engine/balance-engine.js`·`src/balance-service.js` 어디도 이 필드를 **읽지 않았다** —
+  `deterministic:false`를 줘도 아무 일도 안 일어나는 죽은 설정이었다(경제/전투 시뮬레이터
+  둘 다 seed 기반이라 우연히 항상 재현됐을 뿐). `search.deterministic:true` 자체는 이미 잘
+  지켜지고 있었다(시뮬레이터가 `Math.random`/`Date.now`를 전혀 안 쓰고 전부 seeded RNG로만
+  돎을 `src/engine/economy-simulator.js`·`balance-simulator.js` 전체 grep으로 확인) — 문제는
+  `false`가 아무 효과가 없다는 쪽이었다.
+  **한 일**: `src/balance-service.js`에 `deterministic:false`일 때 지정된 seed(들)를 무시하고
+  매 호출마다 `crypto.randomInt`로 새 seed를 뽑도록 3줄 추가 — 이제 플래그가 실제로 결과를
+  바꾼다. `test/reproducibility.test.js` 신설(시험 4개): (1) evaluate 모드 같은 spec/seeds/runs
+  두 번 → outputs 동일(float tolerance **0**을 주석으로 명시 — seeded RNG는 매번 같은 순서로
+  같은 연산을 하므로 "거의 같음"이 아니라 비트 단위로 같다는 것이 이유) (2) tune 모드도 동일 (3)
+  `deterministic:false`+동일 seeds/seed 지정 두 번 → outputs가 달라짐(플래그가 실제로 뭔가 함을
+  증명 — 켠 상태만 보면 우연일 수 있다는 지시서의 우려를 반증) (4) `deterministic` 필드 자체를
+  안 써도(기본값 true) 재현됨 — (3)이 노이즈가 아니라 플래그 때문임을 대조.
+  **사용한 하네스**: 격리 워크트리(`.team-loop-worktrees/tsk_38d1e6d378f26cf3a725`)에서
+  `node --test test/reproducibility.test.js` → 4/4 통과. 전체 `npm test` → 563/563(**주의**: 처음
+  1회는 `test/balance-jobs.test.js` 2건이 `RUNNING`에서 안 넘어가 실패했으나, 이 diff를
+  `git stash`로 뗀 채로도 단독 실행은 통과하고 diff를 다시 넣은 채 전체를 2회 더 돌리면
+  563/563으로 안정됨을 직접 재현 — worker-thread 기동 타이밍 플레이크로 판단, 이 diff와 무관).
+  **막혔다가 고친 것**: 처음에 격리 워크트리 파일을 Edit 툴로 직접 고쳐 확인했더니
+  `submit_task_result`가 "The server worktree already contains non-MCP changes."로 거절 — 바로
+  위 `tsk_b63d72...` 항목이 이미 기록한 것과 동일한 안전장치. `git checkout --`+`rm`으로 직접
+  편집분을 되돌려 워크트리를 HEAD로 깨끗이 한 뒤 같은 내용을 MCP `submit_task_result`로 다시
+  제출하니 통과했다.
+  **지금 상태**: `status REVIEW`, `verification.status PASSED`(`scopeViolations: []`,
+  `changedPaths`가 `src/balance-service.js`·`test/reproducibility.test.js` 정확히 둘뿐),
+  `review.status PENDING`.
+  **이 세션이 안 한 것**: 승인(`approve_task`)은 하지 않았다 — 실행한 세션이 자기 일을 승인하지
+  않는다(ADR-020).
+  **다음(판정) 세션이 볼 것**: 격리 워크트리에서 diff 직접 대조 + `npm test` 독립 재실행(1회
+  실패해도 재실행으로 안정성 확인)으로 완료 기준 3개(재현성 시험+tolerance 명시 /
+  deterministic:false 발산 시험 / 전체 통과)를 재확인한 뒤 `approve_task`로 승인·병합.
+  **참고**: 이 태스크는 `docs/handoff/WORK-QUEUE.md`의 "대기 중" 목록이 아니라 이번 깨우기
+  프롬프트가 직접 지정한 것이었다 — 큐에는 애초에 항목이 없었다(대기 중 절 비어 있음).
