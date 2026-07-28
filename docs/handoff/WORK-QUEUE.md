@@ -1669,3 +1669,34 @@
   — 직전 세션(024106)이 남긴 상태와 **완전히 동일**함을 확인했다(변화 없음). 이 세션도
   block/unblock HTTP 우회·재발사(attempt 2/2 마지막 시도)를 임의로 쓰지 않았다 — 위 세션이
   적은 것과 같은 이유(선례 유지, 마지막 시도 실패 시 완전 봉쇄 위험)다. 코드/보드 상태 변경 없음.
+
+- **`tsk_d1d9808b38e96ba812bf`(승격 영수증 어긋남)가 이 세션에서 REVIEW로 넘어갔다 — 코드는
+  안 건드렸다, `executionMode`가 그 사이 `EXTERNAL_AGENT`로 바뀌어 있어서 절차만 다시 밟았다.**
+  (2026-07-29, 이 조율자 세션 `session-20260729-031107`)
+  **확인한 것(실체, 자기보고 아님)**: `show_task`로 재조회하니 `executor` 필드가
+  `{tool: coordinator-wake, session: 20260729-031107}`, `executionMode: EXTERNAL_AGENT`로
+  이미 바뀌어 있었다(누가/언제 바꿨는지는 이 세션에서 재구성 못 함 — 주체 미상, 이전
+  세션들이 본 `AGENT` 모드가 아니다). `src/delivery-gate.js`를 직접 읽어 왜 이게 중요한지
+  확인: `applyAgentDeliveryGate`는 `mode==='EXTERNAL_AGENT'`일 때 실행 에이전트 종료 코드
+  대신 `hasProgramEvidence()`(검증 체크 중 `passed:true, spawnError:false, actualExit`이
+  유한수인 것이 하나라도 있는지)를 본다 — `repository-basic` 프로파일의 `git diff --check`가
+  바로 그런 체크다(`test/external-agent-submit.test.js`가 이미 이 경로를 시험해 문서로
+  남겨둠). 격리 워크트리(`.team-loop-worktrees/tsk_d1d9808b38e96ba812bf`)의 코드는 이전
+  세션(024106)이 남긴 그대로(`NEVER_ACTIVATED` 분류 + 라이브 9건 고정 픽스처 회귀 시험) —
+  이 세션은 한 줄도 고치지 않았다. `npm test`를 이 세션이 그 워크트리에서 직접 재실행 →
+  `600/600 통과`(자기보고 아님).
+  **한 일**: `verify_task` 재호출 → `PASSED`(delivery gate 통과, `reviewBlock`도
+  `server.js`의 `saveVerificationResult`가 `verification.passed`일 때 자동으로 `null`
+  되돌리는 경로를 타 저절로 풀림). `request_review_task` → `status REVIEW`,
+  `review.status PENDING`으로 전환 확인.
+  **이 세션이 안 한 것**: 승인(`approve_task`)은 하지 않았다(ADR-020, 실행/재검증한 세션은
+  자기 판단을 자기가 승인하지 않는다). `show_task`의 `aiReview` 필드는 아직 attempt 1
+  (17:15:40Z)의 낡은 REJECT를 그대로 보여주고 있다 — codex-review 자동 재실행이 이 세션
+  종료 시점까지 아직 안 붙었다(비동기로 보임, 단정 아님). `data/discussions.json`에도
+  같은 내용을 남겼다(`msg_5c3123af95978153873e`).
+  **사람/판정 세션이 볼 것**: (a) codex-review가 재실행되면 그 결과(REJECT/APPROVE)부터
+  확인 — 새 코드(`NEVER_ACTIVATED` 분류 + 고정 픽스처)가 attempt 1이 지적한 문제(9건을
+  실패시키지 않고 숨김)를 실제로 해소했는지가 핵심 (b) 완료 기준 ③("고친 뒤 0건, 또는 못
+  고칠 이유")은 부분 충족 — 2건(NEVER_ACTIVATED)은 분류기 결함이라 고쳤고, 나머지 7건은
+  원인 미상으로 남겼다(이전 진단 세션의 가설: 서로 다른 서버 프로세스의 in-memory 스냅샷
+  경합, 증명은 못 함) — 이걸 "못 고칠 이유"로 인정할지는 판정 세션의 몫이다.
