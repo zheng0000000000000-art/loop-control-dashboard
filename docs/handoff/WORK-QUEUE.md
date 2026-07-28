@@ -525,6 +525,18 @@
   "범위를 미리 정하지 않는다"는 설계를 그대로 따랐다.
   **사람이 볼 것**: 이 해석이 맞는지, 아니면 특정 작업을 지목한 것이었는지 확인 회신을 기다린다.
 
+- **사람이 "보드로 작업할게 없는건지 물어봐봐"(discussions.json `msg_5e84a1c5fac093be42a0`,
+  2026-07-28 04:40:01Z)라고 했다 — 이 세션이 답했다.** (2026-07-28, 이 조율자 세션
+  `session-20260728-134106`, 코드 변경 없음)
+  **확인한 것(실체)**: `mcp__team-loop__list_tasks(includeArchived:true)`로 보드 전체(33건)를
+  다시 조회 — 전부 `status: DONE`(archived), 활성(READY/IN_PROGRESS/REVIEW) 0건.
+  `WORK-QUEUE.md` 대기 중 절도 0건, `coordinator-inbox.md` 2건도 전부 `[x]`. `loop_enter`는
+  "할 일 없음"에 대해 `create_task`를 제안했으나 새 스코프를 이 세션이 임의로 만드는 것이라
+  따르지 않았다(기존 세션들의 같은 판단과 동일).
+  **한 일**: `src/discussions.js`의 `DiscussionStore.markRead`/`addMessage`(정본 API)로 직접
+  읽음 처리+회신(`msg_9eee0d99c3380729c16b`) — "맞다, 지금 보드로 집을 작업이 없다"고 답함.
+  **사람이 볼 것**: 없음 — 확인 요청 답변. 새 작업을 큐나 보드에 올려주면 다음 세션이 집는다.
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
