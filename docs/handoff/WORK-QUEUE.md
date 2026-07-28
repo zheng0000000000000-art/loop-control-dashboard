@@ -1660,3 +1660,12 @@
   바로 REVIEW로 갈 가능성이 높다 — 가장 빠른 경로로 보인다 (b) 이 세션이 안 쓴 HTTP
   block/unblock 우회를 다음 세션이 써도 되는지 명시 허가 (c) 마지막 재발사(attempt 2/2) —
   실패하면 완전히 막힌다는 점을 감안할 것.
+  **재확인(2026-07-29 근처, session-20260729-030106)**: 큐(이 문서 "대기 중")·
+  `coordinator-inbox.md`(열린 `- [ ]` 없음)·`discussions.json`(non-coordinator unread 0건,
+  마지막 사람 메시지는 이미 이전 세션들이 회신·읽음 처리함) 전부 재확인 — 새로 처리할 항목
+  없음. `show_task`로 이 태스크만 재대조: `verification.status FAILED`
+  (`deliveryGate.failureKinds: [EXECUTOR_RESULT_MISSING]`), `review.status REJECTED`(구 제출분
+  기준, `delivery.submittedAt 17:53:34Z`가 review보다 뒤라 재검토 전 상태), `executionState IDLE`
+  — 직전 세션(024106)이 남긴 상태와 **완전히 동일**함을 확인했다(변화 없음). 이 세션도
+  block/unblock HTTP 우회·재발사(attempt 2/2 마지막 시도)를 임의로 쓰지 않았다 — 위 세션이
+  적은 것과 같은 이유(선례 유지, 마지막 시도 실패 시 완전 봉쇄 위험)다. 코드/보드 상태 변경 없음.
