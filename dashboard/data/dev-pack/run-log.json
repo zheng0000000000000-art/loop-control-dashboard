@@ -33825,12 +33825,12 @@
       }
     },
     {
-      "createdAt": "2026-07-29T02:44:11.1719350+09:00",
+      "createdAt": "2026-07-29T02:57:31.1361809+09:00",
       "event": "measure.completed",
       "params": {
         "providerId": "dev-pack-checks",
         "violationCount": 0,
-        "durationMs": 290
+        "durationMs": 170
       },
       "level": "info",
       "producedBy": {
