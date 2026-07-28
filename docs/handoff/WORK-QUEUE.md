@@ -552,6 +552,20 @@
   전부 `[x]`, team-loop 보드(`list_tasks`) 활성 태스크 0건 재확인 — 이 답변 외에 집을 작업이 없다.
   **사람이 볼 것**: 없음 — 확인 요청 답변.
 
+- **사람이 "이거 조율자 쪽이랑은 소통 안되는거지?"(discussions.json `msg_0da0e113e4875163329c`,
+  2026-07-28 04:56:37Z)라고 물었다 — 이 세션이 답했다.** (2026-07-28, 이 조율자 세션
+  `session-20260728-140106`, 코드 변경 없음)
+  **확인한 것(실체)**: `WORK-QUEUE.md` 대기 항목 0건, `coordinator-inbox.md` 2건 전부 `[x]`,
+  team-loop `list_tasks(includeArchived)` 33건 전부 `status DONE` — 큐/보드에 집을 새 작업이 없다.
+  안 읽은 메시지 30건 중 사람이 쓴 것은 이 질문 하나뿐(나머지 29건은 이 조율자 자신의 `[루프]`
+  로그 — `markRead`가 설계상 자기 메시지는 건너뛴다, 버그 아님).
+  **한 일**: `src/discussions.js`의 `DiscussionStore.markRead`/`addMessage`(정본 API)로 직접
+  읽음 처리+회신(`msg_a376e6f17887f3b2921f`) — 질문 자체가 이 채널(discussions.json)로 왔다는
+  점을 근거로 "이 채널로는 소통이 된다"고 답했다(비동기이며, 사람 메시지나 큐/보드 잔여 작업이
+  있을 때만 스케줄러가 새 세션을 깨우는 구조라는 것도 함께 설명). `loop_enter`는 `create_task`를
+  제안했으나 기존 세션들의 판단과 동일하게 새 스코프를 임의로 만드는 것이라 따르지 않았다.
+  **사람이 볼 것**: 없음 — 확인 요청 답변. 새 작업을 큐나 보드에 올려주면 다음 세션이 집는다.
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
