@@ -23,6 +23,9 @@ param(
   [string]$TeamLoopRoot   = 'C:\NHN Project\team-loop-lite-ai-learning',
   [string]$BoardPath      = 'C:\NHN Project\team-loop-lite-ai-learning\data\tasks.json',
   [string]$QueuePath      = 'C:\Users\1\Documents\Local-First Workflow Dashboard\docs\handoff\WORK-QUEUE.md',
+  # 백로그 경로를 밖에서 줄 수 있어야 이 배선을 픽스처로 잴 수 있다.
+  # 비우면 보충 스크립트의 기본값을 쓴다.
+  [string]$BacklogPath    = '',
   [string]$BaseBranch     = 'wp/state-integrity',
   [int]$ChainDepth        = 0,
   # 상한은 폭주 방지용 백스톱일 뿐이다. 진짜 정지는 queue-drained(할 일 없음)와
@@ -207,17 +210,9 @@ if (Test-Path $QueuePath) {
   $queueReview = @(Select-String -Path $QueuePath -Pattern '^\s*-\s\[~\]\s' -AllMatches).Count
 }
 
-# pendingWork 로 깨우지 않는다. 거기엔 사람 게이트 태스크가 섞여 있어서
-# 아무도 집을 수 없는 일로 깨우고, 그다음 no-progress 로 멈춘다.
-# 2026-07-27 실측: board-stuck=2 로 깨어나 no-progress before=0 after=1 로 끝났다.
-if ($inboxPending -eq 0 -and $unread.Count -eq 0 -and $boardReady.Count -eq 0 -and $boardReview.Count -eq 0 -and $queueOpen -eq 0 -and $queueReview -eq 0) {
-  Write-Line "nothing-to-do (사람 게이트 대기 $pendingWork 건)"; exit 0
-}
-# 검토 대기가 있으면 그것이 최우선이다. 실행보다 판정이 먼저 밀린다 —
-# 판정이 안 나면 그다음 실행이 무엇 위에 쌓이는지 아무도 모른다.
-# 조율자 인계함에 안 다뤄진 항목이 있으면 그것이 최우선이다. 막혀서 올라온 것이므로
-# 그대로 두면 그 줄기 전체가 선다. 2026-07-28: 인계함이 방아쇠가 아니어서, 막힘이 쌓여도
-# 사람이 말을 걸어야 조율자가 읽었다. 스스로 깨우는 고리가 여기서 끊겨 있었다.
+# 아래 nothing-to-do 검사가 $inboxPending 을 쓴다. 그래서 인계함 등록과 세기를 그 앞에서
+# 끝내야 한다 - 2026-07-28 실측: 대입 전에 쓰고 있었고 PowerShell 에서 $null -eq 0 은 False 라
+# 그 분기가 한 번도 안 걸렸다. 할 일이 없어도 매 주기 세션이 떴다.
 # 조율자 판단이 필요한 보드 태스크를 인계함으로 올린다. 건너뛰기만 하면 아무도 결정하지 않고
 # 보드에 영원히 남는다 - 2026-07-27 territory-check 가 그렇게 875분 방치됐다.
 # 같은 태스크로 두 번 올리지 않는다. 인계함에 이미 그 id 가 있으면 넘어간다.
@@ -241,6 +236,40 @@ $inboxPending = 0
 if (Test-Path $InboxPath) {
   $inboxPending = @(Select-String -Path $InboxPath -Pattern '^\s*-\s\[\s\]\s' -AllMatches).Count
 }
+
+# pendingWork 로 깨우지 않는다. 거기엔 사람 게이트 태스크가 섞여 있어서
+# 아무도 집을 수 없는 일로 깨우고, 그다음 no-progress 로 멈춘다.
+# 2026-07-27 실측: board-stuck=2 로 깨어나 no-progress before=0 after=1 로 끝났다.
+if ($inboxPending -eq 0 -and $unread.Count -eq 0 -and $boardReady.Count -eq 0 -and $boardReview.Count -eq 0 -and $queueOpen -eq 0 -and $queueReview -eq 0) {
+  # 보드가 말랐다. 여기서 그냥 끝내면 일감이 조율자로부터만 나온다 - 조율자가 대화에 응답할
+  # 때만 태스크가 생기고 그 사이 루프는 멀쩡한데도 선다. 실행과 판정은 이미 조율자 손을
+  # 떠났는데 발생만 안 떠나 있었다. 백로그에서 다음 항목을 꺼내 보드에 올린다.
+  # 백로그에 선언된 것만 올라간다 - 세션이 없는 일을 발명하면 루프가 자기한테 무한히 일을 만든다.
+  $refillScript = Join-Path (Split-Path -Parent $PSCommandPath) 'backlog-refill.ps1'
+  $refilled = $false
+  if (Test-Path $refillScript) {
+    $refillArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $refillScript)
+    if ($BacklogPath) { $refillArgs += @('-BacklogPath', $BacklogPath) }
+    $refillOut = & powershell @refillArgs 2>&1
+    $refillCode = $LASTEXITCODE
+    foreach ($line in @($refillOut)) { Write-Line "backlog - $line" }
+    # 판정은 종료 코드와 만들어진 id 로 한다. 출력 문구를 세지 않는다.
+    if ($refillCode -eq 0) {
+      foreach ($line in @($refillOut)) { if ("$line".StartsWith('backlog-created ')) { $refilled = $true } }
+    }
+  }
+  if (-not $refilled) { Write-Line "nothing-to-do (사람 게이트 대기 $pendingWork 건)"; exit 0 }
+  # 5분을 기다리지 않는다. 방금 올린 것을 이번 고리에서 바로 집는다.
+  if ($ChainDepth -ge $MaxChain) { Write-Line "backlog-refilled - 연쇄 한도라 다음 주기가 집는다"; exit 0 }
+  Write-Line "backlog-refilled - 이어서 집는다 depth=$($ChainDepth + 1)"
+  & $PSCommandPath -ChainDepth ($ChainDepth + 1) -MaxChain $MaxChain -TimeoutMinutes $TimeoutMinutes
+  exit $LASTEXITCODE
+}
+# 검토 대기가 있으면 그것이 최우선이다. 실행보다 판정이 먼저 밀린다 —
+# 판정이 안 나면 그다음 실행이 무엇 위에 쌓이는지 아무도 모른다.
+# 조율자 인계함에 안 다뤄진 항목이 있으면 그것이 최우선이다. 막혀서 올라온 것이므로
+# 그대로 두면 그 줄기 전체가 선다. 2026-07-28: 인계함이 방아쇠가 아니어서, 막힘이 쌓여도
+# 사람이 말을 걸어야 조율자가 읽었다. 스스로 깨우는 고리가 여기서 끊겨 있었다.
 
 $trigger = if ($inboxPending -gt 0) { "inbox=$inboxPending" }
   elseif ($boardReview.Count -gt 0) { "board-review=$($boardReview.Count)" }

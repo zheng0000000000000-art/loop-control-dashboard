@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "note": "일감의 출처. 보드가 마르면 scripts/backlog-refill.ps1 이 여기서 다음 항목을 꺼내 보드 태스크로 올린다. 여기에 없는 일은 만들어지지 않는다 - 세션이 스스로 일을 발명하면 루프가 자기한테 무한히 일을 만든다. 새 항목을 넣는 것은 사람과 조율자가 한다. 꺼내 쓰는 것은 프로그램이 한다.",
+  "statusValues": {
+    "READY": "꺼내갈 수 있다",
+    "IN_BOARD": "보드에 올라가 있다. boardTaskId 를 본다",
+    "DONE": "보드에서 끝났다",
+    "HOLD": "지금은 꺼내지 않는다. holdReason 을 본다"
+  },
+  "items": [
+    {
+      "id": "bl-sim-03-sample-size",
+      "title": "표본 수가 판정을 뒤집지 않는 지점을 측정해서 정한다",
+      "description": "SIMULATION-CHECKLIST-v1 §3 이 지금 실패로 표시돼 있다. 실측된 것: runs=40 이면 blindTransactionRoiMean 이 위반이고 runs=400 이면 통과인데 여유가 0.07 뿐이다. 즉 지금 판정은 표본 수에 따라 뒤집힌다.\n\n만들 것: (1) 판정을 뒤집지 않는 최소 runs 를 측정으로 정하고 그 근거 수치를 남긴다. (2) 그 값 미만으로 돌리면 경고를 낸다 - 조용히 통과시키지 않는다. (3) 경계에 붙은 지표는 평균만이 아니라 분산도 함께 보고한다.\n\n명세 자신이 이미 그렇게 적어놨다 - 평균 하나에 기대지 말고 분포와 실패율을 보고하라.",
+      "acceptanceCriteria": [
+        "최소 runs 를 고른 근거가 측정 수치로 남는다 - 의견이 아니라 숫자다",
+        "그 값 미만으로 돌리면 경고가 출력에 드러난다. 경고 없이 통과하지 않는다",
+        "경계 지표의 분산이 결과에 함께 실린다",
+        "음성 시험: 표본이 부족한 설정으로 돌렸을 때 경고가 실제로 나오는 것을 단언한다"
+      ],
+      "allowedPaths": ["src/**", "test/**"],
+      "priority": 30,
+      "targetRepo": "team-loop",
+      "source": "docs/plan/SIMULATION-CHECKLIST-v1.md §3 (지금 실패 중)",
+      "status": "READY",
+      "boardTaskId": null,
+      "addedBy": "조율자 세션 23748",
+      "addedAt": "2026-07-28"
+    },
+    {
+      "id": "bl-sim-05-search-does-work",
+      "title": "탐색이 실제로 일을 하는지 - 실패하는 기준선에서 통과 후보를 찾는다",
+      "description": "SIMULATION-CHECKLIST-v1 §5 가 지금 무의미로 표시돼 있다. 탐색이 항상 changed:false 를 돌려준다. 아무것도 안 바꾸는 탐색은 돌아도 돈 것이 아니다.\n\n만들 것: 기준선이 실패하는 사례를 만들고 그 위에서 탐색이 통과하는 후보를 찾아내는 것을 확인한다. 못 찾으면 그 사실과 이유(공간 밖인지 해가 없는지)를 남긴다 - 조용히 changed:false 만 돌려주면 안 된다. explicit-grid 가 공간을 실제로 덮는지 후보 수와 공간 크기를 비교해 남긴다.",
+      "acceptanceCriteria": [
+        "기준선이 실패하는 고정 사례가 있고 그 위에서 탐색이 changed:true 를 낸다",
+        "해를 못 찾은 경우 이유가 결과에 남는다 - 공간 밖인지 해가 없는지 구분된다",
+        "후보 수와 파라미터 공간 크기를 대조한 수치가 남는다",
+        "위 셋을 단언하는 시험이 있다"
+      ],
+      "allowedPaths": ["src/**", "test/**"],
+      "priority": 28,
+      "targetRepo": "team-loop",
+      "source": "docs/plan/SIMULATION-CHECKLIST-v1.md §5 (지금 무의미)",
+      "status": "READY",
+      "boardTaskId": null,
+      "addedBy": "조율자 세션 23748",
+      "addedAt": "2026-07-28"
+    },
+    {
+      "id": "bl-sim-04-sensitivity-table",
+      "title": "손잡이가 연결돼 있는지 - 파라미터 8 x 지표 8 민감도 표를 만든다",
+      "description": "SIMULATION-CHECKLIST-v1 §4 가 미확인이다. 파라미터가 8 개, 지표가 8 개인데 어느 파라미터가 어느 지표를 움직이는지 아무도 재본 적이 없다.\n\n만들 것: 각 파라미터를 혼자 움직였을 때 어느 지표가 얼마나 반응하는지를 8x8 표로 남긴다. 아무 지표도 못 움직이는 파라미터는 죽은 손잡이고, 아무 파라미터에도 안 움직이는 지표는 장식이다. 둘 다 이름을 대서 보고한다.",
+      "acceptanceCriteria": [
+        "파라미터 8 x 지표 8 표가 산출물로 남는다",
+        "어느 지표도 못 움직이는 파라미터가 있으면 이름을 대서 보고한다",
+        "어느 파라미터에도 안 반응하는 지표가 있으면 이름을 대서 보고한다",
+        "표를 만드는 과정이 재현 가능하다 - 같은 seed 로 다시 돌리면 같은 표가 나온다"
+      ],
+      "allowedPaths": ["src/**", "test/**"],
+      "priority": 26,
+      "targetRepo": "team-loop",
+      "source": "docs/plan/SIMULATION-CHECKLIST-v1.md §4 (미확인)",
+      "status": "READY",
+      "boardTaskId": null,
+      "addedBy": "조율자 세션 23748",
+      "addedAt": "2026-07-28"
+    },
+    {
+      "id": "bl-sim-02-reproducible",
+      "title": "같은 입력이 같은 출력을 내는지 - 재현성을 시험으로 못 박는다",
+      "description": "SIMULATION-CHECKLIST-v1 §2. 같은 spec 과 같은 seeds 와 같은 runs 로 두 번 돌렸을 때 같은 outputs 가 나오는지를 단언하는 시험이 없다. search.deterministic:true 가 실제로 지켜지는지도 확인된 바 없다.\n\n만들 것: 두 번 돌린 결과를 대조하는 시험. deterministic 을 껐을 때 결과가 달라지는 것으로 그 플래그가 실제로 작동함을 보인다 - 켠 상태만 보면 그냥 우연히 같았을 수도 있다.",
+      "acceptanceCriteria": [
+        "같은 입력 두 번 -> 같은 출력을 단언하는 시험이 있다 (부동소수 오차 허용치를 명시한다)",
+        "search.deterministic 을 껐을 때 결과가 달라지는 것을 시험이 확인한다",
+        "npm test 전체 통과"
+      ],
+      "allowedPaths": ["src/**", "test/**"],
+      "priority": 24,
+      "targetRepo": "team-loop",
+      "source": "docs/plan/SIMULATION-CHECKLIST-v1.md §2",
+      "status": "READY",
+      "boardTaskId": null,
+      "addedBy": "조율자 세션 23748",
+      "addedAt": "2026-07-28"
+    },
+    {
+      "id": "bl-teamloop-worktree-seeds-data",
+      "title": "team-loop 이 만드는 태스크 워크트리가 data 를 씨딩하게 한다",
+      "description": "createTaskWorktree 가 만든 워크트리에는 data 가 없다. data 는 gitignore 대상이라 브랜치에 안 실린다. 그래서 그 안에서 node --test 를 돌리면 시험이 ENOENT 로 깨진다.\n\n실측 근거: 2026-07-28 tsk_1a113f64adb67331dac2 가 이것 때문에 회로 차단기까지 갔다. 조율자가 손으로 21 개 파일을 씨딩하니 533/533 통과했다. 그 뒤로도 매번 손으로 씨딩하고 있다. 사람이 매번 같은 손질을 하고 있다면 그건 코드가 할 일이다.\n\nLocal-First 쪽에 scripts/teamloop-isolate.ps1 이 이미 같은 일을 한다. 그 동작을 team-loop 안으로 가져온다.",
+      "acceptanceCriteria": [
+        "createTaskWorktree 로 만든 워크트리에서 시험이 데이터 부재로 깨지지 않는다",
+        "씨딩이 원본 data 를 건드리지 않는다 - 사본만 만든다 (음성 시험으로 확인한다)",
+        "씨딩할 것이 없을 때도 실패하지 않는다",
+        "npm test 전체 통과"
+      ],
+      "allowedPaths": ["src/**", "test/**"],
+      "priority": 22,
+      "targetRepo": "team-loop",
+      "source": "2026-07-28 실측 - tsk_1a113f64adb67331dac2 회로 차단기, 이후 반복 수작업",
+      "status": "READY",
+      "boardTaskId": null,
+      "addedBy": "조율자 세션 23748",
+      "addedAt": "2026-07-28"
+    },
+    {
+      "id": "bl-sim-06-input-hash",
+      "title": "결과에 입력의 해시를 함께 남긴다",
+      "description": "SIMULATION-CHECKLIST-v1 §6. 실험 결과가 저장되고 다시 읽히는 것은 확인됐다. 그런데 어떤 spec 으로 낸 값인지가 결과에 안 남는다. 나중에 수치를 놓고 다툴 때 무엇으로 낸 값인지 대조할 방법이 없다.",
+      "acceptanceCriteria": [
+        "결과에 입력 spec 의 해시가 함께 저장된다",
+        "spec 을 한 글자만 바꿔도 해시가 달라지는 것을 시험이 확인한다",
+        "예전 결과에 해시가 없어도 읽기가 깨지지 않는다"
+      ],
+      "allowedPaths": ["src/**", "test/**"],
+      "priority": 20,
+      "targetRepo": "team-loop",
+      "source": "docs/plan/SIMULATION-CHECKLIST-v1.md §6",
+      "status": "READY",
+      "boardTaskId": null,
+      "addedBy": "조율자 세션 23748",
+      "addedAt": "2026-07-28"
+    }
+  ]
+}
