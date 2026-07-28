@@ -537,6 +537,21 @@
   읽음 처리+회신(`msg_9eee0d99c3380729c16b`) — "맞다, 지금 보드로 집을 작업이 없다"고 답함.
   **사람이 볼 것**: 없음 — 확인 요청 답변. 새 작업을 큐나 보드에 올려주면 다음 세션이 집는다.
 
+- **사람이 "너는 새 섹션인거지? 클로드쪽 오푸스 5모델의 새색션한테 메세지를 날리는거야?"
+  (discussions.json `msg_24cb62b7c264c13b1a0f`, 2026-07-28 04:50:52Z)라고 물었다 — 이 세션이 답했다.**
+  (2026-07-28, 이 조율자 세션 `session-20260728-135106`, 코드 변경 없음)
+  **확인한 것(실체)**: 이 세션 자신이 그 답이다 — 매 깨우기마다 새 `claude.exe` 프로세스가
+  headless 로 뜨고, discussions.json·WORK-QUEUE.md·메모리 파일만 읽고 이전 세션의 대화 맥락은
+  이어받지 못한다(파일에 남긴 것만 승계). 모델은 이 조율자 세션 자체는 Claude Sonnet 5로 뜬다
+  (시스템 환경 정보로 직접 확인, Opus 아님) — 다만 team-loop 보드가 실제 코드 작업을 스폰할 땐
+  과거 기록상 `claude-opus-5`로 뜬 사례가 있다(예: `tsk_06ba445c1ee0e40aa5fe`의 `executor` 필드,
+  이 큐 위쪽에 기록됨). 즉 대화 상대(이 조율자)와 보드가 별도로 스폰하는 실행 워커는 서로 다른
+  세션·다를 수 있는 모델이다.
+  **한 일**: `src/discussions.js`의 `DiscussionStore.markRead`/`addMessage`(정본 API)로 읽음
+  처리+회신(`msg_9b8137e29e4c501e558a`). WORK-QUEUE.md 대기 항목 0건, `coordinator-inbox.md`
+  전부 `[x]`, team-loop 보드(`list_tasks`) 활성 태스크 0건 재확인 — 이 답변 외에 집을 작업이 없다.
+  **사람이 볼 것**: 없음 — 확인 요청 답변.
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
