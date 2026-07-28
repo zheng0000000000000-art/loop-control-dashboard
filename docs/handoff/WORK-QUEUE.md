@@ -1355,3 +1355,21 @@
   deterministic:false 발산 시험 / 전체 통과)를 재확인한 뒤 `approve_task`로 승인·병합.
   **참고**: 이 태스크는 `docs/handoff/WORK-QUEUE.md`의 "대기 중" 목록이 아니라 이번 깨우기
   프롬프트가 직접 지정한 것이었다 — 큐에는 애초에 항목이 없었다(대기 중 절 비어 있음).
+
+- **판정 세션 확인(2026-07-29, `session-20260729-003926`)**: 이번 깨우기 프롬프트가 직접 지정한
+  `tsk_16d584e283472a18e88e`(워크트리 data 씨딩)를 판정하러 `show_task`를 불렀더니 이미
+  `status DONE`(archived), `review.status APPROVED`(`reviewerUserId` 사람 계정, `adminOverride:true`,
+  `reviewedAt 2026-07-28T15:40:00Z`) — 이 세션이 승인하기 전에 사람이 먼저 승인·병합했다
+  (`git log`: `db7227d Merge task/tsk_16d584e283472a18e88e`, Reviewed-By 최재혁).
+  이 세션은 승인 행위를 하지 않았지만(이미 DONE이라 할 필요도 없었지만), 실체는 **직접 재확인**했다:
+  `src/worktree.js`의 `seedTaskData`(diff `git show ed4e1b4`)가 완료 기준 4개에 각각 대응하는
+  시험(`createTaskWorktree seeds...`·`seeding copies data - it never touches the source`·
+  `seedTaskData does not overwrite...`·`createTaskWorktree does not fail when there is nothing
+  to seed`)로 뒷받침됨을 `git show`로 직접 읽었고, main tree(`team-loop-lite-ai-learning`, HEAD
+  `db7227d`)에서 `npm test` 독립 재실행 → **567/567 통과**(신설 4건 포함). `grep`으로 `data/` 하위
+  경로 읽기가 `src/`·`test/` 어디에도 없음을 재확인 — top-level만 씨딩하는 설계가 실제로 충분함을
+  자기보고가 아니라 직접 확인. **판정: 완료 기준 충족, 추가 조치 불필요.**
+  같은 세션이 WORK-QUEUE 하단의 미결 항목 `tsk_38d1e6d378f26cf3a725`(재현성 시험)도 `show_task`로
+  대조 — 이것도 이미 `status DONE`(사람 승인, 별도 판정 세션 `20260729-000841`이 이미 상세 재검증
+  코멘트를 남겨둠). `list_tasks(status REVIEW|IN_PROGRESS)` 둘 다 빈 배열 — 보드에 판정 대기 항목
+  없음. 이 세션이 새로 만든 코드나 발사는 없다.
