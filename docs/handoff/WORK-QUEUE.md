@@ -305,6 +305,40 @@
   Local-First에 커밋됨)를 그대로 두고 다음 판정 세션이 커밋만 대조해 승인 판단을 대신할지.
   `data/discussions.json`에도 같은 내용을 남겼다(`msg_boardtask_3b9760b2_targetrepo_20260728`).
 
+- **team-loop 보드가 `tsk_3b9760b2f47c055baecb`(발사기 targetRepo)를 이 세션과 무관하게 자동
+  재발사했다 — 헛돈 썼다.** (2026-07-28, 이 조율자 세션 `session-20260728-121606`, 코드는 만들지
+  않음 — 조사만)
+  **확인한 것(실체, 자기보고 아님)**: `work_inspect`로 타임라인을 직접 대조. `TASK_AUTO_QUEUED`·
+  `ORCHESTRATION_WORK_STARTED`(`reasonCode: ACTIVE_WORK_WITH_STALE_HANDOFF`)·
+  `BOARD_WORKER_LAUNCHED`(`pid: 22276`)가 03:09:56Z에 찍혀 있다 — 이 세션의 `loop_enter`는
+  03:16:28Z로 그 뒤다. 그 사이(02:58~03:11) 어떤 조율자 세션도 떠 있지 않았다
+  (discussions.json에 그 구간 세션 로그 없음) — **보드 자신의 스케줄러가 독립적으로 발사한 것**으로
+  보인다(단정은 아님 — `actorUserId`가 시스템 액션에도 소유자 계정으로 찍히는 관례라 사람이 직접
+  건드렸을 가능성도 완전히 배제 못 한다). 워커는 `claude-opus-5`로 떴고 자기 격리 워크트리
+  (`.team-loop-worktrees/tsk_3b9760b2f47c055baecb`, team-loop 자신의 저장소 기준)에서 돌았다 —
+  실제 산출물이 있는 Local-First 저장소는 그 워크트리 밖이라 접근 불가. 워커는 코드를 고치지
+  않고 `docs/qa/gate-witness/tsk_3b9760b2f47c055baecb-cross-repo-misroute.md`(작업 불가 사실만
+  기록)만 남기고 `verify_task`(`changedPaths` 그 파일 하나, `passed:false`) → `request_review_task`
+  까지 갔다. 자동 `codex-review`가 "요청 스키마·시험·measure dev-pack 증거가 모두 없다"며
+  `REJECT`(`REVIEW_REJECTED`, `adminOverride:true`) → `status: IN_PROGRESS`로 되돌아갔다.
+  `verification.status: STALE`, `nextAction: verify_task`로 남아 있다.
+  **이 세션이 안 한 것**: 재발사하지 않았다(같은 낭비 반복 가능성 높음 — 이 태스크의 실제 산출물은
+  이미 Local-First 저장소 커밋 `98663a4`에 완료돼 있어, team-loop 자신의 격리 워크트리 안에서
+  도는 워커는 애초에 이 작업을 할 수 없는 구조다, 위 `msg_boardtask_3b9760b2_targetrepo_20260728`
+  항목과 동일 근본 원인). `reject_task`/`approve_task` 등 상태를 옮기는 시도도 하지 않았다 —
+  `approve_task`는 REVIEW 상태에만 먹는데 지금은 `IN_PROGRESS`이고, 실제로 이 태스크를 "승인"할
+  근거(team-loop 자신의 검증)가 없다(있는 건 다른 저장소의 커밋뿐이라 이 판정과 별개 경로).
+  **사람이 정할 것**: 위 항목과 동일 — (a) 대시보드 수작업 DONE 처리 (b) 외부 저장소 산출물 제출
+  경로 신설 (c) 이대로 두면 보드가 계속 자동 재시도하며 비용을 태울 가능성이 있다는 점도 고려.
+  discussions.json에도 남겼다(`msg_coordreply_inboxresolved_boardautolaunch_20260728`).
+
+- **team-loop 서버가 옛 코드로 돌고 있다(503분 지연, 2026-07-28 12:16 확인).**
+  `scripts/check-stale-server.ps1` 직접 실행 → `server-stale pid=7492`, 서버 시작 03:46:50 vs
+  코드 커밋 12:09:50. `coordinator-wake.ps1`이 재시작을 자동으로 하지 않도록 설계돼 있다
+  ("재시작은 사람이 볼 수 있을 때 하는 편이 낫다") — 이 세션도 그 설계를 따라 재시작하지
+  않았다. discussions.json에 경고가 이미 두 번 찍혀 있다(03:11·03:16Z).
+  **사람이 정할 것**: 재시작 시점(지금 or 다음에 화면 볼 때).
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
