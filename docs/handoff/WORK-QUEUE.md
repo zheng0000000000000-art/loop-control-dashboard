@@ -1549,3 +1549,51 @@
   승인하는 모양이 된다) - `- [~]`가 아니라 team-loop 보드 상태로는 `REVIEW`까지만 옮겼다.
   다음 판정 세션이 격리 워크트리에서 diff를 직접 대조하고 `npm test`를 독립 재실행해 승인
   여부를 정하면 된다.
+
+- **team-loop 보드 태스크(`tsk_d1d9808b38e96ba812bf`, "승격 영수증이 없는 산출물을 가리킨다")의
+  이전 실행(attempt 1)이 남긴 원인 진단이 틀렸다 - 이 조율자 세션(`session-20260729-022606`)이
+  실측으로 뒤집었다.** (2026-07-29, 코드는 만들지 않음 - 조사만)
+  **이전 상태**: `loop_enter`가 가리켜서 봤다 - `status IN_PROGRESS`, `review REJECTED`
+  (codex-review: "test/promotion-reconciliation.test.js가 현재의 불일치 9건을 실패시키지
+  않고 STALE_REGISTRY_SNAPSHOT으로 제외해 수용 조건을 충족 못 한다"), `verification STALE`.
+  attempt 1이 만든 `src/promotion-reconciliation.js`의 주석은 "9건 전부 격리 워크트리가
+  레지스트리 사본을 커밋 시점에 얼려서 생긴 착시(STALE_REGISTRY_SNAPSHOT)"라고 결론지었었다.
+  **이 세션이 실측으로 확인한 것(자기보고 아님)**: 같은 분류기 코드를 그 워크트리에서 그대로
+  꺼내 **메인 트리의 라이브 `data/`**(격리 워크트리가 아니라 실제 서버가 쓰는 파일, `git status`에
+  `M data/skills.json`·`M data/harnesses.json`로 잡히는 것, mtime 17:01/17:16)에 대고 직접
+  돌렸다 - `registryHorizon=2026-07-28T17:16:12.056Z`(신선함)인데도 그 9건이 이번엔
+  `stale-snapshot=0, missing-artifact=9`로 나왔다. 즉 attempt 1의 "워크트리 착시" 결론은
+  워크트리 안에서만 성립하는 우연이었고, 라이브 데이터에서는 같은 코드가 정반대로(진짜 문제로)
+  판정한다 - codex-review의 REJECT가 맞았다.
+  **더 나눠본 것**: 9건이 균일하지 않다. 2건(`failure-evidence-analysis-8e8dfe81`,
+  `autonomous-loop-stall-handling-0847b43f`)은 `AWAITING_APPROVAL`+`activatedAt: null` -
+  애초에 활성화된 적이 없어 레지스트리에 없는 게 정상이다(분류기가 이걸 걸러내지 않는 게
+  결함). 1건(`no-deliverable-check-820ed9d4`)은 `ROLLED_BACK`인데 `promotion-engine.js`의
+  `audit()`을 읽어보면 롤백은 `skillRegistry.setStatus(...,'DISABLED')`만 부르지 배열에서
+  안 지운다 - 그러니 DISABLED로라도 남아 있어야 하는데 이것도 완전히 없다(같은 부류의 미해결).
+  나머지 6건(`delivery-integrity-harness-1f492061`·`delivery-integrity-c7be4a1f`·
+  `no-program-evidence-820ed9d4`[영수증 2개]·`no-program-evidence-a83d6b52`·
+  `no-deliverable-failure-820ed9d4`)은 STABLE+activatedAt 있음 - 진짜 설명 안 되는 유실이다.
+  **코드로 확인**: `src/skill-registry.js`의 `setStatus(id,...)`는 `db.skills`에서 id를 못
+  찾으면 404를 던진다(96행) - `craft()`가 먼저 `createFromFailures`로 스킬을 만들어 넣어야만
+  `activate()`의 `setStatus`가 성공한다. `db.skills` 배열에서 항목을 지우는 코드는 이 저장소
+  어디에도 없다(status만 바뀐다) - 한번 생긴 스킬은 영원히 파일에 남아야 하는데 이 6건은
+  git 커밋 이력에도 단 한 번도 없다. `setStatus`가 성공(=receipt가 실제로 생성됨)했다는 뜻인데
+  지금은 흔적이 없다 - 유실 경로가 있다는 뜻이다.
+  **가설(단정 아님, 증명 못 함)**: `#withLock`은 한 Node 프로세스 안 Promise 체인만
+  직렬화한다 - 이번 주 여러 번 기록된 team-loop 서버 재시작(`server-stale` 사고들)이 겹쳐 뜨면
+  서로 다른 프로세스의 in-memory 스냅샷이 서로를 덮어써 나중에 쓴 쪽이 앞선 활성화 기록을
+  조용히 지울 수 있다. `team-loop-serve.log`에 재시작 시각이 안 남아 있어 이 6건의 생성
+  시각과 겹치는 재시작을 직접 대조하지는 못했다.
+  **이 세션이 안 한 것**: 워크트리에 코드를 쓰거나 submit하지 않았다(재작성해도 AGENT 딜리버리
+  게이트 때문에 `EXECUTOR_RESULT_MISSING`일 것 - 기존에 반복 확인된 패턴). `work_start_next`로
+  재발사하지도 않았다 - 지금 태스크 설명·리뷰 코멘트만 보고 다시 실행하면 같은 워크트리-상대
+  착시를 반복할 위험이 커서, 이 진단이 먼저 전달돼야 한다고 판단했다. `create_task`로 새
+  태스크도 만들지 않았다(보드 새 스코프 임의 생성은 기존 세션들도 자가발주 재량 밖으로 봤다).
+  `data/discussions.json`에도 같은 내용을 남겼다(`msg_04c73dc9fe9d9ebd3c34`).
+  **사람/다음 세션이 볼 것**: (a) 분류기를 `receipt.status` 기준으로 다듬는다(AWAITING_APPROVAL+
+  activatedAt null은 애초부터 제외, ROLLED_BACK은 별도 분류) (b) 격리 워크트리 안에서는
+  레지스트리 사본이 HEAD 시점에 얼어붙어 있어 이 검사가 라이브 상태를 절대 못 본다는 구조적
+  한계(기존 "격리 워크트리 인프라 결손"과 같은 과) - 수용 기준 "지금 상태에서 9건을 잡는다"를
+  이 하네스 안에서 어떻게 증명할지 별도 결정 필요 (c) 6건의 실제 유실 원인을 더 파볼지, 사람이
+  직접 `skills.json`/`harnesses.json`에 누락 항목을 수작업 복구할지.
