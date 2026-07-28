@@ -261,6 +261,50 @@
   → 커밋 `b632b57`, `git ls-files`에 두 파일 모두 잡힘, `git status --short`는 깨끗함. 즉 "untracked
   사본"이 아니라 지금은 **정식으로 커밋된 파일**이다 — 지울 필요 없다.
 
+- **team-loop 보드 태스크(`tsk_3b9760b2f47c055baecb`, "발사기가 대상 저장소를 받게 한다")를 이
+  세션이 직접 구현·커밋했다 — 그런데 보드 쪽 검증 도구가 이 태스크를 승인 상태로 옮기지 못한다.**
+  (2026-07-28, 이 조율자 세션 `session-20260728-114105`)
+  **주체**: 이 세션이 코드를 직접 만들었다(발사 없음, MCP 코드 실행 없음).
+  **한 일**: `server/CodexHarnessLauncherCli.cs`의 `Execute`가 언제나 `RepoRoot()`(자기 저장소)만
+  대상으로 삼던 것을 고쳤다. 요청 JSON이 `targetRepo`를 선언하면 `ResolveTargetRepo`가 그 경로의
+  존재·git 저장소 여부를 **쏘기 전에** 검증해 거절하고, 통과하면 그 경로를 이후 모든 `root` 인자로
+  쓴다. 선언 안 하면 종전대로 `RepoRoot()`(자기 저장소). `CodexTerritory.RootsRejection`(절대 경로
+  거절)은 손대지 않았다 — 옳은 검사라 그대로 지켰다.
+  **사용한 하네스(명령·exit code·수치)**: `dotnet build server` 경고 0·오류 0.
+  `dotnet run --project server -- codex-launch validate --request <절대경로>`를 다섯 조합 직접
+  실행(`docs/qa/gate-witness/codex-launch-targetrepo-*.request.json` 5개 신설, 절대경로로
+  실행해야 함 — 상대경로로 돌리면 `dotnet run`의 cwd 불일치로 `launch-request-unparsable`이
+  나는 함정을 직접 겪고 피함): ①`targetRepo` 미선언 → `ACCEPTED`(자기 저장소 사용, exit 0)
+  ②없는 경로 → `target-repo-not-found`, exit 2 ③git 저장소 아닌 경로
+  (`docs/qa/gate-witness/build-verify-ok`, `.git` 없음 확인) → `target-repo-not-a-git-repository`,
+  exit 2 ④유효한 `targetRepo`(`team-loop-lite-ai-learning`)+절대 경로 `territoryRoots` →
+  `territory-root-is-absolute`, exit 2(대상 저장소 유무와 무관하게 그대로 거절됨을 재확인)
+  ⑤유효한 `targetRepo`+상대 경로 `territoryRoots`(`src/`) → `ACCEPTED`(양성, 융합 목표 그대로 재현).
+  **회귀 확인**: 기존 요청 파일 3개(`dispatch/LAUNCH-GCLEAN-01.request.json`·`LAUNCH-TERR-01`·
+  `LAUNCH-NET8-01`, 전부 `targetRepo` 미선언)를 재실행 → 이번 변경과 무관한 이전과 동일한 사유
+  (`baseline-commit-mismatch`, 저장소가 그 뒤로 진행돼 핀이 낡음)로 거절됨을 확인 — 회귀 없음.
+  `measure dev-pack` → `violationCount 0`. `territory-check` → `violations 0`(커밋 전 기준).
+  관련 커밋: `98663a4`.
+  **지표는 만족했으나 목적은 미달인 부분(자진 신고)**: ①커밋 제목이 "...적용하는 첫 이"로
+  잘렸다 — 작성 실수(본문은 완전함). 규칙상 임의로 amend하지 않고 여기 그대로 적는다.
+  ②`docs/verification/`은 이 태스크 allowedPaths 밖이라 별도 검증 문서를 안 남기고 이 큐 항목에
+  직접 적었다.
+  **막힌 지점**: team-loop MCP의 `submit_task_result`는 "서버가 **자신의 task worktree** 안에만
+  적용한다"고 스스로 밝히고 `baseCommit`도 team-loop 저장소 기준이다 — 이 태스크의 실제 산출물은
+  완전히 다른 저장소(Local-First, 이 세션이 지금 있는 저장소)에 있어 team-loop 쪽 `baseCommit`이
+  성립하지 않는다. `verify_task`도 team-loop 저장소의 하네스·scope-check를 돈다 — Local-First의
+  `measure dev-pack`을 모른다. `work_start_next`는 태스크 ID를 지정하는 매개변수가 없어 항상
+  최우선순위 항목(현재 `tsk_1a113f64`, BLOCKED)만 돌려준다 — 이 태스크(우선순위 14)를 그것으로
+  개별 시작할 수 없었다. **보드가 "산출물이 다른 저장소에 있는 태스크"를 처음 만난 사례로 보인다.**
+  코드는 정상 커밋됐고 여기 기록한 하네스 결과로 완료 기준 7개(요청 스키마 targetRepo·미선언시
+  자기 저장소·없는 경로 거절·git 아닌 경로 거절·절대경로 territoryRoots 거절·음성 4종 시험·
+  measure dev-pack 0)가 전부 실측으로 충족됨을 확인했다.
+  **사람이 정할 것**: (a) 대시보드에서 이 보드 태스크를 수작업으로 DONE 처리(증거는 커밋
+  `98663a4`+이 항목) (b) team-loop에 "산출물이 외부 저장소에 있다"는 것을 선언할 수 있는 새
+  제출 경로를 추가할지(게이트/판정층 코드 변경 — 사람 결재 대상) (c) 이 상태(board READY, 코드는
+  Local-First에 커밋됨)를 그대로 두고 다음 판정 세션이 커밋만 대조해 승인 판단을 대신할지.
+  `data/discussions.json`에도 같은 내용을 남겼다(`msg_boardtask_3b9760b2_targetrepo_20260728`).
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
