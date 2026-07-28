@@ -1240,3 +1240,17 @@
   REVIEW 상태에서는 `approve_task`만 시도하고, 그것도 실패하면(이번처럼 무관한 메인 트리
   잔여물 때문일 수 있으니) 원인을 먼저 확인한 뒤 재시도하고, 재시도가 상태를 되돌리면
   거기서 멈추고 사람에게 넘겨라.
+  - **재확인(2026-07-28T21:39Z 근처, session-20260728-213910)**: WORK-QUEUE.md 대기 중 0건,
+    `coordinator-inbox.md` 전부 `[x]`, `discussions.json` non-coordinator unread **0건**
+    (직접 스크립트로 문자열/객체 `readBy` 양쪽 인정 필터링해 확인 — 새 사람 메시지 없음).
+    `show_task`/`work_inspect`로 재대조 — `status READY`(직전 세션이 남긴 `IN_PROGRESS`에서
+    바뀌어 있었으나, `verification.status FAILED`/`NO_DELIVERABLE`/`changedPaths:[]`/
+    `version 110`/`workspaceFingerprint`까지 전부 직전 세션이 기록한 값과 동일 — 원장
+    이벤트 로그의 마지막 상태 변경 이벤트도 여전히 12:34:55Z(version 110)뿐이고 그 뒤로는
+    이 세션 자신의 `ORCHESTRATION_ENTRY_DECIDED` 조회 이벤트만 있다. `status` 라벨만
+    `IN_PROGRESS→READY`로 자동 전환된 것으로 보이고(원장에 버전 증가 없는 자동 재큐잉으로
+    추정, 단정은 아님) 실질 진행은 없다). 이 세션은 **`verify_task`도 `approve_task`도
+    호출하지 않았다** — 직전 세션이 남긴 경고(비멱등 재실행이 멀쩡한 상태를 깰 수 있다)를
+    그대로 따랐고, 지금 상태는 REVIEW가 아니라 READY라 `approve_task`도 애초에 대상이 아니다.
+    사람이 (a)(b)(c) 중 아직 아무것도 답하지 않았다 — **여전히 사람 결정 대기**, 코드/보드
+    변경 없음.
