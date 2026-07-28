@@ -211,8 +211,8 @@
                                        ],
                       "targetRepo":  "team-loop",
                       "source":  "2026-07-29 실측 - promotion-receipts.json 대 skills/harnesses.json 대조",
-                      "status":  "READY",
-                      "boardTaskId":  null,
+                      "status":  "IN_BOARD",
+                      "boardTaskId":  "tsk_d1d9808b38e96ba812bf",
                       "addedBy":  "조율자 세션 23748",
                       "addedAt":  "2026-07-29",
                       "priority":  26
