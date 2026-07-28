@@ -126,7 +126,29 @@ switch ($Action) {
       exit 1
     }
 
+    # 생성물만 더러우면 착지 전에 그것부터 커밋한다. 깨우기는 이미 생성물 더러움으로
+    # 막지 않는데(2026-07-28) 여기만 막으면 세션이 일을 다 하고 착지에서 깨진다.
+    # 사람이 매번 손으로 "chore: 재측정" 을 치던 것을 그대로 코드가 한다.
+    # 목록은 scripts/generated-paths.txt 하나를 쓴다.
     $dirty = Invoke-Git $RepoRoot @('status', '--porcelain')
+    $dirtyLines = @($dirty.Text -split "`n" | ForEach-Object { $_.Trim("`r") } | Where-Object { $_.Trim() })
+    $nonGenerated = @()
+    foreach ($line in $dirtyLines) {
+      $path = if ($line.Length -gt 3) { $line.Substring(3).Trim() } else { $line.Trim() }
+      if ($path.Contains(' -> ')) { $path = ($path -split ' -> ')[-1] }
+      $path = $path.Trim('"').Replace('', '/')
+      if (-not (Test-Generated $path)) { $nonGenerated += $path }
+    }
+    if ($dirtyLines.Count -gt 0 -and $nonGenerated.Count -eq 0) {
+      $add = Invoke-Git $RepoRoot @('add', '-A')
+      $made = Invoke-Git $RepoRoot @('-c', 'core.hooksPath=/dev/null', 'commit', '-q', '-m', 'chore: 생성물 재측정 (착지 전 자동)')
+      if ($made.Code -ne 0) {
+        Write-Output "land-refused (생성물 커밋에 실패했다: $($made.Text.Trim()))"
+        exit 1
+      }
+      Write-Output "land-committed-generated ($($dirtyLines.Count)건)"
+      $dirty = Invoke-Git $RepoRoot @('status', '--porcelain')
+    }
     if ($dirty.Text.Trim() -ne '') {
       Write-Output "land-refused (본 저장소 트리가 clean 이 아니다)"
       exit 1
