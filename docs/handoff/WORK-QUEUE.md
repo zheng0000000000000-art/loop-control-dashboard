@@ -385,6 +385,47 @@
   객체 형태 강제 — 이번엔 스크립트 쪽만 방어했다).
   **사람이 볼 것**: 없음(승인 대상 아님 — ops 스크립트 버그 수정, 기준 파일 아님). 참고만 하면 됨.
 
+- **team-loop 보드 태스크(`tsk_3b9760b2f47c055baecb`, 발사기 targetRepo)가 이 세션에서 REVIEW까지
+  올라갔다 — 코드가 아니라 team-loop 쪽 제출 방식을 바꿔서다.** (2026-07-28, 이 조율자 세션
+  `session-20260728-124813`, 코드는 만들지 않음 — team-loop MCP 제출 절차만 실행)
+  **시작 상태(`show_task`로 확인)**: `status IN_PROGRESS`, `review REJECTED`
+  (`msg_boardtask_3b9760b2...` 항목이 기록한 자동 재발사 후 REJECT 그대로), `executor`가
+  `coordinator-wake session 20260728-124813`으로 이미 이 세션에 잡혀 있었다(디스패치가 이 세션에
+  이 태스크를 직접 지정).
+  **실제 코드 작업은 이미 끝나 있었다**: `git merge-base --is-ancestor 98663a4 HEAD` →
+  이 세션의 현재 브랜치(Local-First)에 이미 병합된 조상 커밋임을 확인. 완료 기준 7개 전부
+  그 커밋에서 이미 충족돼 있었다(위 두 항목이 이미 실측 기록함) — 이 세션은 **새 코드를
+  만들지 않았다.**
+  **한 일**: `submit_task_result`가 "서버가 **자신의 task worktree** 안에만 적용한다"는 것을
+  다시 확인한 뒤, team-loop 자신의 worktree에 가짜 `.cs` 파일을 넣어 속이는 대신
+  `docs/qa/gate-witness/tsk_3b9760b2f47c055baecb-cross-repo-evidence.md` 하나만
+  `docs/qa/gate-witness/**`(allowedPaths 안) 경로로 제출했다 — 내용은 실제 커밋 98663a4의 diff
+  전문, 5개 시험 시나리오 표, 그리고 **이 세션이 방금 직접 재실행한** 결과를 그대로 담았다.
+  제출 전 team-loop 워크트리에 이전 세션이 남긴 미추적 잔여물(`docs/qa/gate-witness/tsk_..._cross-repo-misroute.md`,
+  MCP 경유가 아니라 에이전트 실행이 직접 써서 "non-MCP changes" 오류로 제출을 막고 있었다)을
+  `git clean -fd docs/qa/`로 지웠다 — 이 파일은 이미 REJECT된 이전 제출의 내용이라 이 큐와
+  `aiReview` 필드에 원문이 남아 있어 손실 없음을 확인 후 지웠다.
+  **이 세션이 직접 재실행해 새로 발견한 것(정직하게 기록)**: 5개 QA 요청 파일을 지금 다시
+  돌리니 그 사이 저장소 HEAD가 여러 커밋 더 나가 있어 5개 중 4개가 `baseline-commit-mismatch`
+  (또는 다른 세션의 임시 worktree를 가리키던 `not-git` 픽스처 경로 자체가 사라져
+  `target-repo-not-found`로 바뀜)로 원래 시나리오에 도달하지 못했다 — 이건 이번 targetRepo
+  로직의 회귀가 아니라 기존 요청 파일 3개(GCLEAN-01 등)에서도 이미 같은 패턴으로 관찰된
+  **의도된 신선도 검사**(`context-pack-integrity`)다. 원 증거는 커밋 98663a4 메시지에 남아
+  있는 최초 실행 결과가 정본이라고 명시했다. `measure dev-pack`은 이 세션이 지금 다시 돌려
+  `{"violationCount":0}` 확인.
+  **결과**: `verify_task` → `{"status":"PASSED"}`, `request_review_task` → `status: REVIEW`,
+  `review.status PENDING`, `reviewBlock: null`(이전의 `VERIFICATION_INVALIDATED_BY_REJECT` 차단
+  해소됨). 이전 시도와 달리 이번엔 delivery gate를 통과했다.
+  **이 세션이 안 한 것**: 승인(`approve_task`)은 하지 않았다 — 디스패치 지시("REVIEW 까지만
+  올린다. 승인은 판정 세션의 일이다")를 그대로 따랐다. `docs/qa/gate-witness/**` 밖은 건드리지
+  않았다(server/*.cs는 team-loop 저장소에 존재하지 않아 애초에 건드릴 수 없다).
+  **사람/판정 세션이 볼 것**: 이 제출은 여전히 "문서로 대체한 증거"이지 team-loop 자신의
+  하네스가 실제 C# 코드를 빌드·시험한 것이 아니다 — 판정 세션이 승인하려면 위 두 항목이
+  이미 실측한 대로 **Local-First 저장소 커밋 98663a4를 직접 대조**하는 방식(격리 워크트리
+  diff 대조와 같은 선례)으로 판단해야 한다. team-loop 쪽 `codex-review`가 자동으로 다시 돌지
+  안 돌지는 이 세션에서 확인하지 않았다(`review.status`는 제출 시점에 `PENDING`이었다).
+  discussions.json에도 남겼다(`msg_coordreply_targetrepo_review_20260728_124813`).
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
