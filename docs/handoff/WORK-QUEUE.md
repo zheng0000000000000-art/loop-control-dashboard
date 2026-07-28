@@ -354,6 +354,37 @@
   **사람이 정할 것**: 위 항목과 동일 셋 — (a) 커밋 `98663a4` 근거로 수작업 DONE (b) 외부
   저장소 제출 경로 신설 (c) 이대로 두고 판정 세션이 커밋만 대조해 승인 대신.
 
+- **`coordinator-wake.ps1`·`coordinator-heartbeat-watch.ps1`의 unread 판정이 이미 읽은 메시지를
+  영구히 unread 로 오판해 헛트리거를 내고 있었다 — 이 세션이 실체로 확인하고 코드로 고쳤다.**
+  (2026-07-28, 이 조율자 세션 `session-20260728-124106`)
+  **원인(실체 확인, 프록시 아님)**: `src/discussions.js`의 `markRead`(정본 API,
+  `POST /api/discussions/read`)는 항상 `readBy`에 `{userId, at}` **객체**를 넣는다. 그런데
+  두 스크립트의 unread 필터는 `$_.readBy | Where-Object { $_.userId -eq $ReaderId }`로
+  **객체만** 매칭한다 — `readBy`가 문자열(`["usr_claude_coordinator"]`)이면 `$_.userId`가
+  PowerShell에서 조용히 `$null`이 돼 절대 안 걸린다. 실제 `discussions.json`에 이런 문자열
+  전용 항목이 섞여 있었다(`msg_83e1246d37d68f740142`·`msg_9698b22562329037315e` — 둘 다
+  이미 처리·회신까지 끝난 사용자 메시지). 과거 세션들이 "readBy 를 추가해 읽음으로 표시한다"는
+  프롬프트 지시를 따르며 API 대신 파일을 손으로 고치다 문자열만 넣은 것으로 보인다(단정은
+  아님 — 어느 세션인지 재구성 불가, 주체 미상).
+  **재현(직접, 자기보고 아님)**: PowerShell로 버그 버전 필터를 실제 파일에 그대로 돌려
+  `unread count=2`(그 두 메시지)를 확인 → 필터를 `$_ -eq $ReaderId -or $_.userId -eq $ReaderId`로
+  고쳐 같은 파일에 다시 돌리니 `count=0`. `coordinator-wake.ps1 -DryRun`을 고친 뒤 재실행하니
+  트리거 사유가 `unread=2`에서 사라지고 실제로 남아 있던 `board=1`(`tsk_3b9760b2f47c055baecb`,
+  기존에 이미 여러 항목이 기록한 cross-repo 막힘, 사람 결정 대기 — 이 세션이 새로 만든 상황
+  아님)만 잡힘을 확인.
+  **한 일**: 두 스크립트의 필터 한 줄씩만 고쳤다(문자열·객체 양쪽 다 인정). `discussions.json`
+  데이터 자체는 건드리지 않았다 — 서버가 정상 API로 계속 쓰면 자연히 객체 형태로 수렴한다.
+  **사용한 하네스**: `dotnet build server`(경고 0·오류 0) → `measure dev-pack`
+  (`violationCount: 0`) → `handoff-integrity`(`failures: []`) → `doc-integrity`(전부 intact).
+  `git status --short` → `scripts/coordinator-wake.ps1`·`scripts/coordinator-heartbeat-watch.ps1`
+  둘만 수정됨.
+  **지표는 만족했으나 목적은 미달인 부분(자진 신고)**: `discussions.json`에 이미 섞여 있는
+  문자열형 `readBy` 항목 자체는 그대로 뒀다 — 데이터 마이그레이션은 이 세션의 판단 범위를
+  넘는다고 보고 손대지 않았다. 앞으로도 프롬프트가 "readBy 를 추가하라"고 직접 지시하는 한
+  같은 손편집 경로로 문자열이 다시 섞일 수 있다(근본 해결은 API 경유 강제 또는 손편집 시
+  객체 형태 강제 — 이번엔 스크립트 쪽만 방어했다).
+  **사람이 볼 것**: 없음(승인 대상 아님 — ops 스크립트 버그 수정, 기준 파일 아님). 참고만 하면 됨.
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —

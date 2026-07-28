@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-28T12:28:41.8872960+09:00",
+  "measuredAt": "2026-07-28T12:47:00.0681218+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
