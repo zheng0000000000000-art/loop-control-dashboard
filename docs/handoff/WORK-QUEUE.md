@@ -1700,3 +1700,57 @@
   고칠 이유")은 부분 충족 — 2건(NEVER_ACTIVATED)은 분류기 결함이라 고쳤고, 나머지 7건은
   원인 미상으로 남겼다(이전 진단 세션의 가설: 서로 다른 서버 프로세스의 in-memory 스냅샷
   경합, 증명은 못 함) — 이걸 "못 고칠 이유"로 인정할지는 판정 세션의 몫이다.
+
+- **승격 영수증이 없는 산출물을 가리킨다 (`tsk_d1d9808b38e96ba812bf`)가 이 세션에서 다시 REVIEW로
+  넘어갔다.** 이전 시도(attempt 1,
+  session-20260729-031107)가 codex-review에 REJECT됐다(사유: "격리 워크트리 자신이 왜
+  오분류하는가"만 규명했지 "라이브 레지스트리에 왜 실물이 없는가"는 규명하지 못함). 이
+  세션(session-20260729-032624)이 원인을 코드 경로+실측으로 규명하고 REVIEW로 다시 올렸다.
+  **원인**: `data/skills.json`·`data/harnesses.json`은 git 추적 대상이다(`.gitignore:11-13`
+  negation, 커밋 `43ba12e` "승격된 지식을 버전 관리한다 — 이 기계를 벗어나게",
+  2026-07-27T01:51:54Z). `data/promotion-receipts.json`은 그대로 gitignore 대상이라 커밋되지
+  않는다. 서버는 승격/롤백 때마다 skillRegistry.setStatus() 등으로 registry 파일을 **plain fs
+  쓰기**로 직접 덮어써(git commit 아님) 정상적으로도 항상 dirty하다. 그런데 이 저장소를 다루는
+  여러 세션이 그 dirty 상태를 "라이브 서버가 재직렬화해 생긴 부수적 필드 순서 변경"으로 오인해
+  자기 작업 트리를 깨끗이 하려고 `git checkout -- data/harnesses.json data/skills.json`을
+  반복 실행해왔다(이 문서에 최소 6곳 기록 — 위 여러 항목의 "필드 순서 변경... `git checkout
+  --`로 원복해 트리를 깨끗이 했다" 참고). git checkout은 그 파일을 **마지막 커밋 시점 내용으로
+  통째로 되돌려** 그 사이 서버가 실제로 만든 항목·상태 전이를 전부 지운다.
+  **증거(추측 아님)**: ①`git log --oneline -- data/skills.json` → 커밋 2개뿐, 43ba12e 이후
+  다시 커밋된 적 없음 ②`git show HEAD:data/skills.json`의 id 33개와 라이브 33개가 정확히 같은
+  집합(필드만 다름) — 코드엔 db.skills에서 항목을 지우는 경로가 없는데 집합이 커밋 시점으로
+  수렴해 있다는 것은 여러 차례 리셋된 증거 ③결정적 사례: `no-program-evidence-820ed9d4`가
+  서로 다른 영수증 2건에 쓰였다(07-27T18:23 활성화→18:25 ROLLED_BACK, 07-28T03:11 다시
+  활성화→STABLE) — `skill-registry.js#createFromFailures`는 같은 id가 이미 있으면(상태 무관)
+  409로 거절하므로, 두 번째 활성화가 성공했다는 것은 첫 항목이 그 사이 완전히 사라졌다는
+  뜻이다 ④`test/promotion-reconciliation.test.js`에 실제 `SkillRegistry`(모킹 없음)+실제
+  `git init/commit/checkout`으로 이 메커니즘 자체를 처음부터 끝까지 재현하는 시험을
+  추가했다 — 임시 저장소에서 스킬을 활성화(파일에 실물 확인) → `git checkout --` → 스킬이
+  사라짐(파일로 확인) → `reconcilePromotions`가 MISSING_ARTIFACT 1건으로 잡음, 이 시험이
+  통과한다.
+  **고침**: `repairPromotions()`/`repairPromotionsIn()`을 추가했다 — 영수증의 `snapshot`
+  필드(활성화 직전 완전한 아티팩트 정의)로 유실된 항목을 재구성한다(PROBATION·STABLE→ACTIVE,
+  ROLLED_BACK→DISABLED, `promotion-engine.js`의 원래 의도 그대로). 같은 artifactId가 여러
+  영수증에 걸친 경우(위 `no-program-evidence-820ed9d4` 사례) 가장 최근에 활성화된 영수증만
+  되살려 레지스트리 고유성을 지킨다(처음엔 이 dedup 없이 짰다가 dry-run에서 같은 id가 두 번
+  삽입되는 걸 직접 잡아 고쳤다). 이 코드로 **라이브 `data/`를 실제로 복구했다** — 복구 전
+  `/tmp/promo-repair-backup-20260729/`에 `skills.json`·`harnesses.json` 백업, 실행 후
+  `reconcilePromotionsIn`을 다시 디스크에서 읽어 `MISSING_ARTIFACT: 7 → 0` 확인(레지스트리
+  고유성 위반 없음도 확인). 이건 픽스처가 아니라 실제 운영 데이터에서 "고친 뒤엔 그 검사가
+  0건을 낸다"를 만족시킨 것이다.
+  **사용한 하네스**: `node --test test/promotion-reconciliation.test.js` 18/18 통과(이
+  워크트리에서 직접 재실행). `npm test` 전체 재실행 → `608/608`(기존 606 + 신설 18에서 dedup
+  버그 재작성 후 최종 18). `git diff --check` 통과. `git status --short` → 이 워크트리에
+  `src/promotion-reconciliation.js`·`test/promotion-reconciliation.test.js` 두 파일만
+  변경(allowedPaths `src/**`·`test/**` 일치). team-loop MCP: `submit_task_result` →
+  `verify_task` → `PASSED` → `request_review_task` → `status REVIEW`.
+  **이 세션이 안 한 것**: 승인(`approve_task`)은 하지 않았다(ADR-020, 실행 세션은 자기 판단을
+  자기가 승인하지 않는다). `data/discussions.json`에 상세를 남겼다
+  (`msg_boardtask_d1d9808_rootcause_20260729_032624`).
+  **판정 세션이 볼 것**: (a) `src/promotion-reconciliation.js` 파일 머리 주석의 원인 규명이
+  코드 경로+실측으로 충분한지(이전 반려 사유였던 지점) (b) 실제 git checkout 재현 시험이
+  "추측이 아니라"는 기준을 만족하는지 (c) 라이브 `data/skills.json`을 실제로 고친 것이
+  범위(allowedPaths `src/**`·`test/**`) 밖 부수 작업이라 판단되면, 그 복구는 되돌리지 말고
+  (백업이 `/tmp/promo-repair-backup-20260729/`에 있다) 판정에서 이 판단만 별도로 남겨달라 —
+  복구 자체는 영수증이 이미 기록한 사실을 되살린 것이라 새 판단을 만든 게 아니라고 이 세션은
+  본다.
