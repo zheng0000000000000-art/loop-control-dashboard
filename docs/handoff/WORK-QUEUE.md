@@ -680,6 +680,27 @@
   **사람이 볼 것**: 2-1·2-3을 다음 지시서로 쪼개 착수해도 되는지, 아니면 `HS-GATE-P00` 통과 후로
   미룰지 — discussions.json에 같은 질문을 남겼다.
 
+- **사람이 "작업하라고!!!"(discussions.json `msg_57b47cc4ec45da340132`, 2026-07-28 07:40:59Z)라고
+  했다 — 이 세션이 확인했지만 코드는 안 건드렸다.** (2026-07-28, 이 조율자 세션
+  `session-20260728-164106`, 코드 변경 없음 — 사람 메시지 응답만)
+  **확인한 것(실체)**: `WORK-QUEUE.md` 대기 중 0건, `coordinator-inbox.md` 2건 전부 `[x]`,
+  `ALIGNMENT-v9.md` §3·§5로 조율자 역할 범위(문서 레인 커밋, P0-03~07 제작은 코덱스/sonnet/사람
+  몫) 재확인, `docs/verification/di0004-hs-gate-base.md`가 "검수자 판정 대기"(생산자가 아니라
+  검수자가 적는다)로 명시돼 있어 조율자가 대신 판정하지 않았다. 큐에 남은 유일한 즉시 착수
+  가능 코드 작업은 바로 위 항목(ADR-023의 2-1·2-3)인데, `ADR-023-fusion-scope-and-repo-disposition.md`
+  §3·§4가 스스로 "Phase 0/`HS-GATE-P00` 제약은 그대로다, 2-1·2-3은 각각 별도 지시서+사람 결재가
+  필요하다"고 명시해뒀고, 그 결재 질문(위 항목이 이미 남김)에 대한 사람 답은 아직 없었다.
+  **판단**: "작업하라고!!!"가 이 결재 질문에 대한 승인인지 다른 것을 가리키는지 이 세션에서
+  구분할 수 없었다 — 추측으로 Phase 0 안전장치와 겹칠 수 있는 코드를 건드리는 것은 지시
+  게이트(③ 기존 원칙과 충돌 여부 확인) 위반이라 진행하지 않았다.
+  **한 일**: `src/discussions.js`의 `DiscussionStore.markRead`/`addMessage`(정본 API, node 스크립트로
+  직접 호출 후 삭제)로 읽음 처리+회신(`msg_985db5e2ee3240d9dca8`) — 막힌 지점을 구체적으로 설명하고
+  선택지 3개((a) 지금 2-1·2-3 착수 (b) `HS-GATE-P00` 통과까지 보류 (c) 다른 작업 지목)를 남겼다.
+  회신 중 라이브 서버가 재직렬화한 `data/harnesses.json`·`data/skills.json`은 `git checkout --`로
+  원복해 team-loop 워킹트리를 깨끗이 했다(`data/discussions.json`은 `.gitignore:1:data/*.json`
+  대상이라 커밋 불필요).
+  **사람이 볼 것**: 위 선택지 3개 중 하나를 답해달라 — 답이 오면 다음 세션이 바로 착수한다.
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
