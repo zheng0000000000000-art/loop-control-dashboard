@@ -33,6 +33,10 @@ param(
   # 기다린다 - 사람이 기다릴 이유가 없는 대기다.
   # 처치 하나가 이 시간을 넘으면 끊는다. 처치가 루프를 멈추면 그건 처치가 아니다.
   [int]$RemedyTimeoutSeconds = 150,
+  # 보드가 마르고 백로그도 비면 증거에서 일감을 유도하는 세션을 띄운다. 하루 이 횟수까지만 -
+  # 상한이 없으면 루프가 자기한테 무한히 일을 만든다.
+  [int]$PlanMaxPerDay = 6,
+  [string]$PlanLedgerPath = 'C:\NHN Project\_ops\plan-runs.json',
   [int]$MaxChain          = 20,
   [string[]]$ActiveStatuses = @('TODO','READY','IN_PROGRESS','REVIEW','BLOCKED'),
   # 이 표식으로 시작하는 보드 태스크는 사람만 할 수 있다. 실행자가 안 집는다.
@@ -64,6 +68,9 @@ function Write-Line([string]$text) {
     Add-Content -Path $DecisionLog -Value $stampedLine -Encoding UTF8
   } catch { }
 }
+
+# 보드도 백로그도 비었을 때만 참이 된다. 그때는 실행이 아니라 일감을 유도한다.
+$planMode = $false
 
 $loopLogScriptEarly = Join-Path (Split-Path -Parent $PSCommandPath) 'loop-log.ps1'
 
@@ -320,12 +327,44 @@ if ($inboxPending -eq 0 -and $unread.Count -eq 0 -and $boardReady.Count -eq 0 -a
       foreach ($line in @($refillOut)) { if ("$line".StartsWith('backlog-created ')) { $refilled = $true } }
     }
   }
-  if (-not $refilled) { Write-Line "nothing-to-do (사람 게이트 대기 $pendingWork 건)"; exit 0 }
+  if (-not $refilled) {
+    # 보충도 못 했다. 여기서 끝내면 일감이 사람에게서만 나온다. 증거에서 유도하는 것은
+    # 발명이 아니다 - 실패사례·미달 기준·미해결 이슈는 이미 관측된 것이다.
+    # 다만 상한을 둔다. 하루 $PlanMaxPerDay 번까지고, 넘으면 예전처럼 조용히 끝낸다.
+    $planUsed = 0
+    if (Test-Path $PlanLedgerPath) {
+      try {
+        $planLedger = Get-Content -Raw -Encoding UTF8 $PlanLedgerPath | ConvertFrom-Json
+        $cutoff = (Get-Date).ToUniversalTime().AddHours(-24)
+        foreach ($stamp in @($planLedger.runs)) {
+          $parsed = [datetime]::MinValue
+          if ([datetime]::TryParse([string]$stamp, [ref]$parsed)) {
+            if ($parsed.ToUniversalTime() -gt $cutoff) { $planUsed++ }
+          }
+        }
+      } catch { }
+    }
+    if ($planUsed -ge $PlanMaxPerDay) {
+      Write-Line ("nothing-to-do (계획 모드 한도 " + $planUsed + "/" + $PlanMaxPerDay + ", 사람 게이트 대기 " + $pendingWork + " 건)")
+      exit 0
+    }
+    $planMode = $true
+    Write-Line ("plan-mode 시작 (" + ($planUsed + 1) + "/" + $PlanMaxPerDay + ") - 보드도 백로그도 비었다. 증거에서 일감을 유도한다")
+    $planLedgerNew = $null
+    if (Test-Path $PlanLedgerPath) { try { $planLedgerNew = Get-Content -Raw -Encoding UTF8 $PlanLedgerPath | ConvertFrom-Json } catch { } }
+    if (-not $planLedgerNew) { $planLedgerNew = [pscustomobject]@{ runs = @() } }
+    $planRuns = @($planLedgerNew.runs) + @((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))
+    $planLedgerNew | Add-Member -NotePropertyName runs -NotePropertyValue $planRuns -Force
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $PlanLedgerPath) | Out-Null
+    [IO.File]::WriteAllText($PlanLedgerPath, ($planLedgerNew | ConvertTo-Json -Depth 10), [Text.UTF8Encoding]::new($false))
+  } else {
   # 5분을 기다리지 않는다. 방금 올린 것을 이번 고리에서 바로 집는다.
   if ($ChainDepth -ge $MaxChain) { Write-Line "backlog-refilled - 연쇄 한도라 다음 주기가 집는다"; exit 0 }
   Write-Line "backlog-refilled - 이어서 집는다 depth=$($ChainDepth + 1)"
   & $PSCommandPath -ChainDepth ($ChainDepth + 1) -MaxChain $MaxChain -TimeoutMinutes $TimeoutMinutes
-  exit $LASTEXITCODE
+    # 보충으로 새 일이 생겼으니 여기서 끝낸다. 계획 모드일 때는 안 끝내고 아래로 내려간다.
+    exit $LASTEXITCODE
+  }
 }
 # 검토 대기가 있으면 그것이 최우선이다. 실행보다 판정이 먼저 밀린다 —
 # 판정이 안 나면 그다음 실행이 무엇 위에 쌓이는지 아무도 모른다.
@@ -560,8 +599,51 @@ $executePrompt = @'
 '@
 
 # 판정과 실행은 다른 일이다. 한 프롬프트로 둘 다 시키면 실행자가 자기 일을 자기가 통과시킨다.
+# 보드가 마르면 일감을 유도하는 세션을 띄운다. 실행도 판정도 아닌 세 번째 일이다.
+# 경계가 핵심이다 - 발명하면 루프가 자기한테 무한히 일을 만든다. 그래서 출처를 못 박고
+# 개수를 제한하고 근거를 요구한다. 증거에서 유도하는 것은 발명이 아니다.
+$planPrompt = @'
+보드가 비었고 백로그에서도 꺼낼 것이 없다. 너는 지금 실행자도 판정자도 아니다.
+**이번 세션의 유일한 일은 다음에 할 일감을 증거에서 유도해 보드에 올리는 것이다.**
+
+## 지어내지 마라 — 출처는 이 넷뿐이다
+
+1. `C:/NHN Project/team-loop-lite-ai-learning/data/failure-cases.json` — 관측된 실패.
+   아직 실행 가능한 검사로 덮이지 않은 것만. 이미 시험이나 하네스가 잡는 것은 제외한다.
+2. `C:/Users/1/Documents/Local-First Workflow Dashboard/docs/plan/SIMULATION-CHECKLIST-v1.md`
+   — 아직 체크 안 된 항목, 특히 '지금 실패 중' · '미확인' 표시가 붙은 것.
+3. `C:/Users/1/Documents/Local-First Workflow Dashboard/docs/handoff/KNOWN-ISSUES.md` — 미해결로 적힌 것.
+4. team-loop 의 승격 후보 중 권고문으로만 남아 강제되지 않는 것(`data/skills.json` 의
+   `source: FAILURE_DERIVED` 규칙이 '확인한다' 류 문장뿐인 것).
+
+**이 넷 밖에서 떠오른 좋은 생각은 이번에 올리지 마라.** 그건 사람이 백로그에 넣을 일이다.
+
+## 먼저 확인할 것
+
+- 보드(`data/tasks.json`)와 백로그(`docs/plan/BACKLOG.json`)에 이미 같은 일이 있는지 본다.
+  있으면 올리지 않는다. 오늘 같은 실패로 거의 같은 스킬이 3개 생긴 전례가 있다.
+- 아카이브된 DONE 태스크 제목도 훑는다. 이미 한 일을 또 시키지 않는다.
+
+## 올릴 때 지킬 것
+
+- **최대 2건.** 많이 올리는 것이 잘하는 게 아니다.
+- 태스크마다 **근거를 본문에 박는다** — 실패 id, 체크리스트 절 번호, 파일:줄 중 하나.
+  근거를 못 대면 그 태스크는 올리지 않는다.
+- 완료 기준은 **프로그램이 가를 수 있게** 쓴다. '개선한다'가 아니라 '이 명령이 exit 0 이 된다'.
+- **음성 시험을 요구한다.** 안 잡는 검사는 통과 도장만 찍는다.
+- `allowedPaths` 를 좁게 준다.
+- 코드를 직접 고치지 마라. 이번 세션은 태스크를 만들기만 한다.
+
+## 올릴 것이 없으면
+
+없다고 보고하고 끝내라. 억지로 만들지 마라. **네 개의 출처가 다 비었다면 그것 자체가
+보고할 사실이다** — 사람이 새 방향을 정해야 한다는 뜻이다.
+
+작업이 끝나면 무엇을 왜 올렸는지(또는 왜 안 올렸는지)를 근거와 함께 남겨라.
+'@
+
 $isReview = ($queueReview -gt 0) -or ($boardReview.Count -gt 0)
-$prompt = if ($isReview) { $reviewPrompt } else { $executePrompt }
+$prompt = if ($isReview) { $reviewPrompt } elseif ($planMode) { $planPrompt } else { $executePrompt }
 
 # 보드가 방아쇠면 그 태스크를 프롬프트에 박는다. "보드를 봐라"가 아니라 무엇을 할지를 준다 —
 # 깨어난 세션은 이 대화의 기억이 없어서, 가리키기만 하면 다른 것을 집는다.
@@ -606,7 +688,7 @@ $promptFile = Join-Path $LogDir "wake-$stamp.prompt.txt"
 [IO.File]::WriteAllText($promptFile, $prompt, [Text.UTF8Encoding]::new($false))
 
 if ($DryRun) {
-  Write-Line "would-wake trigger=$trigger mode=$(if ($isReview) { 'review' } else { 'execute' }) task=$(if ($boardTask) { $boardTask.id } else { 'none' }) prompt=$promptFile"
+  Write-Line "would-wake trigger=$trigger mode=$(if ($isReview) { 'review' } elseif ($planMode) { 'plan' } else { 'execute' }) task=$(if ($boardTask) { $boardTask.id } else { 'none' }) prompt=$promptFile"
   exit 1
 }
 
@@ -726,7 +808,7 @@ try {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $loopLogScript `
       -Text "끝 · $stamp · $tail" 2>&1 | Out-Null
   }
-  Write-Line "woke exit=$($proc.ExitCode) trigger=$trigger mode=$(if ($isReview) { 'review' } else { 'execute' }) log=$log"
+  Write-Line "woke exit=$($proc.ExitCode) trigger=$trigger mode=$(if ($isReview) { 'review' } elseif ($planMode) { 'plan' } else { 'execute' }) log=$log"
 } finally {
   Pop-Location
 }
