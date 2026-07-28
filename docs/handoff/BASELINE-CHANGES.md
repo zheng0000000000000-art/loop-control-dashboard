@@ -445,3 +445,33 @@ C:\NHN Project\_snapshots\2026-07-27-pre-fusion\   (153 파일, data 4.0M + work
 **③ 되돌리는 법**: `CLAUDE.md`의 해당 줄을 원문으로 되돌리고, `coordinator-wake.ps1`의
 `$HumanGateMarker`를 `[사람 게이트]`로, 두 프롬프트의 발사 문구를 "하지 않는다"로 되돌린다.
 `decisionTasks` 블록을 지우면 인계함 등록도 없어진다.
+
+
+## 2026-07-28 루프 자기순환 차단 + 두 게이트 조이기 (session-coord-selffeed, pid 23748)
+
+**주체**: 조율자 세션 23748. 사람이 "계속 막히던데?"라고 물어 원인을 찾다 나온 것들이다.
+
+**① 깨우기 진전 판정에 인계함 포함 + 멈춤 보고를 `- [!]` 로 (조임)**
+근거: 20:11~21:01 네 주기 연속 `woke trigger=inbox=N -> no-progress before=0 after=1`.
+`before/after` 가 큐+보드만 세는데 깨어난 이유는 인계함이었다. 그 판정을 다시 `- [ ]` 로
+인계함에 적었고 `- [ ]` 개수가 최상위 깨우기 이유라 루프가 자기가 쓴 줄로 자기를 깨웠다.
+되돌리는 법: `scripts/coordinator-wake.ps1` 에서 `$stillInbox`/`$inboxPending` 항을
+`$before`/`$after` 합에서 빼고, `Report-Stop` 의 `- [!]` 를 `- [ ]` 로 되돌린다.
+
+**② board-claim 이 세션 pid 를 모르면 거부 (조임)**
+근거: `-SessionPid` 없이 부른 claim 이 장부에 `0` 을 박았다. MCP `approve_task` 의 검사가
+`mine > 0 -and executed > 0 -and mine -eq executed` 라서 `executed=0` 이면 어떤 세션이든
+자기 일을 자기가 승인할 수 있다. 게이트가 조용히 무장해제된다.
+되돌리는 법: `scripts/board-claim.ps1` 의 `claim-needs-session-pid` 분기와 `Get-SessionPid`
+호출을 지우고 `[int]$SessionPid = 0` 기본값을 그대로 쓴다.
+
+**③ session-worktree Remove 가 착지 안 한 커밋을 안 버림 (조임)**
+근거: Land 가 "트리 clean 아님"으로 거부된 직후 Remove 가 돌아 커밋 하나가 브랜치째 사라졌다.
+`git fsck` 의 dangling 으로만 되찾았다. 되찾을 수 있었던 건 운이다.
+되돌리는 법: `scripts/session-worktree.ps1` 의 `remove-refused-unlanded` 블록을 지운다.
+일회성으로 버리려면 지우지 말고 `-Force` 를 준다.
+
+**셋 다 좁히는 방향이라 위임 재량으로 실행했다**(넓히는 변경이면 사람 결재였다).
+셋 다 실행으로 쟀다. 특히 ②③ 은 시험이 각각 결함을 하나씩 잡았다 — `-like` 의 대괄호가
+문자 클래스로 먹힌 것과 `Invoke-Git` 반환을 `.Out` 으로 읽은 것. 둘 다 시험이 없었으면
+통과했고 조용히 안 걸렸을 코드다.
