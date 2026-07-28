@@ -864,6 +864,19 @@
   대시보드에서 이 완성된 코드를 수작업으로 다음 단계로 옮기거나 (b) 스폰 샌드박스의 권한 거부
   근본 원인을 team-loop 쪽에서 조사하는 것만 남는다.
 
+- **`tsk_19e56ea3cea3be04f8fd` attempt 2/2가 발사 자체에서 걸린 것으로 보인다 — 결과를 기다리는
+  것과는 다른 새 문제.** (2026-07-28, 여러 세션이 5분 간격으로 관찰, 이 세션 `session-20260728-200606`이
+  가장 최근 재확인)
+  재큐잉(10:43:06.776Z) 이후 `BOARD_WORKER_LAUNCHED`가 **24분 넘게** 안 찍힌다 —
+  attempt 1은 큐잉→발사가 6ms였다. `Get-Process`로 이 세션이 직접 재확인해도 재큐잉 시각
+  근처에 시작한 `claude.exe`/`node` 워커 프로세스가 전혀 없다(team-loop 서버 자신인
+  `node pid=22620`은 08:06 KST 시작이라 무관). `coordinator-inbox.md`의
+  `tsk_19e56ea3cea3be04f8fd` 줄에 상세를 남겼고 `discussions.json`에도 후속 메시지
+  (`msg_coordreply_gatereport_queue_stall_20260728_200606`)를 남겼다. 이 세션도 재발사하지
+  않았다(이미 QUEUED인 것을 또 부르면 `maxAttempts 2`를 헛되이 태울 위험).
+  **사람이 볼 것**: attempt 2/2가 결과를 내기 전에 발사 자체가 멈춘 것으로 보인다 — (a) 대시보드
+  에서 수동으로 다시 큐잉/발사하거나 (b) 스케줄러 로그로 발사 실패 원인을 확인해야 한다.
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
