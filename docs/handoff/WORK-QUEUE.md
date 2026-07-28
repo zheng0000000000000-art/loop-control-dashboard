@@ -463,6 +463,36 @@
   이 5개 QA 증거 파일을 outbox 경유로 다시 반입하거나 다른 경로로 옮기기 (c) 이대로 낮은 심각도의
   기지 gap으로 남겨두기.
 
+- **사람 지시 2건 처리 — team-loop 서버 재시작(+향후 재량 위임 확인) 및 "거절 권고" 질문 답변.**
+  (2026-07-28, 이 조율자 세션 `session-20260728-131106`, 코드 변경 없음 — 사람 메시지 응답 +
+  운영 조치)
+  **재시작(실체 확인)**: `discussions.json`의 `msg_dcdea9286725e47e23ad`(04:04:27Z "재시작해줘.
+  재시작도 알아서 해도 돼.")를 확인하기 전, `scripts/check-stale-server.ps1`로 먼저 재확인 —
+  `server-stale pid=7492`(서버 시작 03:46:50 vs 코드 커밋 12:09:50, 기존 경고와 일치). 실제 프로세스를
+  `Get-CimInstance Win32_Process`로 대조해 정확한 기동 명령(`node ./bin/team-loop.js serve --port 4173`,
+  작업 디렉터리 `team-loop-lite-ai-learning`)을 확인한 뒤 `Stop-Process -Id 7492 -Force` →
+  같은 명령으로 재기동 → 새 pid `22620`. 확인: `http://localhost:4173/` → `200`,
+  `check-stale-server.ps1` 재실행 → `server-fresh pid=22620`.
+  **답변(거절 권고)**: `msg_a90d078079b4866c6665`(04:04:52Z "거절 권고는 뭐야?")에 대해
+  `show_task(tsk_3b9760b2f47c055baecb)`를 직접 조회해 확인 — `aiReview.verdict: REJECT`
+  (03:14:05Z, 그 시점 제출물이 코드 없는 misroute 문서였을 때 낸 정당한 판정)과
+  `review.independentReview.verdict: REJECT, overriddenByHuman: true`가 남아 있는 것이,
+  이후 판정 세션(`20260728-125719`)이 실제 코드 증거(Local-First 커밋 `98663a4`)로 재제출·재검증한
+  뒤 사람이 `adminOverride:true`로 `APPROVED`를 덮어쓴 것임을 확인 — 두 답을 `discussions.json`에
+  직접 남겼다(`msg_coordreply_restart_done_20260728_131106`,
+  `msg_coordreply_rejectrecommend_explain_20260728_131106`, `DiscussionStore.addMessage`와 같은
+  스키마로 직접 작성 — `data/*.json`이 team-loop 저장소에서 gitignore 대상이라 커밋 불필요).
+  읽음 처리는 파일을 손으로 안 고치고 `src/discussions.js`의 `DiscussionStore.markRead`를 직접
+  호출해 정본 API 경로를 그대로 썼다(이 저장소가 최근 고친 readBy 문자열/객체 버그를 재발시키지
+  않기 위해) — `marked: [msg_dcdea9286725e47e23ad, msg_a90d078079b4866c6665]`, 재조회로
+  unread 0 확인.
+  **위임 확인**: "재시작도 알아서 해도 돼"는 앞으로 stale 경고가 뜨면 사람 확인 없이 재시작해도
+  된다는 뜻으로 받아들였다 — 재시작 자체가 로컬·가역적 조치(같은 명령으로 다시 띄우면 됨)라
+  `[[prefers-fail-closed-over-convenience]]`·`[[delegated-discretion-tightening-only]]`류의
+  기존 위임 원칙과 결이 다르지 않다고 판단해 즉시 실행했다. 메모리에도 남겨 다음 세션이
+  안 물어보고 재시작하게 했다.
+  **사람이 볼 것**: 없음 — 확인 요청이 아니라 완료 보고.
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
