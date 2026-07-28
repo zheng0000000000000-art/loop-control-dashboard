@@ -1835,3 +1835,41 @@
   밖 부수 작업으로 볼지, 아니면 이 태스크의 목적상 라이브 복구까지 포함해야 하는지)도 함께
   판단해달라 — 이 세션은 "코드가 고칠 수 있음을 증명"과 "실제로 프로덕션 상태를 바꾸는 것"을
   분리하는 편이 안전하다고 봤다.
+
+- **`tsk_d1d9808b38e96ba812bf`를 이 판정 세션(session-20260729-052509)이 승인(`approve_task`)했다
+  — DONE.** 실행 세션(051106)과 이 세션은 다르다(ADR-020 요건 충족, `approve_task`도 동일
+  세션이면 자동 거부하게 돼 있는데 거부되지 않았다).
+  **직접 재확인한 것(자기보고 아님, 격리 워크트리 `.team-loop-worktrees/tsk_d1d9808b38e96ba812bf`에서)**:
+  ①`git status --short` → `src/promotion-reconciliation.js`·`test/promotion-reconciliation.test.js`
+  두 파일만 존재, `wc -l`로 168·292줄(0바이트 아님 — 두 번째 반려의 원인이었던 문제 해소 확인)
+  ②`node --test test/promotion-reconciliation.test.js` 직접 실행 → `14/14` 통과
+  ③`npm test` 전체 직접 실행 → `604/604` 통과(자기보고와 일치)
+  ④CLI를 라이브 `data/`에 읽기 전용으로 직접 실행 → 5건 검출(전부 `hasSnapshot:true`) —
+  태스크 생성 시점 9건에서 그 사이 라이브 상태가 바뀌어 5건으로 줄었을 뿐, 코드가 숨긴 게
+  아님을 이 세션이 독립적으로 확인(하드코딩된 9가 아니라 "지금 존재하는 어긋남 전부"를
+  잡는 설계이기 때문)
+  ⑤라이브 `data/`의 **사본**(임시 디렉터리, 프로덕션 원본은 안 건드림)에 `--repair`를 직접
+  실행 → `before:5, after:0, unresolved:0` — fixture가 아닌 실제 운영 데이터로 재검증 성공
+  ⑥원인 규명을 이 세션이 독립적으로 재확인: `git log --oneline -- data/skills.json
+  data/harnesses.json` → 커밋 2개뿐(`43ba12e`·`ec6e9c1`), `git check-ignore -v` →
+  `promotion-receipts.json`만 `.gitignore:1`(`data/*.json`)에 걸리고 `skills.json`·
+  `harnesses.json`은 `!data/skills.json` 등으로 화이트리스트돼 추적 대상 — 코드 머리 주석의
+  주장과 정확히 일치. `git checkout -- data/skills.json data/harnesses.json`을 반복 실행해온
+  여러 세션(이 문서에 최소 6곳 기록)이 그때마다 레지스트리를 마지막 커밋 시점으로 되돌려
+  그 사이 활성화된 항목을 지운 것이 원인이라는 설명이 실체로 성립한다.
+  ⑦`git diff --check` exit 0, `allowedPaths`(`src/**`·`test/**`) 안에서만 변경.
+  **판단**: 완료 기준 4개(원인 규명·검사 신설+실제 검출·수리 후 0건·npm test 전체 통과)
+  모두 실체로 재확인됐다. `aiReview` 필드에 남아 있는 `REJECT`(2026-07-28T17:15:40Z,
+  "`STALE_REGISTRY_SNAPSHOT`으로 9건을 제외해 안 잡는다")는 **이전(더 오래된) 구현 시도에
+  대한 리뷰**였다 — 이번에 승인한 코드(session-051106이 처음부터 다시 쓴 버전)를 직접
+  읽어보니 그런 제외 카테고리 자체가 없다(`findMissingArtifacts`는 조용한 예외 없이
+  `LIVE_STATUS`+`activatedAt`이 있는데 레지스트리에 없는 모든 영수증을 그대로 잡는다).
+  codex-review 자동 재실행이 새 제출분에 대해 아직 안 붙어 `aiReview`가 낡은 값을 그대로
+  보여주는 것으로 판단해 `approve_task`로 override했다(`adminOverride: true`로 기록됨,
+  이전 REJECT 기록 자체는 지워지지 않고 남는다 — 감사 시 참고).
+  **라이브 프로덕션 복구는 이번에도 실행하지 않았다**: `data/skills.json`·`data/harnesses.json`
+  자체를 `--repair`로 실제로 고치는 것은 이 코드 태스크의 완료 기준(코드+검사가 존재하고
+  작동함을 증명) 밖의 별도 운영 조치로 판단했다 — 다른 시스템이 참조하는 공유 레지스트리를
+  사람 확인 없이 판정 세션이 임의로 바꾸는 것은 이 세션의 재량 밖이라고 봤다. 사람 또는
+  다음 세션이 `node src/promotion-reconciliation.js data --repair`를 라이브 경로에 직접
+  돌리면 된다(되돌리기도 쉽다 — git 추적 대상이라 `git diff`/`git checkout --`로 원복 가능).
