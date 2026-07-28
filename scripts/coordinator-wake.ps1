@@ -345,7 +345,7 @@ foreach ($line in @($mainDirty)) {
   if (-not $entry.Trim()) { continue }
   $path = if ($entry.Length -gt 3) { $entry.Substring(3).Trim() } else { $entry.Trim() }
   if ($path.Contains(' -> ')) { $path = ($path -split ' -> ')[-1] }
-  $path = $path.Trim('"').Replace('', '/')
+  $path = $path.Trim('"').Replace([char]92, '/')
   $isGenerated = $false
   foreach ($g in $generatedPrefixes) { if ($path.StartsWith($g)) { $isGenerated = $true; break } }
   if (-not $isGenerated) { $sourceDirty += $path }

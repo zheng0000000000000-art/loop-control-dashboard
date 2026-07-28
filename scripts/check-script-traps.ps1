@@ -64,6 +64,17 @@ function Test-HeadersCookie([string]$code) {
   return $found
 }
 
+# 규칙 4: 빈 문자열을 첫 인자로 주는 Replace/Split 은 항상 예외를 던진다.
+# 실측(2026-07-28): 파이썬으로 스크립트를 만들다 역슬래시가 이스케이프로 먹혀
+# Replace('', '/') 가 파일에 박혔다. 문법은 통과하고 실행 때 터진다.
+# 이스케이프가 삼켜진 자리는 대개 이렇게 빈 인자로 남는다.
+function Test-EmptyReplace([string]$code) {
+  $found = @()
+  foreach ($m in [regex]::Matches($code, "\.(Replace|Split)\(\s*''\s*,")) { $found += $m.Value }
+  foreach ($m in [regex]::Matches($code, '\.(Replace|Split)\(\s*""\s*,')) { $found += $m.Value }
+  return $found
+}
+
 function Invoke-Scan([string]$root) {
   $violations = @()
   foreach ($file in Get-ChildItem -Path $root -Filter '*.ps1' -Recurse -File) {
@@ -83,6 +94,9 @@ function Invoke-Scan([string]$root) {
       if (-not $code.Trim()) { continue }
       foreach ($hit in (Test-LikeBracket $code)) {
         $violations += "$($file.FullName):$($n + 1) like-bracket : $hit  (대괄호는 문자 클래스다. StartsWith/EndsWith 나 -match 를 써라)"
+      }
+      foreach ($hit in (Test-EmptyReplace $code)) {
+        $violations += "$($file.FullName):$($n + 1) empty-replace : $hit  (빈 문자열 인자는 실행 때 터진다. 이스케이프가 삼켜진 자리다)"
       }
       foreach ($hit in (Test-HeadersCookie $code)) {
         $violations += "$($file.FullName):$($n + 1) headers-cookie : $hit  (PowerShell 5.1 은 -Headers 의 Cookie 를 버린다. WebRequestSession 을 써라)"
@@ -104,7 +118,8 @@ if ($SelfTest) {
       '$r = @($lines | Where-Object { $_ -like "- [!]*$reason" })',
       '$n = Invoke-Git $Root @(''rev-list'')',
       '[void][int]::TryParse(($n.Out).Trim(), [ref]$c)',
-      '$h = @{ ''X-Team-Loop-Client'' = ''cli''; ''Cookie'' = $cookie }'
+      '$h = @{ ''X-Team-Loop-Client'' = ''cli''; ''Cookie'' = $cookie }',
+      '$p = $p.Replace('''', ''/'')'
     ) -join "`r`n"
     [IO.File]::WriteAllText((Join-Path $tmp 'bad.ps1'), $bad, [Text.UTF8Encoding]::new($true))
     # 음성: 고친 형태 + 함정을 설명하는 주석만 있는 파일
@@ -113,7 +128,8 @@ if ($SelfTest) {
       '# -like 에 [ ] 를 쓰면 안 된다. 그리고 $x.Out 도 없는 속성이다. 주석은 안 걸려야 한다.',
       '$n = Invoke-Git $Root @(''rev-list'')',
       '[void][int]::TryParse(($n.Text).Trim(), [ref]$c)',
-      '$ws = New-Object Microsoft.PowerShell.Commands.WebRequestSession'
+      '$ws = New-Object Microsoft.PowerShell.Commands.WebRequestSession',
+      '$p = $p.Replace([char]92, ''/'')'
     ) -join "`r`n"
     [IO.File]::WriteAllText((Join-Path $tmp 'good.ps1'), $good, [Text.UTF8Encoding]::new($true))
 
@@ -123,12 +139,14 @@ if ($SelfTest) {
     $likeHits = @($badHits | Where-Object { $_ -match 'like-bracket' })
     $fieldHits = @($badHits | Where-Object { $_ -match 'invoke-git-field' })
     $cookieHits = @($badHits | Where-Object { $_ -match 'headers-cookie' })
+    $emptyHits = @($badHits | Where-Object { $_ -match 'empty-replace' })
 
     "self-test 양성 like-bracket = $($likeHits.Count) (기대 1)"
     "self-test 양성 invoke-git-field = $($fieldHits.Count) (기대 1)"
     "self-test 음성 위반 = $($goodHits.Count) (기대 0)"
     "self-test 양성 headers-cookie = $($cookieHits.Count) (기대 1)"
-    if ($likeHits.Count -ne 1 -or $fieldHits.Count -ne 1 -or $cookieHits.Count -ne 1 -or $goodHits.Count -ne 0) {
+    "self-test 양성 empty-replace = $($emptyHits.Count) (기대 1)"
+    if ($likeHits.Count -ne 1 -or $fieldHits.Count -ne 1 -or $cookieHits.Count -ne 1 -or $emptyHits.Count -ne 1 -or $goodHits.Count -ne 0) {
       $all | ForEach-Object { "  $_" }
       Write-Output 'script-traps self-test FAIL'
       exit 1

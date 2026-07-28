@@ -136,7 +136,7 @@ switch ($Action) {
     foreach ($line in $dirtyLines) {
       $path = if ($line.Length -gt 3) { $line.Substring(3).Trim() } else { $line.Trim() }
       if ($path.Contains(' -> ')) { $path = ($path -split ' -> ')[-1] }
-      $path = $path.Trim('"').Replace('', '/')
+      $path = $path.Trim('"').Replace([char]92, '/')
       if (-not (Test-Generated $path)) { $nonGenerated += $path }
     }
     if ($dirtyLines.Count -gt 0 -and $nonGenerated.Count -eq 0) {
