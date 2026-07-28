@@ -244,6 +244,7 @@ if ((Test-Path $boardSweepScript) -and (Test-Path $BoardPath)) {
 $pendingWork = 0
 $boardReady  = @()   # 지금 집을 수 있는 것
 $boardReview = @()   # 판정만 남은 것
+$boardInFlight = 0   # 진행 중인 것
 if (Test-Path $BoardPath) {
   try {
     $board = Get-Content -Raw -Encoding UTF8 $BoardPath | ConvertFrom-Json
@@ -253,6 +254,10 @@ if (Test-Path $BoardPath) {
 
     $doneIds = @($tasks | Where-Object { $_.status -eq 'DONE' } | ForEach-Object { $_.id })
     $boardReview = @($tasks | Where-Object { $_.status -eq 'REVIEW' } | Sort-Object { [int]$_.priority })
+    # 진행 중인 것도 센다. IN_PROGRESS 는 boardReady 에도 boardReview 에도 안 잡혀서
+    # 일이 돌고 있는데도 보드가 빈 것으로 읽혔다 - 2026-07-29 02:11 실측: 태스크가
+    # IN_PROGRESS 인데 plan-mode 가 떴다. 일이 있는데 일감을 또 만들 이유가 없다.
+    $boardInFlight = @($tasks | Where-Object { $_.status -eq 'IN_PROGRESS' }).Count
     # 막힌 것과 선행이 안 끝난 것은 집지 않는다. 집어봐야 같은 자리에서 막힌다.
     # 제목이 사람 게이트 표식으로 시작하는 것도 안 집는다. 발사와 approve/reject 와 기준 파일
     # 변경은 사람 결재다(CLAUDE.md). 보드에 올려 폰에서 보이게는 하되 실행자가 집으면
@@ -335,7 +340,7 @@ if (Test-Path $InboxPath) {
 # pendingWork 로 깨우지 않는다. 거기엔 사람 게이트 태스크가 섞여 있어서
 # 아무도 집을 수 없는 일로 깨우고, 그다음 no-progress 로 멈춘다.
 # 2026-07-27 실측: board-stuck=2 로 깨어나 no-progress before=0 after=1 로 끝났다.
-if ($inboxPending -eq 0 -and $unread.Count -eq 0 -and $boardReady.Count -eq 0 -and $boardReview.Count -eq 0 -and $queueOpen -eq 0 -and $queueReview -eq 0) {
+if ($inboxPending -eq 0 -and $unread.Count -eq 0 -and $boardReady.Count -eq 0 -and $boardReview.Count -eq 0 -and $queueOpen -eq 0 -and $queueReview -eq 0 -and $boardInFlight -eq 0) {
   # 보드가 말랐다. 여기서 그냥 끝내면 일감이 조율자로부터만 나온다 - 조율자가 대화에 응답할
   # 때만 태스크가 생기고 그 사이 루프는 멀쩡한데도 선다. 실행과 판정은 이미 조율자 손을
   # 떠났는데 발생만 안 떠나 있었다. 백로그에서 다음 항목을 꺼내 보드에 올린다.
