@@ -814,6 +814,18 @@
   이후 사람 메시지 없음 — 위 (a)(b)(c) 중 아직 아무것도 사람이 고르지 않았다. 이 세션은
   재발사하지 않았다(새 근거 없이 이전 두 세션의 판단을 뒤집지 않는다). `coordinator-inbox.md`
   해당 줄에도 같은 내용을 덧붙였다 — **여전히 [ ]**.
+  **재확인(2026-07-28T10:02Z 근처, session-20260728-190106)**: 사람이 `discussions.json`에
+  `msg_f1d75f4c894262b78f49`(09:51:14Z "작업이 멈춰있는데?")로 새로 물었다. `show_task`로 재대조 —
+  `verification.status FAILED`(`finishedAt 08:58:16.198Z`, 이전과 동일 시각), `executionState IDLE`,
+  `attempt 1/2`, `circuitOpen false` — **상태 변화 없음**을 재확인. `DiscussionStore.addMessage`
+  (정본 API)로 직접 회신(`msg_31b0d12457ece0282eaf`) — 코드는 완성돼 있다는 것, 막힌 원인은 스폰
+  실행자의 샌드박스가 Bash를 거부해 검증을 못 돌린 환경 문제(코드 결함 아님)라는 것, 선택지
+  (a)(b)(c)가 그대로 남아 있다는 것을 설명했다. `markRead`로 그 메시지를 읽음 처리.
+  `coordinator-inbox.md`에도 같은 내용을 덧붙였다. 이 세션도 attempt 2/2를 임의로 당기지
+  않았다 — 근거 없는 재시도이고 마지막 시도라 비가역적 낭비 위험이 크다고 판단(ADR-021 재량
+  안이지만 새 근거 없이 쓰지 않는다는 기존 세션들의 판단 유지). 라이브 서버가 재직렬화한
+  `data/harnesses.json`은 `git checkout --`로 원복해 team-loop 워킹트리를 깨끗이 함. **여전히
+  [ ]** — 사람 결정 대기 그대로.
 
 ## 끝난 것
 
