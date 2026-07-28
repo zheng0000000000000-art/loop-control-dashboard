@@ -53,6 +53,17 @@ function Test-InvokeGitField([string]$code, [bool]$fileUsesInvokeGit) {
   return $found
 }
 
+# 규칙 3: Invoke-RestMethod / Invoke-WebRequest 의 -Headers 에 Cookie 를 넣으면 조용히 버려진다.
+# 실측(2026-07-28): 8/1 까지 유효한 토큰인데 401 이 났다. 같은 토큰을 WebRequestSession 에
+# 넣으니 바로 통했다. 버리면서 아무 말도 안 하니 만료로 오진하게 된다.
+function Test-HeadersCookie([string]$code) {
+  if ($code -notmatch 'Cookie') { return @() }
+  if ($code -notmatch '@\{') { return @() }
+  $found = @()
+  foreach ($m in [regex]::Matches($code, "@\{[^}]*'?`"?Cookie'?`"?\s*=")) { $found += $m.Value.Trim() }
+  return $found
+}
+
 function Invoke-Scan([string]$root) {
   $violations = @()
   foreach ($file in Get-ChildItem -Path $root -Filter '*.ps1' -Recurse -File) {
@@ -73,6 +84,9 @@ function Invoke-Scan([string]$root) {
       foreach ($hit in (Test-LikeBracket $code)) {
         $violations += "$($file.FullName):$($n + 1) like-bracket : $hit  (대괄호는 문자 클래스다. StartsWith/EndsWith 나 -match 를 써라)"
       }
+      foreach ($hit in (Test-HeadersCookie $code)) {
+        $violations += "$($file.FullName):$($n + 1) headers-cookie : $hit  (PowerShell 5.1 은 -Headers 의 Cookie 를 버린다. WebRequestSession 을 써라)"
+      }
       foreach ($hit in (Test-InvokeGitField $code $usesInvokeGit)) {
         $violations += "$($file.FullName):$($n + 1) invoke-git-field : $hit  (Invoke-Git 는 .Code 와 .Text 만 돌려준다)"
       }
@@ -89,7 +103,8 @@ if ($SelfTest) {
     $bad = @(
       '$r = @($lines | Where-Object { $_ -like "- [!]*$reason" })',
       '$n = Invoke-Git $Root @(''rev-list'')',
-      '[void][int]::TryParse(($n.Out).Trim(), [ref]$c)'
+      '[void][int]::TryParse(($n.Out).Trim(), [ref]$c)',
+      '$h = @{ ''X-Team-Loop-Client'' = ''cli''; ''Cookie'' = $cookie }'
     ) -join "`r`n"
     [IO.File]::WriteAllText((Join-Path $tmp 'bad.ps1'), $bad, [Text.UTF8Encoding]::new($true))
     # 음성: 고친 형태 + 함정을 설명하는 주석만 있는 파일
@@ -97,7 +112,8 @@ if ($SelfTest) {
       '$r = @($lines | Where-Object { $_.StartsWith(''- [!]'') -and $_.EndsWith($reason) })',
       '# -like 에 [ ] 를 쓰면 안 된다. 그리고 $x.Out 도 없는 속성이다. 주석은 안 걸려야 한다.',
       '$n = Invoke-Git $Root @(''rev-list'')',
-      '[void][int]::TryParse(($n.Text).Trim(), [ref]$c)'
+      '[void][int]::TryParse(($n.Text).Trim(), [ref]$c)',
+      '$ws = New-Object Microsoft.PowerShell.Commands.WebRequestSession'
     ) -join "`r`n"
     [IO.File]::WriteAllText((Join-Path $tmp 'good.ps1'), $good, [Text.UTF8Encoding]::new($true))
 
@@ -106,11 +122,13 @@ if ($SelfTest) {
     $goodHits = @($all | Where-Object { $_ -match 'good\.ps1' })
     $likeHits = @($badHits | Where-Object { $_ -match 'like-bracket' })
     $fieldHits = @($badHits | Where-Object { $_ -match 'invoke-git-field' })
+    $cookieHits = @($badHits | Where-Object { $_ -match 'headers-cookie' })
 
     "self-test 양성 like-bracket = $($likeHits.Count) (기대 1)"
     "self-test 양성 invoke-git-field = $($fieldHits.Count) (기대 1)"
     "self-test 음성 위반 = $($goodHits.Count) (기대 0)"
-    if ($likeHits.Count -ne 1 -or $fieldHits.Count -ne 1 -or $goodHits.Count -ne 0) {
+    "self-test 양성 headers-cookie = $($cookieHits.Count) (기대 1)"
+    if ($likeHits.Count -ne 1 -or $fieldHits.Count -ne 1 -or $cookieHits.Count -ne 1 -or $goodHits.Count -ne 0) {
       $all | ForEach-Object { "  $_" }
       Write-Output 'script-traps self-test FAIL'
       exit 1

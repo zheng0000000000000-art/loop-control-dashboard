@@ -13,7 +13,10 @@
 param(
   [string]$BoardPath = 'C:\NHN Project\team-loop-lite-ai-learning\data\tasks.json',
   [string]$BacklogPath = 'C:\Users\1\Documents\Local-First Workflow Dashboard\docs\plan\BACKLOG.json',
-  [string]$ServerUrl = 'http://localhost:4173',
+  # 서버 주소와 쿠키는 team-loop CLI 가 로그인 때 저장해 둔 것을 그대로 쓴다. 두 벌로 두면
+  # 한쪽만 바뀌어 조용히 인증이 깨진다. 비워 두면 저장된 server 를 쓴다.
+  [string]$SessionPath = (Join-Path $env:USERPROFILE '.team-loop-lite\session.json'),
+  [string]$ServerUrl = '',
   # 조율자가 판단할 일은 세션이 집을 수 없다. 그래서 보드가 말랐는지 셀 때도 빼야 한다 -
   # 안 그러면 아무도 못 집는 태스크 하나 때문에 백로그가 영원히 안 열린다.
   [string[]]$UnclaimableMarkers = @('[조율자 판단]', '[사람 게이트]'),
@@ -96,6 +99,24 @@ if ($existing) {
 
 if ($DryRun) { Write-Output "backlog-would-create $($pick.id) $($pick.title)"; exit 0 }
 
+# POST 는 인증이 필요하다. 2026-07-28 실측: 헤더 없이 보내 403 이 났고
+# "X-Team-Loop-Client header is required for POST requests" 였다(server.js requireTrustedClientHeader).
+# 쿠키가 없으면 올리지 않는다 - 인증 없이 올린 척하면 백로그만 소비되고 보드는 그대로다.
+if (-not (Test-Path $SessionPath)) { Write-Output "backlog-no-session $SessionPath"; exit 3 }
+try {
+  $session = Get-Content -Raw -Encoding UTF8 $SessionPath | ConvertFrom-Json
+} catch {
+  Write-Output "backlog-session-unreadable $($_.Exception.Message)"
+  exit 3
+}
+$cookie = [string]$session.cookie
+if (-not $cookie) { Write-Output 'backlog-no-cookie - team-loop login 이 필요하다'; exit 3 }
+# 저장된 값은 "이름=값" 형태다. 쿠키 그릇에는 값만 넣는다.
+$cookieValue = [Uri]::UnescapeDataString(($cookie -split '=', 2)[1])
+if (-not $cookieValue) { Write-Output 'backlog-cookie-unparsable'; exit 3 }
+if (-not $ServerUrl) { $ServerUrl = [string]$session.server }
+if (-not $ServerUrl) { Write-Output 'backlog-no-server'; exit 3 }
+
 $body = @{
   title = [string]$pick.title
   description = [string]$pick.description
@@ -111,7 +132,14 @@ $bytes = [Text.Encoding]::UTF8.GetBytes($json)
 # 올리는 데 실패하면 백로그를 건드리지 않는다. 소비했다고 적어놓고 실제로는 안 올라갔으면
 # 그 항목은 영원히 사라진다.
 try {
-  $resp = Invoke-RestMethod -Uri "$ServerUrl/api/tasks" -Method Post -Body $bytes -ContentType 'application/json; charset=utf-8'
+  # 쿠키를 -Headers 에 넣으면 안 된다. PowerShell 5.1 의 Invoke-RestMethod 는 Headers 의
+  # Cookie 를 조용히 버린다 - 2026-07-28 실측: 토큰은 8/1 까지 유효한데 401 이 났고,
+  # WebRequestSession 으로 같은 토큰을 넣으니 바로 통했다. 버리면서 아무 말도 안 한다.
+  $uri = [Uri]"$ServerUrl/api/tasks"
+  $webSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+  $webSession.Cookies.Add((New-Object System.Net.Cookie('team_loop_session', $cookieValue, '/', $uri.Host)))
+  $headers = @{ 'X-Team-Loop-Client' = 'cli'; 'Accept' = 'application/json' }
+  $resp = Invoke-RestMethod -Uri $uri -Method Post -Body $bytes -WebSession $webSession -Headers $headers -ContentType 'application/json; charset=utf-8'
 } catch {
   Write-Output "backlog-create-failed $($pick.id) : $($_.Exception.Message)"
   exit 3
