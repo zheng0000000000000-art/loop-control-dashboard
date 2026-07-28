@@ -519,3 +519,22 @@ C:\NHN Project\_snapshots\2026-07-27-pre-fusion\   (153 파일, data 4.0M + work
 만들기 전과 같은 정지다. 6 건만큼 미뤄졌을 뿐이다. **마르기 전에 말해야 한다.**
 
 **잰 것**: 소진 상태에서 1 회차는 `backlog-alert-sent exhausted`, 2 회차는 억제됐다.
+
+
+## 2026-07-29 server-stale 처치 한도 3 -> 24 (session-coord-remedycap, pid 23748)
+
+**이것은 완화다.** 같은 처치를 하루에 더 많이 돌리게 한다.
+
+**근거(실측)**: 2026-07-29 01:41 에 `remedy-exhausted server-stale (3/3회)` 가 뜨고
+`server-stale-persists` 로 사람에게 올라갔다. 그런데 서버가 안 고쳐진 게 아니라
+**한도가 막아서 재시작을 못 한 것**이었다.
+
+team-loop 코드는 20:00 이후 6시간에 **9번** 바뀌었다(`git log -- server.js src mcp public`).
+루프가 승인된 태스크를 병합할 때마다 바뀐다. **즉 stale 은 고장이 아니라 루프가 잘 돌고 있다는
+증거다.** 하루 3회는 그 속도에 못 미친다.
+
+**무엇이 조용히 넘어가게 되는가**: 서버가 뜨자마자 죽어 계속 재시작하는 상황을 24회까지
+못 잡는다. 다만 그 경우 `server-stale-persists`(재시작 뒤에도 stale)가 **매번** 뜬다 —
+진짜 알람은 그쪽이고 그건 한도와 무관하다. 한도는 폭주 방지용 상한이지 진단이 아니다.
+
+**되돌리는 법**: `scripts/remedies.json` 의 `server-stale.maxPerDay` 를 3 으로 되돌린다.
