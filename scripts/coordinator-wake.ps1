@@ -74,6 +74,14 @@ function Report-Stop([string]$reason, [string]$detail) {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $loopLogScriptEarly `
       -Text "멈춤 · $reason · $detail" 2>&1 | Out-Null
   }
+  # 폰으로도 보낸다. 인계함과 대화 채널은 사람이 그 화면을 열어야 보인다 -
+  # 2026-07-28 실측: 회로 차단기가 걸려 멈춰 있었는데 사람이 물어야 알았다.
+  # 알림이 사람을 찾아가야지 사람이 알림을 찾으러 가면 안 된다.
+  $notifyScript = Join-Path (Split-Path -Parent $PSCommandPath) 'notify.ps1'
+  if (Test-Path $notifyScript) {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $notifyScript `
+      -Title "루프 멈춤" -Body "$reason`n$detail" -Tags "octagonal_sign" 2>&1 | Out-Null
+  }
 }
 
 # 명시적 정지 표식. 조율자가 "지금은 멈춰라"고 말할 때만 만든다.
@@ -197,6 +205,12 @@ foreach ($decisionTask in $decisionTasks) {
   New-Item -ItemType Directory -Force -Path (Split-Path -Parent $InboxPath) | Out-Null
   Add-Content -Path $InboxPath -Encoding UTF8 -Value "- [ ] $stampNow decision-needed : $($decisionTask.id) $($decisionTask.title)"
   Write-Line "decision-queued $($decisionTask.id)"
+  $notifyScript = Join-Path (Split-Path -Parent $PSCommandPath) 'notify.ps1'
+  if (Test-Path $notifyScript) {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $notifyScript `
+      -Title "조율자 판단 필요" -Body "$($decisionTask.id)`n$($decisionTask.title)" `
+      -Tags "question" -Priority "3" 2>&1 | Out-Null
+  }
 }
 
 $inboxPending = 0
