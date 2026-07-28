@@ -27,6 +27,30 @@ param(
 
 $ErrorActionPreference = 'Stop'
 if (-not $TaskId) { Write-Output 'needs-task-id'; exit 2 }
+
+# 세션 pid 를 부르는 쪽이 안 줬으면 직접 알아낸다. 0 을 그대로 장부에 적으면 안 된다 -
+# MCP approve_task 의 독립성 검사가 `mine > 0 -and executed > 0 -and mine -eq executed` 라서
+# executed 가 0 이면 어떤 세션이든 자기 일을 자기가 승인할 수 있다. 검사가 조용히 무장해제된다.
+# 2026-07-28 실측: 이 스크립트를 -SessionPid 없이 부른 claim 이 장부에 pid 0 으로 박혔다.
+# 판별은 session-lock.ps1 과 같은 방식이다 - 조상 중 claude.exe 를 세션이라고 부른다.
+function Get-SessionPid {
+  $current = $PID
+  for ($depth = 0; $depth -lt 12; $depth++) {
+    $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$current" -ErrorAction SilentlyContinue
+    if (-not $proc) { return 0 }
+    if ($proc.Name -eq 'claude.exe') { return [int]$proc.ProcessId }
+    if (-not $proc.ParentProcessId) { return 0 }
+    $current = [int]$proc.ParentProcessId
+  }
+  return 0
+}
+if ($Action -eq 'Claim' -and $SessionPid -le 0) { $SessionPid = Get-SessionPid }
+# 그래도 모르면 잡지 않는다. 모르는 것은 통과가 아니다 - 승인 게이트가 무장해제된 채로
+# 태스크가 진행되느니 여기서 멈추는 편이 낫다.
+if ($Action -eq 'Claim' -and $SessionPid -le 0) {
+  Write-Output 'claim-needs-session-pid'
+  exit 2
+}
 if (-not (Test-Path $BoardPath)) { Write-Output 'board-missing'; exit 2 }
 
 function Read-Ledger {
