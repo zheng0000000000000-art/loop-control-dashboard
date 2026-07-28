@@ -876,6 +876,16 @@
   않았다(이미 QUEUED인 것을 또 부르면 `maxAttempts 2`를 헛되이 태울 위험).
   **사람이 볼 것**: attempt 2/2가 결과를 내기 전에 발사 자체가 멈춘 것으로 보인다 — (a) 대시보드
   에서 수동으로 다시 큐잉/발사하거나 (b) 스케줄러 로그로 발사 실패 원인을 확인해야 한다.
+  **재확인(2026-07-28T11:21Z 근처, session-20260728-202106)**: `loop_enter`·`show_task`·
+  `work_inspect`로 재대조 — 같은 run(`run_69ca892fe60cdc6bf989`), `version 102`
+  (10:43:06.771Z 이후 한 번도 안 바뀜), `executionState QUEUED` 그대로. 재큐잉 후
+  **38분 넘게** `BOARD_WORKER_LAUNCHED`가 안 찍힘 — 24분보다 더 늘었다. `discussions.json`
+  non-coordinator unread 재확인 — 0건(10:30:00Z 이후 사람의 새 메시지 없음). 이 세션도
+  `work_start_next`를 다시 부르지 않았다(같은 이유: `maxAttempts 2` 소진 위험). 코드/보드
+  변경 없음. `coordinator-inbox.md`의 `tsk_19e56ea3cea3be04f8fd` 줄과 최신 no-progress
+  항목(`2026-07-28T11:11:33Z`)에 같은 내용을 남기고 후자는 닫았다. **여전히 사람 확인 대기** —
+  정체 시간이 계속 늘어나는 추세라 다음 세션은 "정상 지연"으로 볼 근거가 더 옅어졌다는 점만
+  참고하면 된다.
 
 ## 끝난 것
 
