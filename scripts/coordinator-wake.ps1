@@ -288,6 +288,21 @@ function Format-BoardTask($task) {
     $lines += "", "허용 경로(이 밖은 건드리지 마라):"
     foreach ($a in @($task.allowedPaths)) { $lines += "  - $a" }
   }
+  # 반려 사유를 넣는다. 안 넣으면 되살아난 실행자가 반려된 줄도 모르고 같은 것을 또 만든다 -
+  # 2026-07-29 실측: 검사가 불일치 9건을 STALE_REGISTRY_SNAPSHOT 으로 제외해 반려됐는데,
+  # 프롬프트에는 그 사실이 없어서 다음 시도가 같은 자리로 갈 참이었다.
+  if ($task.review -and ($task.review.status -eq 'REJECTED')) {
+    $lines += "", "!! 이전 시도가 반려됐다. 같은 것을 다시 내지 마라 !!"
+    if ($task.review.reviewedAt) { $lines += "반려 시각: $($task.review.reviewedAt)" }
+    $why = [string]$task.review.comment
+    if ($why) { $lines += "반려 사유:", $why } else { $lines += "반려 사유가 기록되지 않았다 - 무엇이 부족했는지 스스로 다시 따져라." }
+    $lines += "이 사유를 먼저 해결하지 못하면 다시 반려된다. 완료 조건을 형식만 맞추지 말고 실제로 만족시켜라."
+  }
+  # 앞선 검증이 무엇에서 걸렸는지도 준다. 범위 위반은 다음 시도에서 그대로 반복되기 쉽다.
+  if ($task.verification -and $task.verification.scopeViolations -and (@($task.verification.scopeViolations).Count -gt 0)) {
+    $lines += "", "앞선 검증에서 허용 경로 밖으로 나간 파일:"
+    foreach ($sv in @($task.verification.scopeViolations)) { $lines += "  - $sv" }
+  }
   if ($task.skillIds)  { $lines += "", "참조할 스킬: $(@($task.skillIds) -join ', ')" }
   return ($lines -join "`n")
 }
