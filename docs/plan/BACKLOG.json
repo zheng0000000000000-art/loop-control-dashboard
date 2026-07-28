@@ -47,8 +47,8 @@
                       "priority":  28,
                       "targetRepo":  "team-loop",
                       "source":  "docs/plan/SIMULATION-CHECKLIST-v1.md §5 (지금 무의미)",
-                      "status":  "READY",
-                      "boardTaskId":  null,
+                      "status":  "IN_BOARD",
+                      "boardTaskId":  "tsk_b63d72341610fa0bca67",
                       "addedBy":  "조율자 세션 23748",
                       "addedAt":  "2026-07-28"
                   },
