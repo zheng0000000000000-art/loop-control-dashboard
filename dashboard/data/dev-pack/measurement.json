@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "providerId": "dev-pack-checks",
   "providerVersion": "1",
-  "measuredAt": "2026-07-29T02:36:39.1837368+09:00",
+  "measuredAt": "2026-07-29T02:57:31.1229249+09:00",
   "metrics": [
     {
       "metricId": "domainWordsInEngine",
@@ -16,9 +16,9 @@
     },
     {
       "metricId": "directiveAcceptanceCriteria",
-      "value": 3,
+      "value": 13,
       "evidence": [
-        "docs/directives/_template.md"
+        "docs/directives/TERR-01-territory-check.md"
       ]
     },
     {
