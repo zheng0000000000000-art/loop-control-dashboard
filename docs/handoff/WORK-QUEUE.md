@@ -2064,3 +2064,49 @@
   **사람/판정 세션이 볼 것**: 코드는 완료 기준 8개 전부 실측 충족. REVIEW에서 승인만 하면 된다.
   이 검사가 착지되면 `tsk_b6984473aada76b76917`이 30회 넘게 물었던 "명세가 낡았나 구현이
   어긋났나" 질문에 향후 같은 상황이 커밋 전 exit 1로 자동 드러난다.
+
+- **team-loop 보드 태스크(`tsk_4532ea2c032bfb03d8df`, "태스크가 프로젝트에 안 붙는다 — 실행 저장소를
+  말로만 시키고 있다")를 REVIEW까지 올렸다.** (2026-07-30, 조율자 세션 `session-20260730-013508`,
+  "이번에 할 것"으로 직접 배정됨)
+  **확인한 것**: 격리 워크트리(`.team-loop-worktrees/tsk_4532ea2c032bfb03d8df`)를 열어보니
+  구현이 이미 diff로 존재했다(`server.js`·`src/entry-service.js`·`src/orchestration-engine.js`·
+  `src/store.js`·`src/verifier.js`·`src/cli/main.js`·`test/entry-service.test.js` 수정,
+  `test/task-project-routing.test.js` 신설 — 이 세션이 코드를 새로 만들지 않았다, 어느 시점에
+  만들어졌는지는 재구성 못 함, executor 필드는 이 세션 자신의 것으로 이미 찍혀 있었다). 완료
+  기준 10개를 소스로 직접 대조: ①`store.js`가 태스크 생성 시 `projectId`를 없으면 `'team-loop'`로
+  채운다 ②`entry-service.js`의 `portfolio`/`projectEntry`에서 `project.id === 'team-loop'` 특수
+  분기가 사라지고 `taskProjectId(task) === project.id` 필터로 통일됐다(남은 `'team-loop'` 리터럴은
+  `readPlan`의 team-loop 전용 핸드오프 참조·부트스트랩 엔드포인트 기본 진입점·초기 프로젝트 시딩
+  뿐 — 라우팅 특수분기가 아님을 직접 확인) ③`server.js`의 새 `resolveTaskRepoRoot(task)`가
+  `entryService.getProject`+`resolveProjectRepoRoot`로 프로젝트의 `location`만 쓰고, worktree
+  생성·verify·review·merge·archive·delete·launchBoardWorker·recoverPersistedAgentTask 등
+  워크트리/실행 관련 호출부 전부가 `workspaceRoot` 대신 이 함수를 거치도록 바뀜(`grep`으로
+  `worktreePath(workspaceRoot`류 잔존 호출 0건 확인) ④`resolveProjectRepoRoot`는 `location`이
+  없거나 디렉터리가 아니면 409로 거절(`existsSync`+`statSync(...).isDirectory()`) ⑤~⑦ 신설
+  `test/task-project-routing.test.js`(7개 시험)가 음성 시험 3종을 모두 실제로 서버를 띄워
+  검증 — location 없는 프로젝트 거절, 미등록 프로젝트 거절, `launchBoardWorker`가 spawn 전에
+  판정을 끝내는 것(소스 순서 검사), `verifier.committedButUnlandedPaths`가 `repoRoot`를 안 넘기면
+  잘못된 저장소를 조용히 놓치고 넘기면 올바르게 찾는 것(두 저장소 모두 `tools/` 같은 이름을 갖게
+  만들어 실제 시나리오 재현) ⑧`launchBoardWorker`가 `resolveTaskRepoRoot`를 `spawn()` 전에 부르고
+  실패하면 `blockTaskForInvalidProjectRouting`으로 태스크를 BLOCKED로 돌리며 스폰하지 않음을
+  소스+시험으로 확인 ⑨`npm test` 전체 이 세션이 직접 재실행 → **624/624 통과**(기존 611 언저리에서
+  7개 신설 포함, 회귀 없음) ⑩판정은 exit code로 남긴다(아래 JSON).
+  실측으로 `unknown-auction` 프로젝트가 이미 `location: C:\NHN Project\unknown-auction`으로
+  등록돼 있고 그 디렉터리가 실재함을 `data/project-registry.json`과 파일시스템에서 직접 확인 —
+  이 구현이 그 실제 프로젝트에 대해 동작할 조건을 갖췄다.
+  **제출 경로**: 워크트리에 이미 정확한 diff가 있어 `submit_task_result` 재제출 없이 바로
+  `verify_task` 호출 → `PASSED`(`changedPaths` 8개 파일과 실제 diff 일치, `scopeViolations` 없음,
+  `git diff --check` exit 0) — 위 `tsk_f83396318f0dabb84e2c` 항목이 남긴 것과 같은 경로.
+  `request_review_task` → `status: REVIEW`, `review.status PENDING` 전환 확인.
+  **이 세션이 안 한 것**: 승인(`approve_task`)은 하지 않았다(ADR-020 — 실행/판정은 다른 세션,
+  executor 필드가 이미 이 세션이라 자기 승인이 된다). `docs/**` 관례 주석(함수 위 한국어 설명)은
+  기존 diff에 이미 적절히 붙어 있어 추가로 손대지 않았다.
+  **지표는 만족했으나 목적은 미달인 부분(자진 신고)**: `src/cli/main.js`의 `taskRepoRoot()`는
+  `TEAM_LOOP_TASK_REPO_ROOT` 환경변수가 없으면(사람이 CLI를 직접 실행하는 경우) 여전히
+  `bootstrapWorkspaceRoot || process.cwd()`로 떨어진다 — board가 스폰한 워커는 서버가 이 값을
+  심어주므로 fail-closed가 적용되지만, 사람이 CLI를 손으로 돌리는 경로는 이번 작업 범위 밖으로
+  남아 있다. 완료 기준 문구("워크트리 루트를 프로젝트 location 에서 끌어온다")는 board 경유
+  실행 전체(워크트리 생성·verify·review·merge·delete·spawn)에 대해서는 완전히 충족됐다.
+  `{"gate":"verify_task","status":"PASSED","violations":0,"attempt":1}`
+  **사람/판정 세션이 볼 것**: REVIEW에서 승인하면 `tsk_e8eb58a72ecf3a8315e7`(이 결함의 실물,
+  차단해 둔 태스크)을 해제할 수 있다 — 이 태스크 설명이 그렇게 하라고 남겨 뒀다.
