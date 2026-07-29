@@ -2207,3 +2207,17 @@
   ⑤는 619~620/621로 미달 상태가 되므로 (c)에 대한 사람 결정이 사실상 유일한 무손괄 경로다.
   30회 넘게 같은 질문이 반복됐는데도 사람 응답이 없다는 점 자체도 그대로 기록해 둔다 —
   다음 세션이 또 재해석으로 밀어붙이지 않도록.
+- 재확인(2026-07-30T03:38Z 근처, session-20260730-033449, "이번에 할 것"으로 명시 배정): `show_task`로
+  직접 대조 — `status IN_PROGRESS`, `review.status REJECTED`(2026-07-29T18:18:27.998Z 그대로, 위
+  2180행 항목과 동일 판정), `reviewBlock.reason VERIFICATION_INVALIDATED_BY_REJECT`. `discussions.json`을
+  스크립트로 `createdAt` 순 재정렬해 재확인 — 사람이 쓴 마지막 메시지 여전히
+  `msg_7a56530859ac5cca7041`(2026-07-28T16:05:05Z, 다른 태스크 `tsk_a3ff8c75` 얘기, 무관) — (a)/(b)/(c)
+  결정 요청에 답 없음(약 41시간 경과). 격리 워크트리(`.team-loop-worktrees/tsk_b6984473aada76b76917`)의
+  main 트리 쪽 "격리 밖 오염" 경고(직전 세 세션이 반복 관찰)도 원인을 확인했다 — `docs/PHASE-0-DIRECTIVE-REPAIR-LOOP.md`
+  (untracked, provenance상 `codex-desktop`/다른 작업 산출물)와 `data/harnesses.json`·`data/skills.json`의
+  `scope` 필드 증발(라이브 서버가 재직렬화하며 생기는 기존에 알려진 런타임 부산물, 이 태스크의 diff와
+  무관) — 이번 태스크의 실제 변경과는 무관한 노이즈임을 직접 대조로 확인했다. 재제출·재질문 둘 다
+  하지 않았다(같은 코드로 다시 내면 같은 사유로 반려될 것이 diff 대조로 이미 확정적이고, 질문은
+  이미 30여 회 물었다). 코드/설정/밸런스 파일 변경 없음, 커밋 없음 — **여전히 [ ]**, 사람이
+  (a)/(b)/(c) 중 답할 때까지 다음 세션도 `review.reviewedAt`과 마지막 사람 메시지 시각
+  (2026-07-28T16:05:05Z) 둘만 확인하고 넘어가면 된다.
