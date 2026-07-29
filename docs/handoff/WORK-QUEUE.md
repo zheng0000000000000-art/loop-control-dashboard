@@ -2110,3 +2110,29 @@
   `{"gate":"verify_task","status":"PASSED","violations":0,"attempt":1}`
   **사람/판정 세션이 볼 것**: REVIEW에서 승인하면 `tsk_e8eb58a72ecf3a8315e7`(이 결함의 실물,
   차단해 둔 태스크)을 해제할 수 있다 — 이 태스크 설명이 그렇게 하라고 남겨 뒀다.
+
+- **위 `tsk_4532ea2c032bfb03d8df`(태스크-프로젝트 라우팅)를 이 판정 세션(`session-20260730-014238`,
+  실행 세션 `20260730-013508`과 분리됨)이 `approve_task`로 승인했다 — 단 `tsk_e8eb58a72ecf3a8315e7`는
+  해제하지 않았다.** (2026-07-29, 이 판정 세션)
+  **재검증(자기보고 아님)**: 격리 워크트리(`.team-loop-worktrees/tsk_4532ea2c032bfb03d8df`)에서
+  `git diff`로 8개 파일 변경분을 직접 Read, `npm test` 이 세션이 직접 재실행 → `624/624 pass`
+  (실행 세션 보고와 일치). `git status --short`로 allowedPaths(`src/**`, `server.js`, `test/**`,
+  `docs/**`) 밖 변경 없음 확인. 완료 기준 10개 전부 코드+시험(`test/task-project-routing.test.js`
+  5건, `test/entry-service.test.js` 신설 2건)으로 대조 완료 — `approve_task`로 승인
+  (`status: DONE`, `review.status APPROVED`, `adminOverride: true`).
+  **승인했지만 하지 않은 것**: `tsk_e8eb58a72ecf3a8315e7` 해제. 이 태스크 설명은 "끝나면 해제한다"고
+  적어 뒀지만, 실측(`data/tasks.json` 직접 Read)으로 그 태스크에 **`projectId` 필드가 아예 없음**을
+  확인했다 — 새 코드의 기본값 규칙("없으면 team-loop")대로면 지금 그대로 해제해도 다시
+  team-loop 워크스페이스로 라우팅돼 원래 사고(2026-07-29 23:51 team-loop에 워크트리 생성)가
+  그대로 재발한다. 그런데 `mcp/team-loop-mcp.mjs`의 `create_task` 툴 스키마(613행)에도 다른 어떤
+  MCP 툴에도 기존 태스크에 `projectId`를 설정하거나 신규 생성 시 지정하는 매개변수가 없다
+  (`grep -n "projectId"` 로 확인 — `store.createTask`는 `input.projectId`를 읽지만 MCP 경유로는
+  그 필드에 도달할 방법이 없다). 이건 완료 기준 10개 어디에도 명시되지 않아 승인을 막지는
+  않았지만, 이 태스크의 존재 이유(`tsk_e8eb58a72ecf3a8315e7` 언블록)를 그대로 실행하면 즉시
+  재발한다는 뜻이라 **목적 미달로 기록**한다.
+  **사람이 정할 것**: (a) `data/tasks.json`을 손으로 편집해 `tsk_e8eb58a72ecf3a8315e7`에
+  `projectId: "unknown-auction"`을 채운 뒤 해제할지(하네스 밖의 손편집이라 위험 — 이 저장소도
+  readBy 문자열/객체 혼입 같은 손편집발 버그 전례가 있음, `[[teamloop-self-referential-verify-bootstrap-trap]]`류)
+  (b) MCP `create_task`/새 `update_task`에 `projectId` 매개변수를 추가하는 후속 태스크를 먼저
+  발주할지. 이 판정 세션은 `tsk_e8eb58a72ecf3a8315e7`을 BLOCKED 그대로 두었다 — 만들지 않았고
+  건드리지 않았다.
