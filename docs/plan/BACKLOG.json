@@ -298,8 +298,8 @@
                                        ],
                       "targetRepo":  "team-loop",
                       "source":  "사람 결정 2026-07-29 (시작 2만, 12회차 10만, 적 12~15만) + docs/plan/DONE-CRITERIA.md §5",
-                      "status":  "READY",
-                      "boardTaskId":  null,
+                      "status":  "IN_BOARD",
+                      "boardTaskId":  "tsk_4c0ac9f809ff5e4f3a75",
                       "addedBy":  "조율자 세션 23748",
                       "addedAt":  "2026-07-29",
                       "priority":  26
