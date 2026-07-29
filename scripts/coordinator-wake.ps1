@@ -522,14 +522,39 @@ if ($lockScript -and (Test-Path $lockScript)) {
 
 # 같은 글로 두 번 깨우지 않는다. 실패한 세션이 무한히 재시도하면 토큰만 태운다.
 # 큐가 방아쇠일 때는 남은 개수를 표식으로 쓴다. 하나 끝나면 개수가 줄어 다음 깨우기가 열린다.
-$markerValue = if ($inboxPending -gt 0) { "inbox:$inboxPending" }
-  elseif ($boardReview.Count -gt 0) { "board-review:$($boardReview[0].id)" }
-  elseif ($queueReview -gt 0) { "review:$queueReview" }
-  elseif ($unread.Count -gt 0) { $unread[0].id }
-  elseif ($boardReady.Count -gt 0) { "board:$($boardReady[0].id)" }
-  else { "queue:$queueOpen" }
-$marker = "$HeartbeatPath.woke"
-$attemptMarker = "$HeartbeatPath.attempts"
+# 방아쇠 후보를 우선순위대로 모은다. 하나가 억제돼 있어도 다음 것을 본다 -
+# 2026-07-30 실측: 인박스 표식 하나가 남아 있는 동안 보드에 READY 가 둘인데도
+# 8회 연속 "already-woke-for inbox:1" 로 아무것도 안 했다. 인박스는 사람이 처리해야
+# 줄어드는데 그동안 보드가 굶는다. 표식을 종류별로 나눠 서로 안 막게 한다.
+$candidates = @()
+if ($inboxPending -gt 0) { $candidates += ,@('inbox', "inbox:$inboxPending") }
+if ($boardReview.Count -gt 0) { $candidates += ,@('board-review', "board-review:$($boardReview[0].id)") }
+if ($queueReview -gt 0) { $candidates += ,@('review', "review:$queueReview") }
+if ($unread.Count -gt 0) { $candidates += ,@('unread', [string]$unread[0].id) }
+if ($boardReady.Count -gt 0) { $candidates += ,@('board', "board:$($boardReady[0].id)") }
+if ($candidates.Count -eq 0) { $candidates += ,@('queue', "queue:$queueOpen") }
+
+# 억제 안 된 첫 후보를 고른다. 전부 억제면 그때 나간다.
+$markerKind = $null; $markerValue = $null; $marker = $null; $attemptMarker = $null
+$suppressed = @()
+foreach ($cand in $candidates) {
+  $kind = $cand[0]; $value = $cand[1]
+  $candMarker = "$HeartbeatPath.woke.$kind"
+  if ((Test-Path $candMarker) -and ((Get-Content -Raw $candMarker).Trim() -eq $value)) {
+    $age = [int]([datetimeoffset]::UtcNow - [datetimeoffset](Get-Item $candMarker).LastWriteTimeUtc).TotalMinutes
+    if ($age -lt $RetryAfterMinutes) { $suppressed += "$value(${age}분)"; continue }
+  }
+  $markerKind = $kind; $markerValue = $value
+  $marker = $candMarker; $attemptMarker = "$HeartbeatPath.attempts.$kind"
+  break
+}
+if ($null -eq $markerValue) {
+  Write-Line "already-woke-for $($suppressed -join ' ') (${RetryAfterMinutes}분 뒤 재시도)"
+  exit 0
+}
+if ($suppressed.Count -gt 0) {
+  Write-Line "skipping-suppressed $($suppressed -join ' ') -> $markerValue 로 간다"
+}
 
 # 같은 값으로 두 번 깨우지 않는다. 그런데 그것만 있으면 재시도가 영구히 막힌다 -
 # 2026-07-28 실측: 세션이 진전 없이 끝난 뒤 already-woke-for 로 계속 걸려 아무도 다시 안 집었고,
@@ -538,15 +563,12 @@ $attemptMarker = "$HeartbeatPath.attempts"
 # 그래서 식은 뒤에는 다시 시도하고, 정해진 횟수를 넘으면 조율자에게 넘긴다.
 # 무한 재시도는 토큰만 태우고, 영구 차단은 루프를 죽인다. 둘 사이를 시간과 횟수로 가른다.
 if ((Test-Path $marker) -and ((Get-Content -Raw $marker).Trim() -eq $markerValue)) {
+  # 여기까지 왔다는 것은 위에서 억제를 안 받았다는 뜻이다 - 즉 식은 표식이다.
   $markerAge = [int]([datetimeoffset]::UtcNow - [datetimeoffset](Get-Item $marker).LastWriteTimeUtc).TotalMinutes
   $attempts = 0
   if (Test-Path $attemptMarker) {
     $recorded = (Get-Content -Raw $attemptMarker).Trim() -split ' ', 2
     if ($recorded.Count -eq 2 -and $recorded[1] -eq $markerValue) { $attempts = [int]$recorded[0] }
-  }
-  if ($markerAge -lt $RetryAfterMinutes) {
-    Write-Line "already-woke-for $markerValue (${markerAge}분 전, ${RetryAfterMinutes}분 뒤 재시도)"
-    exit 0
   }
   if ($attempts -ge $MaxAttempts) {
     # 보드를 얼려두지 않는다. 세션이 못 하는 일이면 조율자가 가져간다 -
