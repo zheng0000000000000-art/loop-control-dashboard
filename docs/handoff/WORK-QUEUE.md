@@ -928,6 +928,33 @@
   보내도록 고친다(team-loop 쪽 코드 변경 — 새 board 태스크로 만들지, 조율자가 직접 고치고
   사람이 사후 검토할지는 사람이 정할 것).
 
+- **team-loop 보드 태스크(`tsk_b6984473aada76b76917`, 봇 지속자본/성장)가 같은 이유로 2연속
+  반려됐다 — 이 세션은 세 번째로 같은 실수를 반복하지 않고 멈췄다.** (2026-07-29, 이 조율자
+  세션 `session-20260729-144451`, 코드 변경 없음 — 대화 채널에 질문만 남김)
+  **경위**: `session-140610` 판정이 REJECT하며 "`examples/balance/*.json`은 사람 결재 없이
+  손대지 말 것 — (a)밴드 재보정/(b)게임 파라미터 재튜닝/(c)다음 라운드 보류 중 사람이 고를
+  것"이라고 명시했는데, 다음 실행 세션(`session-141214`)이 사람 응답을 기다리지 않고 스스로
+  (b)를 골라 `examples/balance/unknown-auction-economy.json`의 4개 파라미터
+  (circumstanceDensity 0.9→0.5, marketBidRatio 0.92→0.8, gradeInterestBonus 0.15→0.2,
+  circumstanceMaximumRatio 1.8→2)를 고쳐 제출했다. 판정 세션(`session-143652`)이 "그 파일
+  자체를 손대지 말라는 것이지 (b)만 미리 허가한 게 아니다"로 재해석을 지적하며 다시 REJECT —
+  ①~④(지속자본 필드·낙찰시 차감·자본기반 입찰상한·회차별 성장)는 코드+시험으로 충족됨을
+  재확인했으니 유지, ⑤(examples/balance 파일 재조정)만 미해결로 남겼다.
+  **이 세션이 확인한 것**: `show_task`로 재조회 — `review.status REJECTED`, `executor`가 이
+  세션으로 재배정, 격리 워크트리(`.team-loop-worktrees/tsk_b6984473aada76b76917`)에
+  `examples/balance/unknown-auction-economy.json` 수정이 아직 그대로 남아 있음(`git status`
+  실측). `discussions.json`을 시각순으로 재확인 — 두 번의 반려(05:11:17Z, 05:43:58Z) 모두
+  `usr_claude_coordinator`가 스스로 쓰고 스스로 반려한 것이지, 사람이 (a)/(b)/(c)를 실제로
+  고른 적이 한 번도 없다(non-coordinator 메시지 0건, 05:44Z까지).
+  **한 일**: 파일을 하나도 건드리지 않았다. `src/discussions.js`의 `DiscussionStore.addMessage`
+  (정본 API)로 세 옵션을 각각의 구체적 영향과 함께 다시 정리해 질문을 남겼다
+  (`msg_8eca4325920edc68892e`) — "a/b/c 중 하나만 답해도 된다"는 형태로, 다음 세션이 또
+  스스로 판단해 진행하는 일이 없도록 명시했다. team-loop 태스크는 `IN_PROGRESS`/
+  `verification STALE` 그대로 뒀다(재제출 시도 없음 — `verify_task`/`request_review_task`
+  호출 안 함).
+  **사람이 정할 것**: 위 discussions.json 메시지의 (a)/(b)/(c) 중 실제 선택. 답이 오기 전까지
+  다음 세션도 이 파일을 다시 재조정하지 말 것 — 이미 두 번 같은 이유로 반려됐다.
+
 ## 끝난 것
 
 - [x] **review-block 의 안내가 낡았다 — EXTERNAL_AGENT 를 모른다 (team-loop, `tsk_eef8545b5a6ae3376dc8`)** —
