@@ -1,311 +1,311 @@
 {
-  "schemaVersion": 1,
-  "note": "일감의 출처. 보드가 마르면 scripts/backlog-refill.ps1 이 여기서 다음 항목을 꺼내 보드 태스크로 올린다. 여기에 없는 일은 만들어지지 않는다 - 세션이 스스로 일을 발명하면 루프가 자기한테 무한히 일을 만든다. 새 항목을 넣는 것은 사람과 조율자가 한다. 꺼내 쓰는 것은 프로그램이 한다.",
-  "statusValues": {
-    "READY": "꺼내갈 수 있다",
-    "IN_BOARD": "보드에 올라가 있다. boardTaskId 를 본다",
-    "DONE": "보드에서 끝났다",
-    "HOLD": "지금은 꺼내지 않는다. holdReason 을 본다"
-  },
-  "items": [
-    {
-      "id": "bl-sim-03-sample-size",
-      "title": "표본 수가 판정을 뒤집지 않는 지점을 측정해서 정한다",
-      "description": "SIMULATION-CHECKLIST-v1 §3 이 지금 실패로 표시돼 있다. 실측된 것: runs=40 이면 blindTransactionRoiMean 이 위반이고 runs=400 이면 통과인데 여유가 0.07 뿐이다. 즉 지금 판정은 표본 수에 따라 뒤집힌다.\n\n만들 것: (1) 판정을 뒤집지 않는 최소 runs 를 측정으로 정하고 그 근거 수치를 남긴다. (2) 그 값 미만으로 돌리면 경고를 낸다 - 조용히 통과시키지 않는다. (3) 경계에 붙은 지표는 평균만이 아니라 분산도 함께 보고한다.\n\n명세 자신이 이미 그렇게 적어놨다 - 평균 하나에 기대지 말고 분포와 실패율을 보고하라.",
-      "acceptanceCriteria": [
-        "최소 runs 를 고른 근거가 측정 수치로 남는다 - 의견이 아니라 숫자다",
-        "그 값 미만으로 돌리면 경고가 출력에 드러난다. 경고 없이 통과하지 않는다",
-        "경계 지표의 분산이 결과에 함께 실린다",
-        "음성 시험: 표본이 부족한 설정으로 돌렸을 때 경고가 실제로 나오는 것을 단언한다"
-      ],
-      "allowedPaths": [
-        "src/**",
-        "test/**"
-      ],
-      "priority": 30,
-      "targetRepo": "team-loop",
-      "source": "docs/plan/SIMULATION-CHECKLIST-v1.md §3 (지금 실패 중)",
-      "status": "IN_BOARD",
-      "boardTaskId": "tsk_143c60ca44031236e646",
-      "addedBy": "조율자 세션 23748",
-      "addedAt": "2026-07-28",
-      "tier": "P0",
-      "factors": [
-        "measuredFailure",
-        "blocksOthers"
-      ]
-    },
-    {
-      "id": "bl-sim-05-search-does-work",
-      "title": "탐색이 실제로 일을 하는지 - 실패하는 기준선에서 통과 후보를 찾는다",
-      "description": "SIMULATION-CHECKLIST-v1 §5 가 지금 무의미로 표시돼 있다. 탐색이 항상 changed:false 를 돌려준다. 아무것도 안 바꾸는 탐색은 돌아도 돈 것이 아니다.\n\n만들 것: 기준선이 실패하는 사례를 만들고 그 위에서 탐색이 통과하는 후보를 찾아내는 것을 확인한다. 못 찾으면 그 사실과 이유(공간 밖인지 해가 없는지)를 남긴다 - 조용히 changed:false 만 돌려주면 안 된다. explicit-grid 가 공간을 실제로 덮는지 후보 수와 공간 크기를 비교해 남긴다.",
-      "acceptanceCriteria": [
-        "기준선이 실패하는 고정 사례가 있고 그 위에서 탐색이 changed:true 를 낸다",
-        "해를 못 찾은 경우 이유가 결과에 남는다 - 공간 밖인지 해가 없는지 구분된다",
-        "후보 수와 파라미터 공간 크기를 대조한 수치가 남는다",
-        "위 셋을 단언하는 시험이 있다"
-      ],
-      "allowedPaths": [
-        "src/**",
-        "test/**"
-      ],
-      "priority": 26,
-      "targetRepo": "team-loop",
-      "source": "docs/plan/SIMULATION-CHECKLIST-v1.md §5 (지금 무의미)",
-      "status": "IN_BOARD",
-      "boardTaskId": "tsk_b63d72341610fa0bca67",
-      "addedBy": "조율자 세션 23748",
-      "addedAt": "2026-07-28",
-      "tier": "P0",
-      "factors": [
-        "measuredFailure"
-      ]
-    },
-    {
-      "id": "bl-sim-04-sensitivity-table",
-      "title": "손잡이가 연결돼 있는지 - 파라미터 8 x 지표 8 민감도 표를 만든다",
-      "description": "SIMULATION-CHECKLIST-v1 §4 가 미확인이다. 파라미터가 8 개, 지표가 8 개인데 어느 파라미터가 어느 지표를 움직이는지 아무도 재본 적이 없다.\n\n만들 것: 각 파라미터를 혼자 움직였을 때 어느 지표가 얼마나 반응하는지를 8x8 표로 남긴다. 아무 지표도 못 움직이는 파라미터는 죽은 손잡이고, 아무 파라미터에도 안 움직이는 지표는 장식이다. 둘 다 이름을 대서 보고한다.",
-      "acceptanceCriteria": [
-        "파라미터 8 x 지표 8 표가 산출물로 남는다",
-        "어느 지표도 못 움직이는 파라미터가 있으면 이름을 대서 보고한다",
-        "어느 파라미터에도 안 반응하는 지표가 있으면 이름을 대서 보고한다",
-        "표를 만드는 과정이 재현 가능하다 - 같은 seed 로 다시 돌리면 같은 표가 나온다"
-      ],
-      "allowedPaths": [
-        "src/**",
-        "test/**"
-      ],
-      "priority": 22,
-      "targetRepo": "team-loop",
-      "source": "docs/plan/SIMULATION-CHECKLIST-v1.md §4 (미확인)",
-      "status": "IN_BOARD",
-      "boardTaskId": "tsk_2ff749d26651088379d6",
-      "addedBy": "조율자 세션 23748",
-      "addedAt": "2026-07-28",
-      "tier": "P0",
-      "factors": [
-        "unverifiedRisk"
-      ]
-    },
-    {
-      "id": "bl-sim-02-reproducible",
-      "title": "같은 입력이 같은 출력을 내는지 - 재현성을 시험으로 못 박는다",
-      "description": "SIMULATION-CHECKLIST-v1 §2. 같은 spec 과 같은 seeds 와 같은 runs 로 두 번 돌렸을 때 같은 outputs 가 나오는지를 단언하는 시험이 없다. search.deterministic:true 가 실제로 지켜지는지도 확인된 바 없다.\n\n만들 것: 두 번 돌린 결과를 대조하는 시험. deterministic 을 껐을 때 결과가 달라지는 것으로 그 플래그가 실제로 작동함을 보인다 - 켠 상태만 보면 그냥 우연히 같았을 수도 있다.",
-      "acceptanceCriteria": [
-        "같은 입력 두 번 -> 같은 출력을 단언하는 시험이 있다 (부동소수 오차 허용치를 명시한다)",
-        "search.deterministic 을 껐을 때 결과가 달라지는 것을 시험이 확인한다",
-        "npm test 전체 통과"
-      ],
-      "allowedPaths": [
-        "src/**",
-        "test/**"
-      ],
-      "priority": 26,
-      "targetRepo": "team-loop",
-      "source": "docs/plan/SIMULATION-CHECKLIST-v1.md §2",
-      "status": "IN_BOARD",
-      "boardTaskId": "tsk_38d1e6d378f26cf3a725",
-      "addedBy": "조율자 세션 23748",
-      "addedAt": "2026-07-28",
-      "tier": "P0",
-      "factors": [
-        "blocksOthers",
-        "unverifiedRisk"
-      ]
-    },
-    {
-      "id": "bl-teamloop-worktree-seeds-data",
-      "title": "team-loop 이 만드는 태스크 워크트리가 data 를 씨딩하게 한다",
-      "description": "createTaskWorktree 가 만든 워크트리에는 data 가 없다. data 는 gitignore 대상이라 브랜치에 안 실린다. 그래서 그 안에서 node --test 를 돌리면 시험이 ENOENT 로 깨진다.\n\n실측 근거: 2026-07-28 tsk_1a113f64adb67331dac2 가 이것 때문에 회로 차단기까지 갔다. 조율자가 손으로 21 개 파일을 씨딩하니 533/533 통과했다. 그 뒤로도 매번 손으로 씨딩하고 있다. 사람이 매번 같은 손질을 하고 있다면 그건 코드가 할 일이다.\n\nLocal-First 쪽에 scripts/teamloop-isolate.ps1 이 이미 같은 일을 한다. 그 동작을 team-loop 안으로 가져온다.",
-      "acceptanceCriteria": [
-        "createTaskWorktree 로 만든 워크트리에서 시험이 데이터 부재로 깨지지 않는다",
-        "씨딩이 원본 data 를 건드리지 않는다 - 사본만 만든다 (음성 시험으로 확인한다)",
-        "씨딩할 것이 없을 때도 실패하지 않는다",
-        "npm test 전체 통과"
-      ],
-      "allowedPaths": [
-        "src/**",
-        "test/**"
-      ],
-      "priority": 24,
-      "targetRepo": "team-loop",
-      "source": "2026-07-28 실측 - tsk_1a113f64adb67331dac2 회로 차단기, 이후 반복 수작업",
-      "status": "IN_BOARD",
-      "boardTaskId": "tsk_16d584e283472a18e88e",
-      "addedBy": "조율자 세션 23748",
-      "addedAt": "2026-07-28",
-      "tier": "P0",
-      "factors": [
-        "removesManualToil"
-      ]
-    },
-    {
-      "id": "bl-sim-06-input-hash",
-      "title": "결과에 입력의 해시를 함께 남긴다",
-      "description": "SIMULATION-CHECKLIST-v1 §6. 실험 결과가 저장되고 다시 읽히는 것은 확인됐다. 그런데 어떤 spec 으로 낸 값인지가 결과에 안 남는다. 나중에 수치를 놓고 다툴 때 무엇으로 낸 값인지 대조할 방법이 없다.",
-      "acceptanceCriteria": [
-        "결과에 입력 spec 의 해시가 함께 저장된다",
-        "spec 을 한 글자만 바꿔도 해시가 달라지는 것을 시험이 확인한다",
-        "예전 결과에 해시가 없어도 읽기가 깨지지 않는다"
-      ],
-      "allowedPaths": [
-        "src/**",
-        "test/**"
-      ],
-      "priority": 16,
-      "targetRepo": "team-loop",
-      "source": "docs/plan/SIMULATION-CHECKLIST-v1.md §6",
-      "status": "READY",
-      "boardTaskId": null,
-      "addedBy": "조율자 세션 23748",
-      "addedAt": "2026-07-28",
-      "tier": "P1",
-      "factors": [
-        "unverifiedRisk"
-      ]
-    },
-    {
-      "id": "bl-failure-to-backlog",
-      "tier": "P0",
-      "factors": [
-        "blocksOthers",
-        "removesManualToil"
-      ],
-      "title": "처리 안 된 실패사례를 백로그 후보로 올린다 — 보드가 마르지 않게",
-      "description": "보드가 비면 루프가 선다. 백로그를 만들어 공급을 뚫었지만 백로그도 사람이 채워야 하므로 결국 같은 자리에서 멈춘다. 2026-07-29 실측: 남은 항목이 2건까지 떨어졌고 저수위 알림이 나갔다.\n\n그런데 이미 무한한 일감이 있다. 실패사례 60건이다(data/failure-cases.json). 그중 아직 실행 가능한 검사로 굳지 않은 것들은 그 자체가 할 일이다. 루프가 자기 실패에서 자기 일감을 만든다.\n\n만들 것: 처리 안 된 실패사례를 백로그 후보로 내보내는 경로. 발명이 아니다 - 이미 관측된 실패만 쓴다. 후보에는 근거(실패 id, 발생 횟수)가 붙어야 하고, 사람이나 조율자가 실제 항목으로 승격시킨다.\n\n주의: 자동으로 보드에 밀어 넣지 않는다. ADR-024 가 정한 상한은 '선언된 것만 꺼내 쓴다'이다. 실패사례는 후보까지만 올라오고 백로그 편입은 판단이 있어야 한다.",
-      "acceptanceCriteria": [
-        "처리 안 된 실패사례를 골라내는 기준이 코드로 있다 — 이미 실행 가능한 검사로 덮인 것은 후보에서 빠진다",
-        "후보에 근거가 붙는다: 실패 id, 발생 횟수, 왜 아직 안 덮였는지",
-        "자동으로 보드에 올라가지 않는다 — 후보 목록까지만 만든다(음성 시험으로 확인)",
-        "후보가 0건일 때도 실패하지 않는다"
-      ],
-      "allowedPaths": [
-        "src/**",
-        "test/**"
-      ],
-      "targetRepo": "team-loop",
-      "source": "2026-07-29 실측 - 백로그 저수위 알림, 실패사례 60건 미활용",
-      "status": "IN_BOARD",
-      "boardTaskId": "tsk_8e84cdaac82555324b29",
-      "addedBy": "조율자 세션 23748",
-      "addedAt": "2026-07-29",
-      "priority": 28
-    },
-    {
-      "id": "bl-promo-receipt-drift",
-      "tier": "P0",
-      "factors": [
-        "measuredFailure"
-      ],
-      "title": "승격 영수증이 없는 산출물을 가리킨다 — 장부와 레지스트리가 어긋난다",
-      "description": "2026-07-29 실측: 승격 영수증 37건 중 9건의 artifactId 가 skills.json 에도 harnesses.json 에도 없다. 그중 여럿이 status STABLE 이고 activatedAt 이 찍혀 있다. 예: delivery-integrity-c7be4a1f (STABLE, 2026-07-28T14:15:15Z 활성화), no-program-evidence-820ed9d4 (STABLE), delivery-integrity-harness-1f492061 (STABLE).\n\n장부는 활성화했다고 말하는데 실물이 없다. 둘 중 하나가 틀렸고 어느 쪽인지 모른다 - 주체 미상이다.\n\n원인을 먼저 찾아라. 활성화가 산출물을 안 남기는지, 나중에 정리되면서 영수증만 남는지, 아니면 id 가 바뀌는지. 원인을 모르고 한쪽을 맞추면 조용히 덮는 것이다.",
-      "acceptanceCriteria": [
-        "영수증과 레지스트리가 어긋나는 9건의 원인을 실체로 규명한다 — 추측이 아니라 코드 경로나 로그로",
-        "어긋남을 감지하는 검사가 생기고, 지금 상태에서 실제로 9건을 잡는다",
-        "고친 뒤에는 그 검사가 0건을 낸다. 또는 못 고칠 이유를 근거와 함께 남긴다",
-        "npm test 전체 통과"
-      ],
-      "allowedPaths": [
-        "src/**",
-        "test/**"
-      ],
-      "targetRepo": "team-loop",
-      "source": "2026-07-29 실측 - promotion-receipts.json 대 skills/harnesses.json 대조",
-      "status": "IN_BOARD",
-      "boardTaskId": "tsk_d1d9808b38e96ba812bf",
-      "addedBy": "조율자 세션 23748",
-      "addedAt": "2026-07-29",
-      "priority": 26
-    },
-    {
-      "id": "bl-promo-enforceable",
-      "tier": "P1",
-      "factors": [
-        "measuredFailure"
-      ],
-      "title": "승격이 권고문 말고 실행 가능한 검사를 내게 한다",
-      "description": "승격 엔진이 실패에서 만들어내는 규칙이 이런 문장이다: '과거 실패 Task delivery conflicted on 4 path(s) 가 재발하지 않도록 관련 검증과 변경 범위를 완료 전에 확인한다.'\n\n이건 프롬프트지 강제가 아니다. 이 저장소의 규칙은 프롬프트로 시키지 말고 코드로 강제하라는 것이다. 권고문은 다음 에이전트가 읽을 수도 안 읽을 수도 있고, 읽어도 다르게 해석한다. 실제로 같은 실패가 반복돼 거의 같은 스킬이 여러 개 생겼다(Delivery Integrity Harness 3개).\n\n대조군이 있다. Local-First 의 scripts/check-script-traps.ps1 은 실제로 밟은 함정을 정적 검사로 굳혔고, 자기 시험에 양성·음성 사례가 들어 있어 안 잡게 되면 그것도 실패로 나온다. 그 규칙 하나가 나중에 사람이 모르던 버그를 잡았다.\n\n만들 것: 실패 증거에 재실행 가능한 명령이 있으면 권고문이 아니라 검사로 굳힌다. 없으면 지금처럼 위키로 남긴다(그 갈래는 이미 있다 - decidability-routing). 판정 기준을 명확히 하고, 굳힌 검사에는 음성 사례를 요구한다.",
-      "acceptanceCriteria": [
-        "재실행 가능한 명령 증거가 있는 실패는 실행 가능한 검사로 굳는다 — 문장이 아니라 돌아가는 것",
-        "굳힌 검사에 음성 사례가 없으면 승격을 거부한다. 안 잡는 검사는 통과 도장만 찍는다",
-        "증거가 없으면 지금처럼 위키로 간다 — 기존 decidability-routing 을 깨지 않는다",
-        "같은 실패로 거의 같은 산출물을 또 만들지 않는다(중복 방지). 지금 Delivery Integrity Harness 가 3개다",
-        "npm test 전체 통과"
-      ],
-      "allowedPaths": [
-        "src/**",
-        "test/**"
-      ],
-      "targetRepo": "team-loop",
-      "source": "2026-07-29 실측 - FAILURE_DERIVED 스킬 19건의 규칙 문면, 라벨 중복 3건",
-      "status": "READY",
-      "boardTaskId": null,
-      "addedBy": "조율자 세션 23748",
-      "addedAt": "2026-07-29",
-      "priority": 20
-    },
-    {
-      "id": "bl-rejected-returns",
-      "tier": "P0",
-      "factors": [
-        "measuredFailure",
-        "removesManualToil"
-      ],
-      "title": "반려된 태스크가 곧바로 대기로 돌아오게 한다",
-      "description": "2026-07-29 실측. 태스크가 반려됐는데 status 가 IN_PROGRESS 로 남아 보드가 그것을 '진행 중 1'로 셌다. 그래서 아무도 다시 안 집고, board-sweep 의 30분 문턱을 기다려야 했다. 조율자가 손으로 READY 로 돌렸다.\n\n반려는 '일이 돌고 있다'가 아니라 '다시 해야 한다'는 뜻이다. 승인이 자동 아카이브로 이어지는 것처럼, 반려도 곧바로 대기로 이어져야 한다.\n\n주의: 반려 기록(review.status, comment)은 지워지지 않아야 한다. 다음 실행자가 그 사유를 프롬프트로 받는다(coordinator-wake 의 Format-BoardTask).",
-      "acceptanceCriteria": [
-        "반려 직후 태스크가 다시 집을 수 있는 상태가 된다 — 30분 문턱을 기다리지 않는다",
-        "반려 사유(review.status=REJECTED, comment)가 보존된다. 음성 시험으로 확인한다",
-        "승인 경로는 그대로다 — 기존 시험이 깨지지 않는다",
-        "npm test 전체 통과"
-      ],
-      "allowedPaths": [
-        "src/**",
-        "test/**",
-        "server.js"
-      ],
-      "targetRepo": "team-loop",
-      "source": "2026-07-29 실측 - tsk_d1d9808b38e96ba812bf 반려 후 방치",
-      "status": "READY",
-      "boardTaskId": null,
-      "addedBy": "조율자 세션 23748",
-      "addedAt": "2026-07-29",
-      "priority": 30
-    },
-    {
-      "id": "bl-sim-first-diagnostic",
-      "tier": "P0",
-      "factors": [
-        "blocksOthers",
-        "unverifiedRisk"
-      ],
-      "title": "1차 경매 시뮬레이션 — 목표 대비 현재 구조의 문제를 수치로 짚는다",
-      "description": "1차 시뮬레이션이다. **목표는 달성이 아니라 진단이다** — 사람이 \"처음 돌리는 거니까 현재 구조에서 뭐가 문제인지 파악부터\"라고 했다.\n\n## 사람이 준 값 (지향값이지 합격선이 아니다)\n\n- 시작 자본 20,000 · 12회차에 100,000 이상 · 최종 경매 적 자본 120,000~150,000\n- 상회 업그레이드 품목은 아직 미정 — 성장 지렛대가 빠진 채로 재는 것임을 감안한다\n- **이 숫자를 게이트의 min/max 로 박지 마라.** 못 넘겼다고 FAIL 을 내는 값이 아니라 얼마나 모자란지를 재는 자다. 합격선은 여러 번 재보고 나서 사람이 정한다.\n\n## 먼저 확인할 것 — 모델이 이 목표를 표현할 수 있는가\n\nsrc/engine/economy-simulator.js 를 읽어보면 startingAssets 기본값이 20000 이고 days 가 12 라 앞의 둘은 이미 맞는다. EndAssetsP10/P50/P90 도 있어 12회차 후 자산은 잴 수 있다.\n\n그런데 다음 셋은 어긋나 보인다. **이건 가설이지 결론이 아니다. 코드로 확인하고 맞는지 틀린지를 근거와 함께 보고하라.**\n\n1. **적 자본이 절대값이 아니라 플레이어 자본에 비례한다.** createAuctionBotBids 가 budget 을 playerCash * randomBetween(0.6, 1.2) 로 잡고 spendableBudget 에서 다시 playerCash * 0.25 를 뺀다. 사람은 최종 경매 적 자본을 120,000~150,000 이라는 절대값으로 말했다. 지금 구조면 플레이어가 가난하면 적도 가난하고, 벌수록 적이 강해진다. bots.minimumBudget 이라는 절대 하한 설정이 있는데 기본값이 0 이라 안 쓰인다.\n2. **목표 달성률 지표가 없다.** 지표가 전부 분포(P10/P50/P90)와 비율(ROI, LossRate, RuinRate)이다. \"12회차 후 자산이 100,000 이상인 실행의 비율\"에 해당하는 것이 없다. 5배 성장 목표는 꼬리가 긴 분포일 가능성이 커서 중앙값만으로는 답이 안 나온다.\n3. **회차에 따른 적 성장이 없다.** 사람의 \"최종 경매\"라는 말은 뒤로 갈수록 적이 강해지는 진행을 뜻한다. 지금은 매 로트마다 현재 playerCash 로 다시 계산할 뿐 12회차에 걸친 적 자본 성장이 없다.\n\n## 이 태스크가 낼 것\n\n**코드 변경보다 측정과 진단이 먼저다.** 현재 구조 그대로 목표 설정으로 돌려서 수치를 낸 뒤, 위 세 가설을 코드 대조로 확인하고, 무엇을 바꿔야 목표를 표현할 수 있는지를 적어라. 고칠 것이 크면 별도 태스크로 올려라 — 이 태스크에서 다 고치려 하지 마라.\n\n## 상회가 비어 있는 것은 결함이 아니라 자유도다 (사람 확인, 2026-07-29)\n\n사람이 말했다 — *\"기능 틀은 있는 거니까 상회가 안 정해진 게 오히려 좋을 수도 있어.\"*\n\n그러므로 질문을 뒤집어라. **\"주어진 품목으로 100,000 이 되는가\"가 아니라 \"100,000 이 되려면 그 지렛대가 무엇을 줘야 하는가\"** 를 재라.\n\n구체적으로: 현재 구조 그대로 돌린 12회차 결과와 100,000 사이의 간극을 재고, 그 간극을 메우려면 상회 업그레이드가 회차당 몇 % 의 수익률 개선, 또는 몇 회 분의 정보 우위, 또는 얼마의 자본 효율을 줘야 하는지를 **역산해서 수치로 제시하라**. 그것이 아직 없는 품목의 설계 요구사항이 된다.\n\n간극이 지렛대로 메울 수 없는 크기라면 그것도 결론이다 — 그때는 구조 자체를 바꿔야 한다는 뜻이고, 무엇을 바꿔야 하는지를 적어라.\n\n## 수치와 구조를 바꿔도 된다 (사람 위임, 2026-07-29)\n\n사람이 말했다 — *\"어차피 수치는 너가 정하는 거고, 수치의 문제가 아닐 수도 있지만 그쪽도 너가 고쳐도 돼.\"*\n\n그러므로 파라미터 조정과 구조 변경 둘 다 이 태스크의 범위 안이다. 다만 순서를 지켜라.\n\n1. **먼저 현재 구조 그대로 재라.** 안 재고 고치면 무엇이 나아졌는지 말할 수 없다.\n2. 바꿨으면 **바꾸기 전과 후를 같이 보고하라.** 바꾼 값과 왜 그 값인지를 적는다.\n3. 기준 파일(blueprint.json / workflow-definition.json)이나 측정 코드를 고쳐 게이트를 통과시키는 것은 여전히 금지다(CLAUDE.md). 시뮬레이션 파라미터를 조정하는 것과 판정 기준을 무르게 하는 것은 다르다.",
-      "acceptanceCriteria": [
-        "시작 20,000 / 12회차 / 현재 파라미터로 실제로 돌린 수치를 보고에 적는다 - 최소 표본 수는 §3 에서 정한 값을 따른다",
-        "12회차 후 자산 분포(P10/P50/P90)와 목표 100,000 대비 몇 %인지를 적는다",
-        "위 세 가설 각각에 대해 코드 대조 결과를 맞다/틀리다로 적고 근거(파일:줄)를 댄다",
-        "목표를 표현하려면 무엇을 바꿔야 하는지를 적고, 큰 것은 별도 태스크로 올린다",
-        "발견을 docs/qa/ 아래 문서 하나로 남긴다",
-        "이 태스크는 지향값을 게이트 min/max 로 박지 않는다 - 박았으면 그것이 결함이다",
-        "현재 구조 그대로의 결과를 먼저 재고, 그 뒤에 바꾼 것이 있으면 전후를 같이 보고한다",
-        "100,000 까지의 간극을 메우려면 상회 지렛대가 무엇을 얼마나 줘야 하는지를 역산해 수치로 제시한다 - 또는 지렛대로 못 메운다는 결론과 근거를 낸다"
-      ],
-      "allowedPaths": [
-        "src/**",
-        "test/**",
-        "docs/**"
-      ],
-      "targetRepo": "team-loop",
-      "source": "사람 결정 2026-07-29 (시작 2만, 12회차 10만, 적 12~15만) + docs/plan/DONE-CRITERIA.md §5",
-      "status": "READY",
-      "boardTaskId": null,
-      "addedBy": "조율자 세션 23748",
-      "addedAt": "2026-07-29",
-      "priority": 26
-    }
-  ],
-  "policyVersion": 1,
-  "policy": "docs/plan/BACKLOG-POLICY.md - priority 는 tier 와 factors 에서 계산한다. 손으로 정하지 않는다. scripts/backlog-policy-check.ps1 이 강제한다.",
-  "lastAlertAt": "2026-07-28T15:26:07Z"
+    "schemaVersion":  1,
+    "note":  "일감의 출처. 보드가 마르면 scripts/backlog-refill.ps1 이 여기서 다음 항목을 꺼내 보드 태스크로 올린다. 여기에 없는 일은 만들어지지 않는다 - 세션이 스스로 일을 발명하면 루프가 자기한테 무한히 일을 만든다. 새 항목을 넣는 것은 사람과 조율자가 한다. 꺼내 쓰는 것은 프로그램이 한다.",
+    "statusValues":  {
+                         "READY":  "꺼내갈 수 있다",
+                         "IN_BOARD":  "보드에 올라가 있다. boardTaskId 를 본다",
+                         "DONE":  "보드에서 끝났다",
+                         "HOLD":  "지금은 꺼내지 않는다. holdReason 을 본다"
+                     },
+    "items":  [
+                  {
+                      "id":  "bl-sim-03-sample-size",
+                      "title":  "표본 수가 판정을 뒤집지 않는 지점을 측정해서 정한다",
+                      "description":  "SIMULATION-CHECKLIST-v1 §3 이 지금 실패로 표시돼 있다. 실측된 것: runs=40 이면 blindTransactionRoiMean 이 위반이고 runs=400 이면 통과인데 여유가 0.07 뿐이다. 즉 지금 판정은 표본 수에 따라 뒤집힌다.\n\n만들 것: (1) 판정을 뒤집지 않는 최소 runs 를 측정으로 정하고 그 근거 수치를 남긴다. (2) 그 값 미만으로 돌리면 경고를 낸다 - 조용히 통과시키지 않는다. (3) 경계에 붙은 지표는 평균만이 아니라 분산도 함께 보고한다.\n\n명세 자신이 이미 그렇게 적어놨다 - 평균 하나에 기대지 말고 분포와 실패율을 보고하라.",
+                      "acceptanceCriteria":  [
+                                                 "최소 runs 를 고른 근거가 측정 수치로 남는다 - 의견이 아니라 숫자다",
+                                                 "그 값 미만으로 돌리면 경고가 출력에 드러난다. 경고 없이 통과하지 않는다",
+                                                 "경계 지표의 분산이 결과에 함께 실린다",
+                                                 "음성 시험: 표본이 부족한 설정으로 돌렸을 때 경고가 실제로 나오는 것을 단언한다"
+                                             ],
+                      "allowedPaths":  [
+                                           "src/**",
+                                           "test/**"
+                                       ],
+                      "priority":  30,
+                      "targetRepo":  "team-loop",
+                      "source":  "docs/plan/SIMULATION-CHECKLIST-v1.md §3 (지금 실패 중)",
+                      "status":  "IN_BOARD",
+                      "boardTaskId":  "tsk_143c60ca44031236e646",
+                      "addedBy":  "조율자 세션 23748",
+                      "addedAt":  "2026-07-28",
+                      "tier":  "P0",
+                      "factors":  [
+                                      "measuredFailure",
+                                      "blocksOthers"
+                                  ]
+                  },
+                  {
+                      "id":  "bl-sim-05-search-does-work",
+                      "title":  "탐색이 실제로 일을 하는지 - 실패하는 기준선에서 통과 후보를 찾는다",
+                      "description":  "SIMULATION-CHECKLIST-v1 §5 가 지금 무의미로 표시돼 있다. 탐색이 항상 changed:false 를 돌려준다. 아무것도 안 바꾸는 탐색은 돌아도 돈 것이 아니다.\n\n만들 것: 기준선이 실패하는 사례를 만들고 그 위에서 탐색이 통과하는 후보를 찾아내는 것을 확인한다. 못 찾으면 그 사실과 이유(공간 밖인지 해가 없는지)를 남긴다 - 조용히 changed:false 만 돌려주면 안 된다. explicit-grid 가 공간을 실제로 덮는지 후보 수와 공간 크기를 비교해 남긴다.",
+                      "acceptanceCriteria":  [
+                                                 "기준선이 실패하는 고정 사례가 있고 그 위에서 탐색이 changed:true 를 낸다",
+                                                 "해를 못 찾은 경우 이유가 결과에 남는다 - 공간 밖인지 해가 없는지 구분된다",
+                                                 "후보 수와 파라미터 공간 크기를 대조한 수치가 남는다",
+                                                 "위 셋을 단언하는 시험이 있다"
+                                             ],
+                      "allowedPaths":  [
+                                           "src/**",
+                                           "test/**"
+                                       ],
+                      "priority":  26,
+                      "targetRepo":  "team-loop",
+                      "source":  "docs/plan/SIMULATION-CHECKLIST-v1.md §5 (지금 무의미)",
+                      "status":  "IN_BOARD",
+                      "boardTaskId":  "tsk_b63d72341610fa0bca67",
+                      "addedBy":  "조율자 세션 23748",
+                      "addedAt":  "2026-07-28",
+                      "tier":  "P0",
+                      "factors":  [
+                                      "measuredFailure"
+                                  ]
+                  },
+                  {
+                      "id":  "bl-sim-04-sensitivity-table",
+                      "title":  "손잡이가 연결돼 있는지 - 파라미터 8 x 지표 8 민감도 표를 만든다",
+                      "description":  "SIMULATION-CHECKLIST-v1 §4 가 미확인이다. 파라미터가 8 개, 지표가 8 개인데 어느 파라미터가 어느 지표를 움직이는지 아무도 재본 적이 없다.\n\n만들 것: 각 파라미터를 혼자 움직였을 때 어느 지표가 얼마나 반응하는지를 8x8 표로 남긴다. 아무 지표도 못 움직이는 파라미터는 죽은 손잡이고, 아무 파라미터에도 안 움직이는 지표는 장식이다. 둘 다 이름을 대서 보고한다.",
+                      "acceptanceCriteria":  [
+                                                 "파라미터 8 x 지표 8 표가 산출물로 남는다",
+                                                 "어느 지표도 못 움직이는 파라미터가 있으면 이름을 대서 보고한다",
+                                                 "어느 파라미터에도 안 반응하는 지표가 있으면 이름을 대서 보고한다",
+                                                 "표를 만드는 과정이 재현 가능하다 - 같은 seed 로 다시 돌리면 같은 표가 나온다"
+                                             ],
+                      "allowedPaths":  [
+                                           "src/**",
+                                           "test/**"
+                                       ],
+                      "priority":  22,
+                      "targetRepo":  "team-loop",
+                      "source":  "docs/plan/SIMULATION-CHECKLIST-v1.md §4 (미확인)",
+                      "status":  "IN_BOARD",
+                      "boardTaskId":  "tsk_2ff749d26651088379d6",
+                      "addedBy":  "조율자 세션 23748",
+                      "addedAt":  "2026-07-28",
+                      "tier":  "P0",
+                      "factors":  [
+                                      "unverifiedRisk"
+                                  ]
+                  },
+                  {
+                      "id":  "bl-sim-02-reproducible",
+                      "title":  "같은 입력이 같은 출력을 내는지 - 재현성을 시험으로 못 박는다",
+                      "description":  "SIMULATION-CHECKLIST-v1 §2. 같은 spec 과 같은 seeds 와 같은 runs 로 두 번 돌렸을 때 같은 outputs 가 나오는지를 단언하는 시험이 없다. search.deterministic:true 가 실제로 지켜지는지도 확인된 바 없다.\n\n만들 것: 두 번 돌린 결과를 대조하는 시험. deterministic 을 껐을 때 결과가 달라지는 것으로 그 플래그가 실제로 작동함을 보인다 - 켠 상태만 보면 그냥 우연히 같았을 수도 있다.",
+                      "acceptanceCriteria":  [
+                                                 "같은 입력 두 번 -\u003e 같은 출력을 단언하는 시험이 있다 (부동소수 오차 허용치를 명시한다)",
+                                                 "search.deterministic 을 껐을 때 결과가 달라지는 것을 시험이 확인한다",
+                                                 "npm test 전체 통과"
+                                             ],
+                      "allowedPaths":  [
+                                           "src/**",
+                                           "test/**"
+                                       ],
+                      "priority":  26,
+                      "targetRepo":  "team-loop",
+                      "source":  "docs/plan/SIMULATION-CHECKLIST-v1.md §2",
+                      "status":  "IN_BOARD",
+                      "boardTaskId":  "tsk_38d1e6d378f26cf3a725",
+                      "addedBy":  "조율자 세션 23748",
+                      "addedAt":  "2026-07-28",
+                      "tier":  "P0",
+                      "factors":  [
+                                      "blocksOthers",
+                                      "unverifiedRisk"
+                                  ]
+                  },
+                  {
+                      "id":  "bl-teamloop-worktree-seeds-data",
+                      "title":  "team-loop 이 만드는 태스크 워크트리가 data 를 씨딩하게 한다",
+                      "description":  "createTaskWorktree 가 만든 워크트리에는 data 가 없다. data 는 gitignore 대상이라 브랜치에 안 실린다. 그래서 그 안에서 node --test 를 돌리면 시험이 ENOENT 로 깨진다.\n\n실측 근거: 2026-07-28 tsk_1a113f64adb67331dac2 가 이것 때문에 회로 차단기까지 갔다. 조율자가 손으로 21 개 파일을 씨딩하니 533/533 통과했다. 그 뒤로도 매번 손으로 씨딩하고 있다. 사람이 매번 같은 손질을 하고 있다면 그건 코드가 할 일이다.\n\nLocal-First 쪽에 scripts/teamloop-isolate.ps1 이 이미 같은 일을 한다. 그 동작을 team-loop 안으로 가져온다.",
+                      "acceptanceCriteria":  [
+                                                 "createTaskWorktree 로 만든 워크트리에서 시험이 데이터 부재로 깨지지 않는다",
+                                                 "씨딩이 원본 data 를 건드리지 않는다 - 사본만 만든다 (음성 시험으로 확인한다)",
+                                                 "씨딩할 것이 없을 때도 실패하지 않는다",
+                                                 "npm test 전체 통과"
+                                             ],
+                      "allowedPaths":  [
+                                           "src/**",
+                                           "test/**"
+                                       ],
+                      "priority":  24,
+                      "targetRepo":  "team-loop",
+                      "source":  "2026-07-28 실측 - tsk_1a113f64adb67331dac2 회로 차단기, 이후 반복 수작업",
+                      "status":  "IN_BOARD",
+                      "boardTaskId":  "tsk_16d584e283472a18e88e",
+                      "addedBy":  "조율자 세션 23748",
+                      "addedAt":  "2026-07-28",
+                      "tier":  "P0",
+                      "factors":  [
+                                      "removesManualToil"
+                                  ]
+                  },
+                  {
+                      "id":  "bl-sim-06-input-hash",
+                      "title":  "결과에 입력의 해시를 함께 남긴다",
+                      "description":  "SIMULATION-CHECKLIST-v1 §6. 실험 결과가 저장되고 다시 읽히는 것은 확인됐다. 그런데 어떤 spec 으로 낸 값인지가 결과에 안 남는다. 나중에 수치를 놓고 다툴 때 무엇으로 낸 값인지 대조할 방법이 없다.",
+                      "acceptanceCriteria":  [
+                                                 "결과에 입력 spec 의 해시가 함께 저장된다",
+                                                 "spec 을 한 글자만 바꿔도 해시가 달라지는 것을 시험이 확인한다",
+                                                 "예전 결과에 해시가 없어도 읽기가 깨지지 않는다"
+                                             ],
+                      "allowedPaths":  [
+                                           "src/**",
+                                           "test/**"
+                                       ],
+                      "priority":  16,
+                      "targetRepo":  "team-loop",
+                      "source":  "docs/plan/SIMULATION-CHECKLIST-v1.md §6",
+                      "status":  "READY",
+                      "boardTaskId":  null,
+                      "addedBy":  "조율자 세션 23748",
+                      "addedAt":  "2026-07-28",
+                      "tier":  "P1",
+                      "factors":  [
+                                      "unverifiedRisk"
+                                  ]
+                  },
+                  {
+                      "id":  "bl-failure-to-backlog",
+                      "tier":  "P0",
+                      "factors":  [
+                                      "blocksOthers",
+                                      "removesManualToil"
+                                  ],
+                      "title":  "처리 안 된 실패사례를 백로그 후보로 올린다 — 보드가 마르지 않게",
+                      "description":  "보드가 비면 루프가 선다. 백로그를 만들어 공급을 뚫었지만 백로그도 사람이 채워야 하므로 결국 같은 자리에서 멈춘다. 2026-07-29 실측: 남은 항목이 2건까지 떨어졌고 저수위 알림이 나갔다.\n\n그런데 이미 무한한 일감이 있다. 실패사례 60건이다(data/failure-cases.json). 그중 아직 실행 가능한 검사로 굳지 않은 것들은 그 자체가 할 일이다. 루프가 자기 실패에서 자기 일감을 만든다.\n\n만들 것: 처리 안 된 실패사례를 백로그 후보로 내보내는 경로. 발명이 아니다 - 이미 관측된 실패만 쓴다. 후보에는 근거(실패 id, 발생 횟수)가 붙어야 하고, 사람이나 조율자가 실제 항목으로 승격시킨다.\n\n주의: 자동으로 보드에 밀어 넣지 않는다. ADR-024 가 정한 상한은 \u0027선언된 것만 꺼내 쓴다\u0027이다. 실패사례는 후보까지만 올라오고 백로그 편입은 판단이 있어야 한다.",
+                      "acceptanceCriteria":  [
+                                                 "처리 안 된 실패사례를 골라내는 기준이 코드로 있다 — 이미 실행 가능한 검사로 덮인 것은 후보에서 빠진다",
+                                                 "후보에 근거가 붙는다: 실패 id, 발생 횟수, 왜 아직 안 덮였는지",
+                                                 "자동으로 보드에 올라가지 않는다 — 후보 목록까지만 만든다(음성 시험으로 확인)",
+                                                 "후보가 0건일 때도 실패하지 않는다"
+                                             ],
+                      "allowedPaths":  [
+                                           "src/**",
+                                           "test/**"
+                                       ],
+                      "targetRepo":  "team-loop",
+                      "source":  "2026-07-29 실측 - 백로그 저수위 알림, 실패사례 60건 미활용",
+                      "status":  "IN_BOARD",
+                      "boardTaskId":  "tsk_8e84cdaac82555324b29",
+                      "addedBy":  "조율자 세션 23748",
+                      "addedAt":  "2026-07-29",
+                      "priority":  28
+                  },
+                  {
+                      "id":  "bl-promo-receipt-drift",
+                      "tier":  "P0",
+                      "factors":  [
+                                      "measuredFailure"
+                                  ],
+                      "title":  "승격 영수증이 없는 산출물을 가리킨다 — 장부와 레지스트리가 어긋난다",
+                      "description":  "2026-07-29 실측: 승격 영수증 37건 중 9건의 artifactId 가 skills.json 에도 harnesses.json 에도 없다. 그중 여럿이 status STABLE 이고 activatedAt 이 찍혀 있다. 예: delivery-integrity-c7be4a1f (STABLE, 2026-07-28T14:15:15Z 활성화), no-program-evidence-820ed9d4 (STABLE), delivery-integrity-harness-1f492061 (STABLE).\n\n장부는 활성화했다고 말하는데 실물이 없다. 둘 중 하나가 틀렸고 어느 쪽인지 모른다 - 주체 미상이다.\n\n원인을 먼저 찾아라. 활성화가 산출물을 안 남기는지, 나중에 정리되면서 영수증만 남는지, 아니면 id 가 바뀌는지. 원인을 모르고 한쪽을 맞추면 조용히 덮는 것이다.",
+                      "acceptanceCriteria":  [
+                                                 "영수증과 레지스트리가 어긋나는 9건의 원인을 실체로 규명한다 — 추측이 아니라 코드 경로나 로그로",
+                                                 "어긋남을 감지하는 검사가 생기고, 지금 상태에서 실제로 9건을 잡는다",
+                                                 "고친 뒤에는 그 검사가 0건을 낸다. 또는 못 고칠 이유를 근거와 함께 남긴다",
+                                                 "npm test 전체 통과"
+                                             ],
+                      "allowedPaths":  [
+                                           "src/**",
+                                           "test/**"
+                                       ],
+                      "targetRepo":  "team-loop",
+                      "source":  "2026-07-29 실측 - promotion-receipts.json 대 skills/harnesses.json 대조",
+                      "status":  "IN_BOARD",
+                      "boardTaskId":  "tsk_d1d9808b38e96ba812bf",
+                      "addedBy":  "조율자 세션 23748",
+                      "addedAt":  "2026-07-29",
+                      "priority":  26
+                  },
+                  {
+                      "id":  "bl-promo-enforceable",
+                      "tier":  "P1",
+                      "factors":  [
+                                      "measuredFailure"
+                                  ],
+                      "title":  "승격이 권고문 말고 실행 가능한 검사를 내게 한다",
+                      "description":  "승격 엔진이 실패에서 만들어내는 규칙이 이런 문장이다: \u0027과거 실패 Task delivery conflicted on 4 path(s) 가 재발하지 않도록 관련 검증과 변경 범위를 완료 전에 확인한다.\u0027\n\n이건 프롬프트지 강제가 아니다. 이 저장소의 규칙은 프롬프트로 시키지 말고 코드로 강제하라는 것이다. 권고문은 다음 에이전트가 읽을 수도 안 읽을 수도 있고, 읽어도 다르게 해석한다. 실제로 같은 실패가 반복돼 거의 같은 스킬이 여러 개 생겼다(Delivery Integrity Harness 3개).\n\n대조군이 있다. Local-First 의 scripts/check-script-traps.ps1 은 실제로 밟은 함정을 정적 검사로 굳혔고, 자기 시험에 양성·음성 사례가 들어 있어 안 잡게 되면 그것도 실패로 나온다. 그 규칙 하나가 나중에 사람이 모르던 버그를 잡았다.\n\n만들 것: 실패 증거에 재실행 가능한 명령이 있으면 권고문이 아니라 검사로 굳힌다. 없으면 지금처럼 위키로 남긴다(그 갈래는 이미 있다 - decidability-routing). 판정 기준을 명확히 하고, 굳힌 검사에는 음성 사례를 요구한다.",
+                      "acceptanceCriteria":  [
+                                                 "재실행 가능한 명령 증거가 있는 실패는 실행 가능한 검사로 굳는다 — 문장이 아니라 돌아가는 것",
+                                                 "굳힌 검사에 음성 사례가 없으면 승격을 거부한다. 안 잡는 검사는 통과 도장만 찍는다",
+                                                 "증거가 없으면 지금처럼 위키로 간다 — 기존 decidability-routing 을 깨지 않는다",
+                                                 "같은 실패로 거의 같은 산출물을 또 만들지 않는다(중복 방지). 지금 Delivery Integrity Harness 가 3개다",
+                                                 "npm test 전체 통과"
+                                             ],
+                      "allowedPaths":  [
+                                           "src/**",
+                                           "test/**"
+                                       ],
+                      "targetRepo":  "team-loop",
+                      "source":  "2026-07-29 실측 - FAILURE_DERIVED 스킬 19건의 규칙 문면, 라벨 중복 3건",
+                      "status":  "READY",
+                      "boardTaskId":  null,
+                      "addedBy":  "조율자 세션 23748",
+                      "addedAt":  "2026-07-29",
+                      "priority":  20
+                  },
+                  {
+                      "id":  "bl-rejected-returns",
+                      "tier":  "P0",
+                      "factors":  [
+                                      "measuredFailure",
+                                      "removesManualToil"
+                                  ],
+                      "title":  "반려된 태스크가 곧바로 대기로 돌아오게 한다",
+                      "description":  "2026-07-29 실측. 태스크가 반려됐는데 status 가 IN_PROGRESS 로 남아 보드가 그것을 \u0027진행 중 1\u0027로 셌다. 그래서 아무도 다시 안 집고, board-sweep 의 30분 문턱을 기다려야 했다. 조율자가 손으로 READY 로 돌렸다.\n\n반려는 \u0027일이 돌고 있다\u0027가 아니라 \u0027다시 해야 한다\u0027는 뜻이다. 승인이 자동 아카이브로 이어지는 것처럼, 반려도 곧바로 대기로 이어져야 한다.\n\n주의: 반려 기록(review.status, comment)은 지워지지 않아야 한다. 다음 실행자가 그 사유를 프롬프트로 받는다(coordinator-wake 의 Format-BoardTask).",
+                      "acceptanceCriteria":  [
+                                                 "반려 직후 태스크가 다시 집을 수 있는 상태가 된다 — 30분 문턱을 기다리지 않는다",
+                                                 "반려 사유(review.status=REJECTED, comment)가 보존된다. 음성 시험으로 확인한다",
+                                                 "승인 경로는 그대로다 — 기존 시험이 깨지지 않는다",
+                                                 "npm test 전체 통과"
+                                             ],
+                      "allowedPaths":  [
+                                           "src/**",
+                                           "test/**",
+                                           "server.js"
+                                       ],
+                      "targetRepo":  "team-loop",
+                      "source":  "2026-07-29 실측 - tsk_d1d9808b38e96ba812bf 반려 후 방치",
+                      "status":  "IN_BOARD",
+                      "boardTaskId":  "tsk_4a4674f63cec351eac52",
+                      "addedBy":  "조율자 세션 23748",
+                      "addedAt":  "2026-07-29",
+                      "priority":  30
+                  },
+                  {
+                      "id":  "bl-sim-first-diagnostic",
+                      "tier":  "P0",
+                      "factors":  [
+                                      "blocksOthers",
+                                      "unverifiedRisk"
+                                  ],
+                      "title":  "1차 경매 시뮬레이션 — 목표 대비 현재 구조의 문제를 수치로 짚는다",
+                      "description":  "1차 시뮬레이션이다. **목표는 달성이 아니라 진단이다** — 사람이 \"처음 돌리는 거니까 현재 구조에서 뭐가 문제인지 파악부터\"라고 했다.\n\n## 사람이 준 값 (지향값이지 합격선이 아니다)\n\n- 시작 자본 20,000 · 12회차에 100,000 이상 · 최종 경매 적 자본 120,000~150,000\n- 상회 업그레이드 품목은 아직 미정 — 성장 지렛대가 빠진 채로 재는 것임을 감안한다\n- **이 숫자를 게이트의 min/max 로 박지 마라.** 못 넘겼다고 FAIL 을 내는 값이 아니라 얼마나 모자란지를 재는 자다. 합격선은 여러 번 재보고 나서 사람이 정한다.\n\n## 먼저 확인할 것 — 모델이 이 목표를 표현할 수 있는가\n\nsrc/engine/economy-simulator.js 를 읽어보면 startingAssets 기본값이 20000 이고 days 가 12 라 앞의 둘은 이미 맞는다. EndAssetsP10/P50/P90 도 있어 12회차 후 자산은 잴 수 있다.\n\n그런데 다음 셋은 어긋나 보인다. **이건 가설이지 결론이 아니다. 코드로 확인하고 맞는지 틀린지를 근거와 함께 보고하라.**\n\n1. **적 자본이 절대값이 아니라 플레이어 자본에 비례한다.** createAuctionBotBids 가 budget 을 playerCash * randomBetween(0.6, 1.2) 로 잡고 spendableBudget 에서 다시 playerCash * 0.25 를 뺀다. 사람은 최종 경매 적 자본을 120,000~150,000 이라는 절대값으로 말했다. 지금 구조면 플레이어가 가난하면 적도 가난하고, 벌수록 적이 강해진다. bots.minimumBudget 이라는 절대 하한 설정이 있는데 기본값이 0 이라 안 쓰인다.\n2. **목표 달성률 지표가 없다.** 지표가 전부 분포(P10/P50/P90)와 비율(ROI, LossRate, RuinRate)이다. \"12회차 후 자산이 100,000 이상인 실행의 비율\"에 해당하는 것이 없다. 5배 성장 목표는 꼬리가 긴 분포일 가능성이 커서 중앙값만으로는 답이 안 나온다.\n3. **회차에 따른 적 성장이 없다.** 사람의 \"최종 경매\"라는 말은 뒤로 갈수록 적이 강해지는 진행을 뜻한다. 지금은 매 로트마다 현재 playerCash 로 다시 계산할 뿐 12회차에 걸친 적 자본 성장이 없다.\n\n## 이 태스크가 낼 것\n\n**코드 변경보다 측정과 진단이 먼저다.** 현재 구조 그대로 목표 설정으로 돌려서 수치를 낸 뒤, 위 세 가설을 코드 대조로 확인하고, 무엇을 바꿔야 목표를 표현할 수 있는지를 적어라. 고칠 것이 크면 별도 태스크로 올려라 — 이 태스크에서 다 고치려 하지 마라.\n\n## 상회가 비어 있는 것은 결함이 아니라 자유도다 (사람 확인, 2026-07-29)\n\n사람이 말했다 — *\"기능 틀은 있는 거니까 상회가 안 정해진 게 오히려 좋을 수도 있어.\"*\n\n그러므로 질문을 뒤집어라. **\"주어진 품목으로 100,000 이 되는가\"가 아니라 \"100,000 이 되려면 그 지렛대가 무엇을 줘야 하는가\"** 를 재라.\n\n구체적으로: 현재 구조 그대로 돌린 12회차 결과와 100,000 사이의 간극을 재고, 그 간극을 메우려면 상회 업그레이드가 회차당 몇 % 의 수익률 개선, 또는 몇 회 분의 정보 우위, 또는 얼마의 자본 효율을 줘야 하는지를 **역산해서 수치로 제시하라**. 그것이 아직 없는 품목의 설계 요구사항이 된다.\n\n간극이 지렛대로 메울 수 없는 크기라면 그것도 결론이다 — 그때는 구조 자체를 바꿔야 한다는 뜻이고, 무엇을 바꿔야 하는지를 적어라.\n\n## 수치와 구조를 바꿔도 된다 (사람 위임, 2026-07-29)\n\n사람이 말했다 — *\"어차피 수치는 너가 정하는 거고, 수치의 문제가 아닐 수도 있지만 그쪽도 너가 고쳐도 돼.\"*\n\n그러므로 파라미터 조정과 구조 변경 둘 다 이 태스크의 범위 안이다. 다만 순서를 지켜라.\n\n1. **먼저 현재 구조 그대로 재라.** 안 재고 고치면 무엇이 나아졌는지 말할 수 없다.\n2. 바꿨으면 **바꾸기 전과 후를 같이 보고하라.** 바꾼 값과 왜 그 값인지를 적는다.\n3. 기준 파일(blueprint.json / workflow-definition.json)이나 측정 코드를 고쳐 게이트를 통과시키는 것은 여전히 금지다(CLAUDE.md). 시뮬레이션 파라미터를 조정하는 것과 판정 기준을 무르게 하는 것은 다르다.",
+                      "acceptanceCriteria":  [
+                                                 "시작 20,000 / 12회차 / 현재 파라미터로 실제로 돌린 수치를 보고에 적는다 - 최소 표본 수는 §3 에서 정한 값을 따른다",
+                                                 "12회차 후 자산 분포(P10/P50/P90)와 목표 100,000 대비 몇 %인지를 적는다",
+                                                 "위 세 가설 각각에 대해 코드 대조 결과를 맞다/틀리다로 적고 근거(파일:줄)를 댄다",
+                                                 "목표를 표현하려면 무엇을 바꿔야 하는지를 적고, 큰 것은 별도 태스크로 올린다",
+                                                 "발견을 docs/qa/ 아래 문서 하나로 남긴다",
+                                                 "이 태스크는 지향값을 게이트 min/max 로 박지 않는다 - 박았으면 그것이 결함이다",
+                                                 "현재 구조 그대로의 결과를 먼저 재고, 그 뒤에 바꾼 것이 있으면 전후를 같이 보고한다",
+                                                 "100,000 까지의 간극을 메우려면 상회 지렛대가 무엇을 얼마나 줘야 하는지를 역산해 수치로 제시한다 - 또는 지렛대로 못 메운다는 결론과 근거를 낸다"
+                                             ],
+                      "allowedPaths":  [
+                                           "src/**",
+                                           "test/**",
+                                           "docs/**"
+                                       ],
+                      "targetRepo":  "team-loop",
+                      "source":  "사람 결정 2026-07-29 (시작 2만, 12회차 10만, 적 12~15만) + docs/plan/DONE-CRITERIA.md §5",
+                      "status":  "READY",
+                      "boardTaskId":  null,
+                      "addedBy":  "조율자 세션 23748",
+                      "addedAt":  "2026-07-29",
+                      "priority":  26
+                  }
+              ],
+    "policyVersion":  1,
+    "policy":  "docs/plan/BACKLOG-POLICY.md - priority 는 tier 와 factors 에서 계산한다. 손으로 정하지 않는다. scripts/backlog-policy-check.ps1 이 강제한다.",
+    "lastAlertAt":  "2026-07-28T15:26:07Z"
 }
