@@ -26,6 +26,10 @@ param(
   [int]$LowWater = 2,
   # 같은 알림을 몇 시간 안에 다시 보내지 않는다. 5분마다 울리면 아무도 안 본다.
   [int]$NotifyEveryHours = 12,
+  # 루프가 쓰는 상태는 저장소 밖에 둔다. 선언(사람이 쓰는 것)과 상태(루프가 쓰는 것)를
+  # 한 파일에 두면 루프가 자기 저장소를 더럽혀 자기 다음 주기를 막는다 -
+  # 2026-07-29 실측: BACKLOG.json 미커밋 하나로 main-tree-dirty 가 3주기 연속 찍혔다.
+  [string]$StatePath = 'C:\NHN Project\_ops\backlog-state.json',
   [switch]$DryRun
 )
 
@@ -65,6 +69,30 @@ try {
 }
 if (-not $backlog.items) { Write-Output 'backlog-empty'; exit 0 }
 
+# 상태 파일. 없으면 전부 READY 로 본다 - 상태가 없다는 건 아직 아무것도 안 꺼냈다는 뜻이다.
+$state = $null
+if (Test-Path $StatePath) {
+  try { $state = Get-Content -Raw -Encoding UTF8 $StatePath | ConvertFrom-Json } catch { }
+}
+if (-not $state) { $state = [pscustomobject]@{ items = (New-Object psobject) } }
+if (-not $state.items) { $state | Add-Member -NotePropertyName items -NotePropertyValue (New-Object psobject) -Force }
+
+function Get-ItemState([string]$id) {
+  $entry = $state.items.$id
+  if (-not $entry) { return [pscustomobject]@{ status = 'READY'; boardTaskId = $null } }
+  return $entry
+}
+function Set-ItemState([string]$id, [string]$status, [string]$boardTaskId) {
+  $state.items | Add-Member -NotePropertyName $id -NotePropertyValue ([pscustomobject]@{
+    status = $status; boardTaskId = $boardTaskId
+    at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+  }) -Force
+}
+function Save-BacklogState {
+  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $StatePath) | Out-Null
+  [IO.File]::WriteAllText($StatePath, ($state | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
+}
+
 try {
   $board = Get-Content -Raw -Encoding UTF8 $BoardPath | ConvertFrom-Json
 } catch {
@@ -102,7 +130,7 @@ if ($claimable.Count -gt 0 -or $inFlight.Count -gt 0) {
 # 사람에게 알린다. 실패해도 던지지 않는다 - 알림이 안 갔다고 보충을 잃으면 안 된다.
 # 같은 알림을 반복하지 않도록 마지막 시각을 백로그 파일에 남긴다.
 function Send-BacklogAlert([string]$title, [string]$body, [string]$priority) {
-  $lastRaw = [string]$backlog.lastAlertAt
+  $lastRaw = [string]$state.lastAlertAt
   if ($lastRaw) {
     $last = [datetime]::MinValue
     if ([datetime]::TryParse($lastRaw, [ref]$last)) {
@@ -113,18 +141,18 @@ function Send-BacklogAlert([string]$title, [string]$body, [string]$priority) {
   if (Test-Path $notify) {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $notify -Title $title -Body $body -Tags 'clipboard' -Priority $priority 2>&1 | Out-Null
   }
-  $backlog | Add-Member -NotePropertyName 'lastAlertAt' -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')) -Force
+  $state | Add-Member -NotePropertyName 'lastAlertAt' -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')) -Force
   return $true
 }
 
-$candidates = @($backlog.items | Where-Object { $_.status -eq 'READY' -and (-not $_.boardTaskId) })
+$candidates = @($backlog.items | Where-Object { (Get-ItemState ([string]$_.id)).status -eq 'READY' })
 if ($candidates.Count -eq 0) {
   Write-Output 'backlog-exhausted - 꺼낼 항목이 없다. 사람이 새 항목을 넣어야 한다'
   if (-not $DryRun) {
     $sent = Send-BacklogAlert '백로그가 비었다' ('보드가 말랐는데 꺼낼 일감이 없다.' + [Environment]::NewLine + 'docs/plan/BACKLOG.json 에 항목을 넣어야 루프가 다시 돈다.') '4'
     if ($sent) {
       Write-Output 'backlog-alert-sent exhausted'
-      [IO.File]::WriteAllText($BacklogPath, ($backlog | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
+      Save-BacklogState
     }
   }
   exit 0
@@ -147,9 +175,8 @@ $existing = @($tasks | Where-Object { [string]$_.title -eq [string]$pick.title }
 if ($existing) {
   Write-Output "backlog-already-on-board $($pick.id) -> $($existing.id)"
   if (-not $DryRun) {
-    $pick.boardTaskId = [string]$existing.id
-    $pick.status = 'IN_BOARD'
-    [IO.File]::WriteAllText($BacklogPath, ($backlog | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
+    Set-ItemState ([string]$pick.id) 'IN_BOARD' ([string]$existing.id)
+    Save-BacklogState
   }
   exit 0
 }
@@ -204,16 +231,15 @@ try {
 $newId = [string]$resp.task.id
 if (-not $newId) { Write-Output "backlog-create-no-id $($pick.id)"; exit 3 }
 
-$pick.boardTaskId = $newId
-$pick.status = 'IN_BOARD'
-[IO.File]::WriteAllText($BacklogPath, ($backlog | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
+Set-ItemState ([string]$pick.id) 'IN_BOARD' $newId
+Save-BacklogState
 
-$remaining = @($backlog.items | Where-Object { $_.status -eq 'READY' -and (-not $_.boardTaskId) }).Count
+$remaining = @($backlog.items | Where-Object { (Get-ItemState ([string]$_.id)).status -eq 'READY' }).Count
 if ($remaining -le $LowWater) {
   $sent = Send-BacklogAlert '백로그가 얼마 안 남았다' ("남은 일감 $remaining 건." + [Environment]::NewLine + '다 떨어지면 루프가 선다. docs/plan/BACKLOG.json 에 넣어라.') '3'
   if ($sent) { Write-Output "backlog-alert-sent low-water $remaining" }
 }
-[IO.File]::WriteAllText($BacklogPath, ($backlog | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
+Save-BacklogState
 
 Write-Output "backlog-created $newId $($pick.id) $($pick.title) (남은 $remaining 건)"
 exit 0
