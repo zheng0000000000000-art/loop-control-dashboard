@@ -2136,3 +2136,43 @@
   (b) MCP `create_task`/새 `update_task`에 `projectId` 매개변수를 추가하는 후속 태스크를 먼저
   발주할지. 이 판정 세션은 `tsk_e8eb58a72ecf3a8315e7`을 BLOCKED 그대로 두었다 — 만들지 않았고
   건드리지 않았다.
+
+- **`tsk_38cb6b3b5db54eff9179`(unknown-auction 경매 씬 파일럿 반영)를 이 판정 세션(`session-20260730-021820`,
+  실행 세션 `20260730-020509`과 분리됨)이 `approve_task`로 승인했다 — 코드는 완전히 검증됐지만
+  승인이 트리거한 병합이 `master`가 아니라 낡은 브랜치로 들어갔다.** (2026-07-30, 이 판정 세션)
+  **재검증한 것(자기보고 아님)**: `C:\NHN Project\unknown-auction\.team-loop-worktrees\tsk_38cb6b3b5db54eff9179`에서
+  직접 실행 — `node tools/verify-scene.js --self-test` → exit 0(`{selfTest:12,negative:7,failed:0}`).
+  `node tools/build-scene-state.js`로 실 state를 만들어 `--scene=scene-auction` 판정 → `errors:0,warnings:4`
+  (지정된 전역 팝업 4건과 정확히 일치), exit 0. 음성 시험 둘 다 **이 세션이 직접 재현**(자기보고 아님) —
+  `btn-bid.actionRef` 삭제 → `H03`, exit 1 / `btn-bid.xPercent=500`(캔버스 밖) → `G01`, exit 1.
+  `flow.json`의 `scene-auction` 핀 10/10에 `bindings` 채워짐, `feature-jump-bid`는 저장소 전체
+  `grep`으로 0건(완전 삭제) 확인, `player.fame`은 diff에 전혀 등장하지 않음(건드리지 않음 확인).
+  `layout.json`의 `scene-auction` 요소 24개, `catalog-strip`/`bot-panel`이 `repeat` 보유, 반복 안
+  자식(`catalog-item-grade` 등)의 좌표가 항목 상자 기준 퍼센트(`widthPercent:100`)임을 직접 확인.
+  추가된 모든 data/action refs(`auction.bots` 등, `PLACE_BID` 등)가 `V3-data-contract.md`에
+  이미 등재돼 있음을 확인(새 계약 없음). `git diff --stat`로 allowedPaths
+  (`docs/brainstorms/v3-visual-spec/**`, `tools/**`, `docs/**`, `test/**`) 밖 변경 없음 확인.
+  완료 기준 9개 전부 실측 충족 — `approve_task` 승인(`status: DONE`, `adminOverride: true`).
+  **승인 직후 발견한 문제(코드 결함이 아니라 병합 인프라 결함)**: `approve_task`가 부른
+  `/api/tasks/<id>/review`의 `mergeTaskWorktree`는 `git merge --no-ff <task-branch>`를
+  **`resolveTaskRepoRoot`가 돌려준 경로에서 현재 체크아웃된 브랜치 위에** 실행한다
+  (`src/worktree.js:209`) — `master`로 고정돼 있지 않다. `C:\NHN Project\unknown-auction`
+  (메인 트리)는 그 시점에 `master`가 아니라 **`task/tsk_e8eb58a72ecf3a8315e7`**(위 항목이 이미
+  기록한, `projectId` 없어 BLOCKED로 남겨둔 그 잘못된 태스크의 브랜치)에 체크아웃돼 있었다 —
+  아마 2026-07-29 그 태스크가 엉뚱한 저장소에서 실행되며 남긴 잔재로 보인다(단정은 아님, 그
+  세션 로그 부재로 재구성 불가). 그 결과 병합 커밋(`1152209 Merge task/tsk_38cb6b3b5db54eff9179`)이
+  `task/tsk_e8eb58a72ecf3a8315e7` 브랜치 위에 얹혔다 — `git merge-base --is-ancestor aae6549 master`
+  재확인 → `NO`. **`master`는 이 승인된 작업을 여전히 갖고 있지 않다.**
+  **이 세션이 안 한 것**: `master`를 직접 체크아웃해 병합하지 않았다 — unknown-auction
+  `CLAUDE.md` 하드 룰 "②메인 브랜치 직접 commit/push 금지"에 해당할 수 있는 행위라 임의로
+  진행하지 않았다. `mergeTaskWorktree`/`resolveTaskRepoRoot`(team-loop 코드, 게이트/병합층)도
+  고치지 않았다 — 이 판정 세션은 unknown-auction 격리 워크트리 밖에서 team-loop 소스를 고칠
+  권한 범위 밖이고, 병합 로직 변경은 사람 결재급 판단으로 보인다.
+  **사람이 정할 것**: (a) `unknown-auction`에서 사람이 직접 `git checkout master && git merge
+  task/tsk_38cb6b3b5db54eff9179`(또는 이미 만들어진 병합 커밋 `1152209`을 cherry-pick/merge)로
+  바로잡을지 (b) `mergeTaskWorktree`가 병합 전 `resolveTaskRepoRoot`가 돌려준 저장소의 base
+  브랜치(설정 가능하거나 `origin/HEAD` 추적)로 명시적으로 체크아웃하도록 team-loop 코드를
+  고치는 후속 태스크를 먼저 발주할지(다른 프로젝트로 라우팅되는 태스크가 늘어날수록 이 결함이
+  반복될 것으로 보인다) (c) `C:\NHN Project\unknown-auction`(메인 트리) 자체를 지금이라도
+  `master`로 되돌려 둘지(다른 미완료 태스크가 그 브랜치에 기대고 있는지 먼저 확인 필요 —
+  이 세션은 확인하지 않았다).
