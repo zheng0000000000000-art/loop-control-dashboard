@@ -1873,3 +1873,21 @@
   사람 확인 없이 판정 세션이 임의로 바꾸는 것은 이 세션의 재량 밖이라고 봤다. 사람 또는
   다음 세션이 `node src/promotion-reconciliation.js data --repair`를 라이브 경로에 직접
   돌리면 된다(되돌리기도 쉽다 — git 추적 대상이라 `git diff`/`git checkout --`로 원복 가능).
+
+- **team-loop 보드 태스크(`tsk_4a4674f63cec351eac52`, "반려된 태스크가 곧바로 대기로 돌아오게
+  한다")를 이 판정 세션(session-20260729-112051)이 승인(`approve_task`)했다 — DONE.** 실행
+  세션(`20260729-111106`)과 이 세션은 다르다(ADR-020 요건 충족).
+  **직접 재확인한 것(자기보고 아님, 격리 워크트리
+  `.team-loop-worktrees/tsk_4a4674f63cec351eac52`에서)**: ①`git diff HEAD` — `server.js`의
+  REJECT 분기(2206행)가 `next.status = 'IN_PROGRESS'`에서 `next.status = 'READY'`로 바뀐 것을
+  직접 확인, APPROVE 분기는 무변경(승인 경로 보존) ②claim 핸들러(server.js:531,
+  `if (current.status !== 'READY')`)를 대조해 READY 전환이 실제로 재청구를 여는지 확인
+  ③`npm test` 전체를 이 세션이 격리 워크트리에서 직접 재실행 → `606/606` 통과(자기보고와
+  일치), 신규 테스트 2건("a REJECT sends the task straight back to READY so it can be claimed
+  again immediately", "a REJECT preserves its reason across the status change back to READY")도
+  통과 목록에서 직접 확인 ④두 번째 테스트는 `/api/bootstrap` 재조회로 `review.status`/
+  `review.comment`가 READY 전환 후에도 보존됨을 검증 — 완료 조건("반려 사유가 지워지지 않아야
+  한다")을 코드가 아니라 시험으로 대조 ⑤변경 파일은 `server.js`·`test/review-session-gate.test.js`
+  둘뿐, allowedPaths(`src/**`·`test/**`·`server.js`) 안.
+  **판단**: 완료 기준 4개(즉시 재청구·반려 사유 보존·승인 경로 무변경·npm test 전체 통과)
+  전부 실체로 확인됐다.
