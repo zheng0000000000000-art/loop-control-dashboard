@@ -42,6 +42,8 @@ try {
   [IO.File]::WriteAllText((Join-Path $root 'disc.json'), (@{ schemaVersion = 1; messages = @(); memories = @() } | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
   Set-Content -Path (Join-Path $root 'queue.md') -Encoding UTF8 -Value '# 빈 큐'
   Set-Content -Path (Join-Path $root 'inbox.md') -Encoding UTF8 -Value '# 빈 인계함'
+  # 인박스에 미처리 항목이 하나 있는 판. 사람이 처리해야 줄어드는 종류다.
+  Set-Content -Path (Join-Path $root 'inbox-pending.md') -Encoding UTF8 -Value "# 인계함`n- [ ] 사람이 볼 것"
   [IO.File]::WriteAllText((Join-Path $root 'backlog-empty.json'), (@{ schemaVersion = 1; items = @() } | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
   foreach ($m in @('dry','busy','review','ready')) { New-BoardFixture (Join-Path $root "board-$m.json") $m }
 
@@ -51,18 +53,32 @@ try {
     @{ name = '진행 중 있음';           board = 'busy';   expect = 'execute'; plan = 9 },
     @{ name = '판정 대기 있음';         board = 'review'; expect = 'review';  plan = 9 },
     @{ name = '집을 것 있음';           board = 'ready';  expect = 'execute'; plan = 9 },
-    @{ name = '계획 한도 0 이면 안 뜬다'; board = 'dry';   expect = 'none';    plan = 0 }
+    @{ name = '계획 한도 0 이면 안 뜬다'; board = 'dry';   expect = 'none';    plan = 0 },
+    # 인박스 표식이 억제돼 있어도 보드 일은 굶으면 안 된다.
+    # 2026-07-30 실측: inbox:1 표식 하나에 8회 연속 아무것도 안 했다(보드 READY 2 인데도).
+    @{ name = '인박스 억제 중에도 보드는 돈다'; board = 'ready'; expect = 'execute'; plan = 9;
+       inbox = 'inbox-pending.md'; preMarker = @{ kind = 'inbox'; value = 'inbox:1' } },
+    # 음성: 보드에 일이 없으면 인박스 억제가 실제로 막아야 한다.
+    @{ name = '인박스 억제 + 보드 빔 = 안 뜬다'; board = 'dry'; expect = 'none'; plan = 0;
+       inbox = 'inbox-pending.md'; preMarker = @{ kind = 'inbox'; value = 'inbox:1' } }
   )
 
   $failed = 0
   foreach ($c in $cases) {
-    $ledger = Join-Path $root ('plan-' + $c.board + '-' + $c.plan + '.json')
+    $ledger = Join-Path $root ('plan-' + $c.board + '-' + $c.plan + '-' + $c.name.Length + '.json')
     if (Test-Path $ledger) { Remove-Item -Force $ledger }
+    $inboxFile = Join-Path $root $(if ($c.inbox) { $c.inbox } else { 'inbox.md' })
+    # 표식은 종류별 파일이다. 미리 깔아두면 그 종류만 억제된다.
+    Get-ChildItem $root -Filter 'hb.json.woke.*' -ErrorAction SilentlyContinue | Remove-Item -Force
+    Get-ChildItem $root -Filter 'hb.json.attempts.*' -ErrorAction SilentlyContinue | Remove-Item -Force
+    if ($c.preMarker) {
+      Set-Content -Path (Join-Path $root ('hb.json.woke.' + $c.preMarker.kind)) -Encoding UTF8 -Value $c.preMarker.value
+    }
     $out = & powershell -NoProfile -ExecutionPolicy Bypass -File $WakeScript -DryRun `
       -DiscussionPath (Join-Path $root 'disc.json') `
       -BoardPath (Join-Path $root ("board-" + $c.board + ".json")) `
       -QueuePath (Join-Path $root 'queue.md') `
-      -InboxPath (Join-Path $root 'inbox.md') `
+      -InboxPath $inboxFile `
       -HeartbeatPath (Join-Path $root 'hb.json') `
       -HoldPath (Join-Path $root 'nohold.flag') `
       -LogDir (Join-Path $root 'logs') `
