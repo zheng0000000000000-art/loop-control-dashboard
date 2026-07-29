@@ -952,6 +952,70 @@
         "세션이 정상적으로 얼마나 걸리는지 실측한다. 끝까지 놔둔 표본이 오늘 하나뿐이다(3분 반) - 그것만으로 한도를 정하지 마라",
         "판정은 exit code 로 보고한다"
       ]
+    },
+    {
+      "tier": "P0",
+      "targetRepo": "team-loop",
+      "status": "READY",
+      "boardTaskId": null,
+      "addedBy": "조율자 세션 coord-phase0",
+      "addedAt": "2026-07-30",
+      "allowedPaths": [
+        "src/**",
+        "server.js",
+        "test/**",
+        "docs/**"
+      ],
+      "factors": [
+        "measuredFailure",
+        "blocksOthers"
+      ],
+      "priority": 30,
+      "dependsOn": [],
+      "id": "bl-phase0-progress-signal",
+      "source": "docs/PHASE-0-DIRECTIVE-REPAIR-LOOP.md §6·§12 대조 + 2026-07-30 실측",
+      "title": "실패 패킷에 \"지금 일하고 있나\"를 잴 신호가 없다 — 그래서 일하는 실행자를 죽였다",
+      "description": "`PHASE-0-DIRECTIVE-REPAIR-LOOP.md` §6 의 실패 패킷에는 `stdoutTail`·`stderrTail`·`changedPaths`\n가 있는데 **셋 다 실행이 끝난 뒤의 값**이다. **진행 중에 \"살아서 일하고 있나\"를 잴 신호가 없다.**\n\n## 실측 (2026-07-30)\n\n실행 세션의 stdout 은 **종료 시점에 몰아서** 파일에 실린다. 진행 중에는 0바이트가 정상이다.\n그것을 \"아무것도 안 했다\"로 읽고 **일하던 세션 둘을 죽였다.**\n\n```\ntsk_4532ea2c (라우팅)  server.js · cli/main.js · entry-service.js\n                      orchestration-engine.js · store.js · test/entry-service.test.js\n                      6 files changed, 173 insertions(+), 44 deletions(-)\ntsk_e8eb58a7 (파일럿)  layout.json · build-scene-state.js · scene-closure.js · verify-scene.js\n```\n\n실체는 **워크트리 파일 변경 시각**이었다. 로그 크기는 프록시였다.\n\n```\n0바이트를 봄 -> \"안 했다\" 로 읽음 -> 죽임\n-> 죽였으니 출력이 영영 안 실림 -> 0바이트가 남음 -> 진단이 \"확인\" 됨\n```\n\n**자기충족 진단이다.** §12 의 24시간 운영 필수 상태에 `lastHealthyAt` 이 있지만\n그것은 프로세스 생존만 말한다 — **살아 있는데 일을 안 하는 경우를 못 가른다.**\n\n## 무엇을 만드나\n\n- 실패 패킷과 Run 에 **`lastArtifactChangeAt`** 을 넣는다. 프로그램이 확정할 수 있는 사실이다\n  (격리 워크트리에서 가장 최근에 바뀐 파일의 시각).\n- 진행 판정을 그 신호로 한다. **로그 크기를 신호로 쓰지 않는다** — 종료 전에는 늘 0이다.\n- §13 E2E 에 한 줄 더한다: **\"실행자를 중간에 강제 종료해도 다음 시도가 이전 작업을 이어받는다.\"**\n  2026-07-30 에 우연히 확인됐다(죽인 173줄 위에 다음 세션이 얹어 195줄로 완주). 문서에 없으면 다음에 깨져도 모른다.",
+      "acceptanceCriteria": [
+        "실패 패킷과 Run 에 lastArtifactChangeAt 이 들어간다. 값은 격리 워크트리의 최신 파일 변경 시각이다",
+        "진행 판정에 로그 파일 크기를 쓰지 않는다. 종료 전에는 늘 0이라 아무것도 못 가른다 - 쓰면 실패다",
+        "음성 시험: 실제로 파일을 쓰고 있는 실행자를 \"멈춤\"으로 판정하지 않는다. 2026-07-30 에 그 오판으로 173줄을 죽였다",
+        "음성 시험: 프로세스는 살아 있는데 오래 아무 파일도 안 바뀐 경우는 구분해서 보고한다(죽이라는 뜻은 아니다)",
+        "실행자를 중간에 강제 종료한 뒤 다음 시도가 이전 워크트리를 이어받는 E2E 가 있다",
+        "판정은 exit code 로 보고한다"
+      ]
+    },
+    {
+      "tier": "P0",
+      "targetRepo": "team-loop",
+      "status": "READY",
+      "boardTaskId": null,
+      "addedBy": "조율자 세션 coord-phase0",
+      "addedAt": "2026-07-30",
+      "allowedPaths": [
+        "src/**",
+        "server.js",
+        "test/**",
+        "docs/**"
+      ],
+      "factors": [
+        "measuredFailure",
+        "blocksOthers"
+      ],
+      "priority": 30,
+      "dependsOn": [],
+      "id": "bl-phase0-layer-completion",
+      "source": "docs/PHASE-0-DIRECTIVE-REPAIR-LOOP.md §8·§9 대조 + tsk_4532ea2c 실측",
+      "title": "완료 판정이 \"고친 층\"을 안 본다 — 승인됐는데 아무것도 안 바뀌었다",
+      "description": "`PHASE-0-DIRECTIVE-REPAIR-LOOP.md` §9 는 *\"Repair 의 좁은 검사가 통과했다고 원래 Directive 를\n완료하지 않는다\"* 고 한다. 옳다. 그런데 **같은 결함이 여러 층에 있을 때**를 못 잡는다.\n\n## 실측 (2026-07-30) — tsk_4532ea2c\n\n*\"태스크가 프로젝트에 안 붙는다\"* 를 고치는 태스크가 **verification PASSED · review APPROVED · DONE**\n으로 끝났다. 코드도 실제로 바뀌었다(`entry-service.js` 의 `=== 'team-loop'` 특수 분기 제거,\n`resolveTaskRepoRoot` fail-closed 추가, 195줄).\n\n**그런데 아무것도 안 바뀌었다.**\n\n```\n서버 층   resolveTaskRepoRoot        고쳤다 -> 승인\n루프 층   coordinator-wake.ps1:747   안 고쳤다 -> 워크트리를 여전히 team-loop 에 만든다\n```\n\n워크트리를 만드는 것은 서버가 아니라 **깨우기 스크립트**였다. 그 스크립트는\n`allowedPaths`(`src/** server.js test/** docs/**`) **밖**이었으므로,\n§8 의 *\"원래 범위를 벗어나지 않는가\"* 검사를 **통과하면서 목적은 미달**했다.\n\n확인은 승인 뒤에야 됐다 — projectId 를 박아 재발행했는데 **또 team-loop 에 워크트리가 생겼다.**\n\n## 왜 이것이 구조적인가\n\n완료 기준이 **코드 위치**로 쓰이면 그 위치 밖의 층은 아무도 안 본다.\n*\"entry-service.js 의 특수 분기가 사라진다\"* 는 통과했지만\n*\"unknown-auction 태스크가 그 저장소에서 돈다\"* 는 아무도 안 쟀다.\n\n## 무엇을 만드나\n\n- 완료 기준에 **행위로 쓴 것**을 하나 이상 요구한다 — 파일·함수가 아니라 관측 가능한 결과로.\n- 그 행위 검증을 **원래 Directive 완료 시점에** 실행한다(§9 의 \"원래 완료 조건 전체 재검증\").\n- 검증이 **선언된 allowedPaths 밖의 층을 건드려야만 통과하는 경우**를 드러낸다 -\n  그때는 완료가 아니라 후속 Directive 가 필요하다는 신호다.",
+      "acceptanceCriteria": [
+        "완료 기준 중 최소 하나가 관측 가능한 행위로 쓰여 있어야 한다. 파일·함수 위치만으로 된 기준 집합은 거절한다",
+        "원래 Directive 완료 시점에 그 행위 검증을 실행한다. Repair 의 좁은 검사만으로 완료하지 않는다",
+        "음성 시험: 코드는 바뀌었지만 행위가 안 바뀐 경우를 잡는다. tsk_4532ea2c 가 그 사례다 - 195줄이 바뀌고 승인됐는데 워크트리는 여전히 team-loop 에 생겼다",
+        "음성 시험: 행위 검증이 allowedPaths 밖을 건드려야만 통과한다면 완료가 아니라 후속 Directive 가 필요하다고 보고한다",
+        "기존 태스크의 완료·승인 흐름이 그대로 돈다. 새 요구가 옛 태스크를 소급해 막지 않는다",
+        "판정은 exit code 로 보고한다"
+      ]
     }
   ],
   "policyVersion": 1,
