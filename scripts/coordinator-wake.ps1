@@ -484,7 +484,10 @@ if (Test-Path $generatedList) {
   $generatedPrefixes = @(Get-Content -Encoding UTF8 $generatedList |
     ForEach-Object { $_.Trim() } | Where-Object { $_ -and (-not $_.StartsWith('#')) })
 }
-$mainDirty = & git -C $WorkingDir status --porcelain 2>&1
+# 모의 실행은 착지하지 않으므로 트리 상태를 볼 이유가 없다. 커밋 잠금과 같은 이유다 -
+# 2026-07-29 실측: loop-smoke 의 네 갈래가 본 저장소의 미커밋 파일 하나 때문에 전부 끊겼다.
+# 저장소 상태 때문에 실패하는 시험은 루프를 재는 게 아니다.
+$mainDirty = if ($DryRun) { @() } else { & git -C $WorkingDir status --porcelain 2>&1 }
 # 목록을 못 읽으면 예전처럼 전부 막는다. 모르는 것은 통과가 아니다.
 $sourceDirty = @()
 foreach ($line in @($mainDirty)) {
@@ -656,7 +659,7 @@ $planPrompt = @'
 보드가 비었고 백로그에서도 꺼낼 것이 없다. 너는 지금 실행자도 판정자도 아니다.
 **이번 세션의 유일한 일은 다음에 할 일감을 증거에서 유도해 보드에 올리는 것이다.**
 
-## 지어내지 마라 — 출처는 이 넷뿐이다
+## 지어내지 마라 — 출처는 이 다섯뿐이다
 
 1. `C:/NHN Project/team-loop-lite-ai-learning/data/failure-cases.json` — 관측된 실패.
    아직 실행 가능한 검사로 덮이지 않은 것만. 이미 시험이나 하네스가 잡는 것은 제외한다.
@@ -665,6 +668,15 @@ $planPrompt = @'
 3. `C:/Users/1/Documents/Local-First Workflow Dashboard/docs/handoff/KNOWN-ISSUES.md` — 미해결로 적힌 것.
 4. team-loop 의 승격 후보 중 권고문으로만 남아 강제되지 않는 것(`data/skills.json` 의
    `source: FAILURE_DERIVED` 규칙이 '확인한다' 류 문장뿐인 것).
+5. `C:/NHN Project/_ops/wake-logs/decisions.log` — **루프 자신의 판정 기록.**
+   루프가 헛도는 것은 여기에만 남는다. 다음 표시가 반복되면 그 반복 자체가 일감이다:
+   - `no-progress` (깨어났는데 아무것도 못 줄임) · `main-tree-dirty` (트리가 더러워 시작 못 함)
+   - `remedy-exhausted` / `*-persists` (처치가 듣지 않음) · `already-woke-for` / `stalled`
+   - 같은 태스크에 `claim-skipped` / `board-release-noop` 이 반복
+   **최근 24시간만 본다.** 옛 기록은 이미 고쳐진 것일 수 있으니 `git log` 로 대조하고,
+   고쳐졌으면 올리지 마라. 반복 횟수를 근거로 적어라 - 한 번은 사건이고 반복은 결함이다.
+   이 출처의 일감은 team-loop 이 아니라 **Local-First 저장소의 `scripts/`** 를 고쳐야 하는
+   경우가 많다. 그때는 그 사실과 대상 파일을 태스크 본문에 명시하라.
 
 **이 넷 밖에서 떠오른 좋은 생각은 이번에 올리지 마라.** 그건 사람이 백로그에 넣을 일이다.
 
