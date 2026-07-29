@@ -100,6 +100,7 @@ try {
   exit 2
 }
 $tasks = @(if ($board.tasks) { $board.tasks } else { $board })
+$allTasks = $tasks   # 아카이브된 것도 봐야 한다 - 승인되면 자동 아카이브되기 때문이다
 $tasks = @($tasks | Where-Object { -not $_.archived })
 
 # 끝난 태스크의 id 집합. 의존이 풀렸는지 보는 데 쓴다.
@@ -145,8 +146,29 @@ function Send-BacklogAlert([string]$title, [string]$body, [string]$priority) {
   return $true
 }
 
-$candidates = @($backlog.items | Where-Object { (Get-ItemState ([string]$_.id)).status -eq 'READY' })
+# 보드에서 끝난 항목을 닫는다. 안 닫으면 IN_BOARD 로 영원히 남고 의존이 안 풀린다.
+$closed = 0
+foreach ($item in $backlog.items) {
+  $st = Get-ItemState ([string]$item.id)
+  if ($st.status -ne 'IN_BOARD' -or (-not $st.boardTaskId)) { continue }
+  $bt = @($allTasks | Where-Object { $_.id -eq [string]$st.boardTaskId })[0]
+  if ($bt -and $bt.status -eq 'DONE') { Set-ItemState ([string]$item.id) 'DONE' ([string]$st.boardTaskId); $closed++ }
+}
+if ($closed -gt 0) { Save-BacklogState; Write-Output "backlog-closed $closed" }
+
+# 의존이 안 끝난 항목은 못 꺼낸다. 순서가 있는 일감은 순서대로 나가야 한다.
+function Test-DepsDone($item) {
+  foreach ($dep in @($item.dependsOn)) {
+    if (-not $dep) { continue }
+    if ((Get-ItemState ([string]$dep)).status -ne 'DONE') { return $false }
+  }
+  return $true
+}
+$candidates = @($backlog.items | Where-Object { (Get-ItemState ([string]$_.id)).status -eq 'READY' -and (Test-DepsDone $_) })
 if ($candidates.Count -eq 0) {
+  # 의존 때문에 막힌 것과 진짜로 빈 것은 다르다. 앞은 기다리면 풀리고 뒤는 사람이 넣어야 한다.
+  $blocked = @($backlog.items | Where-Object { (Get-ItemState ([string]$_.id)).status -eq 'READY' -and (-not (Test-DepsDone $_)) }).Count
+  if ($blocked -gt 0) { Write-Output "backlog-blocked-by-deps $blocked"; exit 0 }
   Write-Output 'backlog-exhausted - 꺼낼 항목이 없다. 사람이 새 항목을 넣어야 한다'
   if (-not $DryRun) {
     $sent = Send-BacklogAlert '백로그가 비었다' ('보드가 말랐는데 꺼낼 일감이 없다.' + [Environment]::NewLine + 'docs/plan/BACKLOG.json 에 항목을 넣어야 루프가 다시 돈다.') '4'
@@ -234,7 +256,7 @@ if (-not $newId) { Write-Output "backlog-create-no-id $($pick.id)"; exit 3 }
 Set-ItemState ([string]$pick.id) 'IN_BOARD' $newId
 Save-BacklogState
 
-$remaining = @($backlog.items | Where-Object { (Get-ItemState ([string]$_.id)).status -eq 'READY' }).Count
+$remaining = @($backlog.items | Where-Object { (Get-ItemState ([string]$_.id)).status -eq 'READY' -and (Test-DepsDone $_) }).Count
 if ($remaining -le $LowWater) {
   $sent = Send-BacklogAlert '백로그가 얼마 안 남았다' ("남은 일감 $remaining 건." + [Environment]::NewLine + '다 떨어지면 루프가 선다. docs/plan/BACKLOG.json 에 넣어라.') '3'
   if ($sent) { Write-Output "backlog-alert-sent low-water $remaining" }
