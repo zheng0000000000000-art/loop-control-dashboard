@@ -538,3 +538,39 @@ team-loop 코드는 20:00 이후 6시간에 **9번** 바뀌었다(`git log -- se
 진짜 알람은 그쪽이고 그건 한도와 무관하다. 한도는 폭주 방지용 상한이지 진단이 아니다.
 
 **되돌리는 법**: `scripts/remedies.json` 의 `server-stale.maxPerDay` 를 3 으로 되돌린다.
+
+
+---
+
+## 2026-07-29 · trust-origin 자기시험의 저장소 루트 해석을 워크트리까지 넓힌다
+
+**주체**: 조율자 세션 coord-donenotify (에이전트). 사람 결재 없음 — 아래 근거를 보고 되돌릴 수 있다.
+
+**바꾼 것**: `server/TrustOriginCli.cs` 의 `RepoRootForSelfTest()` 가 `.git` 을
+디렉터리로만 찾던 것을 **파일이어도 루트로 인정**하게 했다. 자기시험 케이스
+`worktree-root-resolved` 를 더하고 표의 `trustOriginSelfTest` 를 29 -> 30 으로 올렸다.
+
+**근거(실측)**: 2026-07-29, 워크트리 `session-coord-donenotify` 에서
+`trust-origin --self-test` 가 `required-commands-match-manifest` 와
+`required-commands-drift-detected` 둘 다 FAIL 했고, 그 탓에 `gate-witness-check` 가
+`WP-STATE-INTEGRITY-LAND` 를 미증언 1건으로 FAIL 했다. 같은 명령이 메인 트리에서는 PASS 했다.
+
+원인은 실체로 확인했다 — 워크트리의 `.git` 은 파일이다(`-rw-r--r-- 100 bytes`).
+디렉터리만 찾으니 워크트리 루트를 지나쳐 상위 운영 저장소를 루트로 잡았고,
+거기에는 `docs/handoff/GATE-MANIFEST.json` 이 없어 **필수 검사가 전부 "빠짐"으로** 보고됐다.
+즉 검사가 **다른 저장소를 읽고 있었다.**
+
+**이것은 완화가 아니다**: 고치기 전 이 검사는 워크트리에서 *아무것도 재지 않았다*
+(항상 같은 거짓 실패). 고친 뒤에야 실제 매니페스트와 대조한다. 판정 기준은 그대로다.
+
+**음성 시험**: 고친 줄을 일부러 되돌리고 다시 돌렸더니 세 케이스가 정확히 FAIL 했다
+(`required-commands-match-manifest`, `required-commands-drift-detected`, `worktree-root-resolved`).
+새 케이스가 이 형태를 실제로 잡는다.
+
+**되돌리는 법**: `RepoRootForSelfTest()` 의 두 줄을
+`if (Directory.Exists(Path.Combine(dir.FullName, ".git"))) return dir.FullName;` 하나로 되돌리고,
+`worktree-root-resolved` 케이스와 `WorktreeRootResolved()` 를 지우고, 표를 30 -> 29 로 내린다.
+
+**남는 의문(주체 미상)**: 이 결함이 언제부터 있었는지는 모른다. 지금까지 워크트리에서
+`run-gates.sh` 전체를 돌린 기록을 못 찾았다 — 착지 게이트가 메인 트리에서만 돌았을 수 있다.
+추측으로 적지 않는다.

@@ -418,7 +418,7 @@ internal static class TrustOriginCli
     private static readonly (string Key, int Cases)[] SelfTestGateCounts =
     [
         ("stateTransitionSelfTest", 19),
-        ("trustOriginSelfTest", 29),
+        ("trustOriginSelfTest", 30),
         ("recoverySelfTest", 8),
     ];
 
@@ -472,6 +472,9 @@ internal static class TrustOriginCli
         Add(cases, "required-commands-match-manifest",
             RequiredCommandsMissingFromManifest(RepoRootForSelfTest()).Count == 0, negative: false);
         Add(cases, "required-commands-drift-detected", RequiredCommandsDriftDetected(), negative: true);
+        // .git 이 파일인 형태(워크트리)에서도 루트를 찾는지 본다. 이 형태를 못 찾으면
+        // 위 두 케이스가 다른 저장소를 읽고 거짓 실패한다 - 실제로 겪었다.
+        Add(cases, "worktree-root-resolved", WorktreeRootResolved(), negative: false);
         // 표의 trustOriginSelfTest 값이 실재 케이스 수와 같은지 본다. 케이스를 더하면서 표를
         // 안 고치면 declare가 integration-gate-evidence-missing으로 거절하는데, 그 사유는
         // 원인을 가리키지 않는다(2026-07-26에 24 → 26으로 올릴 때 실제로 겪었다).
@@ -1158,10 +1161,40 @@ internal static class TrustOriginCli
         var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
         while (dir is not null)
         {
-            if (Directory.Exists(Path.Combine(dir.FullName, ".git"))) return dir.FullName;
+            // 워크트리에서 .git 은 디렉터리가 아니라 파일이다. 디렉터리만 찾으면 워크트리
+            // 루트를 지나쳐 상위의 다른 저장소를 루트로 잡는다 - 그러면 이 자기시험은
+            // 엉뚱한 저장소의 매니페스트를 읽고 필수 검사가 전부 빠진 것으로 보고한다
+            // (2026-07-29 실측: 상위 운영 저장소를 루트로 잡아 두 케이스가 거짓 실패했다).
+            var marker = Path.Combine(dir.FullName, ".git");
+            if (Directory.Exists(marker) || File.Exists(marker)) return dir.FullName;
             dir = dir.Parent;
         }
         return Directory.GetCurrentDirectory();
+    }
+
+    // .git 이 파일인 저장소(워크트리)에서 루트 해석이 성립하는지 본다.
+    private static bool WorktreeRootResolved()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "lfwd-worktree-root-" + Guid.NewGuid().ToString("N"));
+        var prev = Directory.GetCurrentDirectory();
+        try
+        {
+            var deep = Path.Combine(temp, "server");
+            Directory.CreateDirectory(deep);
+            File.WriteAllText(Path.Combine(temp, ".git"), "gitdir: elsewhere", Utf8NoBom);
+            Directory.SetCurrentDirectory(deep);
+            var resolved = RepoRootForSelfTest();
+            // 워크트리 루트가 잡혀야 한다. 하위 폴더가 잡히면 못 찾고 되돌아온 것이다.
+            return string.Equals(Path.GetFullPath(resolved).TrimEnd(Path.DirectorySeparatorChar),
+                                 Path.GetFullPath(temp).TrimEnd(Path.DirectorySeparatorChar),
+                                 StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return false; }
+        finally
+        {
+            Directory.SetCurrentDirectory(prev);
+            try { Directory.Delete(temp, true); } catch { }
+        }
     }
 
     // 목록이 낡았을 때 실제로 잡아내는지 본다. 매니페스트 사본에서 필수 검사 하나를 지우고

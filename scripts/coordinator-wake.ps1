@@ -934,7 +934,25 @@ $completedThisCycle = @()
 if ($null -ne $stillDoneIds) {
   $completedThisCycle = @($stillDoneIds | Where-Object { @($doneIds) -notcontains $_ })
 }
-if ($completedThisCycle.Count -gt 0) { Write-Line ('completed-this-cycle ' + ($completedThisCycle -join ' ')) }
+if ($completedThisCycle.Count -gt 0) {
+  Write-Line ('completed-this-cycle ' + ($completedThisCycle -join ' '))
+  # 끝난 것을 폰으로 알린다. 지금까지 알림은 멈춤·판단필요·백로그 저수위뿐이라
+  # 잘 돌고 있을 때는 아무 신호가 없었다 - 사람이 계속 돌았냐고 물어야 했다.
+  # 나쁜 소식만 알리면 조용한 것이 좋은 것인지 죽은 것인지 구분이 안 된다.
+  $doneTitles = @()
+  foreach ($id in $completedThisCycle) {
+    $doneTask = @($laterTasks | Where-Object { $_.id -eq $id })[0]
+    $line = if ($doneTask) { [string]$doneTask.title } else { [string]$id }
+    if ($line.Length -gt 60) { $line = $line.Substring(0, 60) }
+    $doneTitles += $line
+  }
+  $notifyDone = Join-Path (Split-Path -Parent $PSCommandPath) 'notify.ps1'
+  if (Test-Path $notifyDone) {
+    $body = ($doneTitles -join [Environment]::NewLine)
+    $body = $body + [Environment]::NewLine + ('남은 일 ' + $stillBoardReady + ' · 판정 대기 ' + $stillBoardReview)
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $notifyDone -Title ('태스크 완료 ' + $completedThisCycle.Count + '건') -Body $body -Tags 'white_check_mark' -Priority '2' 2>&1 | Out-Null
+  }
+}
 $moved = ($stillReview -ne $queueReview) -or ($stillBoardReview -ne $boardReview.Count) -or ($stillInbox -ne $inboxPending) -or ($completedThisCycle.Count -gt 0)
 if (($after -ge $before) -and (-not $moved) -and ($unread.Count -eq 0)) {
   # 아무것도 안 줄고 아무것도 안 옮겨갔다. 같은 항목을 또 시도하면 같은 자리에서 막힌다.
