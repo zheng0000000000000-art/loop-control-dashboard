@@ -34499,12 +34499,12 @@
       }
     },
     {
-      "createdAt": "2026-07-29T14:16:43.7990512+09:00",
+      "createdAt": "2026-07-29T14:35:44.3509098+09:00",
       "event": "measure.completed",
       "params": {
         "providerId": "dev-pack-checks",
         "violationCount": 0,
-        "durationMs": 441
+        "durationMs": 614
       },
       "level": "info",
       "producedBy": {
