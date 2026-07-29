@@ -415,7 +415,8 @@
         "docs/plan/SIMULATION-STATUS.md 의 방향 다섯 부호(정보 이득 / 정보가 행동을 바꿈 / 지배 전략 없음 / 후반이 전반보다 나음 / 빌드가 갈림)를 이 변경 전후로 재서 보고에 적는다. 목표 수치가 아니라 부호로 판정한다 - 수치는 바뀔 수 있고 부호는 남는다",
         "수치는 docs/plan/SIMULATION-STATUS.md 6절 기준값에서 시작한다. 스스로 발명하지 않는다 - 아홉 태스크가 각자 정하면 서로 안 맞는다. 바꿨으면 무엇을 왜 바꿨는지 보고에 적는다",
         "세트는 포커 핸드 6종이다(#19). 같은 계열 N점 단일 조건이 아니다 - 조건이 단일하면 배수 폭에 근거가 없다",
-        "배수는 난이도 순서(원페어 < 투페어 < 트리플 < 스트레이트 < 풀하우스 < 포카드)만 지키고 값은 측정이 정한다"
+        "배수는 난이도 순서(원페어 < 투페어 < 트리플 < 스트레이트 < 풀하우스 < 포카드)만 지키고 값은 측정이 정한다",
+        "세트는 예약하고 기한 안에 채우는 것이다(V3 RESERVE_SET / reservation.deadline). 모으면 자동 정산이 아니다 - 기한이 있어야 위험이 생긴다"
       ],
       "allowedPaths": [
         "src/**",
@@ -705,6 +706,136 @@
         "감정 횟수·의뢰 동시 수주를 브랜치로 만들지 않는다(#10, #11)",
         "빌드가 갈리는지 잰다 - 브랜치 선택이 다르면 최종 자본 분포가 달라져야 한다(부호 5)",
         "지배 브랜치가 없어야 한다. 하나가 항상 이기면 나머지 셋은 함정이다(부호 3)",
+        "docs/plan/SIMULATION-STATUS.md 의 방향 다섯 부호를 이 변경 전후로 재서 보고에 적는다"
+      ]
+    },
+    {
+      "tier": "P0",
+      "targetRepo": "team-loop",
+      "status": "READY",
+      "boardTaskId": null,
+      "addedBy": "조율자 세션 coord-v3",
+      "addedAt": "2026-07-29",
+      "allowedPaths": [
+        "src/**",
+        "test/**",
+        "docs/**",
+        "examples/**"
+      ],
+      "source": "unknown-auction/docs/brainstorms/V3-data-contract.md 대조 (docs/plan/V3-RECONCILIATION.md)",
+      "id": "bl-sim-bond",
+      "priority": 26,
+      "factors": [
+        "blocksOthers",
+        "unverifiedRisk"
+      ],
+      "dependsOn": [],
+      "title": "채권·담보 대출을 자본 곡선에 넣는다 — 6절 수치는 빌릴 수 없다는 전제였다",
+      "description": "V3 계약에 `ISSUE_COLLATERAL_LOAN` · `REPAY_LOAN` 과 `bond.*` 경로 5개가 있다.\n**시뮬레이터에도 6절에도 없다.**\n\n6절의 자본 곡선(20,000 x 1.1435^d)과 승급비·마감선은 전부 **빌릴 수 없다는 전제** 위에 있다.\n빌릴 수 있으면 필요 성장률이 내려가고, 지금 적힌 필요 기저 15.25% 는 무효가 된다.\n\n## 범위\n채권 발행·상환과 담보 평가(`player.liquidationValue`)까지. 이자·기한은 명세에 선언한다.",
+      "acceptanceCriteria": [
+        "채권을 쓸 수 있는 정책과 안 쓰는 정책의 지표를 나란히 낸다. 안 갈리면 채권이 판단이 아니라는 뜻이다",
+        "이자·기한·담보 비율이 전부 명세(examples/balance/*.json)에 선언된다. 코드에 하드코딩하지 않는다",
+        "채권을 넣은 뒤 필요 기저 성장률을 다시 푼다. SIMULATION-STATUS.md 6.9절 방법을 쓴다",
+        "음성 시험: 이자를 아주 높이면 아무도 안 빌리고, 0 으로 두면 전부 빌린다. 둘 다 아니면 모델이 안 문 것이다",
+        "갚지 못하는 경로가 파산으로 이어진다(bl-sim-ruin 과 맞물린다)",
+        "V3 계약의 이름을 쓴다 - ISSUE_COLLATERAL_LOAN / REPAY_LOAN / bond.*. 새 이름을 만들지 않는다",
+        "docs/plan/SIMULATION-STATUS.md 의 방향 다섯 부호를 이 변경 전후로 재서 보고에 적는다"
+      ]
+    },
+    {
+      "tier": "P0",
+      "targetRepo": "team-loop",
+      "status": "READY",
+      "boardTaskId": null,
+      "addedBy": "조율자 세션 coord-v3",
+      "addedAt": "2026-07-29",
+      "allowedPaths": [
+        "src/**",
+        "test/**",
+        "docs/**",
+        "examples/**"
+      ],
+      "source": "unknown-auction/docs/brainstorms/V3-data-contract.md 대조 (docs/plan/V3-RECONCILIATION.md)",
+      "id": "bl-sim-info-channels",
+      "priority": 30,
+      "factors": [
+        "measuredFailure",
+        "blocksOthers"
+      ],
+      "dependsOn": [],
+      "title": "정보를 채널로 가른다 — 내 6절은 \"감정 1회 = 태그 1개\"로 뭉갰다",
+      "description": "V3 계약의 `infoChannel` 은 넷이다 — 출품 순서 / 경쟁자 예산 / 출품 명세 / 수요 동향.\n판정표 #3 이 *출품 명세* 를 폐기 유지했으므로 **3종**이 남는다.\n\n지금 시뮬레이터는 `appraisal` 과 `demand` 둘뿐이고, 내 6.3은 그것을\n\"감정 1회 = 태그 1개\" 로 더 뭉갰다. **채널마다 값이 다르고 쓰임이 다른 것이 요점이었다.**\n\n실측: 정보 우위 -43.7%p. 정보를 사는 정책이 안 사는 정책보다 나쁘다.\n채널이 갈리지 않으면 \"어느 정보가 쓸모없는가\" 를 물을 수조차 없다.",
+      "acceptanceCriteria": [
+        "채널 3종이 각각 다른 것을 알려준다. 같은 추정치를 좁히기만 하면 채널이 하나인 것과 같다",
+        "채널별 값과 가격이 명세에 선언되고, 채널별 정보 우위를 따로 낸다",
+        "정보 우위가 채널마다 갈린다. 셋 다 음수면 가격이 아니라 판단 경로가 없는 것이다(진단 1)",
+        "출품 명세 채널은 만들지 않는다(판정표 #3 폐기 유지 - 계열·등급 무료 공개가 상위 결정)",
+        "V3 계약의 이름을 쓴다 - BUY_INFORMATION / information.channels / infoChannel enum",
+        "docs/plan/SIMULATION-STATUS.md 의 방향 다섯 부호를 이 변경 전후로 재서 보고에 적는다"
+      ]
+    },
+    {
+      "tier": "P0",
+      "targetRepo": "team-loop",
+      "status": "READY",
+      "boardTaskId": null,
+      "addedBy": "조율자 세션 coord-v3",
+      "addedAt": "2026-07-29",
+      "allowedPaths": [
+        "src/**",
+        "test/**",
+        "docs/**",
+        "examples/**"
+      ],
+      "source": "unknown-auction/docs/brainstorms/V3-data-contract.md 대조 (docs/plan/V3-RECONCILIATION.md)",
+      "id": "bl-sim-contract-types",
+      "priority": 26,
+      "factors": [
+        "blocksOthers",
+        "unverifiedRisk"
+      ],
+      "dependsOn": [
+        "bl-sim-commissions"
+      ],
+      "title": "의뢰 5종을 넣는다 — 지정·다중·차익·절제·견제",
+      "description": "V3 계약의 `contractType` 은 다섯이다. 내 6.5는 \"태그 2개 조건\" 으로 뭉갰다.\n\n**다섯이 서로 배타적이라는 것이 판정표 #11(동시 수주 상한 불필요)의 근거다.**\n배타성이 실제로 성립하지 않으면 #11 의 근거가 무너지고 상한 논의가 되살아난다.",
+      "acceptanceCriteria": [
+        "다섯이 서로 배타적인지 잰다 - 동시에 여러 개를 수주해도 이득이 겹치지 않아야 한다",
+        "배타성이 안 성립하면 그 사실을 보고에 적는다. 판정표 #11 의 근거가 흔들리는 것이므로 숨기지 않는다",
+        "동시 수주에 상한을 두지 않는다(#11 폐기 유지)",
+        "V3 계약의 이름을 쓴다 - ACCEPT_CONTRACT / contracts.accepted / contractType enum",
+        "docs/plan/SIMULATION-STATUS.md 의 방향 다섯 부호를 이 변경 전후로 재서 보고에 적는다"
+      ]
+    },
+    {
+      "tier": "P0",
+      "targetRepo": "team-loop",
+      "status": "READY",
+      "boardTaskId": null,
+      "addedBy": "조율자 세션 coord-v3",
+      "addedAt": "2026-07-29",
+      "allowedPaths": [
+        "src/**",
+        "test/**",
+        "docs/**",
+        "examples/**"
+      ],
+      "source": "unknown-auction/docs/brainstorms/V3-data-contract.md 대조 (docs/plan/V3-RECONCILIATION.md)",
+      "id": "bl-sim-nemesis",
+      "priority": 22,
+      "factors": [
+        "unverifiedRisk"
+      ],
+      "dependsOn": [
+        "bl-sim-bot-capital"
+      ],
+      "title": "봇을 숙적 1 + 뜨내기 2 로 가른다 — 지금은 셋이 동질이다",
+      "description": "V3 불변조건 3: **숙적 1 상시 + 뜨내기 2 교체, 사정축 유지.**\n계약에 `botIdentity: nemesis / drifter` 와 `rumors.nemesisStage` 가 있다.\n\n시뮬레이터의 봇 3은 전부 같은 규칙이다. 숙적이 상시라면 **후반 압력의 근원이 다르고**,\n그것이 \"후반이 전반보다 나은가\"(부호 4)의 답을 바꾼다.",
+      "acceptanceCriteria": [
+        "숙적과 뜨내기가 다르게 행동한다. 지표가 안 갈리면 가른 의미가 없다",
+        "숙적이 상시이고 뜨내기가 교체된다. 교체 규칙이 명세에 선언된다",
+        "rumors.nemesisStage 가 실제로 무언가를 바꾼다. 표시만 하면 죽은 값이다",
+        "V3 계약의 이름을 쓴다 - botIdentity enum / rumors.nemesisStage",
         "docs/plan/SIMULATION-STATUS.md 의 방향 다섯 부호를 이 변경 전후로 재서 보고에 적는다"
       ]
     }
