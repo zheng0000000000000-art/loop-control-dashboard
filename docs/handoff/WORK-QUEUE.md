@@ -1891,3 +1891,45 @@
   둘뿐, allowedPaths(`src/**`·`test/**`·`server.js`) 안.
   **판단**: 완료 기준 4개(즉시 재청구·반려 사유 보존·승인 경로 무변경·npm test 전체 통과)
   전부 실체로 확인됐다.
+
+- **team-loop 보드 태스크(`tsk_b6984473aada76b76917`, "봇에게 지속 자본과 회차별 성장을 준다")를
+  이 세션이 직접 구현해 REVIEW까지 올렸다.** (2026-07-29, 이 조율자 세션
+  `session-20260729-133606`, 코드는 이 세션이 직접 작성, 발사 없음)
+  **막힌 claim을 이어받음**: `loop_enter`가 `ACTIVE_WORK_WITH_STALE_HANDOFF`로 이 태스크를
+  가리켰다. `work_inspect`로 실측하니 이전 세션(`20260729-124610`)이 03:46:12Z에 `executor`를
+  자기 자신으로 지정해 `IN_PROGRESS`/`RUNNING`으로 찍어뒀으나 `changedPaths: []`·
+  `latestHandoff: null`·타임라인에 실제 작업 흔적이 전혀 없었다(약 50분 방치, 주체 미상 —
+  왜 아무것도 안 남기고 끝났는지 재구성 불가). 이 세션이 claim을 이어받아 처음부터 구현했다.
+  **한 일**: `team-loop-lite-ai-learning`의 `src/engine/economy-simulator.js` — 봇에게 회차 간
+  유지되는 `capital` 필드 신설(초기값 = `economy.startingAssets`), 낙찰 시 차감, 회차마다
+  가산(additive) 성장. 입찰 상한 계산에 `capitalPressure`(자본 비례) 항을 추가해 `estimate`
+  단독 병목을 열었다. 이 과정에서 버그 하나를 추가로 발견해 고쳤다 — `spendableBudget`에
+  원래 상한이 없어 봇이 자기 자본보다 많이 쓸 수 있었던 것(`Math.min(capitalBase, ...)`로
+  캡 씌움). **1차 시도(복리 성장)는 실패**했다 — 낙찰 손실이 성장보다 빨라 자본이 0 근처로
+  붕괴하면 복리는 0에서 회복이 안 된다(기록해 둠). 가산 성장 + 격자 탐색으로 역산한
+  "리키지 보정 배율"(3.81)로 최종 12회차 자본이 4개 정책 평균 134,460~136,862(목표
+  120,000~150,000 안)에 들어옴을 확인했다.
+  **사용한 하네스**: `node --test test/economy-simulator.test.js` 11/11(신설 6건: 지속 자본
+  필드·자본 2배 시 입찰 유의미하게 커짐(1.8배 이상 단언)·낙찰 시 자본 이내로만 지출·
+  `botDailyGrowthAmount` 역산 공식·12회차 자본이 목표 근방·회차 진행에 따라 자본이 늘고
+  음수 안 됨). `npm test` 전체 → **620/621**. `git stash`로 변경 전 코드를 되살려 같은
+  스크립트로 "전" 수치를 재현해 기존 진단 문서(`tsk_4c0ac9f809ff5e4f3a75`)의 §1-1 수치와
+  소수점까지 일치함을 확인 — 이번 "전후" 비교가 같은 조건에서 나온 것임을 검증.
+  **자진 신고(중요)**: ①플레이어 지표가 나빠질 것으로 예상했는데(태스크 설명이 명시)
+  반대로 좋아졌다(`LotWinRate`는 25.7%→21.2%로 하락했는데 `EndAssetsP50`/`RoiMean`은 상승) —
+  로트 등급별 분해 없이 추정만 남겼다(값싼 로트는 더 못 이기고, 비싼 로트는 `spendableBudget`
+  캡 버그 수정으로 봇이 오히려 약해져 플레이어가 더 자주 가져간 것으로 추정, 확정 아님).
+  ②`test/balance-gate-examples.test.js`의 "known-good" 예제(`unknown-auction-economy.json`)가
+  이제 `check-balance-gate.mjs --mode=evaluate`에서 `violations:2`로 실패한다 —
+  **예제 파일의 합격 밴드는 고치지 않았다**(기준 파일 변경은 사람 결재 대상). `npm test` 전체
+  통과라는 완료 기준이 이 1건 때문에 미충족이다. ③`test/fixtures/sensitivity/
+  unknown-auction-economy-v1.md`는 재생성해 덮어썼다 — 이건 코드 변경 시 재생성하도록
+  설계된 문서형 스냅샷이라 판단(해당 시험 파일의 주석이 스스로 이렇게 설명함), 기준 파일과
+  성격이 다르다고 보고 재생성했다.
+  상세 보고: `team-loop-lite-ai-learning/docs/qa/tsk_b6984473aada76b76917-bot-capital-growth.md`.
+  **이 세션이 안 한 것**: 승인(`approve_task`)은 하지 않았다(ADR-020, 이 세션이 코드를
+  직접 만들었으므로 자기 판단을 자기가 승인하는 모양이 된다). `data/discussions.json`에도
+  같은 내용을 남겼다.
+  **판정 세션이 볼 것**: (a) 위 §5의 balance-gate 실패를 완료로 인정할지(태스크 설명이
+  플레이어 지표 악화를 예상했지만 실제로는 다른 두 지표가 악화된 것) (b) 예상과 다르게 나온
+  방향(플레이어 개선)의 원인 추정이 타당한지 (c) 후속으로 밸런스 재튜닝이 필요한지.
