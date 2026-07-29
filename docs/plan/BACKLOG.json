@@ -813,7 +813,9 @@
         "unverifiedRisk"
       ],
       "dependsOn": [
-        "bl-sim-commissions"
+        "bl-sim-commissions",
+        "bl-sim-nemesis",
+        "bl-sim-info-channels"
       ],
       "title": "의뢰 5종을 넣는다 — 지정·다중·차익·절제·견제",
       "description": "V3 계약의 `contractType` 은 다섯이다. 내 6.5는 \"태그 2개 조건\" 으로 뭉갰다.\n\n**다섯이 서로 배타적이라는 것이 판정표 #11(동시 수주 상한 불필요)의 근거다.**\n배타성이 실제로 성립하지 않으면 #11 의 근거가 무너지고 상한 논의가 되살아난다.",
@@ -822,7 +824,11 @@
         "배타성이 안 성립하면 그 사실을 보고에 적는다. 판정표 #11 의 근거가 흔들리는 것이므로 숨기지 않는다",
         "동시 수주에 상한을 두지 않는다(#11 폐기 유지)",
         "V3 계약의 이름을 쓴다 - ACCEPT_CONTRACT / contracts.accepted / contractType enum",
-        "docs/plan/SIMULATION-STATUS.md 의 방향 다섯 부호를 이 변경 전후로 재서 보고에 적는다"
+        "docs/plan/SIMULATION-STATUS.md 의 방향 다섯 부호를 이 변경 전후로 재서 보고에 적는다",
+        "수치는 SIMULATION-STATUS.md 6.12 에서 시작한다 - 지정 x1.20 / 절제 정액 1,900G / 견제 x1.37 / 차익 정액 3,000G / 다중 x1.70",
+        "충돌 5쌍(견제x차익 · 절제x다중 · 절제x지정 · 절제x견제 · 차익x지정)이 실제로 동시 수행을 막는지 잰다. 안 막으면 전부 받는 것이 최적이 되어 #11 이 무너진다",
+        "인도형(지정·견제·다중)과 조건형(절제·차익)에서 빌드가 갈리는지 잰다. 한쪽만 쓰이면 다섯이 아니라 둘이다",
+        "견제는 숙적이 누구인지 알 수 있어야 성립한다. 봇이 동질이면 견제는 의미가 없다 - bl-sim-nemesis 선행"
       ]
     },
     {
