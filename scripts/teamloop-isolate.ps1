@@ -14,6 +14,11 @@ param(
   [ValidateSet('Ensure', 'Check')]
   [string]$Action = 'Ensure',
   [string]$TeamLoopRoot = 'C:\NHN Project\team-loop-lite-ai-learning',
+  # 워크트리를 만들 도구(createTaskWorktree)는 team-loop 에만 있다. 대상 저장소가
+  # 다른 프로젝트일 때 그 저장소에서 모듈을 찾으면 esm/resolve 에서 죽는다
+  # (2026-07-30 실측: unknown-auction 태스크에서 그랬다).
+  # 그래서 모듈은 여기서, 워크트리는 대상 저장소에 만든다.
+  [string]$ToolRoot = 'C:\NHN Project\team-loop-lite-ai-learning',
   [string]$TaskId = ''
 )
 
@@ -78,7 +83,11 @@ if (Test-Path $dir) {
 # 2026-07-28 실측: './src/worktree.js' 로 줬더니 esm/resolve 에서 죽었고 연쇄가 끊겼다.
 # 내 시험이 이미 있는 워크트리로만 돌아 일찍 반환되는 가지만 봤고, 만드는 가지는 안 태웠다.
 # 시험이 지나간 자리와 코드가 도는 자리가 다르면 그 시험은 그 코드를 안 잰 것이다.
-$moduleUrl = ([uri](Join-Path $TeamLoopRoot 'src\worktree.js')).AbsoluteUri
+# 모듈은 도구 저장소에서, 워크트리는 대상 저장소에 만든다.
+$moduleUrl = ([uri](Join-Path $ToolRoot 'src\worktree.js')).AbsoluteUri
+if (-not (Test-Path (Join-Path $ToolRoot 'src\worktree.js'))) {
+  Write-Output "teamloop-tool-missing $ToolRoot 에 src/worktree.js 가 없다"; exit 1
+}
 $script = "import { createTaskWorktree } from '$moduleUrl'; const made = await createTaskWorktree(process.argv[1], process.argv[2]); console.log(made.dir);"
 $made = & node --input-type=module -e $script $TeamLoopRoot $TaskId 2>&1
 if ($LASTEXITCODE -ne 0) { Write-Output "teamloop-worktree-failed`n$made"; exit 1 }

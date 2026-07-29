@@ -740,14 +740,41 @@ $boardTask = if ($boardReview.Count -gt 0) { $boardReview[0] }
 # 경로를 만들어서 건네주는 것이 코드가 할 수 있는 최선이고, 오염은 끝나고 검사한다.
 $teamLoopIsolation = ''
 $isolateScript = Join-Path (Split-Path -Parent $PSCommandPath) 'teamloop-isolate.ps1'
+
+# 실행 저장소는 태스크의 projectId 가 정한다. 매개변수 기본값 하나로 전부 team-loop 에 꽂으면
+# 다른 프로젝트 태스크가 엉뚱한 저장소에서 돈다 - 2026-07-30 에 두 번 그랬다.
+# 서버가 쓰는 것과 같은 원본(data/project-registry.json)을 읽는다. 판정을 두 벌로 두면 또 어긋난다.
+$taskRepoRoot = $TeamLoopRoot
+$taskProjectId = 'team-loop'
+if ($boardTask) {
+  $pid2 = [string]$boardTask.projectId
+  if ($pid2) { $taskProjectId = $pid2.Trim() }
+  $registryPath = Join-Path $TeamLoopRoot 'data\project-registry.json'
+  if (Test-Path $registryPath) {
+    try {
+      $registry = Get-Content -Raw -Encoding UTF8 $registryPath | ConvertFrom-Json
+      $proj = @($registry.projects) | Where-Object { $_.id -eq $taskProjectId } | Select-Object -First 1
+      if ($proj -and $proj.location) {
+        if (Test-Path $proj.location) { $taskRepoRoot = [string]$proj.location }
+        else { Write-Line "route-refused $($boardTask.id) : 프로젝트 '$taskProjectId' 의 location 이 없다 ($($proj.location))"; $boardTask = $null }
+      } elseif ($taskProjectId -ne 'team-loop') {
+        # 등록 안 된 프로젝트면 조용히 team-loop 으로 떨어지지 않는다(fail-closed).
+        Write-Line "route-refused $($boardTask.id) : 프로젝트 '$taskProjectId' 가 등록돼 있지 않다"
+        $boardTask = $null
+      }
+    } catch { Write-Line "route-registry-unreadable $($_.Exception.Message)" }
+  }
+  if ($boardTask -and $taskRepoRoot -ne $TeamLoopRoot) { Write-Line "route $($boardTask.id) -> $taskProjectId ($taskRepoRoot)" }
+}
+
 if ($boardTask -and (Test-Path $isolateScript) -and ("$($boardTask.description)" -notmatch 'Local-First Workflow Dashboard')) {
   $ensured = & powershell -NoProfile -ExecutionPolicy Bypass -File $isolateScript `
-    -Action Ensure -TeamLoopRoot $TeamLoopRoot -TaskId $boardTask.id 2>&1
+    -Action Ensure -TeamLoopRoot $taskRepoRoot -TaskId $boardTask.id 2>&1
   foreach ($line in @($ensured)) { Write-Line "$line" }
-  $teamLoopWorktree = Join-Path $TeamLoopRoot ".team-loop-worktrees\$($boardTask.id)"
+  $teamLoopWorktree = Join-Path $taskRepoRoot ".team-loop-worktrees\$($boardTask.id)"
   $teamLoopIsolation = "`n`n**team-loop 코드는 반드시 이 격리 워크트리 안에서만 고쳐라:**`n" +
     "  $teamLoopWorktree`n" +
-    "메인 트리($TeamLoopRoot)의 src/ 나 test/ 를 건드리지 마라. 건드리면 team-loop 이 변경물의" +
+    "메인 트리($taskRepoRoot)의 src/ 나 test/ 를 건드리지 마라. 건드리면 team-loop 이 변경물의" +
     "`n소유권을 판별하지 못해 태스크를 스스로 차단한다. 끝나고 조율자가 검사한다."
 }
 
