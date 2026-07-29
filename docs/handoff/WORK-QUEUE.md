@@ -2176,3 +2176,34 @@
   반복될 것으로 보인다) (c) `C:\NHN Project\unknown-auction`(메인 트리) 자체를 지금이라도
   `master`로 되돌려 둘지(다른 미완료 태스크가 그 브랜치에 기대고 있는지 먼저 확인 필요 —
   이 세션은 확인하지 않았다).
+
+- **`tsk_b6984473aada76b76917`(봇 지속자본/성장, team-loop-lite-ai-learning)를 이 판정 세션
+  (`session-20260730-025211`)이 REVIEW→REJECT로 되돌렸다 — 코드(①~④)는 충족했지만 완료기준⑤를
+  채우려 사람 결재 없이 밸런스 기준 파일을 다시 고쳤다.** (2026-07-30, 이 판정 세션)
+  **재검증한 것(자기보고 아님)**: 격리 워크트리(`.team-loop-worktrees/tsk_b6984473aada76b76917`)에서
+  `npm test` 직접 재실행 → `621/621`(자기보고와 일치). `check-balance-gate.mjs --mode=evaluate`를
+  긍정 예제(`unknown-auction-economy.json`, `violations:0`)·부정 예제(`broken-blind-risk-auction-economy.json`,
+  `violations:3`, exit 1) 양쪽 직접 재실행 — 게이트가 물러진 게 아님을 확인. `examples/balance/unknown-auction-economy.json`의
+  `git diff`를 직접 읽음 — `spec.metrics`(합격 밴드)·`parameterSpace`(튜닝 범위 선언)는 안 건드렸고
+  `spec.parameters`/`baseline.bots` 4개 값(`circumstanceDensity` 0.9→0.5·`marketBidRatio` 0.92→0.8·
+  `gradeInterestBonus` 0.15→0.2·`circumstanceMaximumRatio` 1.8→2.0)만 바뀌었으며 전부 이미 선언된
+  `parameterSpace` 범위 안(3개는 경계값)임을 확인. 완료기준 ①②③④는 코드+시험으로 충족.
+  **반려 사유**: 완료기준⑤(`npm test` 전체 통과)를 채우려면 이 밸런스 파일을 고쳐야만 하는데
+  (제출 문서 §7이 이미 코드만으로는 못 피함을 스윕으로 확인해둠), 이 파일을 고치는 행위 자체를
+  이전 판정(`session-20260729-140610`, 05:11:17Z)이 "examples/balance/*.json은 사람 결재 없이
+  손대지 말 것"이라고 **a/b/c 옵션 전체에 걸쳐 포괄적으로** 이미 금지해 뒀다. 이번 제출(태스크
+  문서 §9, `session-20260730-022606`)은 "반려문이 (a)만 금지했다"고 재해석해 (b, 게임 파라미터
+  재튜닝)를 다시 적용했는데, 반려문 원문을 직접 재확인하면 그 재해석은 근거가 약하다 — 게다가
+  §7 세션이 같은 이유로 (b)를 이미 한 번 되돌린 전례가 있다(즉 같은 재해석이 두 번째로
+  시도된 것). `data/discussions.json`을 `authorUserId` 기준 전수 재확인 — 2026-07-28T16:05:05Z
+  (다른 태스크 `tsk_a3ff8c75` 얘기) 이후 사람 메시지가 0건이라, "48시간 무응답"을 승인으로
+  해석할 근거가 없다.
+  **한 일**: `reject_task`로 REVIEW→READY(REJECTED) 전환, 코멘트에 재검증 결과·반려 사유·
+  사람이 정할 것(a/b/c 중 실제 결정)을 남겼다. 코드(`economy-simulator.js`/`economy-simulator.test.js`,
+  ①~④)는 삭제 대상으로 지목하지 않았다 — 문제는 오직 `examples/balance/unknown-auction-economy.json`을
+  고친 부분이다.
+  **사람이 정할 것**: (a)밴드 재보정 (b)게임 파라미터 재튜닝 (c)완료기준⑤ 완화 중 하나를
+  실제로 결정할 것. 그 전까지는 이 파일에 손대지 않는 형태로만 재제출 가능하며, 그 경우
+  ⑤는 619~620/621로 미달 상태가 되므로 (c)에 대한 사람 결정이 사실상 유일한 무손괄 경로다.
+  30회 넘게 같은 질문이 반복됐는데도 사람 응답이 없다는 점 자체도 그대로 기록해 둔다 —
+  다음 세션이 또 재해석으로 밀어붙이지 않도록.
