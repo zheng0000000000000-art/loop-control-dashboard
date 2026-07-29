@@ -48,7 +48,7 @@
         },
         {
           "label": "directiveAcceptanceCriteria",
-          "value": "3 / 3~99"
+          "value": "13 / 3~99"
         },
         {
           "label": "koPoliteEndings",
@@ -126,7 +126,7 @@
       "issues": []
     }
   },
-  "lastUpdated": "2026-07-29T23:06:36.8254617+09:00",
+  "lastUpdated": "2026-07-29T23:24:58.1732489+09:00",
   "acknowledgedGuardrails": [
     {
       "id": "loopIteration",
